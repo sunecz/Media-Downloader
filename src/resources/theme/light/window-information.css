@@ -1,0 +1,17 @@
+.tab-pane {
+	-fx-open-tab-animation: NONE;
+	-fx-close-tab-animation: NONE;
+}
+
+.tab-content-area {
+	-fx-padding: 0 0 0 10;
+}
+
+#box-bottom {
+	-fx-padding: 0 10 10 10;
+	-fx-alignment: center-left;
+}
+
+#pane-info .label {
+	-fx-min-width: 50;
+}

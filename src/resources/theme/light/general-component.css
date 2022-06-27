@@ -1,0 +1,274 @@
+* {
+	-fx-focus-color: transparent;
+}
+
+/* ----- LIGHT THEME ----- */
+
+.root {
+	-fx-accent: rgb(40, 118, 50);
+	-fx-focus-color: -fx-accent;
+	-fx-base: rgb(244, 244, 244);
+	-fx-base-top: rgb(255, 255, 255);
+	-fx-base-border: derive(-fx-base, -20%);
+	-fx-control-inner-background: derive(-fx-base, 80%);
+	-fx-control-inner-background-alt: derive(-fx-control-inner-background, -2%);
+}
+
+.label {
+	-fx-text-fill: rgb(0, 0, 0);
+}
+
+.text-field {
+	-fx-prompt-text-fill: rgb(120, 120, 120);
+}
+
+.titulo {
+	-fx-font-weight: bold;
+	-fx-font-size: 18px;
+}
+
+.button {
+	-fx-focus-traversable: false;
+}
+
+.button:hover {
+	-fx-text-fill: rgb(0, 0, 0);
+}
+
+.separator *.line {
+	-fx-background-color: rgb(169, 169, 169);
+	-fx-border-style: solid;
+	-fx-border-width: 1px;
+}
+
+.scroll-bar {
+	-fx-background-color: derive(-fx-base, 45%);
+}
+
+.button:default {
+	-fx-base: -fx-accent;
+}
+
+.table-view, .tree-table-view {
+	-fx-selection-bar-non-focused: derive(-fx-base, 50%);
+}
+
+.list-cell:even,
+.list-cell:odd,
+.table-row-cell:even,
+.table-row-cell:odd {
+	-fx-control-inner-background: derive(-fx-base, 60%);
+}
+
+/* ---------------------- */
+
+.table-view, .tree-table-view, .list-view {
+	-fx-background-color: -fx-box-border, -fx-control-inner-background;
+	-fx-background-insets: 0, 1;
+	-fx-background-radius: 0;
+}
+
+.table-view:focused, .tree-table-view:focused, .list-view:focused {
+	-fx-background-color: -fx-box-border, -fx-control-inner-background;
+	-fx-background-insets: 0, 1;
+	-fx-background-radius: 0;
+}
+
+.table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell > .table-cell:focused,
+.tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:focused,
+.list-view:focused > .virtual-flow > .clipped-container > .sheet > .list-cell:focused {
+	-fx-background-color: -fx-background, -fx-background !important;
+	-fx-background-insets: 0, 1 !important;
+}
+
+.table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell:focused,
+.tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:focused {
+	-fx-background-color: -fx-table-cell-border-color, -fx-background;
+	-fx-background-insets: 0, 0 0 1 0;
+}
+
+.button:focused, .combo-box:focused {
+	-fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
+	-fx-background-insets: 0 0 -1 0, 0, 1, 2;
+	-fx-background-radius: 3, 3, 2, 1;
+}
+
+.text-input:focused {
+	-fx-background-color: linear-gradient(to bottom, derive(-fx-text-box-border, -10%), -fx-text-box-border),
+		linear-gradient(from 0px 0px to 0px 5px, derive(-fx-control-inner-background, -9%), -fx-control-inner-background);
+	-fx-background-insets: 0, 1;
+	-fx-background-radius: 3, 2;
+}
+
+.check-box:focused > .box {
+	-fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
+	-fx-background-insets: 0 0 -1 0, 0, 1, 2;
+	-fx-background-radius: 3, 3, 2, 1;
+}
+
+.menu-item:selected > .label,
+.menu-item:focused > .label {
+    -fx-text-fill: rgb(255, 255, 255);
+}
+
+/* GUI Component: Draggable window */
+
+.draggable-window-pane {
+	-fx-padding: 20;
+	-fx-background-insets: 20;
+}
+
+#pane-wrapper {
+	-fx-background-color: -fx-base;
+	-fx-border-width: 1;
+	-fx-border-color: -fx-base-border;
+	-fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.2), 7, 0, 0, 0);
+}
+
+#pane-header {
+	-fx-padding: 0 0 0 10;
+	-fx-min-height: 30;
+	-fx-hgap: 5;
+	-fx-background-color: -fx-base-top;
+	-fx-alignment: center-left;
+}
+
+#pane-header #button-window-close {
+	-fx-padding: 0;
+	-fx-background-color: transparent;
+	-fx-background-insets: 0;
+	-fx-background-radius: 0;
+}
+
+#pane-header #button-window-close #button-cross {
+	-fx-stroke: rgb(0, 0, 0);
+	-fx-stroke-width: 1.0;
+}
+
+#pane-header #button-window-close:hover {
+	-fx-background-color: rgb(232, 17, 35);
+}
+
+#pane-header #button-window-close:hover #button-cross {
+	-fx-stroke: rgb(255, 255, 255);
+}
+
+#pane-header #button-window-close:hover:pressed {
+	-fx-background-color: rgb(241, 112, 122);
+}
+
+/* GUI Component: Scroll pane */
+
+.scroll-pane {
+	-fx-padding: 0;
+	-fx-background-insets: 0;
+}
+
+/* GUI Component: Tab pane */
+
+.tab-pane > .tab-header-area {
+	-fx-padding: 0;
+}
+
+.tab-pane > .tab-header-area > .tab-header-background {
+	-fx-background-color: derive(-fx-base, -15%);
+	-fx-background-insets: 0;
+	-fx-border-width: 0 0 1 0;
+	-fx-border-color: -fx-accent;
+}
+
+.tab-pane > .tab-header-area > .headers-region > .tab {
+	-fx-padding: 0.3em 1.3em 0.4em;
+	-fx-background-color: derive(-fx-base, -25%);
+	-fx-background-insets: 0 0 1 0;
+	-fx-background-radius: 0;
+}
+
+.tab-pane > .tab-header-area > .headers-region > .tab:selected {
+	-fx-padding: 0.3em 0.8em 0.4em 1.3em;
+	-fx-background-color: -fx-accent;
+	-fx-background-insets: 0;
+}
+
+.tab-pane > .tab-header-area > .headers-region > .tab > .tab-container > .tab-label {
+	-fx-padding: 0;
+	-fx-text-fill: rgb(0, 0, 0);
+}
+
+.tab-pane > .tab-header-area > .headers-region > .tab:selected > .tab-container > .tab-label {
+	-fx-padding: 0 0.5em 0 0;
+	-fx-text-fill: rgb(255, 255, 255);
+}
+
+.tab-pane:focused > .tab-header-area > .headers-region > .tab:selected .focus-indicator {
+	-fx-border-width: 0;
+	-fx-border-insets: 0;
+	-fx-border-radius: 0;
+}
+
+.tab-pane > .tab-header-area > .control-buttons-tab > .container {
+	-fx-padding: 10 0;
+	-fx-background-color: rgb(255, 255, 255), derive(-fx-base, -15%);
+	-fx-background-insets: -10 -1 0 -1, -10 -10 0 0;
+	-fx-translate-x: -10;
+	-fx-translate-y: -1;
+}
+
+.tab-pane > .tab-header-area > .control-buttons-tab > .container > .tab-down-button {
+	-fx-padding: 0.5em 0.5em;
+	-fx-background-color: derive(-fx-base, -25%);
+	-fx-background-insets: 0 -1em 0 0;
+	-fx-background-radius: 0;
+	-fx-translate-x: 0em;
+	-fx-translate-y: -0.85em;
+}
+
+.tab-pane > .tab-header-area > .control-buttons-tab > .container > .tab-down-button .arrow {
+	-fx-padding: 0.35em;
+	-fx-background-color: -fx-control-inner-background;
+	-fx-translate-x: 0.45em;
+	-fx-translate-y: 0.1em;
+}
+
+/* GUI Component: Tooltip */
+
+.tooltip {
+	-fx-padding: 0.5em 0.8em;
+	-fx-background-color: -fx-control-inner-background;
+	-fx-background-radius: 0;
+	-fx-background-insets: 0;
+	-fx-border-width: 1;
+	-fx-border-color: -fx-base;
+	-fx-text-fill: rgb(0, 0, 0);
+	-fx-font-size: 0.8em;
+	-fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.4), 10, 0.0, 0, 0);
+	-fx-translate-y: 5;
+	-fx-translate-x: 5;
+}
+
+/* GUI Component: Progress bar */
+
+.progress-bar {
+	-fx-pref-height: 7;
+	-fx-min-height: 7;
+	-fx-max-height: 7;
+	-fx-max-width: Infinity;
+	-fx-border-color: rgb(0, 0, 0);
+	-fx-border-width: 1;
+	-fx-indeterminate-bar-length: 50;
+	-fx-indeterminate-bar-escape: true;
+	-fx-indeterminate-bar-flip: false;
+	-fx-indeterminate-bar-animation-time: 1.5;
+}
+
+.progress-bar > .bar {
+	-fx-background-insets: 0;
+	-fx-background-radius: 0;
+	-fx-background-color: rgba(36, 164, 53, 0.9);
+}
+
+.progress-bar > .track {
+	-fx-background-insets: 0;
+	-fx-background-radius: 0;
+	-fx-background-color: rgba(0, 0, 0, 0.5);
+}

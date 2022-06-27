@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<project name="generate_jar" default="all">
+	<property name="jarname" value="media-downloader" />
+	<property name="dir.rtd" value="."                />
+	<property name="dir.bin" value="${dir.rtd}/bin"   />
+	<property name="dir.lib" value="${dir.rtd}/lib"   />
+	<property name="dir.ver" value="${dir.rtd}/jar"   />
+	<property name="dir.etc" value="${dir.rtd}/etc"   />
+	<property name="dir.src" value="${dir.rtd}/src"   />
+	<target name="all" depends="jar,jar_jre,src">
+		<!-- Runs all the other targets. -->
+	</target>
+	<target name="jar">
+		<echo message="Generating JAR file..." />
+		<!-- Create a temporary JAR file with all external libraries' content -->
+		<jar destfile="${dir.ver}/${jarname}-dirty.jar">
+			<!-- Include needed libraries -->
+			<zipfileset src="${dir.lib}/sune-utils-load.jar" excludes="META-INF/*.sf,module-info.class,/*.md" />
+		</jar>
+		<jar destfile="${dir.ver}/${jarname}.jar">
+			<!-- Configure JAR's Manifest file -->
+			<manifest>
+				<attribute name="Main-Class" value="sune.app.mediadown.App" />
+				<attribute name="Class-Path" value="."                      />
+			</manifest>
+			<!-- Include the *.class files -->
+			<fileset dir="${dir.bin}" />
+			<!-- Include filtered libraries' content -->
+			<zipfileset src="${dir.ver}/${jarname}-dirty.jar" excludes="META-INF/*.sf,module-info.class,/*.md" />
+		</jar>
+		<!-- Delete the temporary JAR file -->
+		<delete file="${dir.ver}/${jarname}-dirty.jar" />
+	</target>
+	<target name="jar_jre">
+		<echo message="Generating JAR file for building custom JRE..." />
+		<!-- Create a temporary JAR file with all external libraries' content -->
+		<jar destfile="${dir.etc}/jre/${jarname}-jre.jar">
+			<!-- Configure JAR's Manifest file -->
+			<manifest>
+				<attribute name="Main-Class" value="sune.app.mediadown.App" />
+				<attribute name="Class-Path" value="."                      />
+			</manifest>
+			<!-- Include the *.class files -->
+			<fileset dir="${dir.bin}" />
+		</jar>
+	</target>
+	<target name="src" depends="jar">
+		<echo message="Generating source ZIP file..." />
+		<zip destfile="${dir.ver}/${jarname}-source.jar" basedir="${dir.src}" />
+	</target>
+</project>

@@ -1,0 +1,538 @@
+# 00.02.05 -> 00.02.06 (2022-06-16)
+
+CORE
+* Fixed issue with the custom media titles format not being used.
+
+GUI
+* Configuration window:
+	* Added a link to the documentation of how to create a custom media titles format.
+	* Updated the display of the custom media titles format text field.
+
+# 00.02.04 -> 00.02.05 (2022-06-13)
+
+CORE
+* Added support for multiple audio languages.
+* Added support for subtitles.
+* Added support for media title formats.
+* Added ability to add a custom form field for a configuration property.
+* Improved and revamped the media system.
+* Improved obtaining of media titles.
+* Improved some classes and methods throughout the whole program.
+* Updated Message format to "V1".
+* Removed system of media transformers.
+* Fixed issues related to displaying Messages.
+* Fixed various small bugs.
+
+GUI
+* Added ability to resize the custom draggable window.
+* Added Media information window that displays detailed information about a media.
+* Added Preview window that displays various media title format previews.
+* Table window:
+	* Split format and quality columns each to two columns, one for video and one for audio.
+	* Sort by video quality and then by audio quality by default.
+* Configuration window:
+	* Added a new configuration tab "Naming", it contains configuration for naming of media.
+* Download configuration window:
+	* Added field for audio language.
+	* Added field for subtitles languages.
+	* Removed field for servers priority.
+* Fixed various small bugs.
+
+# 00.02.03 -> 00.02.04 (2022-04-23)
+
+CORE
+* Added automatic updates of the application JAR file.
+* Added an ability for plugins to have a configuration.
+* Improved the configuration system.
+* Improved the Worker implementation.
+* Updated the custom JRE to version 0002.
+* Fixed issue with pausing and resuming the computation of total size when downloading a file.
+* Fixed issue with stopping a pipeline and the single file downloader when paused.
+* Fixed issue with using incorrect language of texts of a plugin.
+* Fixed various small bugs.
+
+GUI
+* Fixed issue with GUI being frozen when checking new messages.
+* Table window:
+	* Fixed issue with concurrent errors that were displayed when listing items.
+	* Fixed issue with duplicate items in the table.
+	* Fixed issue with programs being in the wrong (non-alphabetical) order.
+* Configuration window:
+	* Fixed issue with incorrect clipping of configuration forms.
+
+# 00.02.02 -> 00.02.03 (2022-03-19)
+
+CORE
+* Fixed issue with incorrectly marking some media sources as not protected, even though they are.
+
+# 00.02.01 -> 00.02.02 (2022-03-08)
+
+CORE
+* Added automatic fixing of language files.
+* Added automatic language that is based on user's operating system's language.
+* Added support for parsing DASH's ContentProtection and HLS's EXT-X-KEY.
+* Added support for Plugin bootstrap process.
+* Added PipelineTaskRegistry for injecting custom tasks.
+* Added support for running only a standalone plugin, such as the DRM plugin.
+* Added automatic checking and updating of custom JRE.
+* Added concept of messages for displaying messages and news in the program.
+* Updated and simplified parsing of configuration files.
+* Updated checking of resources and libraries.
+* Updated Process API library to version 2.0.0.
+* Moved the required versions of resources (ffmpeg, etc.) to a remote configuration file.
+* Removed support for 32-bit resources.
+* Fixed issue with concurrent modification of table items in the Table window.
+* Fixed various small bugs.
+
+GUI
+* Improved showing of errors so that a single dialog with multiple tabs is opened instead of multiple dialogs.
+* Table window:
+	* Added column for indicating whether a media is protected (using DRM).
+	* When all titles of loaded media sources are empty the column is hidden.
+	* Fixed issue with selecting items using double-click.
+* Added Message window for displaying messages and news.
+
+# 00.02.00 -> 00.02.01 (2021-10-31)
+
+CORE
+* Updated MPD parser:
+	* Allowed to change the BaseURL using the BaseURL tag.
+	* Allowed to use the Number variable in the SegmentTemplate's media attribute.
+	* Allowed to use formatting in variables, i.e. $Number%06d$.
+* Updated FFMpegConverter so that input files are deleted only if a conversion is successful.
+
+GUI
+* Table window:
+	* Media source rows are now sorted by quality by default.
+	* Added a new column for media title.
+
+# 00.01.27 -> 00.02.00 (2021-02-21)
+
+CORE
+* Updated the application (including libraries) to Java 11.
+* Improved initialization process of the application.
+* Updated some libraries to versions that support Java 11.
+* Removed deprecated methods.
+* Removed URLValidator class.
+* Fixed various small bugs.
+
+GUI
+* Information window: Changed position of the tabs to the left.
+* Configuration window: Changed position of the tabs to the left.
+
+# 00.01.26 -> 00.01.27 (2020-10-18)
+
+CORE
+* Added concept of Media Transformers.
+* Added some utility classes and methods.
+* Added MediaGetters class.
+* Added option to disable resources integrity checking at startup.
+* Updated TableWindow to use the Pipeline API.
+* Renamed DownloadConfigWindow class to DownloadConfigurationWindow.
+* Removed InformationDialog class.
+* Removed SearchWindow class.
+* Removed TableConfigurationItems class.
+* Information window: Fixed plugin updating.
+* Fixed various small bugs.
+
+GUI
+* Media Getter window: Added icons to Media Getter selection box.
+* Configuration window: Hidden internal properties.
+* Fixed various small bugs.
+
+# 00.01.25 -> 00.01.26 (2020-08-24)
+
+CORE
+* Added Segments API for downloading segmented files, such as M3U8.
+* Added Pipeline API, used for downloading and conversion process.
+* Added download and conversion managers.
+* Added automatic resources directory updating.
+* Changed handling of initialization states.
+* Improved plugin system.
+* Improved Information window tabs and items handling.
+* Improved file conversion.
+* Updated SSDF2 library to the latest version (Commit: 6ca606e8ef626e2fc445f2ed9915cb0776c577c3).
+* Updated Process API Library to version 1.1.2.
+* Removed default server.
+* Removed default downloader.
+* Removed SAVDownloader class.
+* Removed ParallelDownloader class.
+* Removed file size checking after download.
+* Fixed parsing of M3U files.
+* Fixed parsing of MPD files.
+* Fixed various small bugs.
+
+GUI
+* Progress window: Added progress bar.
+* Information window: Improved the GUI interface.
+* Improved Light theme.
+
+# 00.01.24 -> 00.01.25 (2020-07-31)
+
+CORE
+* Added external resource checking for languages.
+* Added binary resources integrity checking.
+* Added automatic checking of plugin updates.
+* Renamed VideoSource-related translations and names to Media-related.
+* Improved the theme system.
+* Improved exception handling.
+* Improved external resource loading.
+* Improved configuration handling.
+* Improved binary resource handling.
+* Organized resources folder.
+* Replaced ErrorDialog class with Dialog class.
+* Unified names of configuration properties.
+* Fixed translation of some messages.
+* Fixed media conversion on Unix-like operating systems.
+* Fixed various other bugs.
+
+GUI
+* Added experimental dark theme.
+* Startup window: Fixed progress bar.
+* Main window: Fixed some translation issues.
+* Fixed style loading on Unix-like operating systems.
+
+# 00.01.23 -> 00.01.24 (2020-07-18)
+
+CORE
+* Added ability to save a media as an audio file, such as MP3, WAV, etc.
+* Updated file mime type guessing.
+* Unified Video* and Audio* classes to Media* classes.
+* Changed VideoSource* classes to Media* classes.
+* Improved internal handling of video and audio.
+* Fixed various small bugs.
+
+# 00.01.22 -> 00.01.23 (2020-05-17)
+
+CORE
+* Added VideoSourceGetter interface to group Servers and Media engines together.
+* Added library j8pid for correctly getting PID of processes on Windows.
+* Added loading of native libraries at startup.
+* Updated SSDF2 library to the latest version (2020-05-14).
+* Improved library checking and loading at startup.
+* Removed internet connection check at startup since it didn't serve any actual purpose.
+* Fixed pausing and resuming of non-download actions while downloading a file.
+
+# 00.01.21 -> 00.01.22 (2020-04-30)
+
+CORE
+* Added files for version checking and updating from sune-utils-ul library.
+* Replaced sune-utils-ul library with sune-utils-load-j1.8.
+* Removed automatic updating (since it wasn't working anyway), for now.
+* Fixed bug with errors spamming when the plugin list cannot be accessed.
+* Fixed bug with an error message when a plugin is not available for an application version.
+
+GUI
+* Hidden the Search button. (Main window)
+* Replaced video source getter for servers and media engines with video source getter for URLs.
+* Improved table content search. (Table window)
+
+# 00.01.20 -> 00.01.21 (2020-04-23)
+
+CORE
+* Added ability to store additional data in Program and Episode instances.
+* Replaced Waiter, CounterWaiter, VolatileCounterWaiter classes by more reliable CounterLock class.
+* Changed the maximum number of threads used by the application to number of cores.
+* Improved thread handling.
+* Fixed AcceleratedDownloader class to not stuck sometimes.
+
+# 00.01.19 -> 00.01.20 (2020-04-09)
+
+CORE
+* Added support for multiple video and audio sources in the DASH format.
+* Updated Process API Library to 1.1.1 version.
+
+GUI
+* Updated Video source getters so that the file type in a file name is not included in the Save file window.
+
+# 00.01.18 -> 00.01.19 (2020-03-08)
+
+CORE
+* Changed how translation parser handles multiple format signs next to each other.
+* Updated FFMpeg and FFProbe to 4.2.2 version.
+* Updated Process API Library to 1.1.0 version.
+* Fixed bug with missing percentage characters in some texts.
+
+# 00.01.17 -> 00.01.18 (2020-01-18)
+
+CORE
+* Added ability to read M3U8 (HLS) MPD and DASH files from a string
+* Updated the Search API to allow asynchronous searching
+* Updated the Translation API
+* Improved performance of various methods
+* Improved downloading so that when it is stuck the downloading will then continue at that point
+* Removed memory package's classes that were no longer in use
+* Fixed various known bugs
+
+GUI
+* Added some GUI tweaks
+* Added progress text when updating all plugins (Information window)
+* Added all missing translations
+* Changed the application image to graphical elements, i.e. panes and labels (Startup window)
+* Updated the searching to use asynchronous methods (Search window)
+* Fixed bug with updating all plugins (Information window)
+* Fixed bug with occasional freezing when checking plugin updates (Information window)
+
+# 00.01.16 -> 00.01.17 (2018-09-19)
+
+CORE
+* Added SearchEngine concept that allows searching various sites for programs
+* Updated all downloaders to use the latest functionality
+* Updated the Cache mechanism to use SoftReferences instead of WeakReferences
+* Fixed various known bugs
+
+GUI
+* Added button for updating all plugins at once (Information window)
+* Added window for searching programs
+* Updated style of all secondary windows
+* Fixed various known bugs
+
+# 00.01.15 -> 00.01.16 (2018-08-05)
+
+CORE
+* Added an ability to obtain programs, episodes, and video sources asynchronousely
+* Added an ability to specify a range describing where bytes will be saved in a file
+* Added timeouts to HTTP requests
+* Fixed various known bugs
+
+GUI
+* Added a configuration property to alter a request timeout
+* Updated the style of various components to give them a smoother look
+* Updated the style of the Progress window
+* Fixed cancelling of progress when getting programs, episodes, and video sources
+* Fixed various known bugs
+
+# 00.01.14 -> 00.01.15 (2018-08-01)
+
+CORE
+* Updated library: SSDF2
+* Added Worker class that allows to implement multi-threaded actions (e.g. computing M3U8/DASH size)
+* Added an ability to skip the computation of stream size
+* Added an ability to set a download configuration for a server
+* Fixed bug with not resolving absolute URLs for streams (HLS and DASH) correctly
+* Fixed various known bugs
+
+GUI
+* Added some GUI tweaks
+* Added a configuration property to disable computation of stream size
+* Added a button for displaying previous data in the Table window
+* Updated the Information window to use tabs instead of a context menu
+* Fixed bug with displaying incorrect text in the progress column
+* Fixed various known bugs
+
+# 00.01.13 -> 00.01.14 (2018-07-10)
+
+CORE
+* Added restarting of a download when it is stuck (no bytes are being downloaded) for 10 seconds
+* Changed the way of loading internal plugin resources (there is no longer any /temp directory)
+* Fixed some little known bugs
+
+GUI
+* Added basic cancelling of an action in the progress window
+* Fixed graphical glitch when trying to show an already showing context menu
+* Fixed bug with not showing servers in server selector (Video Source Getter window)
+* Fixed bug with automatic server selecting (Video Source Getter window)
+* Fixed bug with not being able to show file in a directory after it has completed downloading
+* Fixed bug with removing selected download items from the table
+* Fixed bug with texts in the table context menu
+* Fixed some little known bugs
+
+# 00.01.12 -> 00.01.13 (2018-07-05)
+
+CORE
+* Added downloading of default plugins (such as media engines, etc.)
+* Added updating and version checking of updatable plugins
+* Moved all internal media engines, downloaders, and servers to their own plugins
+* Fixed bug with closing a downloaded file when the downloading ends
+
+GUI
+* Download items are no longer deleted from the table after completion or error
+
+# 00.01.11 -> 00.01.12 (2018-07-01)
+
+CORE
+* Added accelerated downloading
+* Added automatic updates checking
+* Added automatic library checking
+* Added ability to create custom plugins
+* Added dynamic loading of languages
+* Added dynamic loading of themes
+* Added dynamic loading of plugins
+* Added configuration file
+* Added language: English
+* Updated language: Czech
+* Clean up
+* Fixed some little known bugs
+
+GUI
+* Added startup window
+* Improved displaying of download speed
+* Fixed some little known bugs
+
+# 00.01.10 -> 00.01.11 (2018-06-25)
+
+CORE
+* Added simple automatic detection of a server when typing URL in Video Source Getter window
+* Added server: VidCloud (https://vidcloud.co)
+* Added server: HqqTV (https://hqq.tv)
+* Updated engine: JenomHD
+* Updated server: YouTube
+	* Added obtaining of video's title
+	* Fixed bug with downloading signed videos from the server
+* Fixed bug with corrupted files when a download was paused and then resumed
+* Fixed bug with highlighting a file in a folder when the file's name contained special characters
+
+GUI
+* Added button for starting only selected downloads
+* Added some GUI tweaks and fixes
+
+# 00.01.09 -> 00.01.10 (2018-06-16)
+
+CORE
+* Added ability to translate Data Viewer window
+* Added ability to pause and resume download and conversion operations
+* Added basic exception handling when getting video sources
+* Added server: YouTube
+* Added format: WEBM
+* Added downloader: WEBM Downloader
+* Fixed bug with adding videos from Video Source Getter window to the table
+* Fixed bug with parameters in translation strings
+* Fixed bug with downloading and saving some episodes
+* Fixed bug with incorrect file type conversion when downloading HLS (M3U8) and DASH streams
+* Updated language: Czech
+
+GUI
+* Added window for viewing caught exceptions
+* Added some GUI tweaks and fixes
+* Fixed bug with not centering the progress window
+
+# 00.01.08 -> 00.01.09 (2018-06-10)
+
+CORE
+* Added ability to translate the application to different languages
+* Added language: Czech
+* Updated library: SSDF2
+* Fixed bug with downloading videos from servers: OpenLoad, Streamango
+* Fixed some little known bugs
+
+GUI
+* Fixed some little known bugs
+
+# 00.01.07 -> 00.01.08 (2018-06-02)
+
+CORE
+* Added ability to save video source to different formats
+* Added better support of "Show file in directory" action (MacOS, Unix: GNOME desktop)
+* Added format: FLV
+* Added format: AVI
+* Added format: MKV
+* Added format: WMV
+* Added downloader: FLV Downloader
+* Added downloader: AVI Downloader
+* Added downloader: MKV Downloader
+* Added downloader: WMV Downloader
+* Updated downloader: M3U8 Downloader
+* Updated downloader: DASH Downloader
+
+GUI
+* Added window for displaying all supported engines, downloaders, and servers
+* Added window for downloading videos using URL directly from a server
+* Added some GUI tweaks and fixes
+
+# 00.01.06 -> 00.01.07 (2018-05-29)
+
+CORE
+* Added ability to extract multiple video sources from single URL
+* Added supported qualities: 144p, 380p
+* Added server: DailyMotion
+* Added server: DeusServer
+* Added pseudo server (HTMLVideoServer) for obtaining videos from HTML video tags
+* Changed slightly the application's initialization process
+* Moved all implementations of downloaders, servers, and engines to a separate package
+* Updated engine: JenomHD
+* Updated engine: TopSerialyEngine
+
+GUI
+* Added some GUI tweaks and fixes
+
+# 00.01.05 -> 00.01.06 (2018-05-27)
+
+CORE
+* Added M3U8 sources to video sources list (PlayIPrima)
+* Added server: Streamango
+* Added downloader: M3U8 Downloader
+* Updated engine: PlayIPrima
+* Updated engine: TopSerialy
+* Fixed bug with obtaining some video sources (TopSerialy)
+
+GUI
+* Added ability to download multiple episodes and video sources
+* Added ability to cancel and/or remove multiple downloads from the table
+* Added window for configuring the download settings
+* Added some GUI tweaks
+* Fixed bug with hiding the table context menu
+
+# 00.01.04 -> 00.01.05 (2018-05-26)
+
+CORE
+* Changed the way of defining the selection process of programs, episodes, and video sources
+
+GUI
+* Added search box to search in table of results
+* Fixed bug with removing an unbegun download item in the table
+* Fixed bug with displaying the progress window
+
+# 00.01.03 -> 00.01.04 (2018-05-24)
+
+CORE
+* Added information about format and quality to a video source
+* Added a system of servers to download a video when the video is embedded from a server
+* Added engine: TopSerialy
+* Added server: OpenLoad
+* Changed the way of obtaining a video source from a page allowing to have multiple video sources
+
+GUI
+* Added window for selecting video sources
+
+# 00.01.02 -> 00.01.03 (2018-05-23)
+
+GENERAL
+* Changed name from "TV Media Downloader" to "Media Downloader"
+
+CORE
+* Renamed classes and methods to reflect the change of the application's name
+* Added downloaders to download the video instead of the video downloading itself
+* Added downloader: MP4 Downloader
+* Added downloader: DASH Downloader
+* Added engine: JenomHD
+* Fixed bug with exception thrown when closing the application
+* Fixed bug with incorrect download speeds
+
+GUI
+* Added progress window when obtaining data about selected episode
+* Added engines' icons to the engines menu
+* Changed seconds left information to display an integer instead of a decimal
+* Changed application icon
+* Removed engines' versions from the engines menu
+
+# 00.01.01 -> 00.01.02 (2018-05-17)
+
+CORE
+* Updated and improved some web related functions (e.g. for obtaining size of a file at some URL)
+* Fixed bug with canceling a download (PlayIPrima)
+
+GUI
+* Added progress window when loading program's episode
+
+# 00.01.00 -> 00.01.01 (2018-05-11)
+
+CORE
+* Fixed bug with corrupted video at about 8-16 seconds (PlayIPrima)
+
+GUI
+* Engines context menu is now shown above the button, not aside it
+
+# 00.01.00 (2018-05-10)
+
+GENERAL
+* Initial release

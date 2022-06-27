@@ -1,0 +1,426 @@
+{
+	name:    "czech",
+	version: "0007",
+	title:   "Čeština",
+	code:    "ces",
+	windows: {
+		main: {
+			title: "Media Downloader %{version} (%{date})",
+			buttons: {
+				download:          "Stáhnout vše",
+				download_selected: "Stáhnout vybrané",
+				add:               "Přidat",
+				information:       "Informace",
+				configuration:     "Nastavení",
+				messages:          "Zprávy",
+				search:            "Hledat"
+			},
+			tables: {
+				main: {
+					placeholder: "Žádné stahování neprobíhá",
+					columns: {
+						source:   "Zdroj",
+						output:   "Výstupní soubor",
+						progress: "Průběh"
+					}
+				}
+			},
+			context_menus: {
+				table: {
+					items: {
+						terminate_cancel:   "Přerušit",
+						terminate_combined: "Přerušit/Odebrat",
+						terminate_remove:   "Odebrat",
+						show_file:          "Zobarzit soubor",
+						pause:              "Pozastavit",
+						resume:             "Pokračovat"
+					}
+				},
+				add: {
+					items: {
+						media_getter: "Z URL"
+					}
+				},
+				information: {
+					items: {
+						engines:     "Enginy",
+						downloaders: "Stahovače",
+						servers:     "Servery",
+						plugins:     "Pluginy"
+					}
+				}
+			},
+			progress: {
+				cancel:         "Rušení...",
+				initialization: "Inicializace stahování...",
+				plain:          "%{text} %{percent}%%",
+				waiting:        "Čekání...",
+				error:          "Chyba: %{text}",
+				completed:      "Hotovo",
+				stopped:        "Zrušeno",
+				download: {
+					update: "Stahování... %{percent}%% (%{speed}/s, zbývá: %{time_left}s)",
+				},
+				conversion: {
+					update: "Konverze... %{percent}%% (%{time_current}/%{time_total}s)",
+				}
+			},
+			dialogs: {
+				messages_empty: {
+					title: "Žádné zprávy či novinky",
+					text:  "Momentálně nejsou k dispozici žádné zprávy či novinky."
+				}
+			},
+			actions: {
+				messages: {
+					checking: "Kontrolování nových zpráv..."
+				}
+			}
+		},
+		information: {
+			title: "Informace",
+			labels: {
+				no_item_selected: "Není vybrána žádná položka"
+			},
+			tabs: {
+				media_engines: {
+					title: "Mediální enginy",
+					labels: {
+						url:     "URL",
+						title:   "Název",
+						version: "Verze",
+						author:  "Autor"
+					}
+				},
+				downloaders: {
+					title: "Stahovače",
+					labels: {
+						title:   "Název",
+						version: "Verze",
+						author:  "Autor"
+					}
+				},
+				servers: {
+					title: "Servery",
+					labels: {
+						url:     "URL",
+						title:   "Název",
+						version: "Verze",
+						author:  "Autor"
+					}
+				},
+				search_engines: {
+					title: "Vyhledávací enginy",
+					labels: {
+						url:     "URL",
+						title:   "Název",
+						version: "Verze",
+						author:  "Autor"
+					}
+				},
+				media_transformers: {
+					title: "Mediální transformátory",
+					labels: {
+						url:     "URL",
+						title:   "Název",
+						version: "Verze",
+						author:  "Autor"
+					}
+				},
+				plugins: {
+					title: "Pluginy",
+					labels: {
+						name:    "Jméno",
+						title:   "Název",
+						version: "Verze",
+						author:  "Autor",
+						update: {
+							checking_new_version:     "Kontrolování nové verze...",
+							no_new_version_available: "Není k dispozici žádná nová verze",
+							new_version_available:    "Nová verze k dispozici: %{version}",
+							download: {
+								begin:    "Aktualizace %{name}...",
+								progress: "Aktualizace %{name}... %{current} / %{total} (%{percent}%%)",
+								end:      "Aktualizace %{name}... hotovo",
+								error:    "Aktualizace %{name}... chyba (%{message})"
+							}
+						},
+						update_many: {
+							title:     "Aktualizace pluginů",
+							init:      "Aktualizace pluginů...",
+							item_init: "Aktualizace %{name}...",
+							item_done: "Aktualizace %{name}... done",
+							done_any:  "Pluginy byly aktualizovány. Pro provedení změn restartujte aplikaci.",
+							done_none: "Žádné pluginy nebyly aktualizovány.",
+							cancel:    "Aktualizace pluginů zrušena"
+						}
+					},
+					buttons: {
+						update_all:      "Aktualizovat vše",
+						update_selected: "Aktualizovat vybrané"
+					}
+				}
+			}
+		},
+		download_config: {
+			title: "Nastavení stahování",
+			label: {
+				best_quality:       "Vybrat nejlepší možnou kvalitu",
+				preferred_quality:  "Preferovaná kvalita",
+				formats_priority:   "Priorita video formátů",
+				audio_language:     "Jazyk audia",
+				subtitles_language: "Jazyk titulků",
+				output_format:      "Výstupní formát"
+			},
+			button: {
+				ok:     "OK",
+				cancel: "Zavřít",
+				add:    "Přidat",
+				remove: "Odebrat",
+				up:     "Nahoru",
+				down:   "Dolu"
+			},
+			etc: {
+				no_quality:  "Žádná kvalita",
+				no_language: "Žádný jazyk",
+				window_select: {
+					title: "Vyberte hodnotu"
+				}
+			}
+		},
+		progress: {
+			title: "Zpracovávání",
+			buttons: {
+				cancel: "Zrušit"
+			}
+		},
+		table: {
+			title: "Data",
+			tables: {
+				engines: {
+					title:       "Vybrat pořad",
+					placeholder: "Nebyly nalezeny žádné pořady",
+					columns: {
+						title: "Název pořadu"
+					}
+				},
+				episodes: {
+					title:       "Vybrat epizodu",
+					placeholder: "Nebyly nalezeny žádné epizody",
+					columns: {
+						title: "Název epizody"
+					}
+				},
+				media: {
+					title:       "Vybrat video zdroj",
+					placeholder: "Nebyly nalezeny žádné video zdroje",
+					columns: {
+						title:         "Název",
+						format:        "Formát",
+						video_quality: "Video kvalita",
+						audio_quality: "Audio kvalita",
+						language:      "Jazyk",
+						protected:     "Chráněno",
+						video_format:  "Video formát",
+						audio_format:  "Audio formát"
+					},
+					context_menu: {
+						copy_url:        "Zkopírovat URL",
+						copy_source_url: "Zkopírovat zdrojovou URL",
+						media_info:      "Informace o médiu"
+					}
+				}
+			},
+			progress: {
+				programs: "Načítání programů...",
+				episodes: "Načítání epizod...",
+				media:    "Načítání médií..."
+			},
+			dialogs: {
+				save_file: "Vyberte cílový soubor",
+				save_dir:  "Vyberte cílový adresář"
+			},
+			buttons: {
+				close:  "Zavřít",
+				select: "Vybrat",
+				goback: "Zpět"
+			},
+			etc: {
+				prompt_text_search: "Hledat"
+			},
+			errors: {
+				title:            "Chyba",
+				no_item_selected: "Vyberte položku"
+			}
+		},
+		media_getter: {
+			title: "Získat video zdroje",
+			buttons: {
+				get: "Získat"
+			},
+			tables: {
+				media: {
+					title:       "Vybrat video zdroj",
+					placeholder: "Nebyly nalezeny žádné video zdroje",
+					columns: {
+						url:     "URL zdroje",
+						format:  "Formát",
+						quality: "Kvalita"
+					}
+				}
+			},
+			progress: {
+				media: "Načítání video zdrojů..."
+			},
+			errors: {
+				title:       "Chyba",
+				url_empty:   "Zadejte URL adresu",
+				url_invalid: "Neplatná URL adresa"
+			},
+			dialogs: {
+				save_file: "Uložit video",
+				save_dir:  "Uložit videa"
+			}
+		},
+		search: {
+			title: "Hledat",
+			buttons: {
+				search: "Hledat",
+				close:  "Zavřít",
+				select: "Vybrat"
+			},
+			progress: {
+				search: "Vyhledávání...",
+				cancel: "Rušení..."
+			},
+			table: {
+				placeholder: "Žádné výsledky hledání",
+				columns: {
+					source: "Zdroj",
+					icon:   "Ikona",
+					title:  "Název"
+				}
+			}
+		},
+		configuration: {
+			title: "Nastavení",
+			titles: {
+				general: "Obecné",
+				plugins: "Pluginy",
+				naming:  "Pojmenování"
+			},
+			fields: {
+				language:                "Jazyk",
+				theme:                   "Vzhled",
+				autoUpdateCheck:         "Automatická aktualizace",
+				acceleratedDownload:     "Počet vláken na jedno stahování",
+				parallelDownloads:       "Maximální počet souběžných stahování",
+				parallelConversions:     "Maximální počet souběžných konverzí",
+				computeStreamSize:       "Vypočítat velikost datového proudu",
+				requestTimeout:          "Časový limit požadavku",
+				checkResourcesIntegrity: "Kontrola integrity prostředků",
+				plugins: {
+					autoUpdateCheck: "Automatická aktualizace pluginů"
+				},
+				naming: {
+					mediaTitleFormat:            "Formát názvů médií",
+					customMediaTitleFormat:      "Vlastní formát názvů médií",
+					customMediaTitleFormat_help: "Jak napsat vlastní formát názvů médií?"
+				}
+			},
+			buttons: {
+				save:  "Uložit",
+				close: "Zavřít"
+			},
+			dialog: {
+				save_title:   "Nastavení",
+				save_success: "Nastavení bylo uloženo. Možná bude potřeba restartovat aplikaci.",
+				save_fail:    "Nelze uložit nastavení. Prosím, zkuste to znovu."
+			}
+		},
+		message: {
+			title: "Zprávy a novinky",
+			buttons: {
+				show_in_browser: "Otevřít v prohlížeči",
+				mark_as_read:    "Označit jako přečtené"
+			}
+		},
+		media_info: {
+			title:    "Informace o médiu",
+			no_items: "Žádné informace",
+			column: {
+				title: "Název",
+				value: "Hodnota"
+			},
+			context_menu: {
+				copy_data_text:            "Zkopírovat data jako text",
+				copy_data_text_only_name:  "Zkopírovat název",
+				copy_data_text_only_value: "Zkopírovat hodnotu"
+			}
+		},
+		preview: {
+			title: "Náhled"
+		}
+	},
+	errors: {
+		io: {
+			generic: "Nastala chyba I/O"
+		},
+		download: {
+			invalid_arguments: "Neplatná URL adresa nebo cesta souboru",
+			cannot_download:   "Nelze stáhnout soubor: %{url}"
+		},
+		conversion: {
+			cannot_convert: "Nelze zkonvertovat soubor: %{path}"
+		}
+	},
+	generic: {
+		unknown: "Neznámé",
+		true:    "Ano",
+		false:   "Ne",
+		preview: "Náhled",
+		ok:      "OK",
+		language: {
+			auto: "Automaticky"
+		}
+	},
+	media: {
+		protected: {
+			true:  "Ano",
+			false: "Ne"
+		},
+		language: {
+			UNKNOWN:      "Neznámý",
+			ENGLISH:      "Angličtina",
+			CZECH:        "Čeština",
+			SLOVAK:       "Slovenština",
+			UNDETERMINED: "Neurčeno"
+		},
+		format: {
+			UNKNOWN: "Neznámý"
+		},
+		quality: {
+			UNKNOWN:      "Neznámá",
+			P144:         "144p",
+			P240:         "240p",
+			P360:         "360p",
+			P380:         "380p",
+			P480:         "480p",
+			P720:         "720p",
+			P1080:        "1080p",
+			P2160:        "2160p",
+			VIDEO_MIN:    "Minimální",
+			VIDEO_LOW:    "Nízká",
+			VIDEO_MEDIUM: "Střední",
+			VIDEO_HIGH:   "Vysoká",
+			AUDIO_MIN:    "Minimální",
+			AUDIO_LOW:    "Nízká",
+			AUDIO_MEDIUM: "Střední",
+			AUDIO_HIGH:   "Vysoká"
+		},
+		naming: {
+			word_season:  "sezóna",
+			word_episode: "díl"
+		}
+	}
+}

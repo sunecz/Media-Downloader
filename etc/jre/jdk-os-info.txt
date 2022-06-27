@@ -1,0 +1,5 @@
+Operating System | OS_NAME
+----------------------------------
+Linux x64        | linux-x64
+macOS            | osx-x64
+Windows x64      | windows-x64

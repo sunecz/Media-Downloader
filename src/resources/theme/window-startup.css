@@ -1,0 +1,65 @@
+* {
+	-fx-focus-color: transparent;
+}
+
+.progress-bar {
+	-fx-pref-height: 7;
+	-fx-min-height: 7;
+	-fx-max-height: 7;
+	-fx-max-width: Infinity;
+	-fx-border-color: rgba(0, 0, 0, 1);
+	-fx-border-width: 1;
+	-fx-indeterminate-bar-length: 50;
+	-fx-indeterminate-bar-escape: true;
+	-fx-indeterminate-bar-flip: false;
+	-fx-indeterminate-bar-animation-time: 1.5;
+}
+
+.progress-bar > .bar {
+	-fx-background-insets: 0;
+	-fx-background-radius: 0;
+	-fx-background-color: rgba(36, 164, 53, 0.9);
+}
+
+.progress-bar > .track {
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+    -fx-background-color: rgba(0, 0, 0, 0.5);
+}
+
+.lbl-title {
+	-fx-font-family: "HP Simplified Bold";
+	-fx-font-size: 60;
+	-fx-text-alignment: center;
+	-fx-effect: dropshadow(two-pass-box, rgb(0, 0, 0), 4, 4, 0, 0);
+	-fx-text-fill: rgb(40, 118, 50);
+}
+
+.lbl-title .text {
+	-fx-font-smoothing-type: gray;
+}
+
+#lbl-title-0 { -fx-translate-y: -28; }
+#lbl-title-1 { -fx-translate-y: +28; }
+
+#background {
+	-fx-background-color: rgb(0, 0, 0),
+		linear-gradient(
+			from -22.5% -22.5% to 100% 150%,
+			rgb(101, 162, 109)   0%,
+			rgb(101, 162, 109)  48%,
+			rgb( 82, 144,  89)  52%,
+			rgb( 82, 144,  89) 100%
+		);
+	-fx-background-insets: 0, 5;
+}
+
+#box-bottom {
+	-fx-padding: 5 10 10 10;
+	-fx-background-color: rgba(0, 0, 0, 0.3);
+}
+
+#box-bottom #lbl-status {
+	-fx-padding: 0 0 2 0;
+	-fx-text-fill: black;
+}

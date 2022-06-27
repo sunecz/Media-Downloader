@@ -1,0 +1,426 @@
+{
+	name:    "english",
+	version: "0007",
+	title:   "English",
+	code:    "eng",
+	windows: {
+		main: {
+			title: "Media Downloader %{version} (%{date})",
+			buttons: {
+				download:          "Download all",
+				download_selected: "Download selected",
+				add:               "Add",
+				information:       "Information",
+				configuration:     "Configuration",
+				messages:          "Messages",
+				search:            "Search"
+			},
+			tables: {
+				main: {
+					placeholder: "No downloading in progress",
+					columns: {
+						source:   "Source",
+						output:   "Output file",
+						progress: "Progress"
+					}
+				}
+			},
+			context_menus: {
+				table: {
+					items: {
+						terminate_cancel:   "Cancel",
+						terminate_combined: "Cancel/Remove",
+						terminate_remove:   "Remove",
+						show_file:          "Show file",
+						pause:              "Pause",
+						resume:             "Resume"
+					}
+				},
+				add: {
+					items: {
+						media_getter: "From URL"
+					}
+				},
+				information: {
+					items: {
+						engines:     "Engines",
+						downloaders: "Downloaders",
+						servers:     "Servers",
+						plugins:     "Plugins"
+					}
+				}
+			},
+			progress: {
+				cancel:         "Cancelling...",
+				initialization: "Initializating downloading...",
+				plain:          "%{text} %{percent}%%",
+				waiting:        "Waiting...",
+				error:          "Error: %{text}",
+				completed:      "Completed",
+				stopped:        "Cancelled",
+				download: {
+					update: "Downloading... %{percent}%% (%{speed}/s, ETA: %{time_left}s)",
+				},
+				conversion: {
+					update: "Conversion... %{percent}%% (%{time_current}/%{time_total}s)",
+				}
+			},
+			dialogs: {
+				messages_empty: {
+					title: "No messages or news",
+					text:  "No messages or news are currently available."
+				}
+			},
+			actions: {
+				messages: {
+					checking: "Checking new messages..."
+				}
+			}
+		},
+		information: {
+			title: "Information",
+			labels: {
+				no_item_selected: "No item is selected"
+			},
+			tabs: {
+				media_engines: {
+					title: "Media engines",
+					labels: {
+						url:     "URL",
+						title:   "Title",
+						version: "Version",
+						author:  "Author"
+					}
+				},
+				downloaders: {
+					title: "Downloaders",
+					labels: {
+						title:   "Title",
+						version: "Version",
+						author:  "Author"
+					}
+				},
+				servers: {
+					title: "Servers",
+					labels: {
+						url:     "URL",
+						title:   "Title",
+						version: "Version",
+						author:  "Author"
+					}
+				},
+				search_engines: {
+					title: "Search engines",
+					labels: {
+						url:     "URL",
+						title:   "Title",
+						version: "Version",
+						author:  "Author"
+					}
+				},
+				media_transformers: {
+					title: "Media transformers",
+					labels: {
+						url:     "URL",
+						title:   "Title",
+						version: "Version",
+						author:  "Author"
+					}
+				},
+				plugins: {
+					title: "Plugins",
+					labels: {
+						name:    "Name",
+						title:   "Title",
+						version: "Version",
+						author:  "Author",
+						update: {
+							checking_new_version:     "Checking new version...",
+							no_new_version_available: "No new version available",
+							new_version_available:    "New version available: %{version}",
+							download: {
+								begin:    "Updating %{name}...",
+								progress: "Updating %{name}... %{current} / %{total} (%{percent}%%)",
+								end:      "Updating %{name}... done",
+								error:    "Updating %{name}... error (%{message})"
+							}
+						},
+						update_many: {
+							title:     "Plugins update",
+							init:      "Updating plugins...",
+							item_init: "Updating %{name}...",
+							item_done: "Updating %{name}... done",
+							done_any:  "Plugins updated. For changes restart the application.",
+							done_none: "No plugins updated.",
+							cancel:    "Updating plugins canceled"
+						}
+					},
+					buttons: {
+						update_all:      "Update all",
+						update_selected: "Update selected"
+					}
+				}
+			}
+		},
+		download_config: {
+			title: "Download configuration",
+			label: {
+				best_quality:       "Select the best possible quality",
+				preferred_quality:  "Preferred quality",
+				formats_priority:   "Priority of video formats",
+				audio_language:     "Audio language",
+				subtitles_language: "Subtitles language",
+				output_format:      "Output format"
+			},
+			button: {
+				ok:     "OK",
+				cancel: "Cancel",
+				add:    "Add",
+				remove: "Remove",
+				up:     "Up",
+				down:   "Down"
+			},
+			etc: {
+				no_quality:  "No quality",
+				no_language: "No language",
+				window_select: {
+					title: "Select value"
+				}
+			}
+		},
+		progress: {
+			title: "Processing",
+			buttons: {
+				cancel: "Cancel"
+			}
+		},
+		table: {
+			title: "Data",
+			tables: {
+				engines: {
+					title:       "Select TV show",
+					placeholder: "No TV shows were found",
+					columns: {
+						title: "TV Show name"
+					}
+				},
+				episodes: {
+					title:       "Select episode",
+					placeholder: "No episodes were found",
+					columns: {
+						title: "Episode name"
+					}
+				},
+				media: {
+					title:       "Select video source",
+					placeholder: "No video sources were found",
+					columns: {
+						title:         "Title",
+						format:        "Format",
+						video_quality: "Video quality",
+						audio_quality: "Audio quality",
+						language:      "Language",
+						protected:     "Protected",
+						video_format:  "Video format",
+						audio_format:  "Audio format"
+					},
+					context_menu: {
+						copy_url:        "Copy URL",
+						copy_source_url: "Copy source URL",
+						media_info:      "Media information"
+					}
+				}
+			},
+			progress: {
+				programs: "Loading TV shows...",
+				episodes: "Loading episodes...",
+				media:    "Loading media..."
+			},
+			dialogs: {
+				save_file: "Select a destination file",
+				save_dir:  "Select a destination directory"
+			},
+			buttons: {
+				close:  "Close",
+				select: "Select",
+				goback: "Back"
+			},
+			etc: {
+				prompt_text_search: "Search"
+			},
+			errors: {
+				title:            "Error",
+				no_item_selected: "Select item"
+			}
+		},
+		media_getter: {
+			title: "Get video sources",
+			buttons: {
+				get: "Get"
+			},
+			tables: {
+				media: {
+					title:       "Select video source",
+					placeholder: "No video sources were found",
+					columns: {
+						url:     "Source URL",
+						format:  "Format",
+						quality: "Quality"
+					}
+				}
+			},
+			progress: {
+				media: "Loading video sources..."
+			},
+			errors: {
+				title:       "Error",
+				url_empty:   "Enter URL address",
+				url_invalid: "Invalid URL address"
+			},
+			dialogs: {
+				save_file: "Save video",
+				save_dir:  "Save videos"
+			}
+		},
+		search: {
+			title: "Search",
+			buttons: {
+				search: "Search",
+				close:  "Close",
+				select: "Select"
+			},
+			progress: {
+				search: "Searching...",
+				cancel: "Canceling..."
+			},
+			table: {
+				placeholder: "No search results",
+				columns: {
+					source: "Source",
+					icon:   "Icon",
+					title:  "Title"
+				}
+			}
+		},
+		configuration: {
+			title: "Configuration",
+			titles: {
+				general: "General",
+				plugins: "Plugins",
+				naming:  "Naming"
+			},
+			fields: {
+				language:                "Language",
+				theme:                   "Theme",
+				autoUpdateCheck:         "Automatic updates",
+				acceleratedDownload:     "Threads count per single download",
+				parallelDownloads:       "Maximum number of parallel downloads",
+				parallelConversions:     "Maximum number of parallel conversions",
+				computeStreamSize:       "Compute data stream size",
+				requestTimeout:          "Request timeout",
+				checkResourcesIntegrity: "Check integrity of resources",
+				plugins: {
+					autoUpdateCheck: "Automatic plugin updates"
+				},
+				naming: {
+					mediaTitleFormat:            "Media titles format",
+					customMediaTitleFormat:      "Custom media titles format",
+					customMediaTitleFormat_help: "How to write custom media titles format?"
+				}
+			},
+			buttons: {
+				save:  "Save",
+				close: "Close"
+			},
+			dialog: {
+				save_title:   "Configuration",
+				save_success: "Configuration has been saved. You may want to restart the application.",
+				save_fail:    "Cannot save configuration. Please, try that again."
+			}
+		},
+		message: {
+			title: "Messages and news",
+			buttons: {
+				show_in_browser: "Show in browser",
+				mark_as_read:    "Mark as read"
+			}
+		},
+		media_info: {
+			title:    "Media information",
+			no_items: "No information",
+			column: {
+				title: "Title",
+				value: "Value"
+			},
+			context_menu: {
+				copy_data_text:            "Copy data as text",
+				copy_data_text_only_name:  "Copy name",
+				copy_data_text_only_value: "Copy value"
+			}
+		},
+		preview: {
+			title: "Preview"
+		}
+	},
+	errors: {
+		io: {
+			generic: "An I/O error has occurred"
+		},
+		download: {
+			invalid_arguments: "Invalid URL address or file path",
+			cannot_download:   "Unable to download file: %{url}"
+		},
+		conversion: {
+			cannot_convert: "Unable to convert file: %{path}"
+		}
+	},
+	generic: {
+		unknown: "Unknown",
+		true:    "Yes",
+		false:   "No",
+		preview: "Preview",
+		ok:      "OK",
+		language: {
+			auto: "Automatically"
+		}
+	},
+	media: {
+		protected: {
+			true:  "Yes",
+			false: "No"
+		},
+		language: {
+			UNKNOWN:      "Unknown",
+			ENGLISH:      "English",
+			CZECH:        "Czech",
+			SLOVAK:       "Slovak",
+			UNDETERMINED: "Undetermined"
+		},
+		format: {
+			UNKNOWN: "Unknown"
+		},
+		quality: {
+			UNKNOWN:      "Unknown",
+			P144:         "144p",
+			P240:         "240p",
+			P360:         "360p",
+			P380:         "380p",
+			P480:         "480p",
+			P720:         "720p",
+			P1080:        "1080p",
+			P2160:        "2160p",
+			VIDEO_MIN:    "Minimal",
+			VIDEO_LOW:    "Low",
+			VIDEO_MEDIUM: "Medium",
+			VIDEO_HIGH:   "High",
+			AUDIO_MIN:    "Minimal",
+			AUDIO_LOW:    "Low",
+			AUDIO_MEDIUM: "Medium",
+			AUDIO_HIGH:   "High"
+		},
+		naming: {
+			word_season:  "season",
+			word_episode: "episode"
+		}
+	}
+}

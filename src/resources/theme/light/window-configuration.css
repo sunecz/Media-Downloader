@@ -1,0 +1,16 @@
+.tab-pane {
+	-fx-open-tab-animation: NONE;
+	-fx-close-tab-animation: NONE;
+}
+
+.tab-content-area {
+	-fx-padding: 10;
+}
+
+.buttons-panel .buttons-panel-background {
+	-fx-background-color: derive(-fx-base, -15%);
+}
+
+.buttons-panel .buttons-panel-wrapper {
+	-fx-padding: 10;
+}
