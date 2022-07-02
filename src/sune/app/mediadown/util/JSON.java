@@ -21,6 +21,7 @@ import java.util.Deque;
 import java.util.Objects;
 
 import sune.util.ssdf2.SSDCollection;
+import sune.util.ssdf2.SSDCollectionType;
 import sune.util.ssdf2.SSDNode;
 import sune.util.ssdf2.SSDObject;
 import sune.util.ssdf2.SSDType;
@@ -232,12 +233,25 @@ public final class JSON {
 		}
 		
 		private final void addPendingObject() {
-			if(lastStr.isEmpty() || str.length() <= 0)
-				return;
+			if(str.length() <= 0) return;
+			
+			Pair<String, SSDCollection> pair = parents.peekFirst();
+			SSDCollectionType parentType = pair.b.getType();
+			
+			if(lastStr == null || lastStr.isEmpty()) {
+				switch(parentType) {
+					case OBJECT:
+						throw new IllegalStateException("Object's item name cannot be null or empty");
+					case ARRAY:
+						lastStr = "";
+						break;
+				}
+			}
+			
 			SSDObject object = createObject(lastType, lastStr, str.toString());
 			str.setLength(0);
-			Pair<String, SSDCollection> pair = parents.peekFirst();
-			switch(pair.b.getType()) {
+			
+			switch(parentType) {
 				case OBJECT: pair.b.setDirect(lastStr, object); break;
 				case ARRAY:  pair.b.add               (object); break;
 			}
