@@ -291,8 +291,10 @@ public class WorkerUpdatableTask<P, R> {
 	
 	private final WorkerResult<R> checkResult(Supplier<WorkerResult<R>> supplier) throws Exception {
 		WorkerResult<R> result = supplier.get();
-		Exception exception = result.getException();
-		if(exception != null) throw exception;
+		if(result != null) {
+			Exception exception = result.getException();
+			if(exception != null) throw exception;
+		}
 		return result;
 	}
 	
