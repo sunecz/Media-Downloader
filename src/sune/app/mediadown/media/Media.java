@@ -37,7 +37,7 @@ public interface Media {
 				                         .map(OptMapper.of(Media::mapToContainer)
 				                                       .join((v) -> v.allOfType(mediaType))
 				                                       .build()))
-				  .<List<T>>castAny().get();
+				  .<List<T>>castAny().orElseGet(List::of);
 	}
 	
 	public static <T extends Media> List<T> findAllContainersOfType(Media media, MediaType mediaType) {
@@ -49,7 +49,7 @@ public interface Media {
 				                                                     .map((m) -> (Media) m)
 				                                                     .collect(Collectors.toList()))
 				                                       .build()))
-				  .<List<T>>castAny().get();
+				  .<List<T>>castAny().orElseGet(List::of);
 	}
 	
 	public static <T extends Media> T findOfType(Media media, MediaType mediaType) {
