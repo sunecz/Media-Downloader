@@ -9,6 +9,7 @@ import sune.util.ssdf2.SSDCollection;
 import sune.util.ssdf2.SSDF;
 import sune.util.ssdf2.SSDNode;
 import sune.util.ssdf2.SSDObject;
+import sune.util.ssdf2.SSDType;
 
 /**
  * New version of the Translation API's class for translation's data encapsulation.
@@ -53,10 +54,17 @@ public final class Translation {
 	}
 	
 	public final String getSingle(String name) {
-		return data.getString(name, name);
+		SSDObject object = data.getObject(name, null);
+		if(object == null) return name;
+		
+		// Also handle concatenated strings
+		if(object.getType() == SSDType.STRING_VAR) {
+			return SSDObject.ofRaw("", object.toString(false, true)).stringValue();
+		}
+		
+		return object.stringValue();
 	}
 	
-	private static final int  CHAR_THRS = 1 << 16;
 	private static final char CHAR_SIGN = '%';
 	private static final char CHAR_OB   = '{';
 	private static final char CHAR_CB   = '}';
@@ -105,9 +113,7 @@ public final class Translation {
 				wsign = false;
 			}
 			if((bcadd)) {
-				// Optimize the adding of a character
-				if((c < CHAR_THRS)) sbtmp.append((char) c);
-				else                sbtmp.append(Character.toChars(c));
+				sbtmp.appendCodePoint(c);
 			}
 		}
 		// Add the rest of the string
