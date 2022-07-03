@@ -2,6 +2,7 @@ package sune.app.mediadown.convert;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -48,12 +49,18 @@ public final class FFMpegConverter implements Converter {
 	
 	public FFMpegConverter(ConversionConfiguration configuration, MediaFormat formatInput, MediaFormat formatOutput,
 			Path fileOutput, Path... filesInput) {
-		this.configuration = configuration;
-		this.formatInput = formatInput;
-		this.formatOutput = formatOutput;
-		this.fileOutput = fileOutput;
-		this.filesInput = filesInput;
+		this.configuration = Objects.requireNonNull(configuration);
+		this.formatInput = Objects.requireNonNull(formatInput);
+		this.formatOutput = Objects.requireNonNull(formatOutput);
+		this.fileOutput = Objects.requireNonNull(fileOutput);
+		this.filesInput = checkNonEmptyArray(filesInput);
 		manager.setTracker(new WaitTracker());
+	}
+	
+	private static final <T> T[] checkNonEmptyArray(T[] array) {
+		if(array == null || array.length <= 0)
+			throw new IllegalArgumentException();
+		return array;
 	}
 	
 	private final void ffmpegOutputHandler(String line) {
@@ -65,25 +72,19 @@ public final class FFMpegConverter implements Converter {
 	
 	private final boolean convertOp(MediaFormat formatInput, MediaFormat formatOutput, Path fileOutput, Path... filesInput)
 			throws Exception {
-		if((formatInput == null || formatOutput == null
-				|| fileOutput == null || filesInput == null || filesInput.length <= 0))
-			throw new IllegalArgumentException();
 		try {
 			process = FFMpeg.createAsynchronousProcess(this::ffmpegOutputHandler);
-			if((process == null))
+			if(process == null)
 				throw new IllegalStateException("Unable to create conversion process.");
 			Path parentDir = filesInput[0].getParent();
 			String command = FFMpegConversionCommand.get(formatInput, formatOutput, fileOutput, filesInput);
 			process.execute(parentDir, command);
 			return process.waitFor() == 0;
+		} catch(Exception ex) {
+			eventRegistry.call(ConversionEvent.ERROR, new Pair<>(this, ex));
+			throw ex; // Forward the exception
 		} finally {
-			if((process != null)) {
-				try {
-					process.close();
-				} catch(Exception ex) {
-					// Ignore
-				}
-			}
+			stop();
 		}
 	}
 	
@@ -96,12 +97,13 @@ public final class FFMpegConverter implements Converter {
 			manager.setUpdateListener(() -> eventRegistry.call(ConversionEvent.UPDATE, new Pair<>(this, manager)));
 			conversionTracker = new ConversionTracker(configuration.getDuration());
 			manager.setTracker(conversionTracker);
-			if((convertOp(formatInput, formatOutput, fileOutput, filesInput))) {
+			if(convertOp(formatInput, formatOutput, fileOutput, filesInput)) {
 				Path dest = configuration.getDestination();
 				NIO.deleteFile(dest);
 				NIO.move(fileOutput, dest);
 				done.set(true);
 			} else {
+				// TODO: Move exception up, do not translate or display it here
 				Translation translation = MediaDownloader.translation();
 				String paths = Utils.join(", ", Utils.toList(filesInput).stream()
 					.map(Path::toAbsolutePath).map(Path::toString).toArray(String[]::new));
@@ -119,27 +121,34 @@ public final class FFMpegConverter implements Converter {
 	
 	@Override
 	public void stop() throws Exception {
+		if(stopped.get()) return; // Nothing to do
 		running.set(false);
-		if((process != null))
+		paused .set(false);
+		if(process != null)
 			process.close();
-		if(!done.get()) stopped.set(true);
+		if(!done.get())
+			stopped.set(true);
 		eventRegistry.call(ConversionEvent.END, this);
 	}
 	
 	@Override
 	public void pause() {
-		if((process != null))
+		if(paused.get()) return; // Nothing to do
+		if(process != null)
 			ProcessUtils.pause(process.getProcess());
 		running.set(false);
 		paused .set(true);
+		eventRegistry.call(ConversionEvent.PAUSE, this);
 	}
 	
 	@Override
 	public void resume() {
-		if((process != null))
+		if(!paused.get()) return; // Nothing to do
+		if(process != null)
 			ProcessUtils.resume(process.getProcess());
 		paused .set(false);
 		running.set(true);
+		eventRegistry.call(ConversionEvent.RESUME, this);
 	}
 	
 	@Override
