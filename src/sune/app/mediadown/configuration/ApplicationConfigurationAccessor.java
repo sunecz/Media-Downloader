@@ -33,6 +33,8 @@ public interface ApplicationConfigurationAccessor {
 	public static final String PROPERTY_NAMING_MEDIA_TITLE_FORMAT = "naming.mediaTitleFormat";
 	/** @since 00.02.05 */
 	public static final String PROPERTY_NAMING_CUSTOM_MEDIA_TITLE_FORMAT = "naming.customMediaTitleFormat";
+	/** @since 00.02.07 */
+	public static final String PROPERTY_USE_PRE_RELEASE_VERSIONS = "usePreReleaseVersions";
 	
 	Version version();
 	Language language();
@@ -55,6 +57,8 @@ public interface ApplicationConfigurationAccessor {
 	MediaTitleFormat mediaTitleFormat();
 	/** @since 00.02.05 */
 	String customMediaTitleFormat();
+	/** @since 00.02.07 */
+	boolean usePreReleaseVersions();
 	
 	SSDCollection data();
 }

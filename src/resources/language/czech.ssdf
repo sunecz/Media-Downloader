@@ -318,6 +318,7 @@
 				computeStreamSize:       "Vypočítat velikost datového proudu",
 				requestTimeout:          "Časový limit požadavku",
 				checkResourcesIntegrity: "Kontrola integrity prostředků",
+				usePreReleaseVersions:   "Používat předběžné verze",
 				plugins: {
 					autoUpdateCheck: "Automatická aktualizace pluginů"
 				},

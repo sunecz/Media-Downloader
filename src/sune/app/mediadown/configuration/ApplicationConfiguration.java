@@ -52,6 +52,8 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 	private MediaTitleFormat naming_mediaTitleFormat;
 	/** @since 00.02.05 */
 	private String naming_customMediaTitleFormat;
+	/** @since 00.02.07 */
+	private boolean usePreReleaseVersions;
 	
 	private ApplicationConfiguration(Path path, String name, SSDCollection data, Map<String, ConfigurationProperty<?>> properties) {
 		super(name, data, properties);
@@ -129,6 +131,8 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 		ConfigurationWindow.registerFormField(PROPERTY_NAMING_CUSTOM_MEDIA_TITLE_FORMAT,
 		                                      TextFieldMediaTitleFormat::new);
 		
+		builder.addProperty(ConfigurationProperty.ofBoolean(PROPERTY_USE_PRE_RELEASE_VERSIONS).withDefaultValue(false));
+		
 		return builder;
 	}
 	
@@ -169,6 +173,8 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 		naming_mediaTitleFormat = Optional.<NamedMediaTitleFormat>ofNullable(typeValue(PROPERTY_NAMING_MEDIA_TITLE_FORMAT))
 				                          .map(NamedMediaTitleFormat::format)
 				                          .orElseGet(MediaTitleFormats::ofDefault);
+		
+		usePreReleaseVersions = booleanValue(PROPERTY_USE_PRE_RELEASE_VERSIONS);
 	}
 	
 	/** @since 00.02.05 */
@@ -259,6 +265,12 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 	@Override
 	public String customMediaTitleFormat() {
 		return naming_customMediaTitleFormat;
+	}
+	
+	/** @since 00.02.07 */
+	@Override
+	public boolean usePreReleaseVersions() {
+		return usePreReleaseVersions;
 	}
 	
 	public static final class Builder extends Configuration.Builder implements ApplicationConfigurationAccessor {
@@ -366,6 +378,12 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 		@Override
 		public String customMediaTitleFormat() {
 			return accessor().stringValue(PROPERTY_NAMING_CUSTOM_MEDIA_TITLE_FORMAT);
+		}
+		
+		/** @since 00.02.07 */
+		@Override
+		public boolean usePreReleaseVersions() {
+			return accessor().booleanValue(PROPERTY_USE_PRE_RELEASE_VERSIONS);
 		}
 		
 		@Override

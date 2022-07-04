@@ -119,7 +119,7 @@ public final class MediaDownloader {
 	private static final boolean GENERATE_LISTS = false;
 	
 	public static final String  TITLE   = "Media Downloader";
-	public static final Version VERSION = Version.fromString("00.02.07-dev.0");
+	public static final Version VERSION = Version.fromString("00.02.07-dev.1");
 	public static final String  DATE    = "2022-07-05";
 	public static final String  AUTHOR  = "Sune";
 	public static final Image   ICON    = icon("app.png");
@@ -128,7 +128,6 @@ public final class MediaDownloader {
 	private static final String URL_BASE_VER = URL_BASE + "ver/";
 	private static final String URL_BASE_LIB = URL_BASE + "lib/";
 	private static final String URL_BASE_DAT = URL_BASE + "dat/";
-	private static final String URL_FILE_VER = URL_BASE_VER + "version";
 	
 	private static ApplicationConfigurationWrapper configuration;
 	private static boolean applicationUpdated;
@@ -771,9 +770,18 @@ public final class MediaDownloader {
 		private static final StringReceiver receiver = InitializationStates::setText;
 		private static final String NAME_JAR = "media-downloader.jar";
 		private static final String NAME_JAR_NEW = "media-downloader-new.jar";
-		private static final String NAME_JAR_REMOTE = "application.jar";
 		
 		private static String newestVersion;
+		
+		/** @since 00.02.07 */
+		private static final String versionFileURI() {
+			return URL_BASE_VER + "version" + (configuration.usePreReleaseVersions() ? "_pre" : "");
+		}
+		
+		/** @since 00.02.07 */
+		private static final String remoteJARFileName() {
+			return (configuration.usePreReleaseVersions() ? "pre-release/" : "") + "application.jar";
+		}
 		
 		public static final boolean isAutoUpdateCheckEnabled() {
 			return configuration.isAutoUpdateCheck();
@@ -814,7 +822,7 @@ public final class MediaDownloader {
 						NIO.deleteFile(newJAR);
 					} else {
 						String newestVersion = newestVersion();
-						String newestVersionURL = URL_BASE_VER + newestVersion + "/" + NAME_JAR_REMOTE;
+						String newestVersionURL = URL_BASE_VER + newestVersion + "/" + remoteJARFileName();
 						// Create the download listener using the new event registry support
 						CompatibilityEventRegistry<FileDownloadListener> eventRegistry
 							= EventSupport.compatibilityEventRegistry(FileDownloadListener.class);
@@ -877,7 +885,7 @@ public final class MediaDownloader {
 			if((newestVersion == null
 					// The version can be obtained again once set, if needed
 					|| forceGet)) {
-				Version version = Version.fromURL(URL_FILE_VER, TIMEOUT);
+				Version version = Version.fromURL(versionFileURI(), TIMEOUT);
 				newestVersion   = version != null ? version.string() : null;
 			}
 			return newestVersion;
@@ -1970,6 +1978,8 @@ public final class MediaDownloader {
 		@Override public MediaTitleFormat mediaTitleFormat() { return accessor().mediaTitleFormat(); }
 		/** @since 00.02.05 */
 		@Override public String customMediaTitleFormat() { return accessor().customMediaTitleFormat(); }
+		/** @since 00.02.07 */
+		@Override public boolean usePreReleaseVersions() { return accessor().usePreReleaseVersions(); }
 		@Override public SSDCollection data() { return accessor().data(); }
 		
 		public ApplicationConfiguration configuration() { return configuration; }
