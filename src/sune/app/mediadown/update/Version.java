@@ -77,6 +77,11 @@ public final class Version implements Comparable<Version> {
 		return Formatter.instance().release(this, isCompact);
 	}
 	
+	/** @since 00.02.07 */
+	public Version release() {
+		return this == UNKNOWN ? UNKNOWN : new Version(VersionType.RELEASE, major, minor, patch, 0);
+	}
+	
 	public VersionType type() {
 		return type;
 	}
@@ -164,7 +169,7 @@ public final class Version implements Comparable<Version> {
 	/** @since 00.02.07 */
 	private static final class Parser {
 		
-		private static final Pattern REGEX = Pattern.compile("^(\\d+)\\.(\\d+)\\.(\\d+)(?:-([a-z]+)(?:\\.(\\d+))?)?$");
+		private static final Pattern REGEX = Pattern.compile("^(\\d+)(?:\\.(\\d+)\\.(\\d+)(?:-([a-z]+)(?:\\.(\\d+))?)?)?$");
 		private static Parser INSTANCE;
 		
 		// Forbid anyone to create an instance of this class
@@ -186,8 +191,8 @@ public final class Version implements Comparable<Version> {
 				return UNKNOWN;
 			
 			int major = Integer.valueOf(matcher.group(1));
-			int minor = Integer.valueOf(matcher.group(2));
-			int patch = Integer.valueOf(matcher.group(3));
+			int minor = Optional.ofNullable(matcher.group(2)).map(Integer::valueOf).orElse(0);
+			int patch = Optional.ofNullable(matcher.group(3)).map(Integer::valueOf).orElse(0);
 			VersionType type = Optional.ofNullable(matcher.group(4)).map(VersionType::from).orElse(VersionType.RELEASE);
 			int value = Optional.ofNullable(matcher.group(5)).map(Integer::valueOf).orElse(0);
 			return new Version(type, major, minor, patch, value);

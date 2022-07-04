@@ -32,15 +32,15 @@ public final class PluginUpdater {
 			// Request failed, nothing else to do
 			return versionPlugin;
 		}
-		Version versionApp = MediaDownloader.VERSION;
+		Version localAppVersion = MediaDownloader.VERSION.release();
 		try(BufferedReader reader = new BufferedReader(new StringReader(response.content))) {
 			String line;
 			while((line = reader.readLine()) != null) {
 				if((line.isEmpty())) continue;
 				int index = line.indexOf(':');
 				if((index >= 0)) {
-					Version verApp = Version.fromString(line.substring(0, index));
-					if((versionApp.compareTo(verApp) >= 0)) {
+					Version remoteAppVersion = Version.fromString(line.substring(0, index)).release();
+					if((localAppVersion.compareTo(remoteAppVersion) >= 0)) {
 						versionPlugin = Version.fromString(line.substring(index + 1));
 					} else break;
 				}
@@ -73,10 +73,13 @@ public final class PluginUpdater {
 		return versionURL(file, newestVersion(file));
 	}
 	
+	/** @since 00.02.07 */
+	public static final String pluginVersionString(Version version) {
+		return version == Version.UNKNOWN ? version.string() : String.format("%04d", version.major());
+	}
+	
 	public static final String versionURL(String baseURL, Version version) {
-		return version != Version.UNKNOWN
-					? Utils.urlFixSlashes(Utils.urlConcat(baseURL, version.string()))
-					: Version.UNKNOWN.string(); // Do not return null
+		return Utils.urlFixSlashes(Utils.urlConcat(baseURL, pluginVersionString(version)));
 	}
 	
 	public static final String versionURL(PluginFile file, Version version) {
