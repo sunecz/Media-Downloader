@@ -28,7 +28,7 @@ import javafx.scene.control.TableColumn.SortType;
 import javafx.scene.control.TableView;
 import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.download.MediaDownloadConfiguration;
-import sune.app.mediadown.engine.MediaEngine;
+import sune.app.mediadown.gui.Window;
 import sune.app.mediadown.gui.window.DownloadConfigurationWindow;
 import sune.app.mediadown.gui.window.DownloadConfigurationWindow.DownloadConfiguration;
 import sune.app.mediadown.gui.window.DownloadConfigurationWindow.Feature;
@@ -44,6 +44,7 @@ import sune.app.mediadown.media.AudioMedia;
 import sune.app.mediadown.media.AudioMediaBase;
 import sune.app.mediadown.media.Media;
 import sune.app.mediadown.media.MediaContainer;
+import sune.app.mediadown.media.MediaFilter;
 import sune.app.mediadown.media.MediaFormat;
 import sune.app.mediadown.media.MediaLanguage;
 import sune.app.mediadown.media.MediaQuality;
@@ -235,7 +236,7 @@ public final class TablePipelineUtils {
 		return new ResolvedMedia(media, dest, mediaConfig);
 	}
 	
-	public static final <T> List<ResolvedMedia> resolveMedia(TableWindow window, MediaEngine engine,
+	public static final <T> List<ResolvedMedia> resolveMedia(TableWindow window,
 			List<Pair<T, Media>> result, Function<Pair<T, Media>, String> fTitle) {
 		List<ResolvedMedia> resolved = new ArrayList<>();
 		Translation translation = window.getTranslation();
@@ -270,12 +271,11 @@ public final class TablePipelineUtils {
 					.title(translation.getSingle("dialogs.save_file"))
 					.filters(ExtensionFilters.outputMediaFormats())
 					.build();
-				for(Pair<T, Media> pair : result) {
-					String title = Utils.validateFileName(Utils.getOrDefault(pair.b.metadata().title(), fTitle.apply(pair)));
-					Path path;
-					if((path = chooser.fileName(title).showSave()) != null) {
-						resolved.add(resolveSingleMedia(pair.b, path, subtitlesLanguages));
-					}
+				Pair<T, Media> pair = result.get(0);
+				String title = Utils.validateFileName(Utils.getOrDefault(pair.b.metadata().title(), fTitle.apply(pair)));
+				Path path;
+				if((path = chooser.fileName(title).showSave()) != null) {
+					resolved.add(resolveSingleMedia(pair.b, path, subtitlesLanguages));
 				}
 			} else {
 				Choosers.OfDirectory.Chooser chooser = Choosers.OfDirectory.configuredBuilder()
@@ -295,6 +295,62 @@ public final class TablePipelineUtils {
 						usedTitles.put(title, counter + 1);
 						Path path = dir.resolve(Utils.addFormatExtension(checkedTitle, outputFormat));
 						resolved.add(resolveSingleMedia(pair.b, path, subtitlesLanguages));
+					}
+				}
+			}
+		});
+		return resolved;
+	}
+	
+	/** @since 00.02.07 */
+	public static final <T> List<ResolvedMedia> resolveMediaMultiple(Window<?> window, List<Pair<T, List<Media>>> result) {
+		List<ResolvedMedia> resolved = new ArrayList<>();
+		Translation translation = window.getTranslation();
+		FXUtils.fxTaskValue(() -> {
+			DownloadConfigurationWindow wdc = MediaDownloader.window(DownloadConfigurationWindow.NAME);
+			List<Media> allMedia = result.stream().flatMap((p) -> p.b.stream()).collect(Collectors.toList());
+			Set<FeatureValue> featureValues = TablePipelineUtils.prepareDownloadConfigurationFeatures(allMedia, Feature.ALL_FEATURES);
+			wdc.showWithFeatureValuesAndWait(window, featureValues);
+			DownloadConfiguration config = wdc.result();
+			if(config == null) return; // Configuration window closed
+			
+			MediaLanguage[] subtitlesLanguages = config.subtitlesLanguages().toArray(MediaLanguage[]::new);
+			
+			if(result.size() == 1) {
+				Choosers.OfFile.Chooser chooser = Choosers.OfFile.configuredBuilder()
+					.parent(window)
+					.title(translation.getSingle("dialogs.save_file"))
+					.filters(ExtensionFilters.outputMediaFormats())
+					.build();
+				Pair<T, List<Media>> pair = result.get(0);
+				Media media = config.mediaFilter().filter(pair.b);
+				if(media == null) return;
+				String title = Utils.validateFileName(media.metadata().title());
+				Path path;
+				if((path = chooser.fileName(title).showSave()) != null) {
+					resolved.add(resolveSingleMedia(media, path, subtitlesLanguages));
+				}
+			} else {
+				Choosers.OfDirectory.Chooser chooser = Choosers.OfDirectory.configuredBuilder()
+					.parent(window)
+					.title(translation.getSingle("dialogs.save_dir"))
+					.build();
+				MediaFilter mediaFilter = config.mediaFilter();
+				MediaFormat outputFormat = config.outputFormat();
+				Path dir;
+				if((dir = chooser.show()) != null) {
+					Map<String, Integer> usedTitles = new HashMap<>();
+					int counter;
+					for(Pair<T, List<Media>> pair : result) {
+						Media media = mediaFilter.filter(pair.b);
+						if(media == null) return;
+						String title = Utils.validateFileName(media.metadata().title());
+						String checkedTitle = title;
+						if((counter = usedTitles.getOrDefault(title, 0)) > 0)
+							checkedTitle += String.format(" (%d)", counter);
+						usedTitles.put(title, counter + 1);
+						Path path = dir.resolve(Utils.addFormatExtension(checkedTitle, outputFormat));
+						resolved.add(resolveSingleMedia(media, path, subtitlesLanguages));
 					}
 				}
 			}

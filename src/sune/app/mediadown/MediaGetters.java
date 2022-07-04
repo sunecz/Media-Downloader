@@ -1,8 +1,10 @@
 package sune.app.mediadown;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import sune.app.mediadown.engine.MediaEngine;
@@ -15,6 +17,11 @@ public final class MediaGetters {
 	
 	// Forbid anyone to create an instance of this class
 	private MediaGetters() {
+	}
+	
+	/** @since 00.02.07 */
+	public static final MediaGetter fromURI(URI uri) {
+		return fromURL(Objects.requireNonNull(uri).toString());
 	}
 	
 	public static final MediaGetter fromURL(String url) {

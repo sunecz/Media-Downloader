@@ -32,7 +32,7 @@ public final class MediaPipelineTask extends MediaEnginePipelineTaskBase<Media, 
 	
 	@Override
 	protected final ResolvedMediaPipelineResult getResult(TableWindow window, MediaEngine engine, List<Pair<Episode, Media>> result) {
-		List<ResolvedMedia> resultResolved = TablePipelineUtils.resolveMedia(window, engine, result, (p) -> p.a.title());
+		List<ResolvedMedia> resultResolved = TablePipelineUtils.resolveMedia(window, result, (p) -> p.a.title());
 		return new ResolvedMediaPipelineResult(window, resultResolved);
 	}
 	

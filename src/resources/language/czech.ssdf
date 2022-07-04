@@ -167,7 +167,7 @@
 			label: {
 				best_quality:       "Vybrat nejlepší možnou kvalitu",
 				preferred_quality:  "Preferovaná kvalita",
-				formats_priority:   "Priorita video formátů",
+				formats_priority:   "Priorita formátů médií",
 				audio_language:     "Jazyk audia",
 				subtitles_language: "Jazyk titulků",
 				output_format:      "Výstupní formát"
@@ -212,8 +212,8 @@
 					}
 				},
 				media: {
-					title:       "Vybrat video zdroj",
-					placeholder: "Nebyly nalezeny žádné video zdroje",
+					title:       "Vybrat mediální zdroj",
+					placeholder: "Nebyly nalezeny žádné mediální zdroje",
 					columns: {
 						title:         "Název",
 						format:        "Formát",
@@ -234,7 +234,7 @@
 			progress: {
 				programs: "Načítání programů...",
 				episodes: "Načítání epizod...",
-				media:    "Načítání médií..."
+				media:    "Načítání mediálních zdrojů..."
 			},
 			dialogs: {
 				save_file: "Vyberte cílový soubor",
@@ -254,23 +254,15 @@
 			}
 		},
 		media_getter: {
-			title: "Získat video zdroje",
+			title: "Získat mediální zdroj",
 			buttons: {
 				get: "Získat"
 			},
-			tables: {
-				media: {
-					title:       "Vybrat video zdroj",
-					placeholder: "Nebyly nalezeny žádné video zdroje",
-					columns: {
-						url:     "URL zdroje",
-						format:  "Formát",
-						quality: "Kvalita"
-					}
-				}
+			placeholder: {
+				urls: "Zadejte jednu, nebo více URL, jedna na řádku"
 			},
 			progress: {
-				media: "Načítání video zdrojů..."
+				media: "Načítání mediálních zdrojů..."
 			},
 			errors: {
 				title:       "Chyba",
@@ -278,8 +270,11 @@
 				url_invalid: "Neplatná URL adresa"
 			},
 			dialogs: {
-				save_file: "Uložit video",
-				save_dir:  "Uložit videa"
+				save_file: "Vyberte cílový soubor",
+				save_dir:  "Vyberte cílový adresář"
+			},
+			getter: {
+				automatic: "Automaticky"
 			}
 		},
 		search: {

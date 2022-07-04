@@ -167,7 +167,7 @@
 			label: {
 				best_quality:       "Select the best possible quality",
 				preferred_quality:  "Preferred quality",
-				formats_priority:   "Priority of video formats",
+				formats_priority:   "Priority of media formats",
 				audio_language:     "Audio language",
 				subtitles_language: "Subtitles language",
 				output_format:      "Output format"
@@ -212,8 +212,8 @@
 					}
 				},
 				media: {
-					title:       "Select video source",
-					placeholder: "No video sources were found",
+					title:       "Select media source",
+					placeholder: "No media sources were found",
 					columns: {
 						title:         "Title",
 						format:        "Format",
@@ -254,23 +254,15 @@
 			}
 		},
 		media_getter: {
-			title: "Get video sources",
+			title: "Get media sources",
 			buttons: {
 				get: "Get"
 			},
-			tables: {
-				media: {
-					title:       "Select video source",
-					placeholder: "No video sources were found",
-					columns: {
-						url:     "Source URL",
-						format:  "Format",
-						quality: "Quality"
-					}
-				}
+			placeholder: {
+				urls: "Input one or more URLs, one per line"
 			},
 			progress: {
-				media: "Loading video sources..."
+				media: "Loading media sources..."
 			},
 			errors: {
 				title:       "Error",
@@ -278,8 +270,11 @@
 				url_invalid: "Invalid URL address"
 			},
 			dialogs: {
-				save_file: "Save video",
-				save_dir:  "Save videos"
+				save_file: "Select a destination file",
+				save_dir:  "Select a destination directory"
+			},
+			getter: {
+				automatic: "Automatically"
 			}
 		},
 		search: {

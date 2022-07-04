@@ -33,7 +33,7 @@ public final class MediaOnlyPipelineTask extends MediaEnginePipelineTaskBase<Med
 	
 	@Override
 	protected final ResolvedMediaPipelineResult getResult(TableWindow window, MediaEngine engine, List<Pair<MediaGetter, Media>> result) {
-		List<ResolvedMedia> resultResolved = TablePipelineUtils.resolveMedia(window, engine, result,
+		List<ResolvedMedia> resultResolved = TablePipelineUtils.resolveMedia(window, result,
 			(p) -> Utils.fileNameNoType(Utils.url(p.b.uri()).toExternalForm()));
 		return new ResolvedMediaPipelineResult(window, resultResolved);
 	}
