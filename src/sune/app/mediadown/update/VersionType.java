@@ -1,39 +1,39 @@
 package sune.app.mediadown.update;
 
+import java.util.stream.Stream;
+
 public enum VersionType {
 	
 	// Do not change the order!
 	// The order is used when comparing two versions.
 	
-	ALPHA      ("alpha"),
-	BETA       ("beta"),
-	RELEASE    (""),
-	DEVELOPMENT("dev");
+	/** @since 00.02.07 */
+	UNKNOWN          (null),
+	DEVELOPMENT      ("dev"),
+	ALPHA            ("alpha"),
+	BETA             ("beta"),
+	/** @since 00.02.07 */
+	PRE_RELEASE      ("pre"),
+	/** @since 00.02.07 */
+	RELEASE_CANDIDATE("rc"),
+	RELEASE          ("");
 	
 	private final String string;
+	
 	private VersionType(String string) {
 		this.string = string;
 	}
 	
 	public static final VersionType from(String string) {
-		for(VersionType type : values()) {
-			if((type == RELEASE))
-				// skip the release version type, since it has an empty string
-				continue;
-			String strType = type.getString();
-			if((string.indexOf(strType)) == 0) {
-				return type;
-			}
-		}
-		// if nothing is matched, return the release version type
-		return RELEASE;
+		if(string == null || string.isEmpty())
+			return UNKNOWN;
+		
+		return Stream.of(values())
+					.filter((v) -> v.string != null && string.indexOf(v.string) == 0)
+					.findFirst().orElse(UNKNOWN);
 	}
 	
-	public static final String remove(String string, VersionType type) {
-		return string.substring(type.getString().length());
-	}
-	
-	public String getString() {
+	public String string() {
 		return string;
 	}
 }

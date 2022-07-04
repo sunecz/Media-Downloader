@@ -32,7 +32,7 @@ public final class PluginUpdater {
 			// Request failed, nothing else to do
 			return versionPlugin;
 		}
-		Version versionApp = Version.fromString(MediaDownloader.VERSION);
+		Version versionApp = MediaDownloader.VERSION;
 		try(BufferedReader reader = new BufferedReader(new StringReader(response.content))) {
 			String line;
 			while((line = reader.readLine()) != null) {
@@ -75,8 +75,8 @@ public final class PluginUpdater {
 	
 	public static final String versionURL(String baseURL, Version version) {
 		return version != Version.UNKNOWN
-					? Utils.urlFixSlashes(Utils.urlConcat(baseURL, version.toString()))
-					: Version.UNKNOWN.toString(); // Do not return null
+					? Utils.urlFixSlashes(Utils.urlConcat(baseURL, version.string()))
+					: Version.UNKNOWN.string(); // Do not return null
 	}
 	
 	public static final String versionURL(PluginFile file, Version version) {

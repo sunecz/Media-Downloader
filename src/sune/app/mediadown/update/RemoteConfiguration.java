@@ -16,52 +16,6 @@ import sune.app.mediadown.util.Pair;
 
 public final class RemoteConfiguration {
 	
-	public static final class Property {
-		
-		private final String value;
-		private final Set<String> flags;
-		
-		public Property(String value, Set<String> flags) {
-			this.value = value;
-			this.flags = flags;
-		}
-		
-		public String value() {
-			return value;
-		}
-		
-		public Set<String> flags() {
-			return flags;
-		}
-	}
-	
-	private static final class ValueHolder {
-		
-		private final String value;
-		private final Map<String, Property> props;
-		
-		public ValueHolder(String value) {
-			this(value, null);
-		}
-		
-		public ValueHolder(String value, Map<String, Property> properties) {
-			this.value = value;
-			this.props = properties;
-		}
-		
-		public boolean isSimple() {
-			return props == null;
-		}
-		
-		public String value() {
-			return value;
-		}
-		
-		public Map<String, Property> properties() {
-			return props;
-		}
-	}
-	
 	// Characters
 	private static final char CHAR_DELIMITER_NAME  = ':';
 	private static final char CHAR_DELIMITER_VALUE = ';';
@@ -155,5 +109,51 @@ public final class RemoteConfiguration {
 		return (holder = values.get(name)) != null && !holder.isSimple()
 					? holder.properties().get(propertyName)
 					: null;
+	}
+	
+	public static final class Property {
+		
+		private final String value;
+		private final Set<String> flags;
+		
+		public Property(String value, Set<String> flags) {
+			this.value = value;
+			this.flags = flags;
+		}
+		
+		public String value() {
+			return value;
+		}
+		
+		public Set<String> flags() {
+			return flags;
+		}
+	}
+	
+	private static final class ValueHolder {
+		
+		private final String value;
+		private final Map<String, Property> props;
+		
+		public ValueHolder(String value) {
+			this(value, null);
+		}
+		
+		public ValueHolder(String value, Map<String, Property> properties) {
+			this.value = value;
+			this.props = properties;
+		}
+		
+		public boolean isSimple() {
+			return props == null;
+		}
+		
+		public String value() {
+			return value;
+		}
+		
+		public Map<String, Property> properties() {
+			return props;
+		}
 	}
 }

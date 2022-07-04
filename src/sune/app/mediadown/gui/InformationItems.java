@@ -271,7 +271,7 @@ public final class InformationItems {
 			worker.submit(() -> {
 				Version newVersion;
 				String text = (newVersion = PluginUpdater.checkVersion(plugin)) != null
-						? translation.getSingle("new_version_available", "version", newVersion.toString())
+						? translation.getSingle("new_version_available", "version", newVersion.string())
 						: translation.getSingle("no_new_version_available");
 				FXUtils.thread(() -> lblInfo.setText(text));
 			});

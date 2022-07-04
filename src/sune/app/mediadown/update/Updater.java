@@ -35,13 +35,7 @@ public final class Updater {
 	}
 	
 	public static final boolean compare(String currentVersion, String newestVersion) {
-		Version verC = Version.fromString(currentVersion);
-		Version verN = Version.fromString(newestVersion);
-		int ordN = verN.getType().ordinal();
-		int ordC = verC.getType().ordinal();
-		int valN = verN.getValue();
-		int valC = verC.getValue();
-		return ordN == ordC ? valN > valC : ordN > ordC;
+		return Version.fromString(currentVersion).compareTo(Version.fromString(newestVersion)) < 0;
 	}
 	
 	private static final boolean shouldDownloadEntry(FileCheckerEntry entry, String requiredHash) {

@@ -23,7 +23,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.logging.Level;
 
@@ -119,11 +118,11 @@ public final class MediaDownloader {
 	private static final boolean DEBUG = false;
 	private static final boolean GENERATE_LISTS = false;
 	
-	public static final String TITLE   = "Media Downloader";
-	public static final String VERSION = "00.02.06";
-	public static final String DATE    = "2022-06-16";
-	public static final String AUTHOR  = "Sune";
-	public static final Image  ICON    = icon("app.png");
+	public static final String  TITLE   = "Media Downloader";
+	public static final Version VERSION = Version.fromString("00.02.07-dev.0");
+	public static final String  DATE    = "2022-07-05";
+	public static final String  AUTHOR  = "Sune";
+	public static final Image   ICON    = icon("app.png");
 	
 	private static final String URL_BASE     = "https://app.sune.tech/mediadown/";
 	private static final String URL_BASE_VER = URL_BASE + "ver/";
@@ -867,7 +866,7 @@ public final class MediaDownloader {
 		
 		public static final boolean checkVersion() {
 			String newestVersion = newestVersion();
-			return newestVersion != null && Updater.compare(VERSION, newestVersion);
+			return newestVersion != null && Updater.compare(VERSION.string(), newestVersion);
 		}
 		
 		public static final String newestVersion() {
@@ -879,7 +878,7 @@ public final class MediaDownloader {
 					// The version can be obtained again once set, if needed
 					|| forceGet)) {
 				Version version = Version.fromURL(URL_FILE_VER, TIMEOUT);
-				newestVersion   = version != null ? version.toString() : null;
+				newestVersion   = version != null ? version.string() : null;
 			}
 			return newestVersion;
 		}
@@ -923,7 +922,7 @@ public final class MediaDownloader {
 	public static final RemoteConfiguration remoteConfiguration() {
 		if(remoteConfiguration == null) {
 			try {
-				String configURL = Utils.urlConcat(URL_BASE_VER, VERSION, "config");
+				String configURL = Utils.urlConcat(URL_BASE_VER, VERSION.stringRelease(), "config");
 				remoteConfiguration = RemoteConfiguration.from(Utils.urlStream(configURL, TIMEOUT));
 			} catch(IOException ex) {
 				error(ex);
@@ -1042,7 +1041,7 @@ public final class MediaDownloader {
 		SSDCollection data = SSDF.read(configPath.toFile());
 		// Add a version field to the configuration
 		if(wasLoadedFromInternal) {
-			data.set("version", VERSION);
+			data.set("version", VERSION.string());
 			Utils.ignore(() -> NIO.save(configPath, data.toString()), MediaDownloader::error);
 		}
 		// Check whether the external configuration has all the properties
@@ -1056,7 +1055,7 @@ public final class MediaDownloader {
 		configuration = new ApplicationConfigurationWrapper(configPath);
 		configuration.loadData(data);
 		// Check whether the application was updated (probably)
-		Version versionCurrent = Version.fromString(VERSION);
+		Version versionCurrent = VERSION;
 		Version versionLast    = configuration.version();
 		if((versionLast == Version.UNKNOWN
 				|| versionCurrent.compareTo(versionLast) > 0)) {
@@ -1152,7 +1151,7 @@ public final class MediaDownloader {
 			try {
 				// Get the internal configuration
 				SSDCollection internal = SSDF.read(stream(BASE_RESOURCE, "configuration.ssdf"));
-				internal.set("version", VERSION);
+				internal.set("version", VERSION.string());
 				// Get the current configuration
 				SSDCollection current = configuration.data();
 				// Fix the theme, if needed
@@ -1358,11 +1357,11 @@ public final class MediaDownloader {
 			saveConfiguration();
 		}
 		if(applicationUpdated) {
-			String previousVersion = data.getString("version", VERSION);
+			String previousVersion = data.getString("version", VERSION.string());
 			// Automatically (i.e. without a prompt) update the resources directory
 			updateResourcesDirectory(previousVersion);
 			// Update the version in the configuration file (even if the resources directory is not updated)
-			data.set("version", VERSION);
+			data.set("version", VERSION.string());
 			saveConfiguration();
 		}
 	}
@@ -1655,86 +1654,67 @@ public final class MediaDownloader {
 	
 	private static final class PluginListObtainer {
 		
-		private static final String URL_BASE   = URL_BASE_DAT + VERSION + '/';
-		private static final String URL_CONFIG = URL_BASE + "config";
-		private static final String URL_DIR    = URL_BASE_DAT + "plugin/";
-		private static final Map<String, String> config = new HashMap<>();
+		private static final String URL_DIR = URL_BASE_DAT + "plugin/";
 		
-		private static final void parseFileLines(String url, Consumer<String> consumer) throws Exception {
-			try(StreamResponse response = Web.requestStream(new GetRequest(Utils.url(url), Shared.USER_AGENT));
+		private static final List<Pair<String, String>> parseList() throws Exception {
+			List<Pair<String, String>> plugins = new ArrayList<>();
+			
+			Requirements requirements = Requirements.CURRENT;
+			String version = VERSION.stringRelease();
+			RemoteConfiguration config = remoteConfiguration();
+			String listURL = Utils.urlConcat(URL_BASE_VER, version, config.value("plugin_list"));
+			String prefix  = config.value("plugin_prefix");
+			
+			try(StreamResponse response = Web.requestStream(new GetRequest(Utils.url(listURL), Shared.USER_AGENT));
 				BufferedReader reader = new BufferedReader(new InputStreamReader(response.stream))) {
 				for(String line; (line = reader.readLine()) != null;) {
-					consumer.accept(line);
+					// Parsing of metadata
+					if(line.startsWith("[")) {
+						int index = line.indexOf("]");
+						if(index <= 0) continue; // Invalid plugin line, skip
+						String[] array = line.substring(1, index).split(",");
+						Map<String, String> metadata = new HashMap<>();
+						for(String item : array) {
+							String[] pair = item.split(":", 2);
+							String name = null, value = pair[0];
+							if(pair.length > 1) {
+								name = value;
+								value = pair[1];
+							}
+							metadata.put(name, value);
+						}
+						// Check the metadata
+						boolean isOk = true;
+						String os = metadata.get("os");
+						if(os != null) {
+							String[] osArray = os.split("\\|"); // Support for multiple OS
+							boolean any = false;
+							for(String value : osArray) {
+								if(requirements.equals(Requirements.parseNoDelimiter(value))) {
+									any = true; break;
+								}
+							}
+							if(!any) isOk = false;
+						}
+						// Do not add this plugin, if not OK
+						if(!isOk) continue;
+						// Remove metadata string from the line
+						line = line.substring(index + 1);
+					}
+					String pluginURL = URL_DIR + line;
+					// Strip the prefix, if non-null
+					if((prefix != null
+							&& line.startsWith(prefix)))
+						line = line.substring(prefix.length());
+					plugins.add(new Pair<>(pluginURL, line));
 				}
 			}
-		}
-		
-		private static final void parseConfig() throws Exception {
-			parseFileLines(URL_CONFIG, (line) -> {
-				int index = line.indexOf(':');
-				if((index < 1)) return;
-				config.put(line.substring(0, index), line.substring(index + 1));
-			});
-		}
-		
-		private static final String getURL() {
-			String pluginListName = config.get("plugin");
-			if((pluginListName == null))
-				throw new IllegalStateException("Plugin list name not specified");
-			return URL_BASE + pluginListName;
-		}
-		
-		private static final List<Pair<String, String>> parseList(String url) throws Exception {
-			Requirements requirements = Requirements.CURRENT;
-			String prefix = config.get("plugin_prefix");
-			List<Pair<String, String>> plugins = new ArrayList<>();
-			parseFileLines(url, (line) -> {
-				// Parsing of metadata
-				if(line.startsWith("[")) {
-					int index = line.indexOf("]");
-					if(index <= 0) return; // Invalid plugin line, skip
-					String[] array = line.substring(1, index).split(",");
-					Map<String, String> metadata = new HashMap<>();
-					for(String item : array) {
-						String[] pair = item.split(":", 2);
-						String name = null, value = pair[0];
-						if(pair.length > 1) {
-							name = value;
-							value = pair[1];
-						}
-						metadata.put(name, value);
-					}
-					// Check the metadata
-					boolean isOk = true;
-					String os = metadata.get("os");
-					if(os != null) {
-						String[] osArray = os.split("\\|"); // Support for multiple OS
-						boolean any = false;
-						for(String value : osArray) {
-							if(requirements.equals(Requirements.parseNoDelimiter(value))) {
-								any = true; break;
-							}
-						}
-						if(!any) isOk = false;
-					}
-					// Do not add this plugin, if not OK
-					if(!isOk) return;
-					// Remove metadata string from the line
-					line = line.substring(index + 1);
-				}
-				String pluginURL = URL_DIR + line;
-				// Strip the prefix, if non-null
-				if((prefix != null
-						&& line.startsWith(prefix)))
-					line = line.substring(prefix.length());
-				plugins.add(new Pair<>(pluginURL, line));
-			});
+			
 			return plugins;
 		}
 		
 		public static final List<Pair<String, String>> obtain() throws Exception {
-			parseConfig();
-			return parseList(getURL());
+			return parseList();
 		}
 	}
 	
@@ -1924,7 +1904,7 @@ public final class MediaDownloader {
 		FXUtils.exit();
 	}
 	
-	public static final String version() {
+	public static final Version version() {
 		return VERSION;
 	}
 	
