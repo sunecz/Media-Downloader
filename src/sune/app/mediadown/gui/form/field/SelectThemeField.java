@@ -17,7 +17,7 @@ public class SelectThemeField extends FormField {
 	public SelectThemeField(String name, String title) {
 		super(name, title);
 		control = new ComboBox<>();
-		control.getItems().setAll(ResourceRegistry.themes.allValues());
+		control.getItems().setAll(ResourceRegistry.themes.values());
 		control.setMaxWidth(Double.MAX_VALUE);
 	}
 	

@@ -23,7 +23,7 @@ public final class MessageLanguage {
 	}
 	
 	private static final Set<String> setOfAll() {
-		return ResourceRegistry.languages.allValues().stream()
+		return ResourceRegistry.languages.values().stream()
 					.map(Language::getCode)
 					.collect(Collectors.toUnmodifiableSet());
 	}

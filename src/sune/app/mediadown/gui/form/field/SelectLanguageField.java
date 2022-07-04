@@ -20,7 +20,7 @@ public class SelectLanguageField extends FormField {
 		super(name, title);
 		control = new ComboBox<>();
 		// Add all the registered languages in their order, but put the Automatic language to the top
-		control.getItems().setAll(ResourceRegistry.languages.allValues().stream()
+		control.getItems().setAll(ResourceRegistry.languages.values().stream()
 		                                          .sorted((a, b) -> a.getName().equals("auto") ? -1 : 0)
 		                                          .collect(Collectors.toList()));
 		control.setMaxWidth(Double.MAX_VALUE);

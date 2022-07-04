@@ -62,6 +62,8 @@ import sune.app.mediadown.plugin.PluginLoadListener;
 import sune.app.mediadown.plugin.PluginUpdater;
 import sune.app.mediadown.plugin.Plugins;
 import sune.app.mediadown.registry.NamedRegistry;
+import sune.app.mediadown.registry.ResourceNamedRegistry;
+import sune.app.mediadown.registry.ResourceNamedRegistry.ResourceRegistryEntry;
 import sune.app.mediadown.registry.SimpleNamedRegistry;
 import sune.app.mediadown.resource.ExternalResources;
 import sune.app.mediadown.resource.Extractable;
@@ -1187,7 +1189,7 @@ public final class MediaDownloader {
 		}
 		
 		public static final void languages() {
-			ResourceRegistry.languages.allValues().forEach(ResourcesUpdater::language);
+			ResourceRegistry.languages.values().forEach(ResourcesUpdater::language);
 		}
 		
 		private static final void style(Theme theme, String style) {
@@ -1211,7 +1213,7 @@ public final class MediaDownloader {
 		}
 		
 		public static final void themes() {
-			ResourceRegistry.themes.allValues().forEach(ResourcesUpdater::theme);
+			ResourceRegistry.themes.values().forEach(ResourcesUpdater::theme);
 		}
 		
 		private static final Set<String> getLegacyDefaultPlugins() {
@@ -1373,50 +1375,59 @@ public final class MediaDownloader {
 	
 	private static final class InternalResources {
 		
-		public static final void addLanguage(String path) {
+		public static final void addLanguage(String path, boolean isExtractable) {
 			path = "language/" + path; // prefix the path
 			InputStream stream   = stream(BASE_RESOURCE, path);
 			Language    language = Language.from(path, stream);
-			ResourceRegistry.languages.register(language.getName(), language);
+			ResourceRegistry.languages.registerValue(language.getName(), language, isExtractable);
 		}
 		
-		public static final void addTheme(Theme theme) {
-			ResourceRegistry.themes.register(theme.getName(), theme);
+		public static final void addTheme(Theme theme, boolean isExtractable) {
+			ResourceRegistry.themes.registerValue(theme.getName(), theme, isExtractable);
 		}
 		
-		@SuppressWarnings("unused")
-		public static final void addIcon(String path) {
+		public static final void addIcon(String path, boolean isExtractable) {
 			InputStream              stream = stream(BASE_RESOURCE, "icon/" + path);
 			javafx.scene.image.Image icon   = new javafx.scene.image.Image(stream);
-			ResourceRegistry.icons.register(path, icon);
+			ResourceRegistry.icons.registerValue(path, icon, isExtractable);
 		}
 		
 		@SuppressWarnings("unused")
-		public static final void addImage(String path) {
+		public static final void addImage(String path, boolean isExtractable) {
 			InputStream              stream = stream(BASE_RESOURCE, "image/" + path);
 			javafx.scene.image.Image image  = new javafx.scene.image.Image(stream);
-			ResourceRegistry.images.register(path, image);
+			ResourceRegistry.images.registerValue(path, image, isExtractable);
 		}
 		
 		public static final void initializeDefaults() {
 			// Languages
-			addLanguage("english.ssdf");
-			addLanguage("czech.ssdf");
+			addLanguage("english.ssdf", true);
+			addLanguage("czech.ssdf", true);
 			// Themes
-			addTheme(Theme.getLight());
-			addTheme(Theme.getDark());
+			addTheme(Theme.getLight(), true);
+			addTheme(Theme.getDark(), true);
+			// Icons
+			addIcon("automatic.png", false);
 		}
 		
-		private static final <T> void extract(NamedRegistry<T> registry, String prefix, String suffix, String pathDest) {
-			if((registry.isEmpty()))
-				return; // Do not create the resource subfolder when no resources are present
+		private static final <T> List<String> extract(ResourceNamedRegistry<T> registry, String prefix, String suffix,
+				String pathDest) {
+			List<String> extracted = new ArrayList<>();
+			if(registry.isEmpty()) return extracted; // Do not create the resource subfolder when no resources are present
+			
 			InputStreamResolver inputStreamResolver = ((path) -> stream(BASE_RESOURCE, path));
 			Path folder = Paths.get(pathDest);
-			for(Entry<String, T> entry : registry) {
+			for(Entry<String, ResourceRegistryEntry<T>> entry : registry) {
 				String name = entry.getKey();
-				T value = entry.getValue();
+				ResourceRegistryEntry<T> resource = entry.getValue();
+				
+				// Do not extract the resource, if requested
+				if(!resource.isExtractable())
+					continue;
+				
+				T value = resource.value();
 				try {
-					if((value instanceof Extractable)) {
+					if(value instanceof Extractable) {
 						((Extractable) value).extract(folder, inputStreamResolver);
 					} else {
 						String path = prefix + name + suffix;
@@ -1428,30 +1439,30 @@ public final class MediaDownloader {
 							NIO.copy(stream(BASE_RESOURCE, path), file);
 						}
 					}
+					
+					extracted.add(name);
 				} catch(Exception ex) {
 					throw new RuntimeException("Unable to extract internal resource: " + name, ex);
 				}
 			}
+			
+			return extracted;
+		}
+		
+		/** @since 00.02.07 */
+		private static final <T> void clear(ResourceNamedRegistry<T> registry, List<String> extracted) {
+			extracted.stream().forEach(registry::unregister);
 		}
 		
 		public static final void ensure() {
 			String baseDest = PathSystem.getFullPath(BASE_RESOURCE);
 			// Ensure the folder is existent
-			try {
-				NIO.createDir(Paths.get(baseDest));
-			} catch(IOException ex) {
-				error(ex);
-			}
+			Utils.ignore(() -> NIO.createDir(Paths.get(baseDest)), MediaDownloader::error);
 			// Extract the internal resources to the destination folder
-			extract(ResourceRegistry.languages, "language/", ".ssdf", baseDest + "language/");
-			extract(ResourceRegistry.themes,    "theme/",    "",      baseDest + "theme/");
-			extract(ResourceRegistry.icons,     "icon/",     "",      baseDest + "icon/");
-			extract(ResourceRegistry.images,    "image/",    "",      baseDest + "image/");
-			// Clear the registries so resources can actually be overwritten
-			ResourceRegistry.languages.clear();
-			ResourceRegistry.themes   .clear();
-			ResourceRegistry.icons    .clear();
-			ResourceRegistry.images   .clear();
+			clear(ResourceRegistry.languages, extract(ResourceRegistry.languages, "language/", ".ssdf", baseDest + "language/"));
+			clear(ResourceRegistry.themes,    extract(ResourceRegistry.themes,    "theme/",    "",      baseDest + "theme/"));
+			clear(ResourceRegistry.icons,     extract(ResourceRegistry.icons,     "icon/",     "",      baseDest + "icon/"));
+			clear(ResourceRegistry.images,    extract(ResourceRegistry.images,    "image/",    "",      baseDest + "image/"));
 		}
 	}
 	
@@ -1459,25 +1470,26 @@ public final class MediaDownloader {
 		
 		// Must use Callable<?> since generic types do not allow Callable<Map<String, ?>>.
 		// The types are checked in the add() method.
-		private static final Map<NamedRegistry<?>, Callable<?>> mapper = new HashMap<>();
+		private static final Map<ResourceNamedRegistry<?>, Callable<?>> mapper = new HashMap<>();
 		
-		public static final <T> void add(NamedRegistry<T> registry, CheckedFunction<Path, Map<String, T>> function, Path path) {
+		public static final <T> void add(ResourceNamedRegistry<T> registry, CheckedFunction<Path, Map<String, T>> function,
+				Path path) {
 			if((function == null || path == null))
 				throw new NullPointerException();
 			mapper.put(Objects.requireNonNull(registry), () -> function.apply(path));
 		}
 		
-		private static final <T> void loadToRegistry(NamedRegistry<T> registry, Map<String, T> data) {
-			data.forEach((name, value) -> registry.register(name, value));
+		private static final <T> void loadToRegistry(ResourceNamedRegistry<T> registry, Map<String, T> data) {
+			data.forEach((name, value) -> registry.registerValue(name, value));
 		}
 		
 		@SuppressWarnings("unchecked")
-		private static final <T> void load(NamedRegistry<T> registry, Callable<?> callable) throws Exception {
+		private static final <T> void load(ResourceNamedRegistry<T> registry, Callable<?> callable) throws Exception {
 			loadToRegistry(registry, ((Callable<Map<String, T>>) callable).call());
 		}
 		
 		public static final void load() {
-			for(Entry<NamedRegistry<?>, Callable<?>> entry : mapper.entrySet()) {
+			for(Entry<ResourceNamedRegistry<?>, Callable<?>> entry : mapper.entrySet()) {
 				try {
 					load(entry.getKey(), entry.getValue());
 				} catch(Exception ex) {
@@ -1543,7 +1555,7 @@ public final class MediaDownloader {
 	}
 	
 	private static final void checkExternalResources() {
-		for(Language language : new ArrayList<>(ResourceRegistry.languages.allValues())) {
+		for(Language language : new ArrayList<>(ResourceRegistry.languages.values())) {
 			// Check whether the language is invalid
 			if(!ExternalResourceChecker.checkLanguage(language)) {
 				// Invalid language, unload it
@@ -1551,7 +1563,7 @@ public final class MediaDownloader {
 				// Check whether we can replace it from the internal languages
 				if((ExternalResourceChecker.isInternalLanguage(language))) {
 					// Replace the language with the internal one
-					InternalResources.addLanguage(language.getName() + ".ssdf");
+					InternalResources.addLanguage(language.getName() + ".ssdf", true);
 				}
 			}
 		}
@@ -1560,7 +1572,7 @@ public final class MediaDownloader {
 	private static final void addAutomaticLanguage() {
 		// Add automatic language to the language resources
 		Language autoLanguage = Languages.autoLanguage();
-		ResourceRegistry.languages.register(autoLanguage.getName(), autoLanguage);
+		ResourceRegistry.languages.registerValue(autoLanguage.getName(), autoLanguage);
 	}
 	
 	private static final void loadMiscellaneousResources(StringReceiver stringReceiver) {
@@ -1838,7 +1850,7 @@ public final class MediaDownloader {
 		
 		private static final Language localLanguage(Supplier<Language> defaultLanguage) {
 			String code = localCode();
-			return ResourceRegistry.languages.allValues().stream()
+			return ResourceRegistry.languages.values().stream()
 					               .filter((l) -> l.getCode().equalsIgnoreCase(code))
 					               .findFirst().orElseGet(defaultLanguage);
 		}

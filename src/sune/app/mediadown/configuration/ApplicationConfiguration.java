@@ -71,19 +71,19 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 		
 		builder.addProperty(ConfigurationProperty.ofType(PROPERTY_LANGUAGE, Language.class)
 			.withFactory(() -> Stream.concat(List.of("auto").stream(),
-			                                 ResourceRegistry.languages.allValues().stream()
+			                                 ResourceRegistry.languages.values().stream()
 			                                        .map(Language::getName))
 	                                 .collect(Collectors.toList()))
 			.withTransformer((v) -> v.getName(),
-			                 (s) -> ResourceRegistry.languages.allValues().stream()
+			                 (s) -> ResourceRegistry.languages.values().stream()
 			                            .filter((l) -> l.getName().equals(s))
 			                            .findFirst().orElse(null)));
 		builder.addProperty(ConfigurationProperty.ofType(PROPERTY_THEME, Theme.class)
-			.withFactory(() -> ResourceRegistry.themes.allValues().stream()
+			.withFactory(() -> ResourceRegistry.themes.values().stream()
 			                        .map(Theme::getName)
 			                        .collect(Collectors.toList()))
 			.withTransformer((v) -> v.getName(),
-			                 (s) -> ResourceRegistry.themes.allValues().stream()
+			                 (s) -> ResourceRegistry.themes.values().stream()
 			                            .filter((t) -> t.getName().equals(s))
 			                            .findFirst().orElse(null)));
 		

@@ -10,7 +10,7 @@ import java.util.Set;
 
 public class SimpleNamedRegistry<T> implements NamedRegistry<T> {
 	
-	private final Map<String, T> values = new LinkedHashMap<>();
+	protected final Map<String, T> values = new LinkedHashMap<>();
 	
 	@Override
 	public void register(String name, T value) {
