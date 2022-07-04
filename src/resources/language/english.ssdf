@@ -267,7 +267,11 @@
 			errors: {
 				title:       "Error",
 				url_empty:   "Enter URL address",
-				url_invalid: "Invalid URL address"
+				url_invalid: "Invalid URL address",
+				unsupported_urls: {
+					title: "Error - Unsupported URLs",
+					description: "URLs below could not be recognized."
+				}
 			},
 			dialogs: {
 				save_file: "Select a destination file",

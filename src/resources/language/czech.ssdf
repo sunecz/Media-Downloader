@@ -267,7 +267,11 @@
 			errors: {
 				title:       "Chyba",
 				url_empty:   "Zadejte URL adresu",
-				url_invalid: "Neplatná URL adresa"
+				url_invalid: "Neplatná URL adresa",
+				unsupported_urls: {
+					title: "Chyba - Nepodporované URL",
+					description: "Níže uvedené URL nemohly být rozpoznány."
+				}
 			},
 			dialogs: {
 				save_file: "Vyberte cílový soubor",

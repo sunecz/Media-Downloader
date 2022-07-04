@@ -22,12 +22,14 @@ import javafx.stage.Stage;
 import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.MediaGetter;
 import sune.app.mediadown.MediaGetters;
+import sune.app.mediadown.gui.Dialog;
 import sune.app.mediadown.gui.DraggableWindow;
 import sune.app.mediadown.gui.control.ScrollableComboBox;
 import sune.app.mediadown.gui.table.ResolvedMediaPipelineResult;
 import sune.app.mediadown.gui.table.TablePipelineResult;
 import sune.app.mediadown.gui.table.URIListPipelineResult;
 import sune.app.mediadown.gui.table.URIListPipelineTask;
+import sune.app.mediadown.language.Translation;
 import sune.app.mediadown.media.Media;
 import sune.app.mediadown.pipeline.Pipeline;
 import sune.app.mediadown.pipeline.PipelineResult;
@@ -150,6 +152,13 @@ public class MediaGetterWindow extends DraggableWindow<VBox> {
 				pipeline.waitFor();
 				PipelineResult<?> result = pipeline.getResult();
 				boolean isTerminating = result.isTerminating();
+				
+				List<URI> errors = task.errors();
+				if(!errors.isEmpty()) {
+					Translation tr = translation.getTranslation("errors.unsupported_urls");
+					String content = errors.stream().map((u) -> u.toString() + '\n').reduce("", (a, b) -> a + b);
+					Dialog.showContentError(tr.getSingle("title"), tr.getSingle("description"), content);
+				}
 				
 				if(isTerminating) {
 					MainWindow mainWindow = MainWindow.getInstance();

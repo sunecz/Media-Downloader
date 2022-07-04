@@ -19,6 +19,7 @@ import sune.app.mediadown.util.WorkerUpdatableTask;
 public final class URIListPipelineTask extends ProgressPipelineTaskBase<Pair<MediaGetter, List<Media>>, URIListPipelineResult> {
 	
 	private final List<URI> uris;
+	private final List<URI> errors = new ArrayList<>();
 	
 	public URIListPipelineTask(Window<?> window, List<URI> uris) {
 		super(window);
@@ -29,6 +30,8 @@ public final class URIListPipelineTask extends ProgressPipelineTaskBase<Pair<Med
 	protected final CheckedFunction<CheckedBiFunction<WorkerProxy, Pair<MediaGetter, List<Media>>, Boolean>,
 			WorkerUpdatableTask<CheckedBiFunction<WorkerProxy, Pair<MediaGetter, List<Media>>, Boolean>, Void>> getTask() {
 		return ((function) -> WorkerUpdatableTask.voidTaskChecked(null, (proxy, value) -> {
+			errors.clear();
+			
 			for(URI uri : uris) {
 				if(!running.get() || proxy.isCanceled())
 					break;
@@ -41,9 +44,9 @@ public final class URIListPipelineTask extends ProgressPipelineTaskBase<Pair<Med
 					
 					if(!function.apply(proxy, new Pair<>(getter, list)))
 						break;
+				} else {
+					errors.add(uri);
 				}
-				
-				// TODO: Notify the user if no media getter was found?
 			}
 		}));
 	}
@@ -57,5 +60,9 @@ public final class URIListPipelineTask extends ProgressPipelineTaskBase<Pair<Med
 	@Override
 	protected String getProgressText(Window<?> window) {
 		return window.getTranslation().getSingle("progress.media");
+	}
+	
+	public List<URI> errors() {
+		return errors;
 	}
 }
