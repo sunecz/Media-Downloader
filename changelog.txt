@@ -1,4 +1,4 @@
-# 00.02.05 -> 00.02.06 (2022-06-16)
+# 00.02.06 (2022-06-16)
 
 CORE
 * Fixed issue with the custom media titles format not being used.
@@ -8,7 +8,7 @@ GUI
 	* Added a link to the documentation of how to create a custom media titles format.
 	* Updated the display of the custom media titles format text field.
 
-# 00.02.04 -> 00.02.05 (2022-06-13)
+# 00.02.05 (2022-06-13)
 
 CORE
 * Added support for multiple audio languages.
@@ -38,7 +38,7 @@ GUI
 	* Removed field for servers priority.
 * Fixed various small bugs.
 
-# 00.02.03 -> 00.02.04 (2022-04-23)
+# 00.02.04 (2022-04-23)
 
 CORE
 * Added automatic updates of the application JAR file.
@@ -60,12 +60,12 @@ GUI
 * Configuration window:
 	* Fixed issue with incorrect clipping of configuration forms.
 
-# 00.02.02 -> 00.02.03 (2022-03-19)
+# 00.02.03 (2022-03-19)
 
 CORE
 * Fixed issue with incorrectly marking some media sources as not protected, even though they are.
 
-# 00.02.01 -> 00.02.02 (2022-03-08)
+# 00.02.02 (2022-03-08)
 
 CORE
 * Added automatic fixing of language files.
@@ -92,7 +92,7 @@ GUI
 	* Fixed issue with selecting items using double-click.
 * Added Message window for displaying messages and news.
 
-# 00.02.00 -> 00.02.01 (2021-10-31)
+# 00.02.01 (2021-10-31)
 
 CORE
 * Updated MPD parser:
@@ -106,7 +106,7 @@ GUI
 	* Media source rows are now sorted by quality by default.
 	* Added a new column for media title.
 
-# 00.01.27 -> 00.02.00 (2021-02-21)
+# 00.02.00 (2021-02-21)
 
 CORE
 * Updated the application (including libraries) to Java 11.
@@ -120,7 +120,7 @@ GUI
 * Information window: Changed position of the tabs to the left.
 * Configuration window: Changed position of the tabs to the left.
 
-# 00.01.26 -> 00.01.27 (2020-10-18)
+# 00.01.27 (2020-10-18)
 
 CORE
 * Added concept of Media Transformers.
@@ -140,7 +140,7 @@ GUI
 * Configuration window: Hidden internal properties.
 * Fixed various small bugs.
 
-# 00.01.25 -> 00.01.26 (2020-08-24)
+# 00.01.26 (2020-08-24)
 
 CORE
 * Added Segments API for downloading segmented files, such as M3U8.
@@ -167,7 +167,7 @@ GUI
 * Information window: Improved the GUI interface.
 * Improved Light theme.
 
-# 00.01.24 -> 00.01.25 (2020-07-31)
+# 00.01.25 (2020-07-31)
 
 CORE
 * Added external resource checking for languages.
@@ -192,7 +192,7 @@ GUI
 * Main window: Fixed some translation issues.
 * Fixed style loading on Unix-like operating systems.
 
-# 00.01.23 -> 00.01.24 (2020-07-18)
+# 00.01.24 (2020-07-18)
 
 CORE
 * Added ability to save a media as an audio file, such as MP3, WAV, etc.
@@ -202,7 +202,7 @@ CORE
 * Improved internal handling of video and audio.
 * Fixed various small bugs.
 
-# 00.01.22 -> 00.01.23 (2020-05-17)
+# 00.01.23 (2020-05-17)
 
 CORE
 * Added VideoSourceGetter interface to group Servers and Media engines together.
@@ -213,7 +213,7 @@ CORE
 * Removed internet connection check at startup since it didn't serve any actual purpose.
 * Fixed pausing and resuming of non-download actions while downloading a file.
 
-# 00.01.21 -> 00.01.22 (2020-04-30)
+# 00.01.22 (2020-04-30)
 
 CORE
 * Added files for version checking and updating from sune-utils-ul library.
@@ -227,7 +227,7 @@ GUI
 * Replaced video source getter for servers and media engines with video source getter for URLs.
 * Improved table content search. (Table window)
 
-# 00.01.20 -> 00.01.21 (2020-04-23)
+# 00.01.21 (2020-04-23)
 
 CORE
 * Added ability to store additional data in Program and Episode instances.
@@ -236,7 +236,7 @@ CORE
 * Improved thread handling.
 * Fixed AcceleratedDownloader class to not stuck sometimes.
 
-# 00.01.19 -> 00.01.20 (2020-04-09)
+# 00.01.20 (2020-04-09)
 
 CORE
 * Added support for multiple video and audio sources in the DASH format.
@@ -245,7 +245,7 @@ CORE
 GUI
 * Updated Video source getters so that the file type in a file name is not included in the Save file window.
 
-# 00.01.18 -> 00.01.19 (2020-03-08)
+# 00.01.19 (2020-03-08)
 
 CORE
 * Changed how translation parser handles multiple format signs next to each other.
@@ -253,7 +253,7 @@ CORE
 * Updated Process API Library to 1.1.0 version.
 * Fixed bug with missing percentage characters in some texts.
 
-# 00.01.17 -> 00.01.18 (2020-01-18)
+# 00.01.18 (2020-01-18)
 
 CORE
 * Added ability to read M3U8 (HLS) MPD and DASH files from a string
@@ -273,7 +273,7 @@ GUI
 * Fixed bug with updating all plugins (Information window)
 * Fixed bug with occasional freezing when checking plugin updates (Information window)
 
-# 00.01.16 -> 00.01.17 (2018-09-19)
+# 00.01.17 (2018-09-19)
 
 CORE
 * Added SearchEngine concept that allows searching various sites for programs
@@ -287,7 +287,7 @@ GUI
 * Updated style of all secondary windows
 * Fixed various known bugs
 
-# 00.01.15 -> 00.01.16 (2018-08-05)
+# 00.01.16 (2018-08-05)
 
 CORE
 * Added an ability to obtain programs, episodes, and video sources asynchronousely
@@ -302,7 +302,7 @@ GUI
 * Fixed cancelling of progress when getting programs, episodes, and video sources
 * Fixed various known bugs
 
-# 00.01.14 -> 00.01.15 (2018-08-01)
+# 00.01.15 (2018-08-01)
 
 CORE
 * Updated library: SSDF2
@@ -320,7 +320,7 @@ GUI
 * Fixed bug with displaying incorrect text in the progress column
 * Fixed various known bugs
 
-# 00.01.13 -> 00.01.14 (2018-07-10)
+# 00.01.14 (2018-07-10)
 
 CORE
 * Added restarting of a download when it is stuck (no bytes are being downloaded) for 10 seconds
@@ -337,7 +337,7 @@ GUI
 * Fixed bug with texts in the table context menu
 * Fixed some little known bugs
 
-# 00.01.12 -> 00.01.13 (2018-07-05)
+# 00.01.13 (2018-07-05)
 
 CORE
 * Added downloading of default plugins (such as media engines, etc.)
@@ -348,7 +348,7 @@ CORE
 GUI
 * Download items are no longer deleted from the table after completion or error
 
-# 00.01.11 -> 00.01.12 (2018-07-01)
+# 00.01.12 (2018-07-01)
 
 CORE
 * Added accelerated downloading
@@ -369,7 +369,7 @@ GUI
 * Improved displaying of download speed
 * Fixed some little known bugs
 
-# 00.01.10 -> 00.01.11 (2018-06-25)
+# 00.01.11 (2018-06-25)
 
 CORE
 * Added simple automatic detection of a server when typing URL in Video Source Getter window
@@ -386,7 +386,7 @@ GUI
 * Added button for starting only selected downloads
 * Added some GUI tweaks and fixes
 
-# 00.01.09 -> 00.01.10 (2018-06-16)
+# 00.01.10 (2018-06-16)
 
 CORE
 * Added ability to translate Data Viewer window
@@ -406,7 +406,7 @@ GUI
 * Added some GUI tweaks and fixes
 * Fixed bug with not centering the progress window
 
-# 00.01.08 -> 00.01.09 (2018-06-10)
+# 00.01.09 (2018-06-10)
 
 CORE
 * Added ability to translate the application to different languages
@@ -418,7 +418,7 @@ CORE
 GUI
 * Fixed some little known bugs
 
-# 00.01.07 -> 00.01.08 (2018-06-02)
+# 00.01.08 (2018-06-02)
 
 CORE
 * Added ability to save video source to different formats
@@ -439,7 +439,7 @@ GUI
 * Added window for downloading videos using URL directly from a server
 * Added some GUI tweaks and fixes
 
-# 00.01.06 -> 00.01.07 (2018-05-29)
+# 00.01.07 (2018-05-29)
 
 CORE
 * Added ability to extract multiple video sources from single URL
@@ -455,7 +455,7 @@ CORE
 GUI
 * Added some GUI tweaks and fixes
 
-# 00.01.05 -> 00.01.06 (2018-05-27)
+# 00.01.06 (2018-05-27)
 
 CORE
 * Added M3U8 sources to video sources list (PlayIPrima)
@@ -472,7 +472,7 @@ GUI
 * Added some GUI tweaks
 * Fixed bug with hiding the table context menu
 
-# 00.01.04 -> 00.01.05 (2018-05-26)
+# 00.01.05 (2018-05-26)
 
 CORE
 * Changed the way of defining the selection process of programs, episodes, and video sources
@@ -482,7 +482,7 @@ GUI
 * Fixed bug with removing an unbegun download item in the table
 * Fixed bug with displaying the progress window
 
-# 00.01.03 -> 00.01.04 (2018-05-24)
+# 00.01.04 (2018-05-24)
 
 CORE
 * Added information about format and quality to a video source
@@ -494,7 +494,7 @@ CORE
 GUI
 * Added window for selecting video sources
 
-# 00.01.02 -> 00.01.03 (2018-05-23)
+# 00.01.03 (2018-05-23)
 
 GENERAL
 * Changed name from "TV Media Downloader" to "Media Downloader"
@@ -515,7 +515,7 @@ GUI
 * Changed application icon
 * Removed engines' versions from the engines menu
 
-# 00.01.01 -> 00.01.02 (2018-05-17)
+# 00.01.02 (2018-05-17)
 
 CORE
 * Updated and improved some web related functions (e.g. for obtaining size of a file at some URL)
@@ -524,7 +524,7 @@ CORE
 GUI
 * Added progress window when loading program's episode
 
-# 00.01.00 -> 00.01.01 (2018-05-11)
+# 00.01.01 (2018-05-11)
 
 CORE
 * Fixed bug with corrupted video at about 8-16 seconds (PlayIPrima)
