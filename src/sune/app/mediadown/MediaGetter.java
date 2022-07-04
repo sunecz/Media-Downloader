@@ -4,6 +4,7 @@ import java.net.URI;
 import java.util.List;
 import java.util.Map;
 
+import javafx.scene.image.Image;
 import sune.app.mediadown.download.DownloadConfiguration;
 import sune.app.mediadown.media.Media;
 import sune.app.mediadown.util.CheckedBiFunction;
@@ -43,4 +44,15 @@ public interface MediaGetter {
 		// Just return the default configuration, this method is not needed to be implemented
 		return DownloadConfiguration.getDefault();
 	}
+	
+	/** @since 00.02.07 */
+	String title();
+	/** @since 00.02.07 */
+	String url();
+	/** @since 00.02.07 */
+	String version();
+	/** @since 00.02.07 */
+	String author();
+	/** @since 00.02.07 */
+	Image icon();
 }

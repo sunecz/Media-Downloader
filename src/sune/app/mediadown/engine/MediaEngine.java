@@ -2,7 +2,6 @@ package sune.app.mediadown.engine;
 
 import java.util.List;
 
-import javafx.scene.image.Image;
 import sune.app.mediadown.Episode;
 import sune.app.mediadown.MediaGetter;
 import sune.app.mediadown.Program;
@@ -32,10 +31,4 @@ public interface MediaEngine extends MediaGetter {
 			(Episode episode, CheckedBiFunction<WorkerProxy, Media, Boolean> function) {
 		return WorkerUpdatableTask.listVoidTaskChecked(function, () -> getMedia(episode));
 	}
-	
-	String title();
-	String url();
-	String version();
-	String author();
-	Image  icon();
 }
