@@ -891,7 +891,12 @@ public final class MediaDownloader {
 		}
 		
 		public static final boolean showUpdateDialog() {
-			return FXUtils.fxTaskValue(() -> new UpdateDialog().wasAccepted());
+			// If pre-release versions should be used, automatically accept the update.
+			// This is due to the fact that all pre-release versions share configuration
+			// and sometimes there can be incompatibilities, so just always use
+			// the latest pre-release version.
+			return configuration.usePreReleaseVersions()
+						|| FXUtils.fxTaskValue(() -> new UpdateDialog().wasAccepted());
 		}
 		
 		private static final class UpdateDialog extends Alert {
