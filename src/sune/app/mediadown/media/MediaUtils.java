@@ -37,9 +37,10 @@ public final class MediaUtils {
 	private MediaUtils() {
 	}
 	
-	private static final Object intOrString(String string) {
+	/** @since 00.02.07 */
+	private static final Object intOrString(String string, boolean canConvert) {
 		return string != null
-					? (Utils.isInteger(string)
+					? (canConvert && Utils.isInteger(string)
 							? Integer.parseInt(string)
 							: string)
 					: null;
@@ -126,19 +127,27 @@ public final class MediaUtils {
 	
 	public static final String mediaTitle(String programName, String numSeason, String numEpisode, String episodeName,
 			boolean splitSeasonAndEpisode) {
+		return mediaTitle(programName, numSeason, numEpisode, episodeName, splitSeasonAndEpisode, true, true);
+	}
+	
+	/** @since 00.02.07 */
+	public static final String mediaTitle(String programName, String numSeason, String numEpisode, String episodeName,
+			boolean splitSeasonAndEpisode, boolean canConvertSeason, boolean canConvertEpisode) {
 		if(programName == null || programName.isBlank())
 			throw new IllegalArgumentException("Program name cannot be null");
 		
 		Map<String, Object> args = new HashMap<>();
 		args.put("translation", mediaTitleTranslation());
 		args.put("program_name", programName);
-		args.put("episode_name", episodeName);
 		
-		Object season = intOrString(numSeason);
+		if(episodeName != null)
+			args.put("episode_name", episodeName);
+		
+		Object season = intOrString(numSeason, canConvertSeason);
 		if(season != null)
 			args.put("season", season);
 		
-		Object episode = intOrString(numEpisode);
+		Object episode = intOrString(numEpisode, canConvertEpisode);
 		if(episode != null)
 			args.put("episode", episode);
 		
