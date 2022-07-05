@@ -771,7 +771,7 @@ public final class MediaDownloader {
 		private static final String NAME_JAR = "media-downloader.jar";
 		private static final String NAME_JAR_NEW = "media-downloader-new.jar";
 		
-		private static String newestVersion;
+		private static Version newestVersion;
 		
 		/** @since 00.02.07 */
 		private static final String versionFileURI() {
@@ -821,8 +821,8 @@ public final class MediaDownloader {
 						receiver.receive("Deleting the temporary JAR file...");
 						NIO.deleteFile(newJAR);
 					} else {
-						String newestVersion = newestVersion();
-						String newestVersionURL = URL_BASE_VER + newestVersion + "/" + remoteJARFileName();
+						Version newestVersion = newestVersion();
+						String  newestVersionURL = URL_BASE_VER + newestVersion.stringRelease() + "/" + remoteJARFileName();
 						// Create the download listener using the new event registry support
 						CompatibilityEventRegistry<FileDownloadListener> eventRegistry
 							= EventSupport.compatibilityEventRegistry(FileDownloadListener.class);
@@ -873,20 +873,19 @@ public final class MediaDownloader {
 		}
 		
 		public static final boolean checkVersion() {
-			String newestVersion = newestVersion();
-			return newestVersion != null && Updater.compare(VERSION.string(), newestVersion);
+			Version newestVersion = newestVersion();
+			return  newestVersion != null && Updater.compare(VERSION, newestVersion);
 		}
 		
-		public static final String newestVersion() {
+		public static final Version newestVersion() {
 			return newestVersion(false);
 		}
 		
-		public static final String newestVersion(boolean forceGet) {
-			if((newestVersion == null
+		public static final Version newestVersion(boolean forceGet) {
+			if(newestVersion == null
 					// The version can be obtained again once set, if needed
-					|| forceGet)) {
-				Version version = Version.fromURL(versionFileURI(), TIMEOUT);
-				newestVersion   = version != null ? version.string() : null;
+					|| forceGet) {
+				newestVersion = Version.fromURL(versionFileURI(), TIMEOUT);
 			}
 			return newestVersion;
 		}

@@ -43,7 +43,7 @@ public final class MessageManager {
 	}
 	
 	public static final MessageList current() throws Exception {
-		return ofVersion(MediaDownloader.version().string());
+		return ofVersion(MediaDownloader.version().stringRelease());
 	}
 	
 	public static final MessageList local() throws Exception {
@@ -103,7 +103,7 @@ public final class MessageManager {
 				}
 			}
 			
-			String version = MediaDownloader.version().string();
+			String version = MediaDownloader.version().stringRelease();
 			URI baseURI = versionBaseURI(version);
 			obtainer = new MessageListObtainer(new MessageList(baseURI, version, data));
 			cache.put(null, obtainer);

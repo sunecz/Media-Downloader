@@ -35,7 +35,12 @@ public final class Updater {
 	}
 	
 	public static final boolean compare(String currentVersion, String newestVersion) {
-		return Version.fromString(currentVersion).compareTo(Version.fromString(newestVersion)) < 0;
+		return compare(Version.fromString(currentVersion), Version.fromString(newestVersion));
+	}
+	
+	/** @since 00.02.07 */
+	public static final boolean compare(Version currentVersion, Version newestVersion) {
+		return currentVersion.compareTo(newestVersion) < 0;
 	}
 	
 	private static final boolean shouldDownloadEntry(FileCheckerEntry entry, String requiredHash) {
