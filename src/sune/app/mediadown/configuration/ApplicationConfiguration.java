@@ -10,6 +10,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.gui.form.field.TextFieldMediaTitleFormat;
 import sune.app.mediadown.gui.window.ConfigurationWindow;
 import sune.app.mediadown.language.Language;
@@ -20,6 +21,7 @@ import sune.app.mediadown.media.MediaTitleFormats.NamedMediaTitleFormat;
 import sune.app.mediadown.resource.ResourceRegistry;
 import sune.app.mediadown.theme.Theme;
 import sune.app.mediadown.update.Version;
+import sune.app.mediadown.update.VersionType;
 import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.Utils;
 import sune.util.ssdf2.SSDCollection;
@@ -131,7 +133,8 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 		ConfigurationWindow.registerFormField(PROPERTY_NAMING_CUSTOM_MEDIA_TITLE_FORMAT,
 		                                      TextFieldMediaTitleFormat::new);
 		
-		builder.addProperty(ConfigurationProperty.ofBoolean(PROPERTY_USE_PRE_RELEASE_VERSIONS).withDefaultValue(false));
+		builder.addProperty(ConfigurationProperty.ofBoolean(PROPERTY_USE_PRE_RELEASE_VERSIONS)
+		                                         .withDefaultValue(MediaDownloader.version().type() != VersionType.RELEASE));
 		
 		return builder;
 	}
