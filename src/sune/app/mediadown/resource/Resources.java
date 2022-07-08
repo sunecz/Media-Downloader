@@ -306,8 +306,9 @@ public final class Resources {
 		}
 	}
 	
-	public static final FileChecker etcFileChecker(boolean computeHashes) {
-		Path dir = PATH_ETC.resolve("original");
+	/** @since 00.02.07 */
+	public static final FileChecker etcFileChecker(String dirName, boolean computeHashes) {
+		Path dir = PATH_ETC.resolve(dirName);
 		FileChecker checker = new FileChecker.PrefixedFileChecker(dir.getParent(), null, dir);
 		for(InternalResource resource : RESOURCES) {
 			checker.addEntry(dir.resolve(resource.getOS())

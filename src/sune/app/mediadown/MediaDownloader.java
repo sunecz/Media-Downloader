@@ -360,8 +360,10 @@ public final class MediaDownloader {
 			public InitializationState run(Arguments args) {
 				if(GENERATE_LISTS) {
 					generateList();
-					generateResourcesList();
+					generateResourcesList("original");
+					generateResourcesList("compressed");
 					generateJREList();
+					close();
 					return null; // Do not continue
 				}
 				return new CheckLibraries();
@@ -965,19 +967,20 @@ public final class MediaDownloader {
 		if((checker != null)) {
 			try {
 				// Save the list of entries to a file
-				NIO.save(NIO.localPath("list"), checker.toString());
+				NIO.save(NIO.localPath("list.sha1"), checker.toString());
 			} catch(IOException ex) {
 				error(ex);
 			}
 		}
 	}
 	
-	protected static final void generateResourcesList() {
-		FileChecker checker = Resources.etcFileChecker(true);
+	/** @since 00.02.07 */
+	protected static final void generateResourcesList(String dirName) {
+		FileChecker checker = Resources.etcFileChecker(dirName, true);
 		if((checker != null)) {
 			try {
 				// Save the list of entries to a file
-				NIO.save(NIO.localPath("resources_list"), checker.toString());
+				NIO.save(NIO.localPath("list_resources_" + Utils.fileName(dirName) + ".sha1"), checker.toString());
 			} catch(IOException ex) {
 				error(ex);
 			}
