@@ -7,10 +7,12 @@ import sune.app.mediadown.Episode;
 import sune.app.mediadown.engine.MediaEngine;
 import sune.app.mediadown.gui.window.TableWindow;
 import sune.app.mediadown.media.Media;
+import sune.app.mediadown.resource.GlobalCache;
 import sune.app.mediadown.util.CheckedBiFunction;
 import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.WorkerProxy;
 import sune.app.mediadown.util.WorkerUpdatableTask;
+import sune.app.mediadown.util.WorkerUpdatableTaskUtils;
 
 /** @since 00.01.27 */
 public final class EpisodePipelineTask extends MediaEnginePipelineTaskBase<Episode, Media, EpisodePipelineResult> {
@@ -22,7 +24,8 @@ public final class EpisodePipelineTask extends MediaEnginePipelineTaskBase<Episo
 	@Override
 	protected final CheckedBiFunction<Episode, CheckedBiFunction<WorkerProxy, Media, Boolean>,
 			WorkerUpdatableTask<CheckedBiFunction<WorkerProxy, Media, Boolean>, Void>> getFunction(MediaEngine engine) {
-		return engine::getMedia;
+		return ((episode, f) -> WorkerUpdatableTaskUtils.cachedListBiTask(GlobalCache.ofMedia(), episode,
+		                                                                  f, engine::getMedia, episode));
 	}
 	
 	@Override

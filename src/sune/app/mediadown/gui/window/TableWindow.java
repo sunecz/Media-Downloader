@@ -1,5 +1,6 @@
 package sune.app.mediadown.gui.window;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -292,7 +293,8 @@ public final class TableWindow extends DraggableWindow<BorderPane> {
 		return show(parent, new MediaEnginePipelineTask(this, engine));
 	}
 	
-	public final <R extends PipelineResult<?>> R show(Stage parent, MediaGetter getter, String url) throws Exception {
-		return show(parent, new MediaGetterPipelineTask(this, getter, url));
+	/** @since 00.02.07 */
+	public final <R extends PipelineResult<?>> R show(Stage parent, MediaGetter getter, URI uri) throws Exception {
+		return show(parent, new MediaGetterPipelineTask(this, getter, uri));
 	}
 }

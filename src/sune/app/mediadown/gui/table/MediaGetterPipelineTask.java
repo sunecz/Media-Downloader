@@ -1,5 +1,6 @@
 package sune.app.mediadown.gui.table;
 
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 
@@ -7,28 +8,33 @@ import javafx.scene.control.TableView;
 import sune.app.mediadown.MediaGetter;
 import sune.app.mediadown.gui.window.TableWindow;
 import sune.app.mediadown.media.Media;
+import sune.app.mediadown.resource.GlobalCache;
 import sune.app.mediadown.util.CheckedBiFunction;
 import sune.app.mediadown.util.CheckedFunction;
 import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.WorkerProxy;
 import sune.app.mediadown.util.WorkerUpdatableTask;
+import sune.app.mediadown.util.WorkerUpdatableTaskUtils;
 
 /** @since 00.01.27 */
 public final class MediaGetterPipelineTask extends TableWindowPipelineTaskBase<Media, MediaGetterPipelineResult> {
 	
 	private final MediaGetter getter;
-	private final String url;
+	/** @since 00.02.07 */
+	private final URI uri;
 	
-	public MediaGetterPipelineTask(TableWindow window, MediaGetter getter, String url) {
+	public MediaGetterPipelineTask(TableWindow window, MediaGetter getter, URI uri) {
 		super(window);
 		this.getter = getter;
-		this.url = url;
+		this.uri = uri;
 	}
 	
 	@Override
 	protected final CheckedFunction<CheckedBiFunction<WorkerProxy, Media, Boolean>,
 			WorkerUpdatableTask<CheckedBiFunction<WorkerProxy, Media, Boolean>, Void>> getTask() {
-		return ((function) -> getter.getMedia(Utils.uri(url), Map.of(), function));
+		return ((f) -> WorkerUpdatableTaskUtils.cachedListBiTask(GlobalCache.ofURIs(), uri, f,
+		                                                         (u, a) -> getter.getMedia(u, Map.of(), a),
+		                                                         uri));
 	}
 	
 	@Override

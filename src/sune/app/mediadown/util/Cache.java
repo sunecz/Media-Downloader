@@ -104,4 +104,10 @@ public class Cache {
 		objects .remove(key);
 		creators.remove(key);
 	}
+	
+	/** @since 00.02.07 */
+	public void clear() {
+		objects .clear();
+		creators.clear();
+	}
 }

@@ -9,6 +9,7 @@ import sune.app.mediadown.MediaGetter;
 import sune.app.mediadown.MediaGetters;
 import sune.app.mediadown.gui.Window;
 import sune.app.mediadown.media.Media;
+import sune.app.mediadown.resource.GlobalCache;
 import sune.app.mediadown.util.CheckedBiFunction;
 import sune.app.mediadown.util.CheckedFunction;
 import sune.app.mediadown.util.Pair;
@@ -38,9 +39,12 @@ public final class URIListPipelineTask extends ProgressPipelineTaskBase<Pair<Med
 				
 				MediaGetter getter = MediaGetters.fromURI(uri);
 				if(getter != null) {
-					List<Media> list = new ArrayList<>();
-					getter.getMedia(uri, Map.of(), (p, media) -> list.add(media))
-					      .startAndWaitChecked();
+					List<Media> list = GlobalCache.ofURIs().getChecked(uri, () -> {
+						List<Media> l = new ArrayList<>();
+						getter.getMedia(uri, Map.of(), (p, media) -> l.add(media))
+						      .startAndWaitChecked();
+						return l;
+					});
 					
 					if(!function.apply(proxy, new Pair<>(getter, list)))
 						break;

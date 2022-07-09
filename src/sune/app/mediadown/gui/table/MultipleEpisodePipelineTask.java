@@ -22,6 +22,7 @@ import sune.app.mediadown.media.Media;
 import sune.app.mediadown.media.MediaFilter;
 import sune.app.mediadown.media.MediaFormat;
 import sune.app.mediadown.media.MediaLanguage;
+import sune.app.mediadown.resource.GlobalCache;
 import sune.app.mediadown.util.CheckedBiFunction;
 import sune.app.mediadown.util.Choosers;
 import sune.app.mediadown.util.FXUtils;
@@ -41,7 +42,8 @@ public final class MultipleEpisodePipelineTask extends MediaEnginePipelineTaskBa
 	protected final CheckedBiFunction<Episode, CheckedBiFunction<WorkerProxy, Pair<Episode, List<Media>>, Boolean>,
 			WorkerUpdatableTask<CheckedBiFunction<WorkerProxy, Pair<Episode, List<Media>>, Boolean>, Void>> getFunction(MediaEngine engine) {
 		return ((episode, function) -> WorkerUpdatableTask.voidTaskChecked(null, (proxy, value) -> {
-			function.apply(proxy, new Pair<>(episode, engine.getMedia(episode)));
+			List<Media> media = GlobalCache.ofMedia().getChecked(episode, () -> engine.getMedia(episode));
+			function.apply(proxy, new Pair<>(episode, media));
 		}));
 	}
 	

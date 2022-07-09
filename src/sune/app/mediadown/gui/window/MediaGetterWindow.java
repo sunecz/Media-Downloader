@@ -120,17 +120,17 @@ public class MediaGetterWindow extends DraggableWindow<VBox> {
 				FXUtils.showErrorWindow(this, translation.getSingle("errors.title"), translation.getSingle("errors.url_invalid"));
 				return;
 			}
-			showSelectionWindow(getter, url);
+			showSelectionWindow(getter, Utils.uri(url));
 		} else {
 			showSelectionWindow(urls);
 		}
 	}
 	
-	private final void showSelectionWindow(MediaGetter getter, String url) {
+	private final void showSelectionWindow(MediaGetter getter, URI uri) {
 		TableWindow window = MediaDownloader.window(TableWindow.NAME);
 		Threads.execute(() -> {
 			Utils.ignore(() -> {
-				TablePipelineResult<?, ?> result = window.show(this, getter, url);
+				TablePipelineResult<?, ?> result = window.show(this, getter, uri);
 				if(result.isTerminating()) {
 					MainWindow mainWindow = MainWindow.getInstance();
 					((ResolvedMediaPipelineResult) result).getValue().forEach(mainWindow::addDownload);
