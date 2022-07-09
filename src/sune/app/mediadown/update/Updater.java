@@ -8,7 +8,6 @@ import java.util.function.BiPredicate;
 import javafx.util.Callback;
 import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.update.FileChecker.FileCheckerEntry;
-import sune.app.mediadown.update.FileChecker.Requirements;
 import sune.app.mediadown.util.BiCallback;
 import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.ThrowableBiConsumer;

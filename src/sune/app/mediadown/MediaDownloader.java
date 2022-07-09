@@ -76,11 +76,11 @@ import sune.app.mediadown.theme.Theme;
 import sune.app.mediadown.update.CheckListener;
 import sune.app.mediadown.update.FileCheckListener;
 import sune.app.mediadown.update.FileChecker;
-import sune.app.mediadown.update.FileChecker.Requirements;
 import sune.app.mediadown.update.FileDownloadListener;
 import sune.app.mediadown.update.FileDownloader;
 import sune.app.mediadown.update.RemoteConfiguration;
 import sune.app.mediadown.update.RemoteConfiguration.Property;
+import sune.app.mediadown.update.Requirements;
 import sune.app.mediadown.update.Updater;
 import sune.app.mediadown.update.Version;
 import sune.app.mediadown.util.CSSParser;
@@ -1014,17 +1014,30 @@ public final class MediaDownloader {
 		Runtime.getRuntime().addShutdownHook(new Thread(MediaDownloader::dispose));
 	}
 	
+	/** @since 00.02.07 */
+	private static final void addLibrary(Path path, String name) {
+		addLibrary(path, name, Requirements.ANY);
+	}
+	
+	/** @since 00.02.07 */
+	private static final void addLibrary(Path path, String name, Requirements requirements) {
+		if(requirements != Requirements.ANY
+				&& !requirements.equals(Requirements.CURRENT))
+			return;
+		Libraries.add(path, name);
+	}
+	
 	private static final void registerNativeLibraries() {
 		// No libraries
 	}
 	
 	private static final void registerLibraries() {
 		Path path = Paths.get(PathSystem.getFullPath("lib/"));
-		Libraries.add(path.resolve("infomas-asl.jar"),      "infomas.asl");
-		Libraries.add(path.resolve("ssdf2.jar"),            "ssdf2");
-		Libraries.add(path.resolve("sune-memory.jar"),      "sune.memory");
-		Libraries.add(path.resolve("sune-process-api.jar"), "sune.api.process");
-		Libraries.add(path.resolve("jsoup.jar"),            "org.jsoup");
+		addLibrary(path.resolve("infomas-asl.jar"),      "infomas.asl");
+		addLibrary(path.resolve("ssdf2.jar"),            "ssdf2");
+		addLibrary(path.resolve("sune-memory.jar"),      "sune.memory");
+		addLibrary(path.resolve("sune-process-api.jar"), "sune.api.process");
+		addLibrary(path.resolve("jsoup.jar"),            "org.jsoup");
 		// Define modules for builtin libraries so that plugins can use them
 		ModuleUtils.defineDummyModule("sune.app.mediadown");
 		ModuleUtils.defineDummyModule("sune.util.load");
