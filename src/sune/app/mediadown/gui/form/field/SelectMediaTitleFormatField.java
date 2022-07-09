@@ -25,7 +25,7 @@ import sune.util.ssdf2.SSDType;
 import sune.util.ssdf2.SSDValue;
 
 /** @since 00.02.05 */
-public class SelectMediaTitleFormatField extends FormField {
+public class SelectMediaTitleFormatField<T> extends FormField<T> {
 	
 	private static Translation mediaNamingTranslation;
 	private static MediaTitleFormatPreviewMask titleMask;
@@ -34,8 +34,8 @@ public class SelectMediaTitleFormatField extends FormField {
 	private final ComboBox<NamedMediaTitleFormat> control;
 	private final Button btnPreview;
 	
-	public SelectMediaTitleFormatField(String name, String title) {
-		super(name, title);
+	public SelectMediaTitleFormatField(T property, String name, String title) {
+		super(property, name, title);
 		wrapper = new HBox(5.0);
 		control = new ComboBox<>();
 		btnPreview = new Button(MediaDownloader.translation().getSingle("generic.preview"));
@@ -76,13 +76,13 @@ public class SelectMediaTitleFormatField extends FormField {
 	}
 	
 	@Override
-	public void setValue(SSDValue value, SSDType type) {
+	public void value(SSDValue value, SSDType type) {
 		String name = Utils.removeStringQuotes(value.stringValue());
 		control.getSelectionModel().select(MediaTitleFormats.namedOfName(name));
 	}
 	
 	@Override
-	public Object getValue() {
+	public Object value() {
 		return control.getSelectionModel().getSelectedItem().name();
 	}
 	

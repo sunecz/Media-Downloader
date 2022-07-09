@@ -7,12 +7,12 @@ import sune.app.mediadown.gui.form.FormField;
 import sune.util.ssdf2.SSDType;
 import sune.util.ssdf2.SSDValue;
 
-public class CheckBoxField extends FormField {
+public class CheckBoxField<T> extends FormField<T> {
 	
 	private final CheckBox control;
 	
-	public CheckBoxField(String name, String title) {
-		super(name, title);
+	public CheckBoxField(T property, String name, String title) {
+		super(property, name, title);
 		control = new CheckBox();
 	}
 	
@@ -22,12 +22,12 @@ public class CheckBoxField extends FormField {
 	}
 	
 	@Override
-	public void setValue(SSDValue value, SSDType type) {
+	public void value(SSDValue value, SSDType type) {
 		control.setSelected(value.booleanValue());
 	}
 	
 	@Override
-	public Object getValue() {
+	public Object value() {
 		return control.isSelected();
 	}
 }

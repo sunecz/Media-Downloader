@@ -303,10 +303,12 @@
 		},
 		configuration: {
 			title: "Configuration",
-			titles: {
-				general: "General",
-				plugins: "Plugins",
-				naming:  "Naming"
+			group: {
+				general:    "General",
+				download:   "Download",
+				conversion: "Conversion",
+				naming:     "Naming",
+				plugins:    "Plugins"
 			},
 			fields: {
 				language:                "Language",

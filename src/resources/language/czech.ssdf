@@ -303,10 +303,12 @@
 		},
 		configuration: {
 			title: "Nastavení",
-			titles: {
-				general: "Obecné",
-				plugins: "Pluginy",
-				naming:  "Pojmenování"
+			group: {
+				general:    "Obecné",
+				download:   "Stahování",
+				conversion: "Konverze",
+				naming:     "Pojmenování",
+				plugins:    "Pluginy"
 			},
 			fields: {
 				language:                "Jazyk",

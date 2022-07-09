@@ -12,12 +12,12 @@ import sune.app.mediadown.util.Utils;
 import sune.util.ssdf2.SSDType;
 import sune.util.ssdf2.SSDValue;
 
-public class SelectLanguageField extends FormField {
+public class SelectLanguageField<T> extends FormField<T> {
 	
 	private final ComboBox<Language> control;
 	
-	public SelectLanguageField(String name, String title) {
-		super(name, title);
+	public SelectLanguageField(T property, String name, String title) {
+		super(property, name, title);
 		control = new ComboBox<>();
 		// Add all the registered languages in their order, but put the Automatic language to the top
 		control.getItems().setAll(ResourceRegistry.languages.values().stream()
@@ -32,13 +32,13 @@ public class SelectLanguageField extends FormField {
 	}
 	
 	@Override
-	public void setValue(SSDValue value, SSDType type) {
+	public void value(SSDValue value, SSDType type) {
 		String name = Utils.removeStringQuotes(value.stringValue());
 		control.getSelectionModel().select(ResourceRegistry.language(name));
 	}
 	
 	@Override
-	public Object getValue() {
+	public Object value() {
 		return control.getSelectionModel().getSelectedItem().getName();
 	}
 }

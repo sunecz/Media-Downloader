@@ -1,5 +1,7 @@
 package sune.app.mediadown.gui.form;
 
+import java.util.Objects;
+
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.control.Button;
@@ -11,18 +13,18 @@ public class FormButton extends Button {
 	
 	public FormButton(String name, String title, EventHandler<ActionEvent> action) {
 		super(title);
-		if((name == null || title == null))
-			throw new NullPointerException();
-		this.name = name;
-		this.title = title;
+		this.name = Objects.requireNonNull(name);
+		this.title = Objects.requireNonNull(title);
 		setOnAction(action);
 	}
 	
-	public String getName() {
+	/** @since 00.02.07 */
+	public String name() {
 		return name;
 	}
 	
-	public String getTitle() {
+	/** @since 00.02.07 */
+	public String title() {
 		return title;
 	}
 }

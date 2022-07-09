@@ -251,12 +251,16 @@ public class Configuration implements ConfigurationAccessor {
 		protected final ConfigurationPropertyType type;
 		protected V value;
 		protected final boolean isHidden;
+		/** @since 00.02.07 */
+		protected final String group;
 		
-		protected ConfigurationProperty(String name, ConfigurationPropertyType type, V value, boolean isHidden) {
+		protected ConfigurationProperty(String name, ConfigurationPropertyType type, V value, boolean isHidden,
+				String group) {
 			this.name = Objects.requireNonNull(name);
 			this.type = Objects.requireNonNull(type);
 			this.value = value;
 			this.isHidden = isHidden;
+			this.group = group;
 		}
 		
 		public static final BooleanConfigurationProperty.Builder ofBoolean(String name) {
@@ -312,6 +316,11 @@ public class Configuration implements ConfigurationAccessor {
 			return isHidden;
 		}
 		
+		/** @since 00.02.07 */
+		public String group() {
+			return group;
+		}
+		
 		public abstract SSDNode toNode(Map<String, ConfigurationProperty<?>> builtProperties);
 		
 		public SSDNode toNode() {
@@ -343,15 +352,24 @@ public class Configuration implements ConfigurationAccessor {
 			protected final String name;
 			protected final ConfigurationPropertyType type;
 			protected boolean isHidden;
+			/** @since 00.02.07 */
+			protected String group;
 			
 			public BuilderBase(String name, ConfigurationPropertyType type) {
 				this.name = Objects.requireNonNull(name);
 				this.type = Objects.requireNonNull(type);
 				this.isHidden = false;
+				this.group = null;
 			}
 			
-			protected BuilderBase<V, T> asHidden(boolean isHidden) {
+			public BuilderBase<V, T> asHidden(boolean isHidden) {
 				this.isHidden = isHidden;
+				return this;
+			}
+			
+			/** @since 00.02.07 */
+			public BuilderBase<V, T> inGroup(String group) {
+				this.group = Objects.requireNonNull(group);
 				return this;
 			}
 			
@@ -365,6 +383,16 @@ public class Configuration implements ConfigurationAccessor {
 			
 			public ConfigurationPropertyType type() {
 				return type;
+			}
+			
+			/** @since 00.02.07 */
+			public boolean isHidden() {
+				return isHidden;
+			}
+			
+			/** @since 00.02.07 */
+			public String group() {
+				return group;
 			}
 		}
 		
@@ -418,14 +446,20 @@ public class Configuration implements ConfigurationAccessor {
 			public ScalarBuilder<V, T> asHidden(boolean isHidden) {
 				return (ScalarBuilder<V, T>) super.asHidden(isHidden);
 			}
+			
+			/** @since 00.02.07 */
+			@Override
+			public ScalarBuilder<V, T> inGroup(String group) {
+				return (ScalarBuilder<V, T>) super.inGroup(group);
+			}
 		}
 	}
 	
 	/** @since 00.02.04 */
 	public static final class BooleanConfigurationProperty extends ConfigurationProperty<Boolean> {
 		
-		private BooleanConfigurationProperty(String name, Boolean value, boolean isHidden) {
-			super(name, ConfigurationPropertyType.BOOLEAN, value != null && value, isHidden);
+		private BooleanConfigurationProperty(String name, Boolean value, boolean isHidden, String group) {
+			super(name, ConfigurationPropertyType.BOOLEAN, value != null && value, isHidden, group);
 		}
 		
 		@Override
@@ -442,6 +476,18 @@ public class Configuration implements ConfigurationAccessor {
 				super(name, ConfigurationPropertyType.BOOLEAN);
 			}
 			
+			/** @since 00.02.07 */
+			@Override
+			public Builder asHidden(boolean isHidden) {
+				return (Builder) super.asHidden(isHidden);
+			}
+			
+			/** @since 00.02.07 */
+			@Override
+			public Builder inGroup(String group) {
+				return (Builder) super.inGroup(group);
+			}
+			
 			@Override
 			public Builder loadData(SSDNode node) {
 				if(!node.isObject()) return this;
@@ -450,7 +496,7 @@ public class Configuration implements ConfigurationAccessor {
 			
 			@Override
 			public BooleanConfigurationProperty build() {
-				return new BooleanConfigurationProperty(name, value(), isHidden);
+				return new BooleanConfigurationProperty(name, value(), isHidden, group);
 			}
 		}
 	}
@@ -458,24 +504,24 @@ public class Configuration implements ConfigurationAccessor {
 	/** @since 00.02.04 */
 	public static final class IntegerConfigurationProperty extends ConfigurationProperty<Long> {
 		
-		private IntegerConfigurationProperty(String name, Long value, boolean isHidden) {
-			super(name, ConfigurationPropertyType.INTEGER, value != null ? value : 0L, isHidden);
+		private IntegerConfigurationProperty(String name, Long value, boolean isHidden, String group) {
+			super(name, ConfigurationPropertyType.INTEGER, value != null ? value : 0L, isHidden, group);
 		}
 		
-		private IntegerConfigurationProperty(String name, Integer value, boolean isHidden) {
-			this(name, value != null ? Long.valueOf(value) : 0L, isHidden);
+		private IntegerConfigurationProperty(String name, Integer value, boolean isHidden, String group) {
+			this(name, value != null ? Long.valueOf(value) : 0L, isHidden, group);
 		}
 		
-		private IntegerConfigurationProperty(String name, Short value, boolean isHidden) {
-			this(name, value != null ? Long.valueOf(value) : 0L, isHidden);
+		private IntegerConfigurationProperty(String name, Short value, boolean isHidden, String group) {
+			this(name, value != null ? Long.valueOf(value) : 0L, isHidden, group);
 		}
 		
-		private IntegerConfigurationProperty(String name, Character value, boolean isHidden) {
-			this(name, value != null ? Long.valueOf(value) : 0L, isHidden);
+		private IntegerConfigurationProperty(String name, Character value, boolean isHidden, String group) {
+			this(name, value != null ? Long.valueOf(value) : 0L, isHidden, group);
 		}
 		
-		private IntegerConfigurationProperty(String name, Byte value, boolean isHidden) {
-			this(name, value != null ? Long.valueOf(value) : 0L, isHidden);
+		private IntegerConfigurationProperty(String name, Byte value, boolean isHidden, String group) {
+			this(name, value != null ? Long.valueOf(value) : 0L, isHidden, group);
 		}
 		
 		@Override
@@ -490,6 +536,18 @@ public class Configuration implements ConfigurationAccessor {
 			
 			public Builder(String name) {
 				super(name, ConfigurationPropertyType.INTEGER);
+			}
+			
+			/** @since 00.02.07 */
+			@Override
+			public Builder asHidden(boolean isHidden) {
+				return (Builder) super.asHidden(isHidden);
+			}
+			
+			/** @since 00.02.07 */
+			@Override
+			public Builder inGroup(String group) {
+				return (Builder) super.inGroup(group);
 			}
 			
 			public Builder withDefaultValue(Integer defaultValue) {
@@ -532,7 +590,7 @@ public class Configuration implements ConfigurationAccessor {
 			
 			@Override
 			public IntegerConfigurationProperty build() {
-				return new IntegerConfigurationProperty(name, value(), isHidden);
+				return new IntegerConfigurationProperty(name, value(), isHidden, group);
 			}
 		}
 	}
@@ -540,12 +598,12 @@ public class Configuration implements ConfigurationAccessor {
 	/** @since 00.02.04 */
 	public static final class DecimalConfigurationProperty extends ConfigurationProperty<Double> {
 		
-		private DecimalConfigurationProperty(String name, Double value, boolean isHidden) {
-			super(name, ConfigurationPropertyType.DECIMAL, value != null ? value : 0.0, isHidden);
+		private DecimalConfigurationProperty(String name, Double value, boolean isHidden, String group) {
+			super(name, ConfigurationPropertyType.DECIMAL, value != null ? value : 0.0, isHidden, group);
 		}
 		
-		private DecimalConfigurationProperty(String name, Float value, boolean isHidden) {
-			this(name, value != null ? Double.valueOf(value) : 0.0, isHidden);
+		private DecimalConfigurationProperty(String name, Float value, boolean isHidden, String group) {
+			this(name, value != null ? Double.valueOf(value) : 0.0, isHidden, group);
 		}
 		
 		@Override
@@ -560,6 +618,18 @@ public class Configuration implements ConfigurationAccessor {
 			
 			public Builder(String name) {
 				super(name, ConfigurationPropertyType.DECIMAL);
+			}
+			
+			/** @since 00.02.07 */
+			@Override
+			public Builder asHidden(boolean isHidden) {
+				return (Builder) super.asHidden(isHidden);
+			}
+			
+			/** @since 00.02.07 */
+			@Override
+			public Builder inGroup(String group) {
+				return (Builder) super.inGroup(group);
 			}
 			
 			public Builder withDefaultValue(Float defaultValue) {
@@ -578,7 +648,7 @@ public class Configuration implements ConfigurationAccessor {
 			
 			@Override
 			public DecimalConfigurationProperty build() {
-				return new DecimalConfigurationProperty(name, value(), isHidden);
+				return new DecimalConfigurationProperty(name, value(), isHidden, group);
 			}
 		}
 	}
@@ -586,8 +656,8 @@ public class Configuration implements ConfigurationAccessor {
 	/** @since 00.02.04 */
 	public static final class StringConfigurationProperty extends ConfigurationProperty<String> {
 		
-		private StringConfigurationProperty(String name, String value, boolean isHidden) {
-			super(name, ConfigurationPropertyType.STRING, value, isHidden);
+		private StringConfigurationProperty(String name, String value, boolean isHidden, String group) {
+			super(name, ConfigurationPropertyType.STRING, value, isHidden, group);
 		}
 		
 		@Override
@@ -605,6 +675,18 @@ public class Configuration implements ConfigurationAccessor {
 				super(name, ConfigurationPropertyType.STRING);
 			}
 			
+			/** @since 00.02.07 */
+			@Override
+			public Builder asHidden(boolean isHidden) {
+				return (Builder) super.asHidden(isHidden);
+			}
+			
+			/** @since 00.02.07 */
+			@Override
+			public Builder inGroup(String group) {
+				return (Builder) super.inGroup(group);
+			}
+			
 			@Override
 			public Builder loadData(SSDNode node) {
 				if(!node.isObject()) return this;
@@ -613,7 +695,7 @@ public class Configuration implements ConfigurationAccessor {
 			
 			@Override
 			public StringConfigurationProperty build() {
-				return new StringConfigurationProperty(name, value(), isHidden);
+				return new StringConfigurationProperty(name, value(), isHidden, group);
 			}
 		}
 	}
@@ -627,8 +709,8 @@ public class Configuration implements ConfigurationAccessor {
 		
 		private TypeConfigurationPropertyBase(String name, Class<? extends T> typeClass, String value,
 				boolean isHidden, Supplier<Collection<String>> factory, Function<T, String> transformer,
-				Function<String, T> inverseTransformer) {
-			super(name, ConfigurationPropertyType.STRING, value, isHidden);
+				Function<String, T> inverseTransformer, String group) {
+			super(name, ConfigurationPropertyType.STRING, value, isHidden, group);
 			this.typeClass = Objects.requireNonNull(typeClass);
 			this.factory = factory;
 			this.transformer = transformer;
@@ -680,6 +762,11 @@ public class Configuration implements ConfigurationAccessor {
 				return (Builder<T>) super.asHidden(isHidden);
 			}
 			
+			/** @since 00.02.07 */
+			public Builder<T> inGroup(String group) {
+				return (Builder<T>) super.inGroup(group);
+			}
+			
 			public Builder<T> withTransformer(Function<T, String> transformer, Function<String, T> inverseTransformer) {
 				this.transformer = transformer;
 				this.inverseTransformer = inverseTransformer;
@@ -713,8 +800,8 @@ public class Configuration implements ConfigurationAccessor {
 		
 		private TypeConfigurationProperty(String name, Class<? extends T> typeClass, String value,
 				boolean isHidden, Supplier<Collection<String>> factory, Function<T, String> transformer,
-				Function<String, T> inverseTransformer) {
-			super(name, typeClass, value, isHidden, factory, transformer, inverseTransformer);
+				Function<String, T> inverseTransformer, String group) {
+			super(name, typeClass, value, isHidden, factory, transformer, inverseTransformer, group);
 		}
 		
 		@Override
@@ -730,6 +817,18 @@ public class Configuration implements ConfigurationAccessor {
 			
 			public Builder(String name, Class<? extends T> typeClass) {
 				super(name, typeClass);
+			}
+			
+			/** @since 00.02.07 */
+			@Override
+			public Builder<T> asHidden(boolean isHidden) {
+				return (Builder<T>) super.asHidden(isHidden);
+			}
+			
+			/** @since 00.02.07 */
+			@Override
+			public Builder<T> inGroup(String group) {
+				return (Builder<T>) super.inGroup(group);
 			}
 			
 			@Override
@@ -748,8 +847,8 @@ public class Configuration implements ConfigurationAccessor {
 				String transformedValue = value();
 				return factory == null || values().contains(transformedValue)
 							? new TypeConfigurationProperty<T>(name, typeClass, transformedValue, isHidden,
-									factory, transformer, inverseTransformer)
-							: new NullTypeConfigurationProperty<>(name, typeClass, isHidden);
+									factory, transformer, inverseTransformer, group)
+							: new NullTypeConfigurationProperty<>(name, typeClass, isHidden, group);
 			}
 		}
 	}
@@ -757,8 +856,9 @@ public class Configuration implements ConfigurationAccessor {
 	/** @since 00.02.04 */
 	public static final class NullTypeConfigurationProperty<T> extends TypeConfigurationPropertyBase<T> {
 		
-		private NullTypeConfigurationProperty(String name, Class<? extends T> typeClass, boolean isHidden) {
-			super(name, typeClass, null, isHidden, null, null, null);
+		private NullTypeConfigurationProperty(String name, Class<? extends T> typeClass, boolean isHidden,
+				String group) {
+			super(name, typeClass, null, isHidden, null, null, null, group);
 		}
 		
 		@Override
@@ -774,8 +874,34 @@ public class Configuration implements ConfigurationAccessor {
 			extends ConfigurationProperty<Map<String, ConfigurationProperty<?>>> {
 		
 		private ObjectConfigurationPropertyBase(String name, ConfigurationPropertyType type,
-				Map<String, ConfigurationProperty<?>> value, boolean isHidden) {
-			super(name, type, value, isHidden);
+				Map<String, ConfigurationProperty<?>> value, boolean isHidden, String group) {
+			super(name, type, value, isHidden, group);
+		}
+		
+		/** @since 00.02.07 */
+		protected abstract SSDCollection createCollection();
+		/** @since 00.02.07 */
+		protected abstract void addNode(SSDCollection collection, ConfigurationProperty<?> property, SSDNode node);
+		
+		@Override
+		public SSDNode toNode(Map<String, ConfigurationProperty<?>> builtProperties) {
+			Map<String, ConfigurationProperty<?>> localBuiltProperties
+				= builtProperties != null ? new LinkedHashMap<>() : null;
+			SSDCollection collection = createCollection();
+			if(builtProperties != null)
+				builtProperties.put(name, this);
+			for(ConfigurationProperty<?> property : value().values()) {
+				addNode(collection, property, property.toNode(localBuiltProperties));
+			}
+			// Add all locally built properties to the given collection of built properties
+			// prefixed with the name of the current property.
+			if(localBuiltProperties != null) {
+				builtProperties.putAll(localBuiltProperties.entrySet().stream()
+				                            .map((e) -> Map.entry(name + "." + e.getKey(), e.getValue()))
+				                            .collect(Collectors.toMap(Map.Entry::getKey,
+				                                                      Map.Entry::getValue)));
+			}
+			return collection;
 		}
 		
 		protected static abstract class Builder<T extends ConfigurationProperty<Map<String, ConfigurationProperty<?>>>>
@@ -795,6 +921,11 @@ public class Configuration implements ConfigurationAccessor {
 			@Override
 			public final Builder<T> asHidden(boolean isHidden) {
 				return (Builder<T>) super.asHidden(isHidden);
+			}
+			
+			/** @since 00.02.07 */
+			public Builder<T> inGroup(String group) {
+				return (Builder<T>) super.inGroup(group);
 			}
 			
 			protected Map<String, ConfigurationProperty.BuilderBase<?, ?>> valueOfBuilders() {
@@ -837,6 +968,31 @@ public class Configuration implements ConfigurationAccessor {
 												  (a, b) -> a, LinkedHashMap::new));
 				return this;
 			}
+			
+			/** @since 00.02.07 */
+			@Override
+			public Map<String, ConfigurationProperty<?>> value() {
+				Map<String, ConfigurationProperty<?>> builtProperites = new LinkedHashMap<>();
+				for(ConfigurationProperty.BuilderBase<?, ?> builder : valueOfBuilders().values()) {
+					ConfigurationProperty<?> property = builder.build();
+					builtProperites.put(property.name(), property);
+				}
+				return builtProperites;
+			}
+			
+			/** @since 00.02.07 */
+			@Override
+			public Builder<T> loadData(SSDNode node) {
+				if(!node.isCollection()) return this;
+				Map<String, ConfigurationProperty.BuilderBase<?, ?>> properties = valueOfBuilders();
+				ConfigurationProperty.BuilderBase<?, ?> builder;
+				for(SSDNode subNode : ((SSDCollection) node).nodes()) {
+					if((builder = properties.get(subNode.getName())) != null) {
+						builder.loadData(subNode);
+					}
+				}
+				return this;
+			}
 		}
 	}
 	
@@ -844,32 +1000,22 @@ public class Configuration implements ConfigurationAccessor {
 	public static final class ArrayConfigurationProperty extends ObjectConfigurationPropertyBase {
 		
 		private ArrayConfigurationProperty(String name, Map<String, ConfigurationProperty<?>> value,
-				boolean isHidden) {
-			super(name, ConfigurationPropertyType.ARRAY, value, isHidden);
+				boolean isHidden, String group) {
+			super(name, ConfigurationPropertyType.ARRAY, value, isHidden, group);
 		}
 		
+		/** @since 00.02.07 */
 		@Override
-		public SSDNode toNode(Map<String, ConfigurationProperty<?>> builtProperties) {
-			Map<String, ConfigurationProperty<?>> localBuiltProperties
-				= builtProperties != null ? new LinkedHashMap<>() : null;
-			SSDCollection collection = SSDCollection.emptyArray();
-			if(builtProperties != null)
-				builtProperties.put(name, this);
-			for(ConfigurationProperty<?> property : value().values()) {
-				SSDNode node = property.toNode(localBuiltProperties);
-				// Unfortunatelly, there is no add(SSDNode) method
-				if(node.isObject()) collection.add((SSDObject)     node);
-				else                collection.add((SSDCollection) node);
-			}
-			// Add all locally built properties to the given collection of built properties
-			// prefixed with the name of the current property.
-			if(localBuiltProperties != null) {
-				builtProperties.putAll(localBuiltProperties.entrySet().stream()
-				                            .map((e) -> Map.entry(name + "." + e.getKey(), e.getValue()))
-				                            .collect(Collectors.toMap(Map.Entry::getKey,
-				                                                      Map.Entry::getValue)));
-			}
-			return collection;
+		protected SSDCollection createCollection() {
+			return SSDCollection.emptyArray();
+		}
+		
+		/** @since 00.02.07 */
+		@Override
+		protected void addNode(SSDCollection collection, ConfigurationProperty<?> property, SSDNode node) {
+			// Unfortunatelly, there is no add(SSDNode) method
+			if(node.isObject()) collection.add((SSDObject)     node);
+			else                collection.add((SSDCollection) node);
 		}
 		
 		public static final class Builder extends ObjectConfigurationPropertyBase.Builder<ArrayConfigurationProperty> {
@@ -879,31 +1025,8 @@ public class Configuration implements ConfigurationAccessor {
 			}
 			
 			@Override
-			public Map<String, ConfigurationProperty<?>> value() {
-				Map<String, ConfigurationProperty<?>> builtProperites = new LinkedHashMap<>();
-				for(ConfigurationProperty.BuilderBase<?, ?> builder : valueOfBuilders().values()) {
-					ConfigurationProperty<?> property = builder.build();
-					builtProperites.put(property.name(), property);
-				}
-				return builtProperites;
-			}
-			
-			@Override
-			public Builder loadData(SSDNode node) {
-				if(!node.isCollection()) return this;
-				Map<String, ConfigurationProperty.BuilderBase<?, ?>> properties = valueOfBuilders();
-				ConfigurationProperty.BuilderBase<?, ?> builder;
-				for(SSDNode subNode : ((SSDCollection) node).nodes()) {
-					if((builder = properties.get(subNode.getName())) != null) {
-						builder.loadData(subNode);
-					}
-				}
-				return this;
-			}
-			
-			@Override
 			public ArrayConfigurationProperty build() {
-				return new ArrayConfigurationProperty(name, value(), isHidden);
+				return new ArrayConfigurationProperty(name, value(), isHidden, group);
 			}
 		}
 	}
@@ -912,32 +1035,22 @@ public class Configuration implements ConfigurationAccessor {
 	public static final class ObjectConfigurationProperty extends ObjectConfigurationPropertyBase {
 		
 		private ObjectConfigurationProperty(String name, Map<String, ConfigurationProperty<?>> value,
-				boolean isHidden) {
-			super(name, ConfigurationPropertyType.OBJECT, value, isHidden);
+				boolean isHidden, String group) {
+			super(name, ConfigurationPropertyType.OBJECT, value, isHidden, group);
 		}
 		
+		/** @since 00.02.07 */
 		@Override
-		public SSDNode toNode(Map<String, ConfigurationProperty<?>> builtProperties) {
-			Map<String, ConfigurationProperty<?>> localBuiltProperties
-				= builtProperties != null ? new LinkedHashMap<>() : null;
-			SSDCollection collection = SSDCollection.empty();
-			if(builtProperties != null)
-				builtProperties.put(name, this);
-			for(ConfigurationProperty<?> property : value().values()) {
-				SSDNode node = property.toNode(localBuiltProperties);
-				// Unfortunatelly, there is no set(String, SSDNode) method
-				if(node.isObject()) collection.set(property.name(), (SSDObject)     node);
-				else                collection.set(property.name(), (SSDCollection) node);
-			}
-			// Add all locally built properties to the given collection of built properties
-			// prefixed with the name of the current property.
-			if(localBuiltProperties != null) {
-				builtProperties.putAll(localBuiltProperties.entrySet().stream()
-				                            .map((e) -> Map.entry(name + "." + e.getKey(), e.getValue()))
-				                            .collect(Collectors.toMap(Map.Entry::getKey,
-				                                                      Map.Entry::getValue)));
-			}
-			return collection;
+		protected SSDCollection createCollection() {
+			return SSDCollection.empty();
+		}
+		
+		/** @since 00.02.07 */
+		@Override
+		protected void addNode(SSDCollection collection, ConfigurationProperty<?> property, SSDNode node) {
+			// Unfortunatelly, there is no set(String, SSDNode) method
+			if(node.isObject()) collection.set(property.name(), (SSDObject)     node);
+			else                collection.set(property.name(), (SSDCollection) node);
 		}
 		
 		public static final class Builder extends ObjectConfigurationPropertyBase.Builder<ObjectConfigurationProperty> {
@@ -947,31 +1060,8 @@ public class Configuration implements ConfigurationAccessor {
 			}
 			
 			@Override
-			public Map<String, ConfigurationProperty<?>> value() {
-				Map<String, ConfigurationProperty<?>> builtProperites = new LinkedHashMap<>();
-				for(ConfigurationProperty.BuilderBase<?, ?> builder : valueOfBuilders().values()) {
-					ConfigurationProperty<?> property = builder.build();
-					builtProperites.put(property.name(), property);
-				}
-				return builtProperites;
-			}
-			
-			@Override
-			public Builder loadData(SSDNode node) {
-				if(!node.isCollection()) return this;
-				Map<String, ConfigurationProperty.BuilderBase<?, ?>> properties = valueOfBuilders();
-				ConfigurationProperty.BuilderBase<?, ?> builder;
-				for(SSDNode subNode : ((SSDCollection) node).nodes()) {
-					if((builder = properties.get(subNode.getName())) != null) {
-						builder.loadData(subNode);
-					}
-				}
-				return this;
-			}
-			
-			@Override
 			public ObjectConfigurationProperty build() {
-				return new ObjectConfigurationProperty(name, value(), isHidden);
+				return new ObjectConfigurationProperty(name, value(), isHidden, group);
 			}
 		}
 	}
@@ -979,8 +1069,8 @@ public class Configuration implements ConfigurationAccessor {
 	/** @since 00.02.04 */
 	public static final class NullConfigurationProperty extends ConfigurationProperty<Object> {
 		
-		private NullConfigurationProperty(String name, boolean isHidden) {
-			super(name, ConfigurationPropertyType.NULL, null, isHidden);
+		private NullConfigurationProperty(String name, boolean isHidden, String group) {
+			super(name, ConfigurationPropertyType.NULL, null, isHidden, group);
 		}
 		
 		@Override
@@ -997,6 +1087,18 @@ public class Configuration implements ConfigurationAccessor {
 				super(name, ConfigurationPropertyType.NULL);
 			}
 			
+			/** @since 00.02.07 */
+			@Override
+			public Builder asHidden(boolean isHidden) {
+				return (Builder) super.asHidden(isHidden);
+			}
+			
+			/** @since 00.02.07 */
+			@Override
+			public Builder inGroup(String group) {
+				return (Builder) super.inGroup(group);
+			}
+			
 			@Override
 			public Builder loadData(SSDNode node) {
 				// Do nothing, must be null either way
@@ -1005,7 +1107,7 @@ public class Configuration implements ConfigurationAccessor {
 			
 			@Override
 			public NullConfigurationProperty build() {
-				return new NullConfigurationProperty(name, isHidden);
+				return new NullConfigurationProperty(name, isHidden, group);
 			}
 		}
 	}
@@ -1025,6 +1127,30 @@ public class Configuration implements ConfigurationAccessor {
 			// Due to some logical issues in the SSDF library, when creating an SSDCollection manually,
 			// the name of that collection is empty, not null, and therefore is prepended to the name.
 			return node.getFullName().replaceFirst("^\\.+", "");
+		}
+		
+		/** @since 00.02.07 */
+		private static final void ensureDataParents(SSDCollection parent, String fullName) {
+			int pos;
+			if((pos = fullName.indexOf('.')) <= 0)
+				return; // Last name, no need to create parents
+			
+			String parentName = fullName.substring(0, pos);
+			
+			int end = pos + 1;
+			if((pos = fullName.indexOf('.', end)) <= 0)
+				pos = fullName.length();
+			
+			String nextName = fullName.substring(end, pos);
+			boolean isArray = nextName.matches("\\d+");
+			SSDCollection collection = isArray ? SSDCollection.emptyArray() : SSDCollection.empty();
+			
+			switch(parent.getType()) {
+				case ARRAY:  parent.set(Integer.valueOf(parentName), collection); break;
+				case OBJECT: parent.set(parentName,                  collection); break;
+			}
+			
+			ensureDataParents(collection, fullName.substring(end));
 		}
 		
 		public Builder addProperty(ConfigurationProperty.BuilderBase<?, ?> property) {
@@ -1059,6 +1185,7 @@ public class Configuration implements ConfigurationAccessor {
 			SSDCollection data = newRootCollection(false);
 			for(ConfigurationProperty.BuilderBase<?, ?> property : properties.values()) {
 				SSDNode node = property.build().toNode(builtProperties);
+				ensureDataParents(data, property.name());
 				// Unfortunatelly, there is no set(String, SSDNode) method
 				if(node.isObject()) data.set(property.name(), (SSDObject)     node);
 				else                data.set(property.name(), (SSDCollection) node);
@@ -1070,6 +1197,11 @@ public class Configuration implements ConfigurationAccessor {
 			Map<String, ConfigurationProperty<?>> builtProperties = new LinkedHashMap<>();
 			SSDCollection data = data(builtProperties);
 			return new Configuration(name, data, builtProperties);
+		}
+		
+		/** @since 00.02.07 */
+		public String name() {
+			return name;
 		}
 		
 		public Accessor accessor() {

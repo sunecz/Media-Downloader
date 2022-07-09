@@ -2,6 +2,7 @@ package sune.app.mediadown.gui.form;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
@@ -15,7 +16,7 @@ public class Form extends VBox {
 	private final Pane pane;
 	private final String name;
 	private final String title;
-	private final List<FormField> fields;
+	private final List<FormField<?>> fields;
 	private final List<Form> groups;
 	private final List<FormButton> buttons;
 	
@@ -23,16 +24,14 @@ public class Form extends VBox {
 	private final GridPane paneFields;
 	private final HBox paneButtons;
 	
-	public Form(Pane pane, String name, String title, List<FormField> fields, List<Form> groups,
+	public Form(Pane pane, String name, String title, List<FormField<?>> fields, List<Form> groups,
 			List<FormButton> buttons) {
-		if((pane == null || fields == null || groups == null || buttons == null))
-			throw new IllegalArgumentException();
-		this.pane = pane;
+		this.pane = Objects.requireNonNull(pane);
 		this.name = name;
 		this.title = title;
-		this.fields = Collections.unmodifiableList(fields);
-		this.groups = Collections.unmodifiableList(groups);
-		this.buttons = Collections.unmodifiableList(buttons);
+		this.fields = Collections.unmodifiableList(Objects.requireNonNull(fields));
+		this.groups = Collections.unmodifiableList(Objects.requireNonNull(groups));
+		this.buttons = Collections.unmodifiableList(Objects.requireNonNull(buttons));
 		lblTitle = new Label(title);
 		lblTitle.getStyleClass().add("form-title");
 		paneFields = new GridPane();
@@ -42,7 +41,7 @@ public class Form extends VBox {
 		paneButtons = new HBox(5.0);
 		paneButtons.setAlignment(Pos.CENTER_RIGHT);
 		paneButtons.getStyleClass().add("form-buttons");
-		if((title != null)) {
+		if(title != null) {
 			pane.getChildren().add(lblTitle);
 		}
 		pane.getChildren().addAll(paneFields, paneButtons);
@@ -50,39 +49,48 @@ public class Form extends VBox {
 		getChildren().add(pane);
 	}
 	
-	public Pane getPane() {
+	/** @since 00.02.07 */
+	public Pane pane() {
 		return pane;
 	}
 	
-	public Label getLabelTitle() {
+	/** @since 00.02.07 */
+	public Label labelTitle() {
 		return lblTitle;
 	}
 	
-	public GridPane getPaneFields() {
+	/** @since 00.02.07 */
+	public GridPane paneFields() {
 		return paneFields;
 	}
-
-	public HBox getPaneButtons() {
+	
+	/** @since 00.02.07 */
+	public HBox paneButtons() {
 		return paneButtons;
 	}
 	
-	public String getName() {
+	/** @since 00.02.07 */
+	public String name() {
 		return name;
 	}
 	
-	public String getTitle() {
+	/** @since 00.02.07 */
+	public String title() {
 		return title;
 	}
 	
-	public List<FormField> getFields() {
+	/** @since 00.02.07 */
+	public List<FormField<?>> fields() {
 		return fields;
 	}
 	
-	public List<Form> getGroups() {
+	/** @since 00.02.07 */
+	public List<Form> groups() {
 		return groups;
 	}
 	
-	public List<FormButton> getButtons() {
+	/** @since 00.02.07 */
+	public List<FormButton> buttons() {
 		return buttons;
 	}
 }

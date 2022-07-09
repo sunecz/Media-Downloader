@@ -6,12 +6,12 @@ import sune.app.mediadown.gui.form.FormField;
 import sune.util.ssdf2.SSDType;
 import sune.util.ssdf2.SSDValue;
 
-public class PasswordField extends FormField {
+public class PasswordField<T> extends FormField<T> {
 	
 	private final javafx.scene.control.PasswordField control;
 	
-	public PasswordField(String name, String title) {
-		super(name, title);
+	public PasswordField(T property, String name, String title) {
+		super(property, name, title);
 		control = new javafx.scene.control.PasswordField();
 	}
 	
@@ -21,12 +21,12 @@ public class PasswordField extends FormField {
 	}
 	
 	@Override
-	public void setValue(SSDValue value, SSDType type) {
+	public void value(SSDValue value, SSDType type) {
 		control.setText(type == SSDType.NULL ? "" : value.stringValue());
 	}
 	
 	@Override
-	public Object getValue() {
+	public Object value() {
 		return control.getText();
 	}
 }

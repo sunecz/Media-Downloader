@@ -63,17 +63,16 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 		this.loadFields();
 	}
 	
-	private static final String propertyBasename(String name) {
-		int index; return (index = name.lastIndexOf('.')) >= 0 ? name.substring(index + 1) : name;
-	}
-	
 	public static final ApplicationConfiguration.Builder builder(Path path) {
 		ApplicationConfiguration.Builder builder = new ApplicationConfiguration.Builder(path);
 		
+		// ----- Hidden
 		builder.addProperty(ConfigurationProperty.ofString(PROPERTY_VERSION).asHidden(true));
 		builder.addProperty(ConfigurationProperty.ofArray("removeAtInit").asHidden(true));
 		
+		// ----- General
 		builder.addProperty(ConfigurationProperty.ofType(PROPERTY_LANGUAGE, Language.class)
+			.inGroup(GROUP_GENERAL)
 			.withFactory(() -> Stream.concat(List.of("auto").stream(),
 			                                 ResourceRegistry.languages.values().stream()
 			                                        .map(Language::getName))
@@ -83,6 +82,7 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 			                            .filter((l) -> l.getName().equals(s))
 			                            .findFirst().orElse(null)));
 		builder.addProperty(ConfigurationProperty.ofType(PROPERTY_THEME, Theme.class)
+			.inGroup(GROUP_GENERAL)
 			.withFactory(() -> ResourceRegistry.themes.values().stream()
 			                        .map(Theme::getName)
 			                        .collect(Collectors.toList()))
@@ -90,51 +90,54 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 			                 (s) -> ResourceRegistry.themes.values().stream()
 			                            .filter((t) -> t.getName().equals(s))
 			                            .findFirst().orElse(null)));
+		builder.addProperty(ConfigurationProperty.ofBoolean(PROPERTY_AUTO_UPDATE_CHECK).inGroup(GROUP_GENERAL).withDefaultValue(true));
+		builder.addProperty(ConfigurationProperty.ofBoolean(PROPERTY_CHECK_RESOURCES_INTEGRITY).inGroup(GROUP_GENERAL).withDefaultValue(true));
+		builder.addProperty(ConfigurationProperty.ofBoolean(PROPERTY_USE_PRE_RELEASE_VERSIONS)
+			.inGroup(GROUP_GENERAL)
+			.withDefaultValue(MediaDownloader.version().type() != VersionType.RELEASE));
+
+		// ----- Download
+		builder.addProperty(ConfigurationProperty.ofInteger(PROPERTY_ACCELERATED_DOWNLOAD).inGroup(GROUP_DOWNLOAD).withDefaultValue(1));
+		builder.addProperty(ConfigurationProperty.ofInteger(PROPERTY_PARALLEL_DOWNLOADS).inGroup(GROUP_DOWNLOAD).withDefaultValue(1));
+		builder.addProperty(ConfigurationProperty.ofBoolean(PROPERTY_COMPUTE_STREAM_SIZE).inGroup(GROUP_DOWNLOAD).withDefaultValue(true));
+		builder.addProperty(ConfigurationProperty.ofInteger(PROPERTY_REQUEST_TIMEOUT).inGroup(GROUP_DOWNLOAD).withDefaultValue(5000));
 		
-		builder.addProperty(ConfigurationProperty.ofBoolean(PROPERTY_AUTO_UPDATE_CHECK).withDefaultValue(true));
-		builder.addProperty(ConfigurationProperty.ofInteger(PROPERTY_ACCELERATED_DOWNLOAD).withDefaultValue(1));
-		builder.addProperty(ConfigurationProperty.ofInteger(PROPERTY_PARALLEL_DOWNLOADS).withDefaultValue(1));
-		builder.addProperty(ConfigurationProperty.ofInteger(PROPERTY_PARALLEL_CONVERSIONS).withDefaultValue(1));
-		builder.addProperty(ConfigurationProperty.ofBoolean(PROPERTY_COMPUTE_STREAM_SIZE).withDefaultValue(true));
-		builder.addProperty(ConfigurationProperty.ofInteger(PROPERTY_REQUEST_TIMEOUT).withDefaultValue(5000));
-		builder.addProperty(ConfigurationProperty.ofBoolean(PROPERTY_CHECK_RESOURCES_INTEGRITY).withDefaultValue(true));
+		// ----- Conversion
+		builder.addProperty(ConfigurationProperty.ofInteger(PROPERTY_PARALLEL_CONVERSIONS).inGroup(GROUP_CONVERSION).withDefaultValue(1));
 		
-		builder.addProperty(ConfigurationProperty.ofObject("plugins").withProperties(
-			ConfigurationProperty.ofBoolean(propertyBasename(PROPERTY_PLUGINS_AUTO_UPDATE_CHECK)).withDefaultValue(true)
-		));
+		// ----- Plugins
+		builder.addProperty(ConfigurationProperty.ofBoolean(PROPERTY_PLUGINS_AUTO_UPDATE_CHECK)
+			.inGroup(GROUP_PLUGINS).withDefaultValue(true));
 		
-		builder.addProperty(ConfigurationProperty.ofObject("history").withProperties(
-			ConfigurationProperty.ofType(propertyBasename(PROPERTY_HISTORY_LAST_DIRECTORY), Path.class)
-				.asHidden(true)
-				.withTransformer(Path::toString, NIO::pathOrNull),
-			ConfigurationProperty.ofType(propertyBasename(PROPERTY_HISTORY_LAST_OPEN_FORMAT), MediaFormat.class)
-				.asHidden(true)
-				.withDefaultValue(MediaFormat.UNKNOWN.name())
-				.withTransformer(MediaFormat::name, MediaFormat::fromName),
-			ConfigurationProperty.ofType(propertyBasename(PROPERTY_HISTORY_LAST_SAVE_FORMAT), MediaFormat.class)
-				.asHidden(true)
-				.withDefaultValue(MediaFormat.UNKNOWN.name())
-				.withTransformer(MediaFormat::name, MediaFormat::fromName)
-		));
+		// ----- History
+		builder.addProperty(ConfigurationProperty.ofType(PROPERTY_HISTORY_LAST_DIRECTORY, Path.class)
+			.asHidden(true)
+			.withTransformer(Path::toString, NIO::pathOrNull));
+		builder.addProperty(ConfigurationProperty.ofType(PROPERTY_HISTORY_LAST_OPEN_FORMAT, MediaFormat.class)
+			.asHidden(true)
+			.withDefaultValue(MediaFormat.UNKNOWN.name())
+			.withTransformer(MediaFormat::name, MediaFormat::fromName));
+		builder.addProperty(ConfigurationProperty.ofType(PROPERTY_HISTORY_LAST_SAVE_FORMAT, MediaFormat.class)
+			.asHidden(true)
+			.withDefaultValue(MediaFormat.UNKNOWN.name())
+			.withTransformer(MediaFormat::name, MediaFormat::fromName));
 		
-		builder.addProperty(ConfigurationProperty.ofObject("naming").withProperties(
-			ConfigurationProperty.ofType(propertyBasename(PROPERTY_NAMING_MEDIA_TITLE_FORMAT), NamedMediaTitleFormat.class)
-				.withFactory(() -> Stream.concat(MediaTitleFormats.all().keySet().stream(), Stream.of("custom"))
-				                         .collect(Collectors.toList()))
-				.withTransformer((v) -> v.name(),
-				                 (s) -> Optional.ofNullable(MediaTitleFormats.ofName(s))
-				                            .map((v) -> new NamedMediaTitleFormat(s, v))
-				                            .orElse(null))
-				.withDefaultValue(MediaTitleFormats.defaultName()),
-			ConfigurationProperty.ofString(propertyBasename(PROPERTY_NAMING_CUSTOM_MEDIA_TITLE_FORMAT))
-		));
+		// ----- Naming
+		builder.addProperty(ConfigurationProperty.ofType(PROPERTY_NAMING_MEDIA_TITLE_FORMAT, NamedMediaTitleFormat.class)
+			.inGroup(GROUP_NAMING)
+			.withFactory(() -> Stream.concat(MediaTitleFormats.all().keySet().stream(), Stream.of("custom"))
+			                         .collect(Collectors.toList()))
+			.withTransformer((v) -> v.name(),
+			                 (s) -> Optional.ofNullable(MediaTitleFormats.ofName(s))
+			                                .map((v) -> new NamedMediaTitleFormat(s, v))
+			                                .orElse(null))
+			.withDefaultValue(MediaTitleFormats.defaultName()));
+		builder.addProperty(ConfigurationProperty.ofString(PROPERTY_NAMING_CUSTOM_MEDIA_TITLE_FORMAT)
+			.inGroup(GROUP_NAMING));
 		
 		// Register custom configuration fields that will be display in the Configuration window
 		ConfigurationWindow.registerFormField(PROPERTY_NAMING_CUSTOM_MEDIA_TITLE_FORMAT,
 		                                      TextFieldMediaTitleFormat::new);
-		
-		builder.addProperty(ConfigurationProperty.ofBoolean(PROPERTY_USE_PRE_RELEASE_VERSIONS)
-		                                         .withDefaultValue(MediaDownloader.version().type() != VersionType.RELEASE));
 		
 		return builder;
 	}

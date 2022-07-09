@@ -2,6 +2,7 @@ package sune.app.mediadown.gui.form;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import javafx.scene.Node;
 import javafx.scene.control.Label;
@@ -11,7 +12,7 @@ import javafx.scene.layout.Priority;
 
 public class FormBuilder {
 	
-	private final List<FormField> fields = new ArrayList<>();
+	private final List<FormField<?>> fields = new ArrayList<>();
 	private final List<Form> groups = new ArrayList<>();
 	private final List<FormButton> buttons = new ArrayList<>();
 	
@@ -20,25 +21,11 @@ public class FormBuilder {
 	private String title;
 	private int row;
 	
-	public void setPane(Pane pane) {
-		if((pane == null))
-			throw new NullPointerException();
-		this.pane = pane;
-	}
-	
-	public void setName(String name) {
-		this.name = name;
-	}
-	
-	public void setTitle(String title) {
-		this.title = title;
-	}
-	
-	private final void addFieldGUI(Form form, FormField field) {
+	private final void addFieldGUI(Form form, FormField<?> field) {
 		Node node = field.render(form);
-		Label lblTitle = new Label(field.getTitle());
+		Label lblTitle = new Label(field.title());
 		lblTitle.setWrapText(true);
-		form.getPaneFields().getChildren().addAll(lblTitle, node);
+		form.paneFields().getChildren().addAll(lblTitle, node);
 		GridPane.setConstraints(lblTitle, 0, row);
 		GridPane.setConstraints(node, 1, row);
 		GridPane.setHgrow(node, Priority.ALWAYS);
@@ -46,32 +33,41 @@ public class FormBuilder {
 	}
 	
 	private final void addGroupGUI(Form form, Form group) {
-		form.getPaneFields().getChildren().add(group);
+		form.paneFields().getChildren().add(group);
 		GridPane.setConstraints(group, 0, row, 2, 1);
 		++row;
 	}
 	
 	private final void addButtonGUI(Form form, FormButton button) {
 		button.setMinWidth(80.0);
-		form.getPaneButtons().getChildren().add(button);
+		form.paneButtons().getChildren().add(button);
 	}
 	
-	public void addField(FormField field) {
-		if((field == null))
-			throw new NullPointerException();
-		fields.add(field);
+	/** @since 00.02.07 */
+	public void pane(Pane pane) {
+		this.pane = Objects.requireNonNull(pane);
+	}
+	
+	/** @since 00.02.07 */
+	public void name(String name) {
+		this.name = name;
+	}
+	
+	/** @since 00.02.07 */
+	public void title(String title) {
+		this.title = title;
+	}
+	
+	public void addField(FormField<?> field) {
+		fields.add(Objects.requireNonNull(field));
 	}
 	
 	public void addGroup(Form form) {
-		if((form == null))
-			throw new NullPointerException();
-		groups.add(form);
+		groups.add(Objects.requireNonNull(form));
 	}
 	
 	public void addButton(FormButton button) {
-		if((button == null))
-			throw new NullPointerException();
-		buttons.add(button);
+		buttons.add(Objects.requireNonNull(button));
 	}
 	
 	public Form build() {

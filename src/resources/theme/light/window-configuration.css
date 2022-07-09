@@ -3,7 +3,7 @@
 	-fx-close-tab-animation: NONE;
 }
 
-.tab-content-area {
+.tab-content-area .scroll-tab-content {
 	-fx-padding: 10;
 }
 

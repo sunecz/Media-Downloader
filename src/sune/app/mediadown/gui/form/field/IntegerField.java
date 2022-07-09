@@ -7,12 +7,12 @@ import sune.app.mediadown.gui.form.FormField;
 import sune.util.ssdf2.SSDType;
 import sune.util.ssdf2.SSDValue;
 
-public class IntegerField extends FormField {
+public class IntegerField<T> extends FormField<T> {
 	
 	private final IntegerTextField control;
 	
-	public IntegerField(String name, String title) {
-		super(name, title);
+	public IntegerField(T property, String name, String title) {
+		super(property, name, title);
 		control = new IntegerTextField();
 	}
 	
@@ -22,12 +22,12 @@ public class IntegerField extends FormField {
 	}
 	
 	@Override
-	public void setValue(SSDValue value, SSDType type) {
+	public void value(SSDValue value, SSDType type) {
 		control.setValue(value.intValue());
 	}
 	
 	@Override
-	public Object getValue() {
+	public Object value() {
 		return control.getValue();
 	}
 }

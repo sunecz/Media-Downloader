@@ -12,6 +12,19 @@ import sune.util.ssdf2.SSDCollection;
 /** @since 00.02.04 */
 public interface ApplicationConfigurationAccessor {
 	
+	// ----- Names of configuration groups
+	/** @since 00.02.07 */
+	public static final String GROUP_GENERAL = "general";
+	/** @since 00.02.07 */
+	public static final String GROUP_DOWNLOAD = "download";
+	/** @since 00.02.07 */
+	public static final String GROUP_CONVERSION = "conversion";
+	/** @since 00.02.07 */
+	public static final String GROUP_PLUGINS = "plugins";
+	/** @since 00.02.07 */
+	public static final String GROUP_NAMING = "naming";
+	
+	// ----- Names of configuration properties
 	public static final String PROPERTY_VERSION = "version";
 	public static final String PROPERTY_LANGUAGE = "language";
 	public static final String PROPERTY_THEME = "theme";

@@ -5,18 +5,20 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.BiFunction;
+import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
 import javafx.scene.control.Button;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TabPane.TabClosingPolicy;
@@ -28,12 +30,11 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import sune.app.mediadown.MediaDownloader;
+import sune.app.mediadown.configuration.ApplicationConfigurationAccessor;
 import sune.app.mediadown.configuration.Configuration;
-import sune.app.mediadown.configuration.Configuration.ArrayConfigurationProperty;
 import sune.app.mediadown.configuration.Configuration.ConfigurationProperty;
 import sune.app.mediadown.configuration.Configuration.ConfigurationPropertyType;
 import sune.app.mediadown.configuration.Configuration.NullTypeConfigurationProperty;
-import sune.app.mediadown.configuration.Configuration.ObjectConfigurationProperty;
 import sune.app.mediadown.configuration.Configuration.TypeConfigurationProperty;
 import sune.app.mediadown.gui.Dialog;
 import sune.app.mediadown.gui.DraggableWindow;
@@ -57,18 +58,38 @@ import sune.app.mediadown.util.FXUtils;
 import sune.app.mediadown.util.HorizontalLeftTabPaneSkin;
 import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.Password;
+import sune.app.mediadown.util.TriFunction;
 import sune.app.mediadown.util.Utils;
 import sune.util.ssdf2.SSDCollection;
 import sune.util.ssdf2.SSDObject;
+import sune.util.ssdf2.SSDType;
 
 public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 	
 	public static final String NAME = "configuration";
 	
-	/** @since 00.02.04 */
-	private final Map<Configuration, ConfigurationForms> configurations = new LinkedHashMap<>();
+	/** @since 00.02.07 */
+	private static final List<Form> forms = new ArrayList<>();
 	/** @since 00.02.05 */
-	private static final Map<String, BiFunction<String, String, FormField>> formFieldsRegistry = new HashMap<>();
+	private static final Map<String, TriFunction<ConfigurationFormFieldProperty,
+	                                             String, String,
+	                                             FormField<ConfigurationFormFieldProperty>>>
+		formFieldsRegistry = new HashMap<>();
+	/** @since 00.02.07 */
+	private static final Map<String, FormBuilder> formBuilders = new LinkedHashMap<>();
+	/** @since 00.02.07 */
+	private static final Map<String, String> groupTitles = new HashMap<>();
+	
+	static {
+		// Ensure that main groups are in a specific order
+		Stream.of(
+			ApplicationConfigurationAccessor.GROUP_GENERAL,
+			ApplicationConfigurationAccessor.GROUP_DOWNLOAD,
+			ApplicationConfigurationAccessor.GROUP_CONVERSION,
+			ApplicationConfigurationAccessor.GROUP_NAMING,
+			ApplicationConfigurationAccessor.GROUP_PLUGINS
+		).forEach((s) -> formBuilders.put(s, new FormBuilder()));
+	}
 	
 	private final TabPane tabPane;
 	private final Button btnSave;
@@ -113,38 +134,7 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 	}
 	
 	/** @since 00.02.04 */
-	private static final boolean isObjectOrArray(Entry<String, ConfigurationProperty<?>> entry) {
-		ConfigurationPropertyType type = entry.getValue().type();
-		return !entry.getValue().isHidden() && (type == ConfigurationPropertyType.ARRAY || type == ConfigurationPropertyType.OBJECT);
-	}
-	
-	/** @since 00.02.04 */
-	private static final boolean isNotObjectOrArray(Entry<String, ConfigurationProperty<?>> entry) {
-		ConfigurationPropertyType type = entry.getValue().type();
-		return !entry.getValue().isHidden() && (type != ConfigurationPropertyType.ARRAY && type != ConfigurationPropertyType.OBJECT);
-	}
-	
-	/** @since 00.02.04 */
-	private static final Stream<Entry<String, ConfigurationProperty<?>>> collectionsEntryStream(Map<String, ConfigurationProperty<?>> map) {
-		return map.entrySet().stream().filter(ConfigurationWindow::isObjectOrArray);
-	}
-	
-	/** @since 00.02.04 */
-	private static final Stream<Entry<String, ConfigurationProperty<?>>> objectsEntryStream(Map<String, ConfigurationProperty<?>> map) {
-		return map.entrySet().stream().filter(ConfigurationWindow::isNotObjectOrArray);
-	}
-	
-	/** @since 00.02.04 */
-	private static final Map<String, ConfigurationProperty<?>> propertyToCollection(ConfigurationProperty<?> property) {
-		switch(property.type()) {
-			case ARRAY:  return ((ArrayConfigurationProperty)  property).value();
-			case OBJECT: return ((ObjectConfigurationProperty) property).value();
-			default:     return null;
-		}
-	}
-	
-	/** @since 00.02.04 */
-	private static final FieldType getFieldType(ConfigurationProperty<?> property) {
+	private static final ConfigurationFormFieldType getFieldType(ConfigurationProperty<?> property) {
 		ConfigurationPropertyType type = property.type();
 		if(type == ConfigurationPropertyType.ARRAY || type == ConfigurationPropertyType.OBJECT)
 			return null; // No fields for containers
@@ -156,27 +146,30 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 				property instanceof NullTypeConfigurationProperty ? ((NullTypeConfigurationProperty<?>) property).typeClass() :
 				null
 			);
-			if(typeClass == null) return FieldType.TEXT;
-			return typeClass == Language.class              ? FieldType.SELECT_LANGUAGE :
-				   typeClass == Theme.class                 ? FieldType.SELECT_THEME :
-				   typeClass == NamedMediaTitleFormat.class ? FieldType.SELECT_MEDIA_TITLE_FORMAT :
-				   typeClass == Password.class              ? FieldType.TEXT_PASSWORD :
-				   FieldType.TEXT;
+			if(typeClass == null) return ConfigurationFormFieldType.TEXT;
+			return typeClass == Language.class              ? ConfigurationFormFieldType.SELECT_LANGUAGE :
+				   typeClass == Theme.class                 ? ConfigurationFormFieldType.SELECT_THEME :
+				   typeClass == NamedMediaTitleFormat.class ? ConfigurationFormFieldType.SELECT_MEDIA_TITLE_FORMAT :
+				   typeClass == Password.class              ? ConfigurationFormFieldType.TEXT_PASSWORD :
+				   ConfigurationFormFieldType.TEXT;
 		}
 		switch(type) {
-			case BOOLEAN: return FieldType.CHECKBOX;
-			case INTEGER: return FieldType.INTEGER;
-			case DECIMAL: return FieldType.TEXT; // Currently no decimal field type
+			case BOOLEAN: return ConfigurationFormFieldType.CHECKBOX;
+			case INTEGER: return ConfigurationFormFieldType.INTEGER;
+			case DECIMAL: return ConfigurationFormFieldType.TEXT; // Currently no decimal field type
 			case STRING:
 			case NULL:
-				return FieldType.TEXT;
+				return ConfigurationFormFieldType.TEXT;
 			default:
 				throw new IllegalStateException("Unsupported field type for type: " + type); // Should not happen
 		}
 	}
 	
 	/** @since 00.02.05 */
-	public static final void registerFormField(String name, BiFunction<String, String, FormField> supplier) {
+	public static final void registerFormField(String name,
+			TriFunction<ConfigurationFormFieldProperty,
+			            String, String,
+			            FormField<ConfigurationFormFieldProperty>> supplier) {
 		formFieldsRegistry.put(Objects.requireNonNull(name), Objects.requireNonNull(supplier));
 	}
 	
@@ -191,109 +184,121 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 			.setMinWidth(((Region) tabPane.lookup(".headers-region")).getWidth() + 10.0);
 	}
 	
+	/** @since 00.02.07 */
+	private final String groupTitle(String group) {
+		Objects.requireNonNull(group);
+		return translation.hasSingle("group." + group)
+					? translation.getSingle("group." + group)
+					: groupTitles.getOrDefault(group, group);
+	}
+	
+	/** @since 00.02.07 */
+	private final void addGroupTitlesFromTranslation(String prefix, Translation translation) {
+		if(!translation.hasCollection("group")) return;
+		String namePrefix = translation.getData().getParent().getFullName();
+		namePrefix = namePrefix.replaceFirst("^" + Pattern.quote(prefix + '.'), "");
+		for(SSDObject item : translation.getTranslation("group").getData().objectsIterable()) {
+			if(item.getType() != SSDType.STRING) continue;
+			groupTitles.putIfAbsent(namePrefix + '.' + item.getName(), item.stringValue());
+		}
+	}
+	
+	/** @since 00.02.07 */
+	private final Tab addFormAndCreateTab(String group, FormBuilder builder) {
+		builder.name(group);
+		builder.pane(new VBox(5.0));
+		Form form = builder.build();
+		forms.add(form);
+		ScrollPane scrollable = new ScrollPane();
+		scrollable.setFitToWidth(true);
+		StackPane content = new StackPane();
+		Tab tab = new Tab(groupTitle(group), scrollable);
+		content.getChildren().add(form);
+		content.getStyleClass().add("scroll-tab-content");
+		scrollable.setContent(content);
+		return tab;
+	}
+	
 	/** @since 00.02.04 */
 	private final void loadConfigurations() {
 		// Add the application configuratin
 		addConfiguration(MediaDownloader.configuration(), translation);
 		// Add configurations of loaded plugins
 		Plugins.allLoaded().forEach(this::addPluginConfiguration);
-		// Add all the forms and their tabs
-		String defaultTabName = "general";
-		configurations.entrySet().stream().forEach((entry) -> {
-			ConfigurationForms data = entry.getValue();
-			Translation translation = data.translation();
-			String regexConfigName = '^' + Pattern.quote(entry.getKey().name());
-			data.forms().forEach((form) -> {
-				String tabName = Optional.ofNullable(form.getName())
-						.orElse(defaultTabName)
-						.replaceFirst(regexConfigName, "");
-				if(tabName.isEmpty()) tabName = defaultTabName;
-				StackPane content = new StackPane();
-				Tab tab = new Tab(translation.getSingle("titles." + tabName), content);
-				content.getChildren().add(form);
-				tabPane.getTabs().add(tab);
-			});
-		});
+		
+		tabPane.getTabs().addAll(
+			formBuilders.entrySet().stream()
+				.map((entry) -> addFormAndCreateTab(entry.getKey(), entry.getValue()))
+				.toArray(Tab[]::new)
+		);
 	}
 	
 	/** @since 00.02.04 */
 	private final void addPluginConfiguration(PluginFile plugin) {
 		Configuration configuration = plugin.getConfiguration();
 		if(configuration == null || configuration.isEmpty()) return; // Plugin has no configuration
+		
 		Translation translation = plugin.getInstance().translation();
 		if(translation != null && translation.hasCollection("configuration"))
 			translation = translation.getTranslation("configuration");
 		if(translation == null) translation = this.translation; // Translation cannot be null
+		
+		addGroupTitlesFromTranslation("plugin", translation);
 		addConfiguration(configuration, translation);
+	}
+	
+	/** @since 00.02.07 */
+	private final FormBuilder formBuilder(ConfigurationProperty<?> property) {
+		String group = Optional.ofNullable(property.group()).orElse(ApplicationConfigurationAccessor.GROUP_GENERAL);
+		return formBuilders.computeIfAbsent(group, (k) -> new FormBuilder());
 	}
 	
 	/** @since 00.02.04 */
 	private final void addConfiguration(Configuration configuration, Translation translation) {
-		Map<String, ConfigurationProperty<?>> rootProperties = configuration.rootProperties();
-		List<Form> forms = new ArrayList<>();
 		String configName = configuration.name();
 		boolean isAppConfig = configName.equals(MediaDownloader.configuration().name());
-		String rootName = isAppConfig ? null : configName;
-		// Create all the forms with their fields
-		Stream.concat(Stream.of(buildForm(configName, rootName, objectsEntryStream(rootProperties), translation)),
-		              collectionsEntryStream(rootProperties)
-		                    .map((entry) -> buildForm(configName,
-		                                              (rootName != null ? rootName + '.' : "") + entry.getKey(),
-		                                              objectsEntryStream(propertyToCollection(entry.getValue())),
-		                                              translation)))
-		      .filter(Objects::nonNull)
-		      .forEach(forms::add);
-		if(!forms.isEmpty()) {
-			configurations.put(configuration, new ConfigurationForms(forms, translation));
-		}
-	}
-	
-	private final Form buildForm(String configName, String formName, Stream<Entry<String, ConfigurationProperty<?>>> data,
-			Translation translation) {
-		FormBuilder builder = new FormBuilder();
-		boolean isEmpty = true;
+		String formName = isAppConfig ? null : configName;
 		String regexConfigName = '^' + Pattern.quote(configName + '.');
-		for(Entry<String, ConfigurationProperty<?>> entry : Utils.iterable(data.iterator())) {
-			String name = (formName != null ? formName + '.' : "") + entry.getKey();
+		
+		for(Entry<String, ConfigurationProperty<?>> entry : configuration.properties().entrySet()) {
 			ConfigurationProperty<?> property = entry.getValue();
 			if(property.isHidden()) continue;
+			
+			// Currently objects and arrays are not supported
+			ConfigurationPropertyType type = property.type();
+			if(type == ConfigurationPropertyType.ARRAY
+					|| type == ConfigurationPropertyType.OBJECT)
+				continue;
+			
+			String name = (formName != null ? formName + '.' : "") + entry.getKey();
 			String title = translation.getSingle("fields." + name.replaceFirst(regexConfigName, ""));
-			FormField field = getFormField(property, name, title);
 			SSDObject object = (SSDObject) property.toNode();
-			field.setValue(object.getFormattedValue(), object.getType());
-			builder.addField(field);
-			isEmpty = false;
+			
+			FormField<ConfigurationFormFieldProperty> field = getFormField(configuration, property, name, title);
+			field.value(object.getFormattedValue(), object.getType());
+			formBuilder(property).addField(field);
 		}
-		if(isEmpty) return null; // Indicate empty form, will be filtered out
-		builder.setName(formName);
-		builder.setPane(new VBox(5.0));
-		return builder.build();
 	}
 	
-	private final FormField getFormField(ConfigurationProperty<?> property, String name, String title) {
+	private final FormField<ConfigurationFormFieldProperty> getFormField(Configuration configuration,
+			ConfigurationProperty<?> property, String name, String title) {
+		ConfigurationFormFieldProperty fieldProperty = new ConfigurationFormFieldProperty(configuration, property);
+		
 		// Allow injection of custom form fields
-		BiFunction<String, String, FormField> supplier;
+		TriFunction<ConfigurationFormFieldProperty, String, String, FormField<ConfigurationFormFieldProperty>> supplier;
 		if((supplier = formFieldsRegistry.get(name)) != null) {
-			FormField field = supplier.apply(name, title);
+			FormField<ConfigurationFormFieldProperty> field = supplier.apply(fieldProperty, name, title);
 			if(field != null) return field; // Custom form fields may be null
 		}
 		
 		switch(getFieldType(property)) {
-			case CHECKBOX:                  return new CheckBoxField(name, title);
-			case INTEGER:                   return new IntegerField(name, title);
-			case SELECT_LANGUAGE:           return new SelectLanguageField(name, title);
-			case SELECT_THEME:              return new SelectThemeField(name, title);
-			case SELECT_MEDIA_TITLE_FORMAT: return new SelectMediaTitleFormatField(name, title);
-			case TEXT_PASSWORD:             return new PasswordField(name, title);
-			default:                        return new TextField(name, title);
-		}
-	}
-	
-	private final void saveForm(String configName, SSDCollection data, Form form) {
-		String regexConfigName = '^' + Pattern.quote(configName + '.');
-		for(FormField field : form.getFields()) {
-			String name = field.getName().replaceFirst(regexConfigName, "");
-			data.set(name, SSDObject.of(field.getValue()));
+			case CHECKBOX:                  return new CheckBoxField<>(fieldProperty, name, title);
+			case INTEGER:                   return new IntegerField<>(fieldProperty, name, title);
+			case SELECT_LANGUAGE:           return new SelectLanguageField<>(fieldProperty, name, title);
+			case SELECT_THEME:              return new SelectThemeField<>(fieldProperty, name, title);
+			case SELECT_MEDIA_TITLE_FORMAT: return new SelectMediaTitleFormatField<>(fieldProperty, name, title);
+			case TEXT_PASSWORD:             return new PasswordField<>(fieldProperty, name, title);
+			default:                        return new TextField<>(fieldProperty, name, title);
 		}
 	}
 	
@@ -306,18 +311,26 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 		
 		String dialogTitle = translation.getSingle("dialog.save_title");
 		StringBuilder errorContentBuilder = null;
-		for(Entry<Configuration, ConfigurationForms> entry : configurations.entrySet()) {
-			Configuration configuration = entry.getKey();
-			String name = configuration.name();
-			if(name == null || name.isEmpty()) continue;
+		Set<Configuration> configurations = new LinkedHashSet<>();
+		
+		// Save all fields data in memory
+		for(FormField<?> f : Utils.iterable(forms.stream().flatMap((f) -> f.fields().stream()).iterator())) {
+			FormField<ConfigurationFormFieldProperty> field = Utils.cast(f);
+			ConfigurationFormFieldProperty fieldProperty = field.property();
+			Configuration configuration = fieldProperty.configuration();
 			
 			SSDCollection data = configuration.data();
-			for(Form form : entry.getValue().forms()) {
-				saveForm(name, data, form);
-			}
+			String regexConfigName = '^' + Pattern.quote(configuration.name() + '.');
+			String name = field.name().replaceFirst(regexConfigName, "");
+			data.set(name, SSDObject.of(field.value()));
 			
+			configurations.add(configuration);
+		}
+		
+		// Save all configurations to their respective files
+		for(Configuration configuration : configurations) {
 			try {
-				NIO.save(dir.resolve(name + ".ssdf"), data.toString());
+				NIO.save(dir.resolve(configuration.name() + ".ssdf"), configuration.data().toString());
 			} catch(IOException ex) {
 				(errorContentBuilder == null
 						? errorContentBuilder = new StringBuilder()
@@ -340,8 +353,8 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 		close();
 	}
 	
-	/** @since 00.02.04 */
-	private static enum FieldType {
+	/** @since 00.02.07 */
+	private static enum ConfigurationFormFieldType {
 		
 		// General types
 		CHECKBOX, INTEGER, TEXT, TEXT_PASSWORD,
@@ -351,22 +364,23 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 		SELECT_MEDIA_TITLE_FORMAT;
 	}
 	
-	private static final class ConfigurationForms {
+	/** @since 00.02.07 */
+	public static final class ConfigurationFormFieldProperty {
 		
-		private final List<Form> forms;
-		private final Translation translation;
+		private final Configuration configuration;
+		private final ConfigurationProperty<?> property;
 		
-		public ConfigurationForms(List<Form> forms, Translation translation) {
-			this.forms = Objects.requireNonNull(forms);
-			this.translation = Objects.requireNonNull(translation);
+		public ConfigurationFormFieldProperty(Configuration configuration, ConfigurationProperty<?> property) {
+			this.configuration = Objects.requireNonNull(configuration);
+			this.property = Objects.requireNonNull(property);
 		}
 		
-		public List<Form> forms() {
-			return forms;
+		public Configuration configuration() {
+			return configuration;
 		}
 		
-		public Translation translation() {
-			return translation;
+		public ConfigurationProperty<?> property() {
+			return property;
 		}
 	}
 }

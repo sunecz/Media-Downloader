@@ -9,12 +9,12 @@ import sune.app.mediadown.gui.form.FormField;
 import sune.util.ssdf2.SSDType;
 import sune.util.ssdf2.SSDValue;
 
-public class SelectField extends FormField {
+public class SelectField<T> extends FormField<T> {
 	
 	private final ComboBox<Object> control;
 	
-	public SelectField(String name, String title, Collection<?> items) {
-		super(name, title);
+	public SelectField(T property, String name, String title, Collection<?> items) {
+		super(property, name, title);
 		control = new ComboBox<>();
 		control.getItems().setAll(items);
 		control.setMaxWidth(Double.MAX_VALUE);
@@ -26,12 +26,12 @@ public class SelectField extends FormField {
 	}
 	
 	@Override
-	public void setValue(SSDValue value, SSDType type) {
+	public void value(SSDValue value, SSDType type) {
 		control.getSelectionModel().select(value.value());
 	}
 	
 	@Override
-	public Object getValue() {
+	public Object value() {
 		return control.getSelectionModel().getSelectedItem();
 	}
 }

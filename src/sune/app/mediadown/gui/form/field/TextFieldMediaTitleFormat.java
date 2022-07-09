@@ -25,7 +25,7 @@ import sune.app.mediadown.util.FXUtils;
 import sune.util.ssdf2.SSDType;
 import sune.util.ssdf2.SSDValue;
 
-public class TextFieldMediaTitleFormat extends FormField {
+public class TextFieldMediaTitleFormat<T> extends FormField<T> {
 	
 	/** @since 00.02.06 */
 	private static final String URI_HELP = "https://projects.suneweb.net/media-downloader/docs/media-title-format/";
@@ -39,8 +39,8 @@ public class TextFieldMediaTitleFormat extends FormField {
 	/** @since 00.02.06 */
 	private final Hyperlink linkHelp;
 	
-	public TextFieldMediaTitleFormat(String name, String title) {
-		super(name, title);
+	public TextFieldMediaTitleFormat(T property, String name, String title) {
+		super(property, name, title);
 		wrapper = new VBox(0.0);
 		inline = new HBox(5.0);
 		control = new javafx.scene.control.TextField();
@@ -143,12 +143,12 @@ public class TextFieldMediaTitleFormat extends FormField {
 	}
 	
 	@Override
-	public void setValue(SSDValue value, SSDType type) {
+	public void value(SSDValue value, SSDType type) {
 		control.setText(type == SSDType.NULL ? "" : value.stringValue());
 	}
 	
 	@Override
-	public Object getValue() {
+	public Object value() {
 		return control.getText();
 	}
 }
