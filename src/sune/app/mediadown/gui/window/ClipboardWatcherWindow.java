@@ -22,6 +22,7 @@ import javafx.scene.input.DataFormat;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
+import javafx.scene.text.Font;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import sune.app.mediadown.MediaDownloader;
@@ -60,6 +61,7 @@ public class ClipboardWatcherWindow extends DraggableWindow<VBox> {
 		btnGet.setOnAction((e) -> sendData());
 		
 		txtURLs.setPromptText(translation.getSingle("placeholder.urls"));
+		txtURLs.setFont(Font.font("monospaced", txtURLs.getFont().getSize()));
 		HBox boxFill = new HBox();
 		HBox.setHgrow(boxFill, Priority.ALWAYS);
 		boxBottom.getChildren().addAll(btnSetState, lblStatus, boxFill, btnGet);

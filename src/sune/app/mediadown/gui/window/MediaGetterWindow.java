@@ -18,6 +18,7 @@ import javafx.scene.image.Image;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
+import javafx.scene.text.Font;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import sune.app.mediadown.MediaDownloader;
@@ -79,6 +80,7 @@ public class MediaGetterWindow extends DraggableWindow<VBox> {
 		cmbGetters.setButtonCell(new IconListCell<>(MediaGetter::icon));
 		
 		txtURLs.setPromptText(translation.getSingle("placeholder.urls"));
+		txtURLs.setFont(Font.font("monospaced", txtURLs.getFont().getSize()));
 		cmbGetters.setMaxWidth(Double.MAX_VALUE);
 		boxBottom.getChildren().addAll(cmbGetters, btnGet);
 		content.getChildren().addAll(txtURLs, boxBottom);
