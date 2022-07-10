@@ -122,7 +122,7 @@ public class MediaGetterWindow extends DraggableWindow<VBox> {
 			}
 			showSelectionWindow(getter, Utils.uri(url));
 		} else {
-			showSelectionWindow(urls);
+			showSelectionWindowURLs(urls);
 		}
 	}
 	
@@ -140,10 +140,20 @@ public class MediaGetterWindow extends DraggableWindow<VBox> {
 	    });
 	}
 	
-	private final void showSelectionWindow(List<String> urls) {
+	private final void showSelectionWindowURLs(List<String> urls) {
+		showSelectionWindow(urls.stream().filter(Utils::isValidURL).map(Utils::uri).collect(Collectors.toList()));
+	}
+	
+	/** @since 00.02.07 */
+	public final void showSelectionWindow(URI uri) {
+		MediaGetter getter = MediaGetters.fromURI(uri);
+		if(getter != null) showSelectionWindow(getter, uri);
+	}
+	
+	/** @since 00.02.07 */
+	public final void showSelectionWindow(List<URI> uris) {
 		Threads.execute(() -> {
 			boolean shouldClose = Utils.ignore(() -> {
-				List<URI> uris = urls.stream().map(Utils::uri).collect(Collectors.toList());
 				URIListPipelineTask task = new URIListPipelineTask(this, uris);
 				
 				Pipeline pipeline = Pipeline.create();

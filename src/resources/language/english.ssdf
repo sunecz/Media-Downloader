@@ -55,6 +55,12 @@
 						configuration: "Configuration",
 						messages:      "Messages"
 					}
+				},
+				tools: {
+					title: "Tools",
+					item: {
+						clipboard_watcher: "Clipboard watcher"
+					}
 				}
 			},
 			progress: {
@@ -369,6 +375,29 @@
 		},
 		preview: {
 			title: "Preview"
+		},
+		clipboard_watcher: {
+			title: "Clipboard watcher",
+			label: {
+				status: "Status: %{status}"
+			},
+			status: {
+				enabled:  "Enabled",
+				disabled: "Disabled"
+			},
+			button: {
+				set_state_enable:  "Enable",
+				set_state_disable: "Disable",
+				get:               "Get"
+			},
+			placeholder: {
+				urls: "URLs will be put here"
+			},
+			error: {
+				title:       "Error",
+				url_empty:   "Enter URL address",
+				url_invalid: "Invalid URL address"
+			}
 		}
 	},
 	errors: {

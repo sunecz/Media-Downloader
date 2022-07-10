@@ -116,6 +116,8 @@ public final class MainWindow extends Window<BorderPane> {
 	private MenuItem menuItemInformation;
 	private MenuItem menuItemConfiguration;
 	private MenuItem menuItemMessages;
+	private Menu menuTools;
+	private MenuItem menuClipboardWatcher;
 	
 	private final Timer timer = new Timer(200, (e) -> {
 		if(!refresh.get() && updated.get()) {
@@ -145,6 +147,8 @@ public final class MainWindow extends Window<BorderPane> {
 		menuItemInformation   = new MenuItem(translation.getSingle("menu_bar.application.item.information"));
 		menuItemConfiguration = new MenuItem(translation.getSingle("menu_bar.application.item.configuration"));
 		menuItemMessages      = new MenuItem(translation.getSingle("menu_bar.application.item.messages"));
+		menuTools             = new Menu(translation.getSingle("menu_bar.tools.title"));
+		menuClipboardWatcher  = new MenuItem(translation.getSingle("menu_bar.tools.item.clipboard_watcher"));
 		String titleVSRC = translation.getSingle("tables.main.columns.source");
 		String titlePath = translation.getSingle("tables.main.columns.output");
 		String titleDPrg = translation.getSingle("tables.main.columns.progress");
@@ -279,7 +283,6 @@ public final class MainWindow extends Window<BorderPane> {
 				}
 			}
 		});
-		menuApplication.getItems().addAll(menuItemInformation, menuItemConfiguration, menuItemMessages);
 		menuItemInformation.setOnAction((e) -> {
 			showInformationWindow();
 		});
@@ -287,7 +290,12 @@ public final class MainWindow extends Window<BorderPane> {
 			MediaDownloader.window(ConfigurationWindow.NAME).show(this);
 		});
 		menuItemMessages.setOnAction((e) -> resetAndShowMessagesAsync());
-		menuBar.getMenus().add(menuApplication);
+		menuApplication.getItems().addAll(menuItemInformation, menuItemConfiguration, menuItemMessages);
+		menuClipboardWatcher.setOnAction((e) -> {
+			MediaDownloader.window(ClipboardWatcherWindow.NAME).show(this);
+		});
+		menuTools.getItems().addAll(menuClipboardWatcher);
+		menuBar.getMenus().addAll(menuApplication, menuTools);
 		btnDownload.setOnAction((e) -> {
 			table.getItems().stream().forEach(this::startPipeline);
 			btnDownload.setDisable(true);

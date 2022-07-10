@@ -55,6 +55,12 @@
 						configuration: "Nastavení",
 						messages:      "Zprávy"
 					}
+				},
+				tools: {
+					title: "Nástroje",
+					item: {
+						clipboard_watcher: "Sledování schránky"
+					}
 				}
 			},
 			progress: {
@@ -369,6 +375,29 @@
 		},
 		preview: {
 			title: "Náhled"
+		},
+		clipboard_watcher: {
+			title: "Sledování schránky",
+			label: {
+				status: "Stav: %{status}"
+			},
+			status: {
+				enabled:  "Aktivní",
+				disabled: "Neaktivní"
+			},
+			button: {
+				set_state_enable:  "Aktivovat",
+				set_state_disable: "Deaktivovat",
+				get:               "Získat"
+			},
+			placeholder: {
+				urls: "Zde budou vkládány URL"
+			},
+			error: {
+				title:       "Chyba",
+				url_empty:   "Zadejte URL adresu",
+				url_invalid: "Neplatná URL adresa"
+			}
 		}
 	},
 	errors: {

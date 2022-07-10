@@ -38,6 +38,7 @@ import sune.app.mediadown.gui.Dialog;
 import sune.app.mediadown.gui.DialogWindow;
 import sune.app.mediadown.gui.Menu;
 import sune.app.mediadown.gui.Window;
+import sune.app.mediadown.gui.window.ClipboardWatcherWindow;
 import sune.app.mediadown.gui.window.ConfigurationWindow;
 import sune.app.mediadown.gui.window.DownloadConfigurationWindow;
 import sune.app.mediadown.gui.window.InformationWindow;
@@ -1641,6 +1642,7 @@ public final class MediaDownloader {
 			windows.register(MessageWindow.NAME, FXUtils.fxTaskValue(MessageWindow::new));
 			windows.register(MediaInfoWindow.NAME, FXUtils.fxTaskValue(MediaInfoWindow::new));
 			windows.register(PreviewWindow.NAME, FXUtils.fxTaskValue(PreviewWindow::new));
+			windows.register(ClipboardWatcherWindow.NAME, FXUtils.fxTaskValue(ClipboardWatcherWindow::new));
 		}
 		
 		private static final void registerDialogs() {
