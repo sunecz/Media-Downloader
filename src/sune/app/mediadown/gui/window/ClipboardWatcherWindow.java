@@ -33,6 +33,8 @@ public class ClipboardWatcherWindow extends DraggableWindow<VBox> {
 	
 	public static final String NAME = "clipboard_watcher";
 	
+	private static final Pattern REGEX_TRAILING_END_SEPARATORS = Pattern.compile("[\\n\\r]+$");
+	
 	private final Label lblStatus;
 	private final TextArea txtURLs;
 	private final HBox boxBottom;
@@ -79,8 +81,6 @@ public class ClipboardWatcherWindow extends DraggableWindow<VBox> {
 	private static final boolean isSupportedURI(URI uri) {
 		return MediaGetters.fromURI(uri) != null;
 	}
-	
-	private static final Pattern REGEX_TRAILING_END_SEPARATORS = Pattern.compile("[\\n\\r]+$");
 	
 	private final void appendURI(URI uri) {
 		if(!isSupportedURI(uri))
