@@ -125,6 +125,12 @@
     -fx-text-fill: rgb(255, 255, 255);
 }
 
+.menu-bar > .container > .menu-button:hover > .label,
+.menu-bar > .container > .menu-button:focused > .label,
+.menu-bar > .container > .menu-button:showing  > .label {
+    -fx-text-fill: rgb(255, 255, 255);
+}
+
 /* GUI Component: Draggable window */
 
 .draggable-window-pane {

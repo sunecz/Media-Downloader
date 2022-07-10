@@ -10,9 +10,6 @@
 				download:          "Download all",
 				download_selected: "Download selected",
 				add:               "Add",
-				information:       "Information",
-				configuration:     "Configuration",
-				messages:          "Messages",
 				search:            "Search"
 			},
 			tables: {
@@ -47,6 +44,16 @@
 						downloaders: "Downloaders",
 						servers:     "Servers",
 						plugins:     "Plugins"
+					}
+				}
+			},
+			menu_bar: {
+				application: {
+					title: "Application",
+					item: {
+						information:   "Information",
+						configuration: "Configuration",
+						messages:      "Messages"
 					}
 				}
 			},

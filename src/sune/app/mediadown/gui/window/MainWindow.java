@@ -99,67 +99,11 @@ public final class MainWindow extends Window<BorderPane> {
 	private final AtomicBoolean refresh = new AtomicBoolean();
 	private final AtomicBoolean updated = new AtomicBoolean();
 	
-	public final class PipelineInfo {
-		
-		private final Pipeline pipeline;
-		/** @since 00.02.05 */
-		private final ResolvedMedia media;
-		private String progress;
-		
-		public PipelineInfo(Pipeline pipeline, ResolvedMedia media) {
-			this.pipeline = Objects.requireNonNull(pipeline);
-			this.media    = Objects.requireNonNull(media);
-			this.progress = "";
-		}
-		
-		public void update(String progress) {
-			this.progress = progress;
-			updated.set(true);
-		}
-		
-		// Setters
-		public void setSource     (String source)   {}
-		public void setDestination(String path)     {}
-		public void setProgress   (String progress) {}
-		
-		// Getters
-		public String getSource() {
-			return media.media().source().toString();
-		}
-		
-		public String getDestination() {
-			return media.path().toString();
-		}
-		
-		public String getProgress() {
-			return progress;
-		}
-		
-		public Media getMedia() {
-			return media.media();
-		}
-		
-		public Path getPath() {
-			return media.path();
-		}
-		
-		/** @since 00.02.05 */
-		public MediaDownloadConfiguration getMediaConfiguration() {
-			return media.configuration();
-		}
-		
-		public Pipeline getPipeline() {
-			return pipeline;
-		}
-	}
-	
 	private TableView<PipelineInfo> table;
 	private Button btnDownload;
 	private Button btnDownloadSelected;
 	private Button btnAdd;
-	private Button btnInformation;
-	private Button btnConfig;
-	private Button btnMessages;
+	
 	private ContextMenu menuTable;
 	private MenuItem menuItemPause;
 	private MenuItem menuItemTerminate;
@@ -168,8 +112,10 @@ public final class MainWindow extends Window<BorderPane> {
 	private ContextMenu menuAdd;
 	
 	private MenuBar menuBar;
-	private Menu menuHelp;
-	private MenuItem menuItemReportIssue;
+	private Menu menuApplication;
+	private MenuItem menuItemInformation;
+	private MenuItem menuItemConfiguration;
+	private MenuItem menuItemMessages;
 	
 	private final Timer timer = new Timer(200, (e) -> {
 		if(!refresh.get() && updated.get()) {
@@ -186,20 +132,19 @@ public final class MainWindow extends Window<BorderPane> {
 	
 	public MainWindow() {
 		super(NAME, new BorderPane(), 650.0, 420.0);
-		table 		        = new TableView<>();
-		btnDownload         = new Button(translation.getSingle("buttons.download"));
-		btnDownloadSelected = new Button(translation.getSingle("buttons.download_selected"));
-		btnAdd	            = new Button(translation.getSingle("buttons.add"));
-		btnInformation      = new Button(translation.getSingle("buttons.information"));
-		btnConfig           = new Button(translation.getSingle("buttons.configuration"));
-		btnMessages         = new Button(translation.getSingle("buttons.messages"));
-		menuTable	        = new ContextMenu();
-		menuItemPause       = new MenuItem(translation.getSingle("context_menus.table.items.pause"));
-		menuItemTerminate   = new MenuItem(translation.getSingle("context_menus.table.items.terminate_cancel"));
-		menuItemShowFile    = new MenuItem(translation.getSingle("context_menus.table.items.show_file"));
-		menuBar             = new MenuBar();
-		menuHelp            = new Menu(translation.getSingle("menu_bar.help.title"));
-		menuItemReportIssue = new MenuItem(translation.getSingle("menu_bar.help.items.report_issue"));
+		table 		          = new TableView<>();
+		btnDownload           = new Button(translation.getSingle("buttons.download"));
+		btnDownloadSelected   = new Button(translation.getSingle("buttons.download_selected"));
+		btnAdd	              = new Button(translation.getSingle("buttons.add"));
+		menuTable	          = new ContextMenu();
+		menuItemPause         = new MenuItem(translation.getSingle("context_menus.table.items.pause"));
+		menuItemTerminate     = new MenuItem(translation.getSingle("context_menus.table.items.terminate_cancel"));
+		menuItemShowFile      = new MenuItem(translation.getSingle("context_menus.table.items.show_file"));
+		menuBar               = new MenuBar();
+		menuApplication       = new Menu(translation.getSingle("menu_bar.application.title"));
+		menuItemInformation   = new MenuItem(translation.getSingle("menu_bar.application.item.information"));
+		menuItemConfiguration = new MenuItem(translation.getSingle("menu_bar.application.item.configuration"));
+		menuItemMessages      = new MenuItem(translation.getSingle("menu_bar.application.item.messages"));
 		String titleVSRC = translation.getSingle("tables.main.columns.source");
 		String titlePath = translation.getSingle("tables.main.columns.output");
 		String titleDPrg = translation.getSingle("tables.main.columns.progress");
@@ -334,11 +279,15 @@ public final class MainWindow extends Window<BorderPane> {
 				}
 			}
 		});
-		menuHelp.getItems().add(menuItemReportIssue);
-		menuItemReportIssue.setOnAction((e) -> {
-			
+		menuApplication.getItems().addAll(menuItemInformation, menuItemConfiguration, menuItemMessages);
+		menuItemInformation.setOnAction((e) -> {
+			showInformationWindow();
 		});
-		menuBar.getMenus().add(menuHelp);
+		menuItemConfiguration.setOnAction((e) -> {
+			MediaDownloader.window(ConfigurationWindow.NAME).show(this);
+		});
+		menuItemMessages.setOnAction((e) -> resetAndShowMessagesAsync());
+		menuBar.getMenus().add(menuApplication);
 		btnDownload.setOnAction((e) -> {
 			table.getItems().stream().forEach(this::startPipeline);
 			btnDownload.setDisable(true);
@@ -350,27 +299,19 @@ public final class MainWindow extends Window<BorderPane> {
 		btnAdd.setOnAction((e) -> {
 			showContextMenuAtNode(menuAdd, btnAdd);
 		});
-		btnInformation.setOnAction((e) -> {
-			showInformationWindow();
-		});
-		btnConfig.setOnAction((e) -> {
-			MediaDownloader.window(ConfigurationWindow.NAME).show(this);
-		});
-		btnMessages.setOnAction((e) -> resetAndShowMessagesAsync());
 		btnDownload.setMinWidth(80);
 		btnDownloadSelected.setMinWidth(80);
 		btnAdd.setMinWidth(80);
-		btnInformation.setMinWidth(80);
-		btnConfig.setMinWidth(80);
-		btnMessages.setMinWidth(80);
-		pane.setPadding(new Insets(15));
+		pane.setTop(menuBar);
 		pane.setCenter(table);
+		BorderPane.setMargin(table, new Insets(15, 15, 5, 15));
 		HBox box = new HBox(5);
 		box.setAlignment(Pos.CENTER_RIGHT);
 		box.setPadding(new Insets(5, 0, 0, 0));
 		HBox fillBox = new HBox();
 		HBox.setHgrow(fillBox, Priority.ALWAYS);
-		box.getChildren().addAll(btnInformation, btnConfig, btnMessages, fillBox, btnAdd, btnDownloadSelected, btnDownload);
+		box.getChildren().addAll(btnAdd, fillBox, btnDownloadSelected, btnDownload);
+		box.setPadding(new Insets(0, 15, 15, 15));
 		pane.setBottom(box);
 		setScene(scene);
 	    setOnCloseRequest(this::internal_close);
@@ -839,6 +780,60 @@ public final class MainWindow extends Window<BorderPane> {
 	
 	public final Translation getTranslation() {
 		return translation;
+	}
+	
+	public final class PipelineInfo {
+		
+		private final Pipeline pipeline;
+		/** @since 00.02.05 */
+		private final ResolvedMedia media;
+		private String progress;
+		
+		public PipelineInfo(Pipeline pipeline, ResolvedMedia media) {
+			this.pipeline = Objects.requireNonNull(pipeline);
+			this.media    = Objects.requireNonNull(media);
+			this.progress = "";
+		}
+		
+		public void update(String progress) {
+			this.progress = progress;
+			updated.set(true);
+		}
+		
+		// Setters
+		public void setSource     (String source)   {}
+		public void setDestination(String path)     {}
+		public void setProgress   (String progress) {}
+		
+		// Getters
+		public String getSource() {
+			return media.media().source().toString();
+		}
+		
+		public String getDestination() {
+			return media.path().toString();
+		}
+		
+		public String getProgress() {
+			return progress;
+		}
+		
+		public Media getMedia() {
+			return media.media();
+		}
+		
+		public Path getPath() {
+			return media.path();
+		}
+		
+		/** @since 00.02.05 */
+		public MediaDownloadConfiguration getMediaConfiguration() {
+			return media.configuration();
+		}
+		
+		public Pipeline getPipeline() {
+			return pipeline;
+		}
 	}
 	
 	/** @since 00.02.04 */

@@ -10,9 +10,6 @@
 				download:          "Stáhnout vše",
 				download_selected: "Stáhnout vybrané",
 				add:               "Přidat",
-				information:       "Informace",
-				configuration:     "Nastavení",
-				messages:          "Zprávy",
 				search:            "Hledat"
 			},
 			tables: {
@@ -47,6 +44,16 @@
 						downloaders: "Stahovače",
 						servers:     "Servery",
 						plugins:     "Pluginy"
+					}
+				}
+			},
+			menu_bar: {
+				application: {
+					title: "Program",
+					item: {
+						information:   "Informace",
+						configuration: "Nastavení",
+						messages:      "Zprávy"
 					}
 				}
 			},
