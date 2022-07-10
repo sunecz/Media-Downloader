@@ -317,19 +317,21 @@
 				download:   "Download",
 				conversion: "Conversion",
 				naming:     "Naming",
-				plugins:    "Plugins"
+				plugins:    "Plugins",
+				other:      "Other"
 			},
 			fields: {
-				language:                "Language",
-				theme:                   "Theme",
-				autoUpdateCheck:         "Automatic updates",
-				acceleratedDownload:     "Threads count per single download",
-				parallelDownloads:       "Maximum number of parallel downloads",
-				parallelConversions:     "Maximum number of parallel conversions",
-				computeStreamSize:       "Compute data stream size",
-				requestTimeout:          "Request timeout",
-				checkResourcesIntegrity: "Check integrity of resources",
-				usePreReleaseVersions:   "Use pre-release versions",
+				language:                   "Language",
+				theme:                      "Theme",
+				autoUpdateCheck:            "Automatic updates",
+				acceleratedDownload:        "Threads count per single download",
+				parallelDownloads:          "Maximum number of parallel downloads",
+				parallelConversions:        "Maximum number of parallel conversions",
+				computeStreamSize:          "Compute data stream size",
+				requestTimeout:             "Request timeout",
+				checkResourcesIntegrity:    "Check integrity of resources",
+				usePreReleaseVersions:      "Use pre-release versions",
+				autoEnableClipboardWatcher: "Automatically enable the Clipboard watcher",
 				plugins: {
 					autoUpdateCheck: "Automatic plugin updates"
 				},

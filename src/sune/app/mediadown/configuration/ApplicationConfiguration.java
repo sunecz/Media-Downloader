@@ -56,6 +56,8 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 	private String naming_customMediaTitleFormat;
 	/** @since 00.02.07 */
 	private boolean usePreReleaseVersions;
+	/** @since 00.02.07 */
+	private boolean autoEnableClipboardWatcher;
 	
 	private ApplicationConfiguration(Path path, String name, SSDCollection data, Map<String, ConfigurationProperty<?>> properties) {
 		super(name, data, properties);
@@ -135,6 +137,11 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 		builder.addProperty(ConfigurationProperty.ofString(PROPERTY_NAMING_CUSTOM_MEDIA_TITLE_FORMAT)
 			.inGroup(GROUP_NAMING));
 		
+		// ----- Other
+		builder.addProperty(ConfigurationProperty.ofBoolean(PROPERTY_AUTO_ENABLE_CLIPBOARD_WATCHER)
+			.inGroup(GROUP_OTHER)
+			.withDefaultValue(false));
+		
 		// Register custom configuration fields that will be display in the Configuration window
 		ConfigurationWindow.registerFormField(PROPERTY_NAMING_CUSTOM_MEDIA_TITLE_FORMAT,
 		                                      TextFieldMediaTitleFormat::new);
@@ -181,6 +188,7 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 				                          .orElseGet(MediaTitleFormats::ofDefault);
 		
 		usePreReleaseVersions = booleanValue(PROPERTY_USE_PRE_RELEASE_VERSIONS);
+		autoEnableClipboardWatcher = booleanValue(PROPERTY_AUTO_ENABLE_CLIPBOARD_WATCHER);
 	}
 	
 	/** @since 00.02.05 */
@@ -277,6 +285,12 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 	@Override
 	public boolean usePreReleaseVersions() {
 		return usePreReleaseVersions;
+	}
+	
+	/** @since 00.02.07 */
+	@Override
+	public boolean autoEnableClipboardWatcher() {
+		return autoEnableClipboardWatcher;
 	}
 	
 	public static final class Builder extends Configuration.Builder implements ApplicationConfigurationAccessor {
@@ -390,6 +404,12 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 		@Override
 		public boolean usePreReleaseVersions() {
 			return accessor().booleanValue(PROPERTY_USE_PRE_RELEASE_VERSIONS);
+		}
+		
+		/** @since 00.02.07 */
+		@Override
+		public boolean autoEnableClipboardWatcher() {
+			return accessor().booleanValue(PROPERTY_AUTO_ENABLE_CLIPBOARD_WATCHER);
 		}
 		
 		@Override

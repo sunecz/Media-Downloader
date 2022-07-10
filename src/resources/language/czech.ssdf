@@ -317,19 +317,21 @@
 				download:   "Stahování",
 				conversion: "Konverze",
 				naming:     "Pojmenování",
-				plugins:    "Pluginy"
+				plugins:    "Pluginy",
+				other:      "Ostatní"
 			},
 			fields: {
-				language:                "Jazyk",
-				theme:                   "Vzhled",
-				autoUpdateCheck:         "Automatická aktualizace",
-				acceleratedDownload:     "Počet vláken na jedno stahování",
-				parallelDownloads:       "Maximální počet souběžných stahování",
-				parallelConversions:     "Maximální počet souběžných konverzí",
-				computeStreamSize:       "Vypočítat velikost datového proudu",
-				requestTimeout:          "Časový limit požadavku",
-				checkResourcesIntegrity: "Kontrola integrity prostředků",
-				usePreReleaseVersions:   "Používat předběžné verze",
+				language:                   "Jazyk",
+				theme:                      "Vzhled",
+				autoUpdateCheck:            "Automatická aktualizace",
+				acceleratedDownload:        "Počet vláken na jedno stahování",
+				parallelDownloads:          "Maximální počet souběžných stahování",
+				parallelConversions:        "Maximální počet souběžných konverzí",
+				computeStreamSize:          "Vypočítat velikost datového proudu",
+				requestTimeout:             "Časový limit požadavku",
+				checkResourcesIntegrity:    "Kontrola integrity prostředků",
+				usePreReleaseVersions:      "Používat předběžné verze",
+				autoEnableClipboardWatcher: "Automaticky aktivovat Sledování schránky",
 				plugins: {
 					autoUpdateCheck: "Automatická aktualizace pluginů"
 				},

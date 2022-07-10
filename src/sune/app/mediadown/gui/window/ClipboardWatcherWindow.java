@@ -12,6 +12,7 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 
 import javafx.beans.Observable;
+import javafx.beans.value.ChangeListener;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
@@ -44,7 +45,7 @@ public class ClipboardWatcherWindow extends DraggableWindow<VBox> {
 	private final Button btnSetState;
 	private final Button btnGet;
 	
-	private ClipboardWatcher watcher;
+	private final ChangeListener<ClipboardContents> listener = this::clipboardContentsChanged;
 	
 	public ClipboardWatcherWindow() {
 		super(NAME, new VBox(5.0), 450.0, 300.0);
@@ -69,7 +70,7 @@ public class ClipboardWatcherWindow extends DraggableWindow<VBox> {
 		boxBottom.setAlignment(Pos.CENTER_LEFT);
 		VBox.setVgrow(txtURLs, Priority.ALWAYS);
 		
-		setOnCloseRequest((e) -> setStateDisabled());
+		setOnCloseRequest((e) -> ensureDisabled());
 		
 		FXUtils.onWindowShow(this, () -> {
 			Stage parent = (Stage) args.get("parent");
@@ -77,7 +78,7 @@ public class ClipboardWatcherWindow extends DraggableWindow<VBox> {
 			// Must be added here since Media Getters are not available yet when creating this window
 			txtURLs.setText("");
 			txtURLs.requestFocus();
-			setStateDisabled();
+			ensureEnabled();
 		});
 	}
 	
@@ -87,6 +88,20 @@ public class ClipboardWatcherWindow extends DraggableWindow<VBox> {
 	
 	private static final MediaGetterWindow mediaGetterWindow() {
 		return MediaDownloader.window(MediaGetterWindow.NAME);
+	}
+	
+	private static final boolean autoEnableClipboardWatcher() {
+		return MediaDownloader.configuration().autoEnableClipboardWatcher();
+	}
+	
+	private final void ensureDisabled() {
+		// Don't disable the watcher till the user disables it manually,
+		// if the watcher is automatically enabled.
+		if(!autoEnableClipboardWatcher()) disable();
+	}
+	
+	private final void ensureEnabled() {
+		if(!isActive()) enable();
 	}
 	
 	private final void appendURI(URI uri) {
@@ -112,11 +127,19 @@ public class ClipboardWatcherWindow extends DraggableWindow<VBox> {
 		});
 	}
 	
+	private final void ensureWindowIsShowing() {
+		FXUtils.thread(() -> {
+			if(!isShowing())
+				show(MainWindow.getInstance());
+		});
+	}
+	
 	private final void clipboardContentsChanged(Observable o, ClipboardContents ov, ClipboardContents contents) {
 		DataFormat format = contents.format();
 		Object value = contents.value();
 		
 		if(format == DataFormat.URL) {
+			ensureWindowIsShowing();
 			appendURI((URI) value);
 			return; // We're done, do not continue
 		}
@@ -148,22 +171,21 @@ public class ClipboardWatcherWindow extends DraggableWindow<VBox> {
 		}
 		
 		// Check for multiple lines of URIs
-		text.lines()
+		List<URI> uris = text.lines()
 			.map(String::trim)
 			.filter(Predicate.not(String::isEmpty))
 			.filter(Utils::isValidURL)
 			.map(Utils::uri)
-			.forEach(this::appendURI);
+			.collect(Collectors.toList());
+		
+		if(!uris.isEmpty()) {
+			ensureWindowIsShowing();
+			uris.forEach(this::appendURI);
+		}
 	}
 	
-	private final ClipboardWatcher createClipboardWatcher() {
-		ClipboardWatcher watcher = ClipboardWatcher.instance();
-		watcher.contentsProperty().addListener(this::clipboardContentsChanged);
-		return watcher;
-	}
-	
-	private final void clearClipboardWatcher(ClipboardWatcher watcher) {
-		watcher.contentsProperty().removeListener(this::clipboardContentsChanged);
+	private final ClipboardWatcher clipboardWatcher() {
+		return ClipboardWatcher.instance();
 	}
 	
 	private final void setStatusText(String status) {
@@ -174,27 +196,24 @@ public class ClipboardWatcherWindow extends DraggableWindow<VBox> {
 		FXUtils.thread(() -> btnSetState.setText(text));
 	}
 	
+	private final boolean isActive() {
+		return clipboardWatcher().isActive();
+	}
+	
 	private final void toggleState() {
-		if(watcher == null || !watcher.isActive()) setStateEnabled();
-		else                                       setStateDisabled();
+		if(!isActive()) enable(); else disable();
 	}
 	
-	private final void setStateEnabled() {
-		if(watcher == null) {
-			watcher = createClipboardWatcher();
-		}
+	private final void startClipboardWatcher(ClipboardWatcher watcher) {
+		if(isActive()) return; // Already active
+		watcher.contentsProperty().addListener(listener);
 		watcher.start();
-		setStatusText(translation.getSingle("status.enabled"));
-		setStateButtonText(translation.getSingle("button.set_state_disable"));
 	}
 	
-	private final void setStateDisabled() {
-		if(watcher != null) {
-			watcher.stop();
-			clearClipboardWatcher(watcher);
-		}
-		setStatusText(translation.getSingle("status.disabled"));
-		setStateButtonText(translation.getSingle("button.set_state_enable"));
+	private final void stopClipboardWatcher(ClipboardWatcher watcher) {
+		if(!isActive()) return; // Not active
+		watcher.stop();
+		watcher.contentsProperty().removeListener(listener);
 	}
 	
 	private final List<String> nonEmptyURLs() {
@@ -235,5 +254,17 @@ public class ClipboardWatcherWindow extends DraggableWindow<VBox> {
 			);
 			mediaGetterWindow().showSelectionWindow(this, uris, this::closeIfTrue);
 		}
+	}
+	
+	public final void enable() {
+		startClipboardWatcher(clipboardWatcher());
+		setStatusText(translation.getSingle("status.enabled"));
+		setStateButtonText(translation.getSingle("button.set_state_disable"));
+	}
+	
+	public final void disable() {
+		stopClipboardWatcher(clipboardWatcher());
+		setStatusText(translation.getSingle("status.disabled"));
+		setStateButtonText(translation.getSingle("button.set_state_enable"));
 	}
 }

@@ -2002,6 +2002,8 @@ public final class MediaDownloader {
 		@Override public String customMediaTitleFormat() { return accessor().customMediaTitleFormat(); }
 		/** @since 00.02.07 */
 		@Override public boolean usePreReleaseVersions() { return accessor().usePreReleaseVersions(); }
+		/** @since 00.02.07 */
+		@Override public boolean autoEnableClipboardWatcher() { return accessor().autoEnableClipboardWatcher(); }
 		@Override public SSDCollection data() { return accessor().data(); }
 		
 		public ApplicationConfiguration configuration() { return configuration; }

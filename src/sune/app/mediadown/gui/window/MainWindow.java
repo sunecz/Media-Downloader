@@ -330,6 +330,7 @@ public final class MainWindow extends Window<BorderPane> {
 	    centerOnScreen();
 	    FXUtils.onWindowShowOnce(this, this::init);
 	    FXUtils.onWindowShowOnce(this, this::showMessagesAsync);
+	    FXUtils.onWindowShowOnce(this, this::maybeAutoEnableClipboardWatcher);
 	    INSTANCE = this;
 	}
 	
@@ -340,6 +341,8 @@ public final class MainWindow extends Window<BorderPane> {
 	private final AtomicBoolean closeRequest = new AtomicBoolean();
 	private final void internal_close(WindowEvent e) {
 		actions.terminate();
+		maybeAutoDisableClipboardWatcher();
+		
 		List<Pipeline> pipelines = getPipelines();
 		if(!pipelines.isEmpty()) {
 			e.consume();
@@ -433,6 +436,22 @@ public final class MainWindow extends Window<BorderPane> {
 			
 			@Override public void cancel() { /* Do nothing */ }
 		});
+	}
+	
+	/** @since 00.02.07 */
+	private final void maybeAutoEnableClipboardWatcher() {
+		if(MediaDownloader.configuration().autoEnableClipboardWatcher()) {
+			ClipboardWatcherWindow window = MediaDownloader.window(ClipboardWatcherWindow.NAME);
+			window.enable(); // Automatically enable the clipboard watcher
+		}
+	}
+	
+	/** @since 00.02.07 */
+	private final void maybeAutoDisableClipboardWatcher() {
+		if(MediaDownloader.configuration().autoEnableClipboardWatcher()) {
+			ClipboardWatcherWindow window = MediaDownloader.window(ClipboardWatcherWindow.NAME);
+			window.disable(); // Automatically disable the clipboard watcher
+		}
 	}
 	
 	private final void prepareAddMenu() {
