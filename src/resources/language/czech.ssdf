@@ -286,10 +286,6 @@
 					description: "Níže uvedené URL nemohly být rozpoznány."
 				}
 			},
-			dialogs: {
-				save_file: "Vyberte cílový soubor",
-				save_dir:  "Vyberte cílový adresář"
-			},
 			getter: {
 				automatic: "Automaticky"
 			}
@@ -389,6 +385,9 @@
 				set_state_enable:  "Aktivovat",
 				set_state_disable: "Deaktivovat",
 				get:               "Získat"
+			},
+			progress: {
+				media: "Načítání mediálních zdrojů..."
 			},
 			placeholder: {
 				urls: "Zde budou vkládány URL"

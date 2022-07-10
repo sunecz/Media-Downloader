@@ -286,10 +286,6 @@
 					description: "URLs below could not be recognized."
 				}
 			},
-			dialogs: {
-				save_file: "Select a destination file",
-				save_dir:  "Select a destination directory"
-			},
 			getter: {
 				automatic: "Automatically"
 			}
@@ -389,6 +385,9 @@
 				set_state_enable:  "Enable",
 				set_state_disable: "Disable",
 				get:               "Get"
+			},
+			progress: {
+				media: "Loading media sources..."
 			},
 			placeholder: {
 				urls: "URLs will be put here"

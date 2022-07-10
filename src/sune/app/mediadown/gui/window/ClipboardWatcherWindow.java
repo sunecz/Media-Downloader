@@ -85,6 +85,10 @@ public class ClipboardWatcherWindow extends DraggableWindow<VBox> {
 		return MediaGetters.fromURI(uri) != null;
 	}
 	
+	private static final MediaGetterWindow mediaGetterWindow() {
+		return MediaDownloader.window(MediaGetterWindow.NAME);
+	}
+	
 	private final void appendURI(URI uri) {
 		if(!isSupportedURI(uri))
 			return; // Add only supported URIs
@@ -201,8 +205,8 @@ public class ClipboardWatcherWindow extends DraggableWindow<VBox> {
 					.collect(Collectors.toList());
 	}
 	
-	private static final MediaGetterWindow mediaGetterWindow() {
-		return MediaDownloader.window(MediaGetterWindow.NAME);
+	private final void closeIfTrue(boolean shouldClose) {
+		if(shouldClose) FXUtils.thread(this::close);
 	}
 	
 	private final void sendData() {
@@ -221,7 +225,7 @@ public class ClipboardWatcherWindow extends DraggableWindow<VBox> {
 				                              translation.getSingle("error.url_invalid"));
 				return;
 			}
-			mediaGetterWindow().showSelectionWindow(Utils.uri(url));
+			mediaGetterWindow().showSelectionWindow(this, Utils.uri(url), this::closeIfTrue);
 		} else {
 			List<URI> uris = Utils.deduplicate(
 				urls.stream()
@@ -229,7 +233,7 @@ public class ClipboardWatcherWindow extends DraggableWindow<VBox> {
 					.map(Utils::uri)
 					.collect(Collectors.toList())
 			);
-			mediaGetterWindow().showSelectionWindow(uris);
+			mediaGetterWindow().showSelectionWindow(this, uris, this::closeIfTrue);
 		}
 	}
 }

@@ -3,6 +3,7 @@ package sune.app.mediadown.gui.window;
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -24,7 +25,9 @@ import sune.app.mediadown.MediaGetter;
 import sune.app.mediadown.MediaGetters;
 import sune.app.mediadown.gui.Dialog;
 import sune.app.mediadown.gui.DraggableWindow;
+import sune.app.mediadown.gui.Window;
 import sune.app.mediadown.gui.control.ScrollableComboBox;
+import sune.app.mediadown.gui.table.ResolvedMedia;
 import sune.app.mediadown.gui.table.ResolvedMediaPipelineResult;
 import sune.app.mediadown.gui.table.TablePipelineResult;
 import sune.app.mediadown.gui.table.URIListPipelineResult;
@@ -105,6 +108,60 @@ public class MediaGetterWindow extends DraggableWindow<VBox> {
 					.collect(Collectors.toList());
 	}
 	
+	/** @since 00.02.07 */
+	private final void doTask(Window<?> parent, MediaGetter getter, URI uri, Consumer<Boolean> onFinish) {
+		boolean shouldClose = Utils.ignore(() -> {
+			TableWindow tableWindow = MediaDownloader.window(TableWindow.NAME);
+			TablePipelineResult<?, ?> result = tableWindow.show(parent, getter, uri);
+			boolean isTerminating = result.isTerminating() && result instanceof ResolvedMediaPipelineResult;
+			
+			if(isTerminating) {
+				MainWindow mainWindow = MainWindow.getInstance();
+				List<ResolvedMedia> resolvedMedia = ((ResolvedMediaPipelineResult) result).getValue();
+				resolvedMedia.forEach(mainWindow::addDownload);
+			}
+			
+			return isTerminating;
+		}, false, MediaDownloader::error);
+		
+		if(onFinish != null) {
+			onFinish.accept(shouldClose);
+		}
+	}
+	
+	/** @since 00.02.07 */
+	private final void doTask(Window<?> parent, List<URI> uris, Consumer<Boolean> onFinish) {
+		boolean shouldClose = Utils.ignore(() -> {
+			URIListPipelineTask task = new URIListPipelineTask(parent, uris);
+			
+			Pipeline pipeline = Pipeline.create();
+			pipeline.addTask(task);
+			pipeline.start();
+			pipeline.waitFor();
+			PipelineResult<?> result = pipeline.getResult();
+			boolean isTerminating = result.isTerminating() && result instanceof URIListPipelineResult;
+			
+			List<URI> errors = task.errors();
+			if(!errors.isEmpty()) {
+				Translation tr = translation.getTranslation("errors.unsupported_urls");
+				String content = errors.stream().map((u) -> u.toString() + '\n').reduce("", (a, b) -> a + b);
+				Dialog.showContentError(tr.getSingle("title"), tr.getSingle("description"), content);
+			}
+			
+			if(isTerminating) {
+				MainWindow mainWindow = MainWindow.getInstance();
+				List<ResolvedMedia> resolvedMedia = ((URIListPipelineResult) result).getValue();
+				resolvedMedia.forEach(mainWindow::addDownload);
+			}
+			
+			return isTerminating;
+		}, false, MediaDownloader::error);
+		
+		if(onFinish != null) {
+			onFinish.accept(shouldClose);
+		}
+	}
+	
 	private final void showSelectionWindow() {
 		List<String> urls = nonEmptyURLs();
 		
@@ -127,16 +184,10 @@ public class MediaGetterWindow extends DraggableWindow<VBox> {
 	}
 	
 	private final void showSelectionWindow(MediaGetter getter, URI uri) {
-		TableWindow window = MediaDownloader.window(TableWindow.NAME);
 		Threads.execute(() -> {
-			Utils.ignore(() -> {
-				TablePipelineResult<?, ?> result = window.show(this, getter, uri);
-				if(result.isTerminating()) {
-					MainWindow mainWindow = MainWindow.getInstance();
-					((ResolvedMediaPipelineResult) result).getValue().forEach(mainWindow::addDownload);
-				}
-			}, MediaDownloader::error);
-			FXUtils.thread(this::close);
+			doTask(this, getter, uri, (shouldClose) -> {
+				if(shouldClose) FXUtils.thread(this::close);
+			});
 	    });
 	}
 	
@@ -145,44 +196,25 @@ public class MediaGetterWindow extends DraggableWindow<VBox> {
 	}
 	
 	/** @since 00.02.07 */
-	public final void showSelectionWindow(URI uri) {
-		MediaGetter getter = MediaGetters.fromURI(uri);
-		if(getter != null) showSelectionWindow(getter, uri);
+	private final void showSelectionWindow(List<URI> uris) {
+		List<URI> uniqueURIs = Utils.deduplicate(uris);
+		Threads.execute(() -> {
+			doTask(this, uniqueURIs, (shouldClose) -> {
+				if(shouldClose) FXUtils.thread(this::close);
+			});
+	    });
 	}
 	
 	/** @since 00.02.07 */
-	public final void showSelectionWindow(List<URI> uris) {
+	public final void showSelectionWindow(Window<?> parent, URI uri, Consumer<Boolean> onFinish) {
+		MediaGetter getter = MediaGetters.fromURI(uri);
+		if(getter != null) Threads.execute(() -> doTask(parent, getter, uri, onFinish));
+	}
+	
+	/** @since 00.02.07 */
+	public final void showSelectionWindow(Window<?> parent, List<URI> uris, Consumer<Boolean> onFinish) {
 		List<URI> uniqueURIs = Utils.deduplicate(uris);
-		Threads.execute(() -> {
-			boolean shouldClose = Utils.ignore(() -> {
-				URIListPipelineTask task = new URIListPipelineTask(this, uniqueURIs);
-				
-				Pipeline pipeline = Pipeline.create();
-				pipeline.addTask(task);
-				pipeline.start();
-				pipeline.waitFor();
-				PipelineResult<?> result = pipeline.getResult();
-				boolean isTerminating = result.isTerminating();
-				
-				List<URI> errors = task.errors();
-				if(!errors.isEmpty()) {
-					Translation tr = translation.getTranslation("errors.unsupported_urls");
-					String content = errors.stream().map((u) -> u.toString() + '\n').reduce("", (a, b) -> a + b);
-					Dialog.showContentError(tr.getSingle("title"), tr.getSingle("description"), content);
-				}
-				
-				if(isTerminating) {
-					MainWindow mainWindow = MainWindow.getInstance();
-					((URIListPipelineResult) result).getValue().forEach(mainWindow::addDownload);
-				}
-				
-				return isTerminating;
-			}, false, MediaDownloader::error);
-			
-			if(shouldClose) {
-				FXUtils.thread(this::close);
-			}
-	    });
+		Threads.execute(() -> doTask(parent, uniqueURIs, onFinish));
 	}
 	
 	private static final class IconListCell<T> extends ListCell<T> {
