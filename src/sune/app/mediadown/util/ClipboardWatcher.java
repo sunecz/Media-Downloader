@@ -7,10 +7,17 @@ import java.awt.datatransfer.ClipboardOwner;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
 import java.awt.datatransfer.UnsupportedFlavorException;
+import java.io.CharArrayWriter;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.Reader;
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
+import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -35,6 +42,36 @@ public final class ClipboardWatcher {
 		return Toolkit.getDefaultToolkit().getSystemClipboard();
 	}
 	
+	// Inspired by sun.datatransfer.DataFlavorUtil
+	private static final String charset(DataFlavor flavor) {
+		return Optional.ofNullable(flavor.getParameter("charset")).orElseGet(() -> Charset.defaultCharset().name());
+	}
+	
+	private static final byte[] byteBufferToArray(ByteBuffer buf) {
+		if(buf.hasArray()) return buf.array();
+		buf.rewind();
+		byte[] arr = new byte[buf.remaining()];
+		buf.get(arr);
+		return arr;
+	}
+	
+	private static final char[] charBufferToArray(CharBuffer buf) {
+		if(buf.hasArray()) return buf.array();
+		buf.rewind();
+		char[] arr = new char[buf.remaining()];
+		buf.get(arr);
+		return arr;
+	}
+	
+	private static final char[] readerToArray(Reader reader) {
+		return Utils.ignore(() -> {
+			try(CharArrayWriter writer = new CharArrayWriter()) {
+				reader.transferTo(writer);
+				return writer.toCharArray();
+			}
+		}, () -> new char[0]);
+	}
+	
 	public static final ClipboardWatcher instance() {
 		return INSTANCE == null ? (INSTANCE = new ClipboardWatcher()) : INSTANCE;
 	}
@@ -42,7 +79,7 @@ public final class ClipboardWatcher {
 	// Convert between AWT's DataFlavor and JavaFX's DataFormat
 	private final DataFormat dataFormat(DataFlavor flavor, Transferable contents) {
 		if(flavor == DataFlavor.stringFlavor) {
-			String maybeURL = Utils.ignore(() -> (String) contents.getTransferData(flavor), "");
+			String maybeURL = Utils.ignore(() -> ensureString(contents.getTransferData(flavor), charset(flavor)), "");
 			// Also check whether the string is an URL, so a better format is returned
 			return Utils.isValidURL(maybeURL) ? DataFormat.URL : DataFormat.PLAIN_TEXT;
 		}
@@ -51,28 +88,46 @@ public final class ClipboardWatcher {
 			return DataFormat.IMAGE;
 		}
 		
-		if(flavor == DataFlavor.allHtmlFlavor
-				|| flavor == DataFlavor.selectionHtmlFlavor
-				|| flavor == DataFlavor.fragmentHtmlFlavor) {
-			return DataFormat.HTML;
-		}
-		
 		if(flavor == DataFlavor.javaFileListFlavor) {
 			return DataFormat.FILES;
+		}
+		
+		// Use MimeType match test rather than the pre-defined HTML flavors
+		if(flavor.isMimeTypeEqual("text/html")) {
+			return DataFormat.HTML;
 		}
 		
 		// Use plain text as the default format since it should cause less problems
 		return DataFormat.PLAIN_TEXT;
 	}
 	
+	// Some data may be a string but they are represented differently (InputStream, ByteBuffer, ...)
+	private final String ensureString(Object data, String charset) {
+		Class<?> clazz = data.getClass();
+		
+		// "Value" types
+		if(clazz == String.class) return (String) data;
+		if(clazz == byte[].class) return Utils.ignore(() -> new String((byte[]) data, charset));
+		if(clazz == char[].class) return new String((char[]) data);
+		
+		// "Class" types
+		if(data instanceof InputStream) return Utils.ignore(() -> new String(((InputStream) data).readAllBytes(), charset));
+		if(data instanceof ByteBuffer)  return Utils.ignore(() -> new String(byteBufferToArray((ByteBuffer) data), charset));
+		if(data instanceof CharBuffer)  return new String(charBufferToArray((CharBuffer) data));
+		if(data instanceof Reader)      return new String(readerToArray((Reader) data));
+		
+		return null;
+	}
+	
 	// Cast value in a format to a proper value, if needed
 	@SuppressWarnings("unchecked")
-	private final Object contentsValue(DataFormat format, Object data) {
+	private final Object contentsValue(DataFormat format, Object data, DataFlavor flavor) {
 		if(format == DataFormat.PLAIN_TEXT
+				|| format == DataFormat.HTML
 				|| format == DataFormat.RTF) {
-			return (String) data;
+			return ensureString(data, charset(flavor));
 		} else if(format == DataFormat.URL) {
-			return Utils.uri((String) data);
+			return Utils.uri(ensureString(data, charset(flavor)));
 		} else if(format == DataFormat.IMAGE) {
 			// Currently, do not convert to JavaFX to not include another module (javafx.swing)
 			return (Image) data;
@@ -93,7 +148,7 @@ public final class ClipboardWatcher {
 		try {
 			Object data = contents.getTransferData(flavor);
 			DataFormat format = dataFormat(flavor, contents);
-			Object value = contentsValue(format, data);
+			Object value = contentsValue(format, data, flavor);
 			this.contents.set(new ClipboardContents(format, value));
 		} catch(UnsupportedFlavorException | IOException ex) {
 			// Ignore

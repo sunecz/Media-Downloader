@@ -8,6 +8,9 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+
 import javafx.beans.Observable;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -96,7 +99,8 @@ public class ClipboardWatcherWindow extends DraggableWindow<VBox> {
 			
 			// Put the new text on a new line, if there is already some text
 			if(!txtURLs.getText().isEmpty()) {
-				builder.append(System.lineSeparator());
+				// Use the new line character rather than System#lineSeparator
+				builder.append("\n");
 			}
 			
 			builder.append(uri.toString());
@@ -110,14 +114,42 @@ public class ClipboardWatcherWindow extends DraggableWindow<VBox> {
 		
 		if(format == DataFormat.URL) {
 			appendURI((URI) value);
-		} else if(format == DataFormat.PLAIN_TEXT) {
-			// Check for multiple lines of URIs
-			String text = (String) value;
-			text.lines()
-				.filter(Utils::isValidURL)
-				.map(Utils::uri)
-				.forEach(this::appendURI);
+			return; // We're done, do not continue
 		}
+		
+		if(format != DataFormat.PLAIN_TEXT
+				&& format != DataFormat.HTML)
+			return; // Nothing to do
+		
+		// Should always be string (see ClipboardWatcher#ensureString)
+		String text = (String) value;
+		
+		if(format == DataFormat.HTML) {
+			Document document = Utils.parseDocument((String) value);
+			StringBuilder builder = new StringBuilder();
+			
+			// Edge browser copy links from the URL bar as an HTML anchor tag.
+			// Probe the content for anchor tags and extract their hrefs.
+			for(Element elLink : document.select("a")) {
+				// Use the new line character rather than System#lineSeparator
+				builder.append("\n");
+				builder.append(elLink.attr("href"));
+			}
+			
+			// Always add the textual content of the document,
+			// maybe there's an URL.
+			builder.append("\n" + document.text());
+			
+			text = builder.toString();
+		}
+		
+		// Check for multiple lines of URIs
+		text.lines()
+			.map(String::trim)
+			.filter(Predicate.not(String::isEmpty))
+			.filter(Utils::isValidURL)
+			.map(Utils::uri)
+			.forEach(this::appendURI);
 	}
 	
 	private final ClipboardWatcher createClipboardWatcher() {
@@ -191,7 +223,12 @@ public class ClipboardWatcherWindow extends DraggableWindow<VBox> {
 			}
 			mediaGetterWindow().showSelectionWindow(Utils.uri(url));
 		} else {
-			List<URI> uris = urls.stream().filter(Utils::isValidURL).map(Utils::uri).collect(Collectors.toList());
+			List<URI> uris = Utils.deduplicate(
+				urls.stream()
+					.filter(Utils::isValidURL)
+					.map(Utils::uri)
+					.collect(Collectors.toList())
+			);
 			mediaGetterWindow().showSelectionWindow(uris);
 		}
 	}

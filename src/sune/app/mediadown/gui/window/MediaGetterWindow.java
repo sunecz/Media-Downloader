@@ -152,9 +152,10 @@ public class MediaGetterWindow extends DraggableWindow<VBox> {
 	
 	/** @since 00.02.07 */
 	public final void showSelectionWindow(List<URI> uris) {
+		List<URI> uniqueURIs = Utils.deduplicate(uris);
 		Threads.execute(() -> {
 			boolean shouldClose = Utils.ignore(() -> {
-				URIListPipelineTask task = new URIListPipelineTask(this, uris);
+				URIListPipelineTask task = new URIListPipelineTask(this, uniqueURIs);
 				
 				Pipeline pipeline = Pipeline.create();
 				pipeline.addTask(task);
