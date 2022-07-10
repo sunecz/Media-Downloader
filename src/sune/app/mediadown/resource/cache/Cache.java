@@ -1,4 +1,4 @@
-package sune.app.mediadown.util;
+package sune.app.mediadown.resource.cache;
 
 import java.lang.ref.SoftReference;
 import java.util.HashMap;
@@ -6,6 +6,10 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.function.Supplier;
 
+import sune.app.mediadown.util.CheckedSupplier;
+import sune.app.mediadown.util.Utils;
+
+/** @since 00.02.07 */
 public class Cache {
 	
 	private final Map<Object, SoftReference<?>> objects = new HashMap<>();

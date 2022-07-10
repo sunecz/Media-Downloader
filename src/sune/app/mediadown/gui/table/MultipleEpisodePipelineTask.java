@@ -22,7 +22,7 @@ import sune.app.mediadown.media.Media;
 import sune.app.mediadown.media.MediaFilter;
 import sune.app.mediadown.media.MediaFormat;
 import sune.app.mediadown.media.MediaLanguage;
-import sune.app.mediadown.resource.GlobalCache;
+import sune.app.mediadown.resource.cache.GlobalCache;
 import sune.app.mediadown.util.CheckedBiFunction;
 import sune.app.mediadown.util.Choosers;
 import sune.app.mediadown.util.FXUtils;

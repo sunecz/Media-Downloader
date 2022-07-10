@@ -12,7 +12,7 @@ import sune.app.mediadown.Program;
 import sune.app.mediadown.engine.MediaEngine;
 import sune.app.mediadown.gui.window.TableWindow;
 import sune.app.mediadown.language.Translation;
-import sune.app.mediadown.resource.GlobalCache;
+import sune.app.mediadown.resource.cache.GlobalCache;
 import sune.app.mediadown.util.CheckedBiFunction;
 import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.WorkerProxy;

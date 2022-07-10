@@ -3,6 +3,8 @@ package sune.app.mediadown.util;
 import java.util.ArrayList;
 import java.util.List;
 
+import sune.app.mediadown.resource.cache.Cache;
+
 /** @since 00.02.07 */
 public final class WorkerUpdatableTaskUtils {
 	

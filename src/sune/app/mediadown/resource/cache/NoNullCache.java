@@ -1,5 +1,6 @@
-package sune.app.mediadown.util;
+package sune.app.mediadown.resource.cache;
 
+/** @since 00.02.07 */
 public class NoNullCache extends Cache {
 	
 	@Override

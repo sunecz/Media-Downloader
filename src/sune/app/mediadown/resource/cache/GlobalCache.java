@@ -1,11 +1,8 @@
-package sune.app.mediadown.resource;
+package sune.app.mediadown.resource.cache;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-
-import sune.app.mediadown.util.Cache;
-import sune.app.mediadown.util.NoNullCache;
 
 /** @since 00.02.07 */
 public final class GlobalCache {
