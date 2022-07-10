@@ -72,4 +72,15 @@ public final class MediaEnginePipelineTask extends TableWindowPipelineTaskBase<P
 	public final boolean filter(Program item, String text) {
 		return Utils.normalize(item.title()).toLowerCase().contains(text);
 	}
+	
+	/** @since 00.02.07 */
+	public boolean canReload() {
+		return true;
+	}
+	
+	/** @since 00.02.07 */
+	@Override
+	public void beforeReload() {
+		GlobalCache.ofPrograms().remove(engine.getClass());
+	}
 }

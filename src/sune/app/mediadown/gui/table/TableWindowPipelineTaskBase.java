@@ -52,6 +52,13 @@ public abstract class TableWindowPipelineTaskBase<T, R extends PipelineResult<?>
 	public abstract String getTitle(TableWindow window);
 	public abstract boolean filter(T item, String text);
 	
+	/** @since 00.02.07 */
+	public boolean canReload() { return false; }
+	/** @since 00.02.07 */
+	public void beforeReload() { /* Do nothing by default */ }
+	/** @since 00.02.07 */
+	public void afterReload() { /* Do nothing by default */ }
+	
 	@Override
 	public R run(Pipeline pipeline) throws Exception {
 		started.set(true);

@@ -61,4 +61,15 @@ public final class MediaGetterPipelineTask extends TableWindowPipelineTaskBase<M
 	public final boolean filter(Media item, String text) {
 		return Utils.normalize(item.metadata().get("title", "")).toLowerCase().contains(text);
 	}
+	
+	/** @since 00.02.07 */
+	public boolean canReload() {
+		return true;
+	}
+	
+	/** @since 00.02.07 */
+	@Override
+	public void beforeReload() {
+		GlobalCache.ofURIs().remove(uri);
+	}
 }

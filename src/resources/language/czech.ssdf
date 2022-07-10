@@ -241,9 +241,9 @@
 				save_dir:  "Vyberte cílový adresář"
 			},
 			buttons: {
-				close:  "Zavřít",
 				select: "Vybrat",
-				goback: "Zpět"
+				goback: "Zpět",
+				reload: "Obnovit"
 			},
 			etc: {
 				prompt_text_search: "Hledat"

@@ -52,4 +52,15 @@ public final class EpisodePipelineTask extends MediaEnginePipelineTaskBase<Episo
 	public final boolean filter(Media item, String text) {
 		return Utils.normalize(item.metadata().get("title", "")).toLowerCase().contains(text);
 	}
+	
+	/** @since 00.02.07 */
+	public boolean canReload() {
+		return true;
+	}
+	
+	/** @since 00.02.07 */
+	@Override
+	public void beforeReload() {
+		items.forEach(GlobalCache.ofMedia()::remove);
+	}
 }

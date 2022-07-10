@@ -241,9 +241,9 @@
 				save_dir:  "Select a destination directory"
 			},
 			buttons: {
-				close:  "Close",
 				select: "Select",
-				goback: "Back"
+				goback: "Back",
+				reload: "Reload"
 			},
 			etc: {
 				prompt_text_search: "Search"

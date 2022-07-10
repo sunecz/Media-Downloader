@@ -49,9 +49,9 @@ public final class TableWindow extends DraggableWindow<BorderPane> {
 	private TableView<Object> table;
 	private HBox boxBottom;
 	private TextField txtSearch;
-	private Button btnClose;
 	private Button btnSelect;
 	private Button btnGoBack;
+	private Button btnReload;
 	
 	private final SyncObject lockSelect = new SyncObject();
 	private final History<PipelineTask<?>> history = new History<>();
@@ -67,16 +67,16 @@ public final class TableWindow extends DraggableWindow<BorderPane> {
 		setOnCloseRequest((e) -> terminateAndClose());
 		boxBottom = new HBox(5);
 		txtSearch = new FixedTextField();
-		btnClose  = new Button(translation.getSingle("buttons.close"));
 		btnSelect = new Button(translation.getSingle("buttons.select"));
 		btnGoBack = new Button(translation.getSingle("buttons.goback"));
+		btnReload = new Button(translation.getSingle("buttons.reload"));
 		btnSelect.setOnAction((e) -> select());
-		btnClose .setOnAction((e) -> terminateAndClose());
 		btnGoBack.setOnAction((e) -> goBack());
-		txtSearch.setPrefWidth(200);
-		btnClose .setMinWidth(80);
-		btnSelect.setMinWidth(80);
-		btnGoBack.setMinWidth(80);
+		btnReload.setOnAction((e) -> reload());
+		txtSearch.setMinWidth(100.0);
+		btnSelect.setMinWidth(80.0);
+		btnGoBack.setMinWidth(80.0);
+		btnReload.setMinWidth(80.0);
 		txtSearch.setPromptText(translation.getSingle("etc.prompt_text_search"));
 		txtSearch.textProperty().addListener((o, ov, nv) -> updateSearchResults(nv));
 		boxBottom.setAlignment(Pos.CENTER_RIGHT);
@@ -85,14 +85,21 @@ public final class TableWindow extends DraggableWindow<BorderPane> {
 		HBox.setHgrow(boxFill, Priority.ALWAYS);
 		btnSelect.setDisable(true);
 		btnGoBack.setDisable(true);
+		btnReload.setDisable(true);
 		txtSearch.setDisable(true);
-		boxBottom.getChildren().addAll(txtSearch, boxFill, btnGoBack, btnSelect, btnClose);
+		boxBottom.getChildren().addAll(btnGoBack, txtSearch, btnReload, btnSelect);
+		HBox.setHgrow(txtSearch, Priority.ALWAYS);
 		content.setPadding(new Insets(10));
 		content.setBottom(boxBottom);
 		FXUtils.onWindowShow(this, () -> {
 			Stage parent = (Stage) args.get("parent");
 			if(parent != null) centerWindow(parent);
 		});
+	}
+	
+	/** @since 00.02.07 */
+	private final TableWindowPipelineTaskBase<Object, PipelineResult<?>> currentTask() {
+		return Utils.cast(pipeline.getTask());
 	}
 	
 	private final void pipelineOnUpdate(Pair<Pipeline, PipelineTask<?>> pair) {
@@ -142,6 +149,7 @@ public final class TableWindow extends DraggableWindow<BorderPane> {
 				table.sort();
 		});
 		setSearchable(true);
+		setCanReload();
 		hideEmptyColumns();
 		FXUtils.thread(() -> txtSearch.requestFocus());
 		lockSelect.await();
@@ -151,6 +159,7 @@ public final class TableWindow extends DraggableWindow<BorderPane> {
 	private final void notifySelection() {
 		lockSelect.unlock();
 		setSearchable(false);
+		setCanReload();
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -168,6 +177,24 @@ public final class TableWindow extends DraggableWindow<BorderPane> {
 		setCanGoBack();
 		pipeline.reset(result);
 		notifySelection();
+	}
+	
+	/** @since 00.02.07 */
+	public final void reload() {
+		TableWindowPipelineTaskBase<Object, PipelineResult<?>> task = currentTask();
+		// Allow tasks to do some stuff before the reload (such as clear cache)
+		task.beforeReload();
+		
+		// Remove history entry
+		history.backward();
+		setCanGoBack();
+		
+		// Reset the task
+		pipeline.reset(task);
+		notifySelection();
+		
+		// Allow tasks to do some stuff after the reload
+		task.afterReload();
 	}
 	
 	private final <T> TableRow<T> createTableRow(TableView<T> table) {
@@ -209,6 +236,12 @@ public final class TableWindow extends DraggableWindow<BorderPane> {
 		FXUtils.thread(() -> txtSearch.setDisable(!flag));
 	}
 	
+	/** @since 00.02.07 */
+	private final void setCanReload() {
+		boolean flag = currentTask().canReload();
+		FXUtils.thread(() -> btnReload.setDisable(!flag));
+	}
+	
 	private final void setTable(TableView<Object> newTable) {
 		table = newTable;
 		table.setRowFactory(this::createTableRow);
@@ -228,9 +261,7 @@ public final class TableWindow extends DraggableWindow<BorderPane> {
 	}
 	
 	private final void updateSearchResults(String text) {
-		@SuppressWarnings("unchecked")
-		TableWindowPipelineTaskBase<Object, PipelineResult<?>> task
-			= (TableWindowPipelineTaskBase<Object, PipelineResult<?>>) pipeline.getTask();
+		TableWindowPipelineTaskBase<Object, PipelineResult<?>> task = currentTask();
 		String normalizedText = Utils.normalize(text).toLowerCase();
 		ObservableList<Object> tableItems = table.getItems();
 		if(text == null || text.isEmpty()) {

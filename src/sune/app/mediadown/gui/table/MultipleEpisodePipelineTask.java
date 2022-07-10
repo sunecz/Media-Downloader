@@ -109,4 +109,15 @@ public final class MultipleEpisodePipelineTask extends MediaEnginePipelineTaskBa
 		// Do not filter anything
 		return true;
 	}
+	
+	/** @since 00.02.07 */
+	public boolean canReload() {
+		return true;
+	}
+	
+	/** @since 00.02.07 */
+	@Override
+	public void beforeReload() {
+		items.forEach(GlobalCache.ofMedia()::remove);
+	}
 }
