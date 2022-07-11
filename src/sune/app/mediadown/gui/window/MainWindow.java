@@ -78,12 +78,12 @@ import sune.app.mediadown.media.Media;
 import sune.app.mediadown.message.Message;
 import sune.app.mediadown.message.MessageList;
 import sune.app.mediadown.message.MessageManager;
+import sune.app.mediadown.os.OS;
 import sune.app.mediadown.pipeline.MediaPipelineResult;
 import sune.app.mediadown.pipeline.Pipeline;
 import sune.app.mediadown.plugin.PluginFile;
 import sune.app.mediadown.plugin.PluginUpdater;
 import sune.app.mediadown.plugin.Plugins;
-import sune.app.mediadown.util.DesktopUtils;
 import sune.app.mediadown.util.FXUtils;
 import sune.app.mediadown.util.MathUtils;
 import sune.app.mediadown.util.Pair;
@@ -641,7 +641,7 @@ public final class MainWindow extends Window<BorderPane> {
 	}
 	
 	private final void showFile(PipelineInfo info) {
-		DesktopUtils.highlightFile(info.getPath());
+		Utils.ignore(() -> OS.current().highlight(info.getPath()), MediaDownloader::error);
 	}
 	
 	public final void showSelectionWindow(MediaEngine engine) {

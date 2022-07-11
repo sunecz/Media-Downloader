@@ -41,6 +41,7 @@ module sune.app.mediadown {
 	exports sune.app.mediadown.media.format;
 	exports sune.app.mediadown.media.type;
 	exports sune.app.mediadown.message;
+	exports sune.app.mediadown.os;
 	exports sune.app.mediadown.pipeline;
 	exports sune.app.mediadown.plugin;
 	exports sune.app.mediadown.registry;
