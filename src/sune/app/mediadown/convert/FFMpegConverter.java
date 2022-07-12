@@ -78,7 +78,7 @@ public final class FFMpegConverter implements Converter {
 				throw new IllegalStateException("Unable to create conversion process.");
 			Path parentDir = filesInput[0].getParent();
 			String command = FFMpegConversionCommand.get(formatInput, formatOutput, fileOutput, filesInput);
-			process.execute(parentDir, command);
+			process.execute(command, parentDir);
 			return process.waitFor() == 0;
 		} catch(Exception ex) {
 			eventRegistry.call(ConversionEvent.ERROR, new Pair<>(this, ex));
@@ -135,7 +135,7 @@ public final class FFMpegConverter implements Converter {
 	public void pause() {
 		if(paused.get()) return; // Nothing to do
 		if(process != null)
-			ProcessUtils.pause(process.getProcess());
+			ProcessUtils.pause(process.process());
 		running.set(false);
 		paused .set(true);
 		eventRegistry.call(ConversionEvent.PAUSE, this);
@@ -145,7 +145,7 @@ public final class FFMpegConverter implements Converter {
 	public void resume() {
 		if(!paused.get()) return; // Nothing to do
 		if(process != null)
-			ProcessUtils.resume(process.getProcess());
+			ProcessUtils.resume(process.process());
 		paused .set(false);
 		running.set(true);
 		eventRegistry.call(ConversionEvent.RESUME, this);
