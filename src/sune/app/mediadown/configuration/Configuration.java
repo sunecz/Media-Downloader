@@ -1123,12 +1123,6 @@ public class Configuration implements ConfigurationAccessor {
 			this.name = Objects.requireNonNull(name);
 		}
 		
-		private static final String nodeFullName(SSDNode node) {
-			// Due to some logical issues in the SSDF library, when creating an SSDCollection manually,
-			// the name of that collection is empty, not null, and therefore is prepended to the name.
-			return node.getFullName().replaceFirst("^\\.+", "");
-		}
-		
 		/** @since 00.02.07 */
 		private static final void setIfNonExistent(SSDCollection parent, String name, SSDCollection collection) {
 			if(!parent.hasCollection(name)) parent.set(name, collection);
@@ -1182,12 +1176,17 @@ public class Configuration implements ConfigurationAccessor {
 		}
 		
 		public Builder loadData(SSDCollection data) {
-			ConfigurationProperty.BuilderBase<?, ?> builder;
-			for(SSDNode node : data.nodes()) {
-				if((builder = properties.get(nodeFullName(node))) != null) {
-					builder.loadData(node);
+			// Loop through properties rather than the given data, since some properties
+			// can have complex names that would require recursion or more complex access.
+			for(Entry<String, ConfigurationProperty.BuilderBase<?, ?>> entry : properties.entrySet()) {
+				String name = entry.getKey();
+				
+				if(data.has(name)) {
+					ConfigurationProperty.BuilderBase<?, ?> builder = entry.getValue();
+					builder.loadData(data.get(name));
 				}
 			}
+			
 			return this;
 		}
 		
