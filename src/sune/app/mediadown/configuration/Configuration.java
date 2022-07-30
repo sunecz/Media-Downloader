@@ -1130,6 +1130,16 @@ public class Configuration implements ConfigurationAccessor {
 		}
 		
 		/** @since 00.02.07 */
+		private static final void setIfNonExistent(SSDCollection parent, String name, SSDCollection collection) {
+			if(!parent.hasCollection(name)) parent.set(name, collection);
+		}
+		
+		/** @since 00.02.07 */
+		private static final void setIfNonExistent(SSDCollection parent, int index, SSDCollection collection) {
+			if(!parent.hasCollection(index)) parent.set(index, collection);
+		}
+		
+		/** @since 00.02.07 */
 		private static final void ensureDataParents(SSDCollection parent, String fullName) {
 			int pos;
 			if((pos = fullName.indexOf('.')) <= 0)
@@ -1146,8 +1156,8 @@ public class Configuration implements ConfigurationAccessor {
 			SSDCollection collection = isArray ? SSDCollection.emptyArray() : SSDCollection.empty();
 			
 			switch(parent.getType()) {
-				case ARRAY:  parent.set(Integer.valueOf(parentName), collection); break;
-				case OBJECT: parent.set(parentName,                  collection); break;
+				case ARRAY:  setIfNonExistent(parent, Integer.valueOf(parentName), collection); break;
+				case OBJECT: setIfNonExistent(parent, parentName,                  collection); break;
 			}
 			
 			ensureDataParents(collection, fullName.substring(end));
