@@ -35,12 +35,12 @@
 				},
 				add: {
 					items: {
-						media_getter: "From URL"
+						media_getter: "URL"
 					}
 				},
 				information: {
 					items: {
-						engines:     "Engines",
+						engines:     "Websites",
 						downloaders: "Downloaders",
 						servers:     "Servers",
 						plugins:     "Plugins"
@@ -97,7 +97,7 @@
 			},
 			tabs: {
 				media_engines: {
-					title: "Media engines",
+					title: "Websites",
 					labels: {
 						url:     "URL",
 						title:   "Title",
@@ -124,15 +124,6 @@
 				},
 				search_engines: {
 					title: "Search engines",
-					labels: {
-						url:     "URL",
-						title:   "Title",
-						version: "Version",
-						author:  "Author"
-					}
-				},
-				media_transformers: {
-					title: "Media transformers",
 					labels: {
 						url:     "URL",
 						title:   "Title",

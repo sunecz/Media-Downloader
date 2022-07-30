@@ -28,19 +28,19 @@
 						terminate_cancel:   "Přerušit",
 						terminate_combined: "Přerušit/Odebrat",
 						terminate_remove:   "Odebrat",
-						show_file:          "Zobarzit soubor",
+						show_file:          "Zobrazit soubor",
 						pause:              "Pozastavit",
 						resume:             "Pokračovat"
 					}
 				},
 				add: {
 					items: {
-						media_getter: "Z URL"
+						media_getter: "URL"
 					}
 				},
 				information: {
 					items: {
-						engines:     "Enginy",
+						engines:     "Weby",
 						downloaders: "Stahovače",
 						servers:     "Servery",
 						plugins:     "Pluginy"
@@ -97,7 +97,7 @@
 			},
 			tabs: {
 				media_engines: {
-					title: "Mediální enginy",
+					title: "Weby",
 					labels: {
 						url:     "URL",
 						title:   "Název",
@@ -123,16 +123,7 @@
 					}
 				},
 				search_engines: {
-					title: "Vyhledávací enginy",
-					labels: {
-						url:     "URL",
-						title:   "Název",
-						version: "Verze",
-						author:  "Autor"
-					}
-				},
-				media_transformers: {
-					title: "Mediální transformátory",
+					title: "Vyhledávače",
 					labels: {
 						url:     "URL",
 						title:   "Název",
