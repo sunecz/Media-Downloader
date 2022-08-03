@@ -16,6 +16,8 @@ set DIR_DIST=%DIR%\dist
 
 REM ----- Vars: Windows
 set OS_WIN_ARF=windows-x64
+set OS_WIN_EXF=mdext
+set OS_WIN_SFX=7zWin.sfx
 set OS_WIN_JRE=windows-x64
 set OS_WIN_BIN=win64
 set OS_WIN_RUN=mdrun-windows.exe
@@ -24,6 +26,8 @@ REM -----
 
 REM ----- Vars: Linux
 set OS_LIN_ARF=linux-x64
+set OS_LIN_EXF=mdext
+set OS_LIN_SFX=7zUnx.sfx
 set OS_LIN_JRE=linux-x64
 set OS_LIN_BIN=unx64
 set OS_LIN_RUN=mdrun-linux
@@ -32,6 +36,8 @@ REM -----
 
 REM ----- Vars: Mac OS X
 set OS_OSX_ARF=osx-x64
+set OS_OSX_EXF=mdext
+set OS_OSX_SFX=7zOSX.sfx
 set OS_OSX_JRE=osx-x64
 set OS_OSX_BIN=mac64
 set OS_OSX_RUN=mdrun-osx
@@ -45,13 +51,14 @@ set PATH_RUN=%DIR%\etc\run
 set PATH_JAR=%DIR%\jar
 set PATH_LIB=%DIR%\lib
 set PATH_RES=%DIR%\resources
+set PATH_SFX=%DIR%\etc\dist
 set JAR_NAME=media-downloader.jar
 set LIB_EXCLUDE=sune-utils-load.jar
 REM -----
 
 REM ----- Common vars for apps, without file extension
-set APP_VERSION_FFMPEG=4.4.1
-set APP_VERSION_FFPROBE=4.4.1
+set APP_VERSION_FFMPEG=5.0.1
+set APP_VERSION_FFPROBE=5.0.1
 set APP_VERSION_PSSUSPEND=1.07
 set APP_NAME_FFMPEG=ffmpeg
 set APP_NAME_FFPROBE=ffprobe
@@ -62,7 +69,9 @@ REM -----
 set OS=%1
 if "%OS%" == "windows" (
 	set NAM=%OS_WIN_ARF%
-	set ARF=%DIR_DIST%\%OS_WIN_ARF%.zip
+	set ARF=%DIR_DIST%\%OS_WIN_ARF%
+	set EXE=%DIR_DIST%\%OS_WIN_EXF%
+	set SFX=%PATH_SFX%\%OS_WIN_SFX%
 	set JRE=%OS_WIN_JRE%
 	set BIN=%OS_WIN_BIN%
 	set RUN=%OS_WIN_RUN%
@@ -70,7 +79,9 @@ if "%OS%" == "windows" (
 ) else (
 	if "%OS%" == "linux" (
 		set NAM=%OS_LIN_ARF%
-		set ARF=%DIR_DIST%\%OS_LIN_ARF%.tar
+		set ARF=%DIR_DIST%\%OS_LIN_ARF%
+		set EXE=%DIR_DIST%\%OS_LIN_EXF%
+		set SFX=%PATH_SFX%\%OS_LIN_SFX%
 		set JRE=%OS_LIN_JRE%
 		set BIN=%OS_LIN_BIN%
 		set RUN=%OS_LIN_RUN%
@@ -78,7 +89,9 @@ if "%OS%" == "windows" (
 	) else (
 		if "%OS%" == "osx" (
 			set NAM=%OS_OSX_ARF%
-			set ARF=%DIR_DIST%\%OS_OSX_ARF%.tar
+			set ARF=%DIR_DIST%\%OS_OSX_ARF%
+			set EXE=%DIR_DIST%\%OS_OSX_EXF%
+			set SFX=%PATH_SFX%\%OS_OSX_SFX%
 			set JRE=%OS_OSX_JRE%
 			set BIN=%OS_OSX_BIN%
 			set RUN=%OS_OSX_RUN%
@@ -164,6 +177,7 @@ REM -----
 
 :create
 set OUT=%ARF%
+set OUT_EXE=%EXE%
 set OUT_DIR=%DIR_DIST%\%NAM%
 set OUT_JRE=%OUT_DIR%\jre
 set OUT_LIB=%OUT_DIR%\lib
@@ -172,12 +186,19 @@ set OUT_BIN=%OUT_RES%\binary
 
 echo Creating distribution archive file...
 echo     OS:          "%OS%"
-echo     Output path: "%OUT%"
+echo     Output path: "%OUT_EXE%"
 echo.
 
 :delete_old
 echo Deleting the old archive...
-call :fn_delfile "%OUT%"
+if "%OS%" == "windows" (
+	call :fn_delfile "%OUT%.zip"
+) else (
+	call :fn_delfile "%OUT%.tar.gz"
+)
+
+echo Deleting the old extractor...
+call :fn_delfile "%OUT_EXE%"
 
 echo Deleting the old directory...
 call :fn_deldir "%OUT_DIR%"
@@ -218,31 +239,47 @@ for %%f in (%LIB_EXCLUDE%) do (
 echo Adding the JAR file...
 call :fn_copyfile "%PATH_JAR%\%JAR_NAME%" "%OUT_DIR%\%JAR_NAME%"
 
-:exe
-echo Adding the executable file...
-call :fn_copyfile "%PATH_RUN%\%RUN%" "%OUT_DIR%\%RUN%"
-ren "%OUT_DIR%\%RUN%" "%RNM%"
-
 :archive
 echo Creating the archive...
-if "%OS%" == "windows" (
-	7z a "%OUT%" "%OUT_DIR%\*" -r -mm=Deflate -mx=9 -mfb=256 -bso0
-) else (
-	7z a "%OUT%" "%OUT_DIR%\*" -r -ttar -bso0
-)
+7z a -t7z -mx=9 -myx=9 -mfb=273 -md=1536m -ms -mmf=bt3 -mmc=10000 -mpb=0 -mlp=0 -mlc=0 -mtm=- -mmt -mmtf -r -bso0 "%OUT%.7z" "%OUT_DIR%\*"
+
+:extractor
+echo Creating the extractor...
+copy /b "%SFX%" + "%OUT%.7z" "%OUT_EXE%" >nul 2>&1
+
+:exe
+echo Adding the executable file...
+call :fn_copyfile "%PATH_RUN%\%RUN%" "%DIR_DIST%\%RUN%"
+ren "%DIR_DIST%\%RUN%" "%RNM%"
 
 :compress
+if "%OS%" == "windows" (
+	7z a "%OUT%.zip" "%OUT_EXE%" "%DIR_DIST%\%RNM%" -r -tzip -bso0
+) else (
+	7z a "%OUT%.tar" "%OUT_EXE%" "%DIR_DIST%\%RNM%" -r -ttar -bso0
+)
+
 if NOT "%OS%" == "windows" (
 	echo Compressing the archive...
-	7z a "%OUT%.gz" "%OUT%" -tgzip -mx=9 -mfb=256 -bso0
+	7z a "%OUT%.tar.gz" "%OUT%.tar" -tgzip -mx=9 -mfb=256 -bso0
 	echo Deleting the uncompressed archive...
-	call :fn_delfile "%OUT%"
+	call :fn_delfile "%OUT%.tar"
 )
 
 :cleanup
+echo Deleting the extractor...
+call :fn_delfile "%OUT_EXE%"
+
+echo Deleting the executable file...
+call :fn_delfile "%DIR_DIST%\%RNM%"
+
+echo Deleting the archive...
+call :fn_delfile "%OUT%.7z"
+
 echo Deleting the temporary directory...
 call :fn_deldir "%OUT_DIR%"
 
+:done
 echo Done!
 
 :end
