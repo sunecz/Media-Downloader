@@ -6,7 +6,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
@@ -84,10 +83,6 @@ import sune.app.mediadown.update.RemoteConfiguration.Property;
 import sune.app.mediadown.update.Requirements;
 import sune.app.mediadown.update.Updater;
 import sune.app.mediadown.update.Version;
-import sune.app.mediadown.util.CSSParser;
-import sune.app.mediadown.util.CSSParser.CSS;
-import sune.app.mediadown.util.CSSParser.CSSProperty;
-import sune.app.mediadown.util.CSSParser.CSSRule;
 import sune.app.mediadown.util.CheckedFunction;
 import sune.app.mediadown.util.FXUtils;
 import sune.app.mediadown.util.IllegalAccessWarnings;
@@ -394,7 +389,7 @@ public final class MediaDownloader {
 					public FileCheckListener fileCheckListener() {
 						return new FileCheckListener() {
 							
-							private final Path rootDir = Paths.get(PathSystem.getCurrentDirectory());
+							private final Path rootDir = Path.of(PathSystem.getCurrentDirectory());
 							
 							@Override
 							public void begin(Path dir) {
@@ -421,7 +416,7 @@ public final class MediaDownloader {
 					public FileDownloadListener fileDownloadListener() {
 						return new FileDownloadListener() {
 							
-							private final Path rootDir = Paths.get(PathSystem.getCurrentDirectory());
+							private final Path rootDir = Path.of(PathSystem.getCurrentDirectory());
 							private double pvalue;
 							
 							@Override
@@ -1033,7 +1028,7 @@ public final class MediaDownloader {
 	}
 	
 	private static final void registerLibraries() {
-		Path path = Paths.get(PathSystem.getFullPath("lib/"));
+		Path path = Path.of(PathSystem.getFullPath("lib/"));
 		addLibrary(path.resolve("infomas-asl.jar"),      "infomas.asl");
 		addLibrary(path.resolve("ssdf2.jar"),            "ssdf2");
 		addLibrary(path.resolve("sune-memory.jar"),      "sune.memory");
@@ -1116,47 +1111,6 @@ public final class MediaDownloader {
 	
 	private static final class ResourcesUpdater {
 		
-		protected static final class Merger {
-			
-			public static final boolean ssdf(SSDCollection dst, SSDCollection src) {
-				boolean changed = false;
-				Deque<Pair<SSDCollection, SSDCollection>> stack = new LinkedList<>();
-				stack.push(new Pair<>(dst, src));
-				while(!stack.isEmpty()) {
-					Pair<SSDCollection, SSDCollection> pair = stack.pop();
-					for(SSDNode node : pair.b) {
-						String name = node.getName();
-						if(!pair.a.hasDirect(name)) {
-							changed = true; // Data changed
-							if((node.isCollection())) pair.a.set(name, (SSDCollection) node);
-							else                      pair.a.set(name, (SSDObject) node);
-						} else if(node.isCollection()) {
-							stack.push(new Pair<>((SSDCollection) node, pair.a.getDirectCollection(name)));
-						}
-					}
-				}
-				return changed;
-			}
-			
-			public static final void css(CSS dst, CSS src) {
-				Map<String, CSSRule> selectors = new HashMap<>();
-				dst.getRules().stream().forEach((r) -> selectors.put(r.getSelector(), r));
-				for(CSSRule rule : src.getRules()) {
-					CSSRule dstRule;
-					if((dstRule = selectors.get(rule.getSelector())) != null) {
-						Map<String, CSSProperty> properties = new HashMap<>();
-						dstRule.getProperties().stream().forEach((p) -> properties.put(p.getName(), p));
-						for(CSSProperty property : rule.getProperties()) {
-							if(!properties.containsKey(property.getName()))
-								dstRule.getProperties().add(property);
-						}
-					} else {
-						dst.getRules().add(new CSSRule(rule.getSelector(), new ArrayList<>(rule.getProperties())));
-					}
-				}
-			}
-		}
-		
 		public static final void configuration() {
 			Path configDir  = NIO.localPath(BASE_RESOURCE).resolve("config");
 			Path configPath = configDir.resolve("application.ssdf");
@@ -1185,7 +1139,7 @@ public final class MediaDownloader {
 				SSDCollection current = configuration.data();
 				// Fix the theme, if needed
 				if(current.getString("theme", "default").equalsIgnoreCase("default"))
-					current.set("theme", Theme.getDefault().getName());
+					current.set("theme", Theme.ofDefault().name());
 				// Remove the annotations at every object
 				for(SSDObject object : current.objectsIterable()) {
 					for(SSDAnnotation annotation : object.getAnnotations()) {
@@ -1201,47 +1155,70 @@ public final class MediaDownloader {
 			}
 		}
 		
-		private static final void language(Language current) {
-			InputStream stream = stream(BASE_RESOURCE, "language/" + current.getName() + ".ssdf");
-			if((stream == null)) return; // Language does not exist internally
+		private static final void language(Language current, boolean force) {
+			InputStream stream = stream(BASE_RESOURCE, "language/" + current.name() + ".ssdf");
+			if(stream == null) return; // Language does not exist internally
+			
 			try {
-				Path pathLanguage = NIO.localPath(BASE_RESOURCE).resolve(current.getPath());
-				Language internal = Language.from(current.getPath(), stream);
-				// Add missing fields from the internal to the current language
-				Merger.ssdf(current.getTranslation().getData(), internal.getTranslation().getData());
-				// Save the updated language
-				NIO.save(pathLanguage, current.getTranslation().getData().toString());
+				Path pathLanguage = NIO.localPath(BASE_RESOURCE).resolve(current.path());
+				Language internal = Language.from(current.path(), stream);
+				
+				// Check whether the internal version is higher than the current one
+				if(force || internal.version().compareTo(current.version()) > 0) {
+					// If so, replace the whole content, do not merge the files
+					NIO.save(pathLanguage, internal.translation().getData().toString());
+				} else {
+					// Otherwise add missing fields from the internal to the current language
+					Merger.ssdf(current.translation().getData(), internal.translation().getData());
+					// Save the updated language file
+					NIO.save(pathLanguage, current.translation().getData().toString());
+				}
 			} catch(IOException ex) {
 				error(ex);
 			}
 		}
 		
-		public static final void languages() {
-			ResourceRegistry.languages.values().forEach(ResourcesUpdater::language);
+		public static final void languages(boolean force) {
+			ResourceRegistry.languages.values().forEach((l) -> ResourcesUpdater.language(l, force));
 		}
 		
-		private static final void style(Theme theme, String style) {
-			InputStream stream = stream(BASE_RESOURCE, "theme/" + theme.getName() + "/" + style);
-			if((stream == null)) return; // Style does not exist internally
+		/** @since 00.02.07 */
+		private static final boolean hasInternalVersion(Theme current) {
 			try {
-				Path pathStyle = theme.getPath().resolve(style);
-				CSS internal = CSSParser.parse(Utils.streamToString(stream));
-				CSS current = CSSParser.parse(NIO.read(pathStyle));
-				// Add missing CSS rules from the internal to the current style
-				Merger.css(current, internal);
-				// Save the updated style
-				NIO.save(pathStyle, current.toString());
+				InputStreamResolver resolver = ((path) -> stream(BASE_RESOURCE, path));
+				Theme internal = Theme.Reader.readInternal("theme/" + current.name(), resolver);
+				return internal.version() != Version.UNKNOWN;
 			} catch(IOException ex) {
+				// Ignore
+			}
+			
+			return false;
+		}
+		
+		private static final void theme(Theme current, boolean force) {
+			// Only internal themes can be automatically fixed since reference files
+			// are available internally and can be re-extracted.
+			if(!hasInternalVersion(current)) return;
+			
+			try {
+				InputStreamResolver resolver = ((path) -> stream(BASE_RESOURCE, path));
+				Theme internal = Theme.Reader.readInternal("theme/" + current.name(), resolver);
+				Path pathTheme = current.externalPath();
+				
+				// Check whether the internal version is higher than the current one
+				if(force || internal.version().compareTo(current.version()) > 0) {
+					// If so, first delete all the theme files
+					NIO.deleteDir(pathTheme);
+					// Then just extract the theme files again
+					internal.extract(pathTheme.getParent(), resolver);
+				}
+			} catch(Exception ex) {
 				error(ex);
 			}
 		}
 		
-		private static final void theme(Theme theme) {
-			Arrays.asList(theme.getStyles()).stream().forEach((style) -> style(theme, style));
-		}
-		
-		public static final void themes() {
-			ResourceRegistry.themes.values().forEach(ResourcesUpdater::theme);
+		public static final void themes(boolean force) {
+			ResourceRegistry.themes.values().forEach((t) -> ResourcesUpdater.theme(t, force));
 		}
 		
 		private static final Set<String> getLegacyDefaultPlugins() {
@@ -1311,10 +1288,9 @@ public final class MediaDownloader {
 		}
 		
 		/** @since 00.02.05 */
-		public static final void messages(String previousVersion) {
-			Version current = Version.fromString(previousVersion);
+		public static final void messages(Version previousVersion) {
 			// 00.02.04 -> 00.02.05: Messages format update (V0 -> V1)
-			if(current.equals(Version.fromString("00.02.04"))) {
+			if(previousVersion.equals(Version.fromString("00.02.04"))) {
 				// Do not bother with conversion and just remove the messages.ssdf file
 				Utils.ignore(() -> NIO.deleteFile(NIO.localPath(BASE_RESOURCE).resolve("messages.ssdf")),
 				             MediaDownloader::error);
@@ -1324,7 +1300,7 @@ public final class MediaDownloader {
 		public static final void clean() {
 			Path dir = NIO.localPath(BASE_RESOURCE);
 			// Delete the old plugins directory
-			try { NIO.deleteDir(dir.resolve("plugins")); } catch(Exception ex) { error(ex); }
+			Utils.ignore(() -> NIO.deleteDir(dir.resolve("plugins")), MediaDownloader::error);
 			// Delete the old default theme
 			try {
 				NIO.deleteDir(dir.resolve("theme/default"));
@@ -1337,9 +1313,9 @@ public final class MediaDownloader {
 				removeAtInit.add(path.toString().replace('\\', '/'));
 				saveConfiguration();
 			}
+			// Delete empty directories
 			try {
 				for(Path file : Utils.iterable(Files.list(dir).iterator())) {
-					// Delete empty directories
 					if((NIO.isDirectory(file) && NIO.isEmptyDirectory(file))) {
 						try {
 							NIO.deleteFile(file);
@@ -1352,12 +1328,40 @@ public final class MediaDownloader {
 				error(ex);
 			}
 		}
+		
+		protected static final class Merger {
+			
+			public static final boolean ssdf(SSDCollection dst, SSDCollection src) {
+				boolean changed = false;
+				Deque<Pair<SSDCollection, SSDCollection>> stack = new LinkedList<>();
+				stack.push(new Pair<>(dst, src));
+				while(!stack.isEmpty()) {
+					Pair<SSDCollection, SSDCollection> pair = stack.pop();
+					for(SSDNode node : pair.b) {
+						String name = node.getName();
+						if(!pair.a.hasDirect(name)) {
+							changed = true; // Data changed
+							if((node.isCollection())) pair.a.set(name, (SSDCollection) node);
+							else                      pair.a.set(name, (SSDObject) node);
+						} else if(node.isCollection()) {
+							stack.push(new Pair<>((SSDCollection) node, pair.a.getDirectCollection(name)));
+						}
+					}
+				}
+				return changed;
+			}
+		}
 	}
 	
-	private static final void updateResourcesDirectory(String previousVersion) {
+	/** @since 00.02.07 */
+	public static final void updateResources() {
+		updateResourcesDirectory(VERSION, true);
+	}
+	
+	private static final void updateResourcesDirectory(Version previousVersion, boolean force) {
 		ResourcesUpdater.configuration();
-		ResourcesUpdater.languages();
-		ResourcesUpdater.themes();
+		ResourcesUpdater.languages(force);
+		ResourcesUpdater.themes(force);
 		ResourcesUpdater.plugins();
 		ResourcesUpdater.binary();
 		ResourcesUpdater.messages(previousVersion);
@@ -1386,9 +1390,9 @@ public final class MediaDownloader {
 			saveConfiguration();
 		}
 		if(applicationUpdated) {
-			String previousVersion = data.getString("version", VERSION.string());
+			Version previousVersion = Version.fromString(data.getString("version", VERSION.string()));
 			// Automatically (i.e. without a prompt) update the resources directory
-			updateResourcesDirectory(previousVersion);
+			updateResourcesDirectory(previousVersion, false);
 			// Update the version in the configuration file (even if the resources directory is not updated)
 			data.set("version", VERSION.string());
 			saveConfiguration();
@@ -1403,27 +1407,24 @@ public final class MediaDownloader {
 	
 	private static final class InternalResources {
 		
-		public static final void addLanguage(String path, boolean isExtractable) {
-			path = "language/" + path; // prefix the path
-			InputStream stream   = stream(BASE_RESOURCE, path);
-			Language    language = Language.from(path, stream);
-			ResourceRegistry.languages.registerValue(language.getName(), language, isExtractable);
+		public static final void addLanguage(String name, boolean isExtractable) {
+			String path = "language/" + name;
+			Language language = Language.from(path, stream(BASE_RESOURCE, path));
+			ResourceRegistry.languages.registerValue(language.name(), language, isExtractable);
 		}
 		
 		public static final void addTheme(Theme theme, boolean isExtractable) {
-			ResourceRegistry.themes.registerValue(theme.getName(), theme, isExtractable);
+			ResourceRegistry.themes.registerValue(theme.name(), theme, isExtractable);
 		}
 		
 		public static final void addIcon(String path, boolean isExtractable) {
-			InputStream              stream = stream(BASE_RESOURCE, "icon/" + path);
-			javafx.scene.image.Image icon   = new javafx.scene.image.Image(stream);
+			javafx.scene.image.Image icon = new javafx.scene.image.Image(stream(BASE_RESOURCE, "icon/" + path));
 			ResourceRegistry.icons.registerValue(path, icon, isExtractable);
 		}
 		
 		@SuppressWarnings("unused")
 		public static final void addImage(String path, boolean isExtractable) {
-			InputStream              stream = stream(BASE_RESOURCE, "image/" + path);
-			javafx.scene.image.Image image  = new javafx.scene.image.Image(stream);
+			javafx.scene.image.Image image = new javafx.scene.image.Image(stream(BASE_RESOURCE, "image/" + path));
 			ResourceRegistry.images.registerValue(path, image, isExtractable);
 		}
 		
@@ -1432,8 +1433,8 @@ public final class MediaDownloader {
 			addLanguage("english.ssdf", true);
 			addLanguage("czech.ssdf", true);
 			// Themes
-			addTheme(Theme.getLight(), true);
-			addTheme(Theme.getDark(), true);
+			addTheme(Theme.ofLight(), true);
+			addTheme(Theme.ofDark(), true);
 			// Icons
 			addIcon("automatic.png", false);
 		}
@@ -1444,7 +1445,7 @@ public final class MediaDownloader {
 			if(registry.isEmpty()) return extracted; // Do not create the resource subfolder when no resources are present
 			
 			InputStreamResolver inputStreamResolver = ((path) -> stream(BASE_RESOURCE, path));
-			Path folder = Paths.get(pathDest);
+			Path folder = Path.of(pathDest);
 			for(Entry<String, ResourceRegistryEntry<T>> entry : registry) {
 				String name = entry.getKey();
 				ResourceRegistryEntry<T> resource = entry.getValue();
@@ -1485,7 +1486,7 @@ public final class MediaDownloader {
 		public static final void ensure() {
 			String baseDest = PathSystem.getFullPath(BASE_RESOURCE);
 			// Ensure the folder is existent
-			Utils.ignore(() -> NIO.createDir(Paths.get(baseDest)), MediaDownloader::error);
+			Utils.ignore(() -> NIO.createDir(Path.of(baseDest)), MediaDownloader::error);
 			// Extract the internal resources to the destination folder
 			clear(ResourceRegistry.languages, extract(ResourceRegistry.languages, "language/", ".ssdf", baseDest + "language/"));
 			clear(ResourceRegistry.themes,    extract(ResourceRegistry.themes,    "theme/",    "",      baseDest + "theme/"));
@@ -1531,15 +1532,23 @@ public final class MediaDownloader {
 		
 		// This should be done differently, but since the current resource system
 		// is written as terribly as it is, we will do it this way.
-		private static final List<String> internalLanguages = Utils.toList("english", "czech");
+		private static final List<String> internalLanguages = List.of("english", "czech");
 		
 		public static final boolean isInternalLanguage(Language language) {
-			return language != null && internalLanguages.contains(language.getName());
+			return language != null && internalLanguages.contains(language.name());
 		}
 		
 		private static final Language getDefaultLanguage() {
 			String path = "language/english.ssdf";
 			return Language.from(path, stream(BASE_RESOURCE, path));
+		}
+		
+		public static final boolean checkLanguage(Language language) {
+			if((language == null))
+				throw new NullPointerException();
+			SSDCollection dataDefault = getDefaultLanguage().translation().getData();
+	        SSDCollection dataCurrent = language            .translation().getData();
+			return SSDFNamesChecker.check(dataDefault, dataCurrent);
 		}
 		
 		private static final class SSDFNamesChecker {
@@ -1558,14 +1567,6 @@ public final class MediaDownloader {
 				}
 				return true;
 			}
-		}
-		
-		public static final boolean checkLanguage(Language language) {
-			if((language == null))
-				throw new NullPointerException();
-			SSDCollection dataDefault = getDefaultLanguage().getTranslation().getData();
-	        SSDCollection dataCurrent = language            .getTranslation().getData();
-			return SSDFNamesChecker.check(dataDefault, dataCurrent);
 		}
 	}
 	
@@ -1587,11 +1588,11 @@ public final class MediaDownloader {
 			// Check whether the language is invalid
 			if(!ExternalResourceChecker.checkLanguage(language)) {
 				// Invalid language, unload it
-				ResourceRegistry.languages.unregister(language.getName());
+				ResourceRegistry.languages.unregister(language.name());
 				// Check whether we can replace it from the internal languages
 				if((ExternalResourceChecker.isInternalLanguage(language))) {
 					// Replace the language with the internal one
-					InternalResources.addLanguage(language.getName() + ".ssdf", true);
+					InternalResources.addLanguage(language.name() + ".ssdf", true);
 				}
 			}
 		}
@@ -1600,7 +1601,7 @@ public final class MediaDownloader {
 	private static final void addAutomaticLanguage() {
 		// Add automatic language to the language resources
 		Language autoLanguage = Languages.autoLanguage();
-		ResourceRegistry.languages.registerValue(autoLanguage.getName(), autoLanguage);
+		ResourceRegistry.languages.registerValue(autoLanguage.name(), autoLanguage);
 	}
 	
 	private static final void loadMiscellaneousResources(StringReceiver stringReceiver) {
@@ -1821,7 +1822,7 @@ public final class MediaDownloader {
 							String pluginURL = PluginUpdater.check(plugin);
 							// Check whether there is a newer version of the plugin
 							if((pluginURL != null)) {
-								Path file = Paths.get(plugin.getPath());
+								Path file = Path.of(plugin.getPath());
 								FileDownloader.download(pluginURL, file, listener);
 								// Must reload the plugin, otherwise it will have incorrect information
 								PluginFile.resetPluginFileLoader();
@@ -1861,7 +1862,7 @@ public final class MediaDownloader {
 		private static final Language localLanguage(Supplier<Language> defaultLanguage) {
 			String code = localCode();
 			return ResourceRegistry.languages.values().stream()
-					               .filter((l) -> l.getCode().equalsIgnoreCase(code))
+					               .filter((l) -> l.code().equalsIgnoreCase(code))
 					               .findFirst().orElseGet(defaultLanguage);
 		}
 		
@@ -1871,14 +1872,30 @@ public final class MediaDownloader {
 				String currentLanguageName = configuration.data().getDirectString("language");
 				boolean isCurrentLanguageAuto = currentLanguageName.equalsIgnoreCase("auto");
 				Language currentLanguage = isCurrentLanguageAuto ? local : ResourceRegistry.language(currentLanguageName);
-				String title = currentLanguage.getTranslation().getSingle("generic.language.auto");
-				autoLanguage = new Language("", "auto", "0000", title, "auto", local.getTranslation());
+				String title = currentLanguage.translation().getSingle("generic.language.auto");
+				autoLanguage = new Language("", "auto", Version.ZERO, title, "auto", local.translation());
 			}
 			return autoLanguage;
 		}
 		
 		public static final Language localLanguage() {
-			return localLanguage(() -> ResourceRegistry.language("english")); // English by default
+			return localLanguage(() -> ResourceRegistry.language(defaultLanguageName()));
+		}
+		
+		/** @since 00.02.07 */
+		public static final String defaultLanguageName() {
+			return "english";
+		}
+		
+		/** @since 00.02.07 */
+		public static final String defaultLanguageCode() {
+			return "eng";
+		}
+		
+		/** @since 00.02.07 */
+		public static final Language currentLanguage() {
+			Language language = language();
+			return language.code().equalsIgnoreCase("auto") ? localLanguage() : language;
 		}
 	}
 	
@@ -1891,7 +1908,7 @@ public final class MediaDownloader {
 	}
 	
 	public static final Translation translation() {
-		return configuration.language().getTranslation();
+		return configuration.language().translation();
 	}
 	
 	public static final Theme theme() {
@@ -1916,8 +1933,8 @@ public final class MediaDownloader {
 	// https://stackoverflow.com/questions/4159802/how-can-i-restart-a-java-application
 	public static final void restart() {
 		try {
-			Path pathJava = Paths.get(System.getProperty("java.home"), "bin", "java");
-			Path pathJAR  = Paths.get(MediaDownloader.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+			Path pathJava = Path.of(System.getProperty("java.home"), "bin", "java");
+			Path pathJAR  = Path.of(MediaDownloader.class.getProtectionDomain().getCodeSource().getLocation().toURI());
 			if((!pathJAR.getFileName().toString().endsWith(".jar")))
 				return;
 			List<String> commands = Arrays.asList(pathJava.toAbsolutePath().toString(), "-jar",

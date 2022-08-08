@@ -21,7 +21,7 @@ public class SelectLanguageField<T> extends FormField<T> {
 		control = new ComboBox<>();
 		// Add all the registered languages in their order, but put the Automatic language to the top
 		control.getItems().setAll(ResourceRegistry.languages.values().stream()
-		                                          .sorted((a, b) -> a.getName().equals("auto") ? -1 : 0)
+		                                          .sorted((a, b) -> a.name().equals("auto") ? -1 : 0)
 		                                          .collect(Collectors.toList()));
 		control.setMaxWidth(Double.MAX_VALUE);
 	}
@@ -39,6 +39,6 @@ public class SelectLanguageField<T> extends FormField<T> {
 	
 	@Override
 	public Object value() {
-		return control.getSelectionModel().getSelectedItem().getName();
+		return control.getSelectionModel().getSelectedItem().name();
 	}
 }

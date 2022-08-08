@@ -4,7 +4,6 @@ import static sune.app.mediadown.MediaDownloader.DATE;
 import static sune.app.mediadown.MediaDownloader.VERSION;
 
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -117,7 +116,8 @@ public final class MainWindow extends Window<BorderPane> {
 	private MenuItem menuItemConfiguration;
 	private MenuItem menuItemMessages;
 	private Menu menuTools;
-	private MenuItem menuClipboardWatcher;
+	private MenuItem menuItemClipboardWatcher;
+	private MenuItem menuItemUpdateResources;
 	
 	private final Timer timer = new Timer(200, (e) -> {
 		if(!refresh.get() && updated.get()) {
@@ -134,21 +134,22 @@ public final class MainWindow extends Window<BorderPane> {
 	
 	public MainWindow() {
 		super(NAME, new BorderPane(), 650.0, 420.0);
-		table 		          = new TableView<>();
-		btnDownload           = new Button(translation.getSingle("buttons.download"));
-		btnDownloadSelected   = new Button(translation.getSingle("buttons.download_selected"));
-		btnAdd	              = new Button(translation.getSingle("buttons.add"));
-		menuTable	          = new ContextMenu();
-		menuItemPause         = new MenuItem(translation.getSingle("context_menus.table.items.pause"));
-		menuItemTerminate     = new MenuItem(translation.getSingle("context_menus.table.items.terminate_cancel"));
-		menuItemShowFile      = new MenuItem(translation.getSingle("context_menus.table.items.show_file"));
-		menuBar               = new MenuBar();
-		menuApplication       = new Menu(translation.getSingle("menu_bar.application.title"));
-		menuItemInformation   = new MenuItem(translation.getSingle("menu_bar.application.item.information"));
-		menuItemConfiguration = new MenuItem(translation.getSingle("menu_bar.application.item.configuration"));
-		menuItemMessages      = new MenuItem(translation.getSingle("menu_bar.application.item.messages"));
-		menuTools             = new Menu(translation.getSingle("menu_bar.tools.title"));
-		menuClipboardWatcher  = new MenuItem(translation.getSingle("menu_bar.tools.item.clipboard_watcher"));
+		table 		             = new TableView<>();
+		btnDownload              = new Button(translation.getSingle("buttons.download"));
+		btnDownloadSelected      = new Button(translation.getSingle("buttons.download_selected"));
+		btnAdd	                 = new Button(translation.getSingle("buttons.add"));
+		menuTable	             = new ContextMenu();
+		menuItemPause            = new MenuItem(translation.getSingle("context_menus.table.items.pause"));
+		menuItemTerminate        = new MenuItem(translation.getSingle("context_menus.table.items.terminate_cancel"));
+		menuItemShowFile         = new MenuItem(translation.getSingle("context_menus.table.items.show_file"));
+		menuBar                  = new MenuBar();
+		menuApplication          = new Menu(translation.getSingle("menu_bar.application.title"));
+		menuItemInformation      = new MenuItem(translation.getSingle("menu_bar.application.item.information"));
+		menuItemConfiguration    = new MenuItem(translation.getSingle("menu_bar.application.item.configuration"));
+		menuItemMessages         = new MenuItem(translation.getSingle("menu_bar.application.item.messages"));
+		menuTools                = new Menu(translation.getSingle("menu_bar.tools.title"));
+		menuItemClipboardWatcher = new MenuItem(translation.getSingle("menu_bar.tools.item.clipboard_watcher"));
+		menuItemUpdateResources  = new MenuItem(translation.getSingle("menu_bar.tools.item.update_resources"));
 		String titleVSRC = translation.getSingle("tables.main.columns.source");
 		String titlePath = translation.getSingle("tables.main.columns.output");
 		String titleDPrg = translation.getSingle("tables.main.columns.progress");
@@ -291,10 +292,16 @@ public final class MainWindow extends Window<BorderPane> {
 		});
 		menuItemMessages.setOnAction((e) -> resetAndShowMessagesAsync());
 		menuApplication.getItems().addAll(menuItemInformation, menuItemConfiguration, menuItemMessages);
-		menuClipboardWatcher.setOnAction((e) -> {
+		menuItemClipboardWatcher.setOnAction((e) -> {
 			MediaDownloader.window(ClipboardWatcherWindow.NAME).show(this);
 		});
-		menuTools.getItems().addAll(menuClipboardWatcher);
+		menuItemUpdateResources.setOnAction((e) -> {
+			Translation tr = translation.getTranslation("dialogs.update_resources");
+			if(Dialog.showPrompt(tr.getSingle("title"), tr.getSingle("text"))) {
+				MediaDownloader.updateResources();
+			}
+		});
+		menuTools.getItems().addAll(menuItemClipboardWatcher, menuItemUpdateResources);
 		menuBar.getMenus().addAll(menuApplication, menuTools);
 		btnDownload.setOnAction((e) -> {
 			table.getItems().stream().forEach(this::startPipeline);
@@ -381,9 +388,9 @@ public final class MainWindow extends Window<BorderPane> {
 	/** @since 00.02.02 */
 	private final boolean showMessages() {
 		MessageList list = Utils.ignore(() -> MessageManager.current(), MessageManager.empty());
-		String language = MediaDownloader.language().getCode();
+		String language = MediaDownloader.language().code();
 		if(language.equalsIgnoreCase("auto"))
-			language = MediaDownloader.Languages.localLanguage().getCode();
+			language = MediaDownloader.Languages.localLanguage().code();
 		List<Message> messages = list.difference(language, Utils.ignore(() -> MessageManager.local(), MessageManager.empty()));
 		if(!messages.isEmpty()) {
 			FXUtils.thread(() -> {
@@ -490,7 +497,7 @@ public final class MainWindow extends Window<BorderPane> {
 					// Check whether there is a newer version of the plugin
 					if((pluginURL != null)) {
 						String pluginTitle = pluginFile.getPlugin().instance().title();
-						downloadUpdate = PluginUpdater.update(pluginURL, Paths.get(pluginFile.getPath()));
+						downloadUpdate = PluginUpdater.update(pluginURL, Path.of(pluginFile.getPath()));
 						downloadUpdate.addEventListener(DownloadEvent.BEGIN,
 							(data) -> listener.setText(translation.getSingle("labels.update.download.begin", "name", pluginTitle)));
 						downloadUpdate.addEventListener(DownloadEvent.UPDATE, (data) -> {

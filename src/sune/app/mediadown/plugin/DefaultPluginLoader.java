@@ -5,7 +5,6 @@ import java.io.InputStream;
 import java.nio.MappedByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -105,9 +104,9 @@ final class DefaultPluginLoader implements PluginLoader {
 			file.setMemory(memory);
 			// Initialize the language file
 			if((MediaDownloader.language() != null)) {
-				String langName = MediaDownloader.language().getName();
+				String langName = MediaDownloader.language().name();
 				if(langName.equalsIgnoreCase("auto")) // Replace auto language with the local one
-					langName = MediaDownloader.Languages.localLanguage().getName();
+					langName = MediaDownloader.Languages.localLanguage().name();
 				String filePath = languageFiles.stream().reduce(null, languageFileReducer(langName));
 				if((filePath == null)) {
 					// No language file was found for the current language, therefore
@@ -206,7 +205,7 @@ final class DefaultPluginLoader implements PluginLoader {
 			if(listener != null)
 				listener.onLoading(plugin);
 			PluginLoaderContext.setContext(plugin);
-			Path    path   = Paths.get(plugin.getPath());
+			Path    path   = Path.of(plugin.getPath());
 			boolean loaded = false;
 			try {
 				if((Files.exists(path))) {

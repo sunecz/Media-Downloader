@@ -24,7 +24,7 @@ public final class MessageLanguage {
 	
 	private static final Set<String> setOfAll() {
 		return ResourceRegistry.languages.values().stream()
-					.map(Language::getCode)
+					.map(Language::code)
 					.collect(Collectors.toUnmodifiableSet());
 	}
 	

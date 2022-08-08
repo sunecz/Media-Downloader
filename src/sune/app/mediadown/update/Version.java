@@ -15,6 +15,8 @@ import sune.app.mediadown.util.Utils;
 public final class Version implements Comparable<Version> {
 	
 	public static final Version UNKNOWN = new Version();
+	/** @since 00.02.07 */
+	public static final Version ZERO    = new Version(VersionType.UNKNOWN, 0, 0, 0, 0);
 	
 	private static Comparator<Version> comparator;
 	

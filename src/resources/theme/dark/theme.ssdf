@@ -1,0 +1,15 @@
+{
+	name: "dark",
+	version: "1",
+	title: {
+		eng: "Dark",
+		ces: "Tmavý"
+	},
+	files: [
+		"general-component.css",
+		"window-progress.css",
+		"window-information.css",
+		"window-configuration.css",
+		"window-search.css"
+	]
+}

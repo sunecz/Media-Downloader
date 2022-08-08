@@ -29,14 +29,8 @@ import sune.util.ssdf2.SSDF;
 
 public final class ExternalResources {
 	
-	private static final class ImageResource {
-		
-		public final Path  file;
-		public final Image image;
-		public ImageResource(Path file, Image image) {
-			this.file  = file;
-			this.image = image;
-		}
+	// Forbid anyone to create an instance of this class
+	private ExternalResources() {
 	}
 	
 	private static final <T> T usingStream(Path file, Function<InputStream, T> action) throws IOException {
@@ -60,10 +54,21 @@ public final class ExternalResources {
 		return path.toString().replace('\\', '/');
 	}
 	
-	private static final String[] content(Path folder, Predicate<Path> filter) throws IOException {
-		return Files.walk(folder).filter((p) -> Files.isRegularFile(p) && filter.test(p))
-					.map((file) -> string(folder.relativize(file)))
-					.toArray(String[]::new);
+	private static final Map<String, ImageResource> findImages0(Path folder) throws IOException {
+		if(!NIO.exists(folder)) return new HashMap<>(); // Do not return null
+		return Files.walk(folder)
+					.filter((path) -> Files.isRegularFile(path) && MimeType.isImage(path))
+					.map((file) -> {
+						try {
+							return usingStream(file, (stream) -> new ImageResource(file, new Image(stream)));
+						} catch(IOException ex) {
+							throw new UncheckedException(ex);
+						}
+					})
+					.collect(Collectors.toMap((item) -> string(folder.relativize(item.file)),
+					                          (item) -> item,
+					                          (e0, e1) -> e0,
+					                          LinkedHashMap::new));
 	}
 	
 	public static final Map<String, Language> findLanguages(Path folder) throws IOException {
@@ -93,38 +98,18 @@ public final class ExternalResources {
 			} catch(IOException ex) {
 				throw new UncheckedException(ex);
 			}
-		}, (item) -> item.getName(), (item) -> item);
+		}, Language::name, Function.identity());
 	}
 	
 	public static final Map<String, Theme> findThemes(Path folder) throws IOException {
 		if(!NIO.exists(folder)) return new HashMap<>(); // Do not return null
-		return scan(folder, (file) -> Files.isDirectory(file),
-			(file) -> {
-				try {
-					return new Theme(file.getFileName().toString(),
-					                    content(file, (f) -> f.getFileName().toString().endsWith(".css")));
-				} catch(IOException ex) {
-					throw new UncheckedException(ex);
-				}
-			},
-			(item) -> item.getName(), (item) -> item);
-	}
-	
-	private static final Map<String, ImageResource> findImages0(Path folder) throws IOException {
-		if(!NIO.exists(folder)) return new HashMap<>(); // Do not return null
-		return Files.walk(folder)
-					.filter((path) -> Files.isRegularFile(path) && MimeType.isImage(path))
-					.map((file) -> {
-						try {
-							return usingStream(file, (stream) -> new ImageResource(file, new Image(stream)));
-						} catch(IOException ex) {
-							throw new UncheckedException(ex);
-						}
-					})
-					.collect(Collectors.toMap((item) -> string(folder.relativize(item.file)),
-					                          (item) -> item,
-					                          (e0, e1) -> e0,
-					                          LinkedHashMap::new));
+		return scan(folder, Files::isDirectory, (file) -> {
+			try {
+				return Theme.Reader.readExternal(file);
+			} catch(IOException ex) {
+				throw new UncheckedException(ex);
+			}
+		}, Theme::name, Function.identity());
 	}
 	
 	public static final Map<String, Image> findIcons(Path folder) throws IOException {
@@ -139,13 +124,23 @@ public final class ExternalResources {
 								                            LinkedHashMap::new));
 	}
 	
+	private static final class ImageResource {
+		
+		public final Path  file;
+		public final Image image;
+		public ImageResource(Path file, Image image) {
+			this.file  = file;
+			this.image = image;
+		}
+	}
+	
 	/** @since 00.02.02 */
 	private static final class FileFixer {
 		
 		private static final String languageCodeFromName(String name) {
 			return Utils.ignore(() -> Stream.of(Locale.getAvailableLocales())
 			                                .filter((locale) -> locale.getDisplayLanguage(Locale.ENGLISH).equalsIgnoreCase(name))
-			                                .findFirst().get().getISO3Language(),
+			                                .findFirst().get().getISO3Language().toLowerCase(),
 			                    (String) null);
 		}
 		
@@ -175,9 +170,9 @@ public final class ExternalResources {
 				try(InputStream stream = Files.newInputStream(path, StandardOpenOption.READ)) {
 					SSDCollection ssdf = SSDF.read(stream);
 					if(!ssdf.hasDirectString("name")) // Fix missing name
-						ssdf.setDirect("name", Utils.fileNameNoType(path.getFileName().toString()));
+						ssdf.setDirect("name", Utils.fileNameNoType(path.getFileName().toString()).toLowerCase());
 					if(!ssdf.hasDirectString("version")) // Fix missing version
-						ssdf.setDirect("version", "0000");
+						ssdf.setDirect("version", "0");
 					if(!ssdf.hasDirectString("title")) // Fix missing title
 						ssdf.setDirect("title", ssdf.getDirectString("name"));
 					if(!ssdf.hasDirectString("code")) { // Fix missing code
@@ -188,9 +183,5 @@ public final class ExternalResources {
 				}
 			});
 		}
-	}
-	
-	// Forbid anyone to create an instance of this class
-	private ExternalResources() {
 	}
 }

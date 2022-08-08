@@ -3,7 +3,7 @@ package sune.app.mediadown.resource;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.nio.file.Path;
 
 import sune.app.mediadown.util.PathSystem;
 
@@ -13,7 +13,7 @@ public final class Resource {
 	
 	public static final InputStream stream(String path) {
 		try {
-			return Files.newInputStream(Paths.get(resolve(path)));
+			return Files.newInputStream(Path.of(resolve(path)));
 		} catch(IOException ex) {
 		}
 		return null;

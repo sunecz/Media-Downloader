@@ -1,7 +1,9 @@
 package sune.app.mediadown.language;
 
 import java.io.InputStream;
+import java.util.Objects;
 
+import sune.app.mediadown.update.Version;
 import sune.util.ssdf2.SSDCollection;
 import sune.util.ssdf2.SSDF;
 
@@ -9,54 +11,58 @@ public final class Language {
 	
 	private final String path;
 	private final String name;
-	private final String version;
+	/** @since 00.02.07 */
+	private final Version version;
 	private final String title;
 	/** @since 00.02.02 */
 	private final String code;
 	private Translation translation;
 	
-	public Language(String path, String name, String version, String title, String code, Translation translation) {
-		if((path == null || name == null || version == null || title == null || code == null || translation == null))
-			throw new IllegalArgumentException();
-		this.path        = path;
-		this.name        = name;
-		this.version     = version;
-		this.title       = title;
-		this.code        = code;
-		this.translation = translation;
+	public Language(String path, String name, Version version, String title, String code, Translation translation) {
+		this.path        = Objects.requireNonNull(path);
+		this.name        = Objects.requireNonNull(name);
+		this.version     = Objects.requireNonNull(version);
+		this.title       = Objects.requireNonNull(title);
+		this.code        = Objects.requireNonNull(code);
+		this.translation = Objects.requireNonNull(translation);
 	}
 	
 	public static final Language from(String path, InputStream stream) {
 		SSDCollection data = SSDF.read(stream);
-		String name    = data.getDirectString("name");
-		String version = data.getDirectString("version");
-		String title   = data.getDirectString("title");
-		String code    = data.getDirectString("code");
+		String name     = data.getDirectString("name");
+		Version version = Version.fromString(data.getDirectString("version"));
+		String title    = data.getDirectString("title");
+		String code     = data.getDirectString("code");
 		return new Language(path, name, version, title, code, new Translation(data));
 	}
 	
-	public final String getPath() {
+	/** @since 00.02.07 */
+	public final String path() {
 		return path;
 	}
 	
-	public final String getName() {
+	/** @since 00.02.07 */
+	public final String name() {
 		return name;
 	}
 	
-	public final String getVersion() {
+	/** @since 00.02.07 */
+	public final Version version() {
 		return version;
 	}
 	
-	public final String getTitle() {
+	/** @since 00.02.07 */
+	public final String title() {
 		return title;
 	}
 	
-	/** @since 00.02.02 */
-	public final String getCode() {
+	/** @since 00.02.07 */
+	public final String code() {
 		return code;
 	}
 	
-	public final Translation getTranslation() {
+	/** @since 00.02.07 */
+	public final Translation translation() {
 		return translation;
 	}
 	

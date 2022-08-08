@@ -1,6 +1,6 @@
 {
 	name:    "english",
-	version: "0007",
+	version: "8",
 	title:   "English",
 	code:    "eng",
 	windows: {
@@ -59,7 +59,8 @@
 				tools: {
 					title: "Tools",
 					item: {
-						clipboard_watcher: "Clipboard watcher"
+						clipboard_watcher: "Clipboard watcher",
+						update_resources:  "Update resources"
 					}
 				}
 			},
@@ -82,6 +83,10 @@
 				messages_empty: {
 					title: "No messages or news",
 					text:  "No messages or news are currently available."
+				},
+				update_resources: {
+					title: "Update resources",
+					text:  "Are you sure you want to update all resources?"
 				}
 			},
 			actions: {

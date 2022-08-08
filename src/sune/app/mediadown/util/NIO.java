@@ -21,7 +21,6 @@ import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
@@ -55,15 +54,15 @@ public final class NIO {
 	}
 	
 	public static final Path localPath() {
-		return Paths.get(PathSystem.getCurrentDirectory());
+		return Path.of(PathSystem.getCurrentDirectory());
 	}
 	
 	public static final Path localPath(String path, String... more) {
-		return Paths.get(PathSystem.getFullPath(path), more);
+		return Path.of(PathSystem.getFullPath(path), more);
 	}
 	
 	public static final Path path(String path, String... more) {
-		return Paths.get(path, more);
+		return Path.of(path, more);
 	}
 	
 	public static final Path path(Path path, String child) {

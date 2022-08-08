@@ -1,6 +1,6 @@
 {
 	name:    "czech",
-	version: "0007",
+	version: "8",
 	title:   "Čeština",
 	code:    "ces",
 	windows: {
@@ -59,7 +59,8 @@
 				tools: {
 					title: "Nástroje",
 					item: {
-						clipboard_watcher: "Sledování schránky"
+						clipboard_watcher: "Sledování schránky",
+						update_resources:  "Aktualizovat prostředky"
 					}
 				}
 			},
@@ -82,6 +83,10 @@
 				messages_empty: {
 					title: "Žádné zprávy či novinky",
 					text:  "Momentálně nejsou k dispozici žádné zprávy či novinky."
+				},
+				update_resources: {
+					title: "Aktualizovat prostředky",
+					text:  "Jste si jistí, že chcete aktualizovat všechny prostředky?"
 				}
 			},
 			actions: {

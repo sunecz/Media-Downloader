@@ -1,0 +1,15 @@
+{
+	name: "light",
+	version: "1",
+	title: {
+		eng: "Light",
+		ces: "Světlý"
+	},
+	files: [
+		"general-component.css",
+		"window-progress.css",
+		"window-information.css",
+		"window-configuration.css",
+		"window-search.css"
+	]
+}

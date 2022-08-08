@@ -77,20 +77,20 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 			.inGroup(GROUP_GENERAL)
 			.withFactory(() -> Stream.concat(List.of("auto").stream(),
 			                                 ResourceRegistry.languages.values().stream()
-			                                        .map(Language::getName))
+			                                        .map(Language::name))
 	                                 .collect(Collectors.toList()))
-			.withTransformer((v) -> v.getName(),
+			.withTransformer((v) -> v.name(),
 			                 (s) -> ResourceRegistry.languages.values().stream()
-			                            .filter((l) -> l.getName().equals(s))
+			                            .filter((l) -> l.name().equals(s))
 			                            .findFirst().orElse(null)));
 		builder.addProperty(ConfigurationProperty.ofType(PROPERTY_THEME, Theme.class)
 			.inGroup(GROUP_GENERAL)
 			.withFactory(() -> ResourceRegistry.themes.values().stream()
-			                        .map(Theme::getName)
+			                        .map(Theme::name)
 			                        .collect(Collectors.toList()))
-			.withTransformer((v) -> v.getName(),
+			.withTransformer((v) -> v.name(),
 			                 (s) -> ResourceRegistry.themes.values().stream()
-			                            .filter((t) -> t.getName().equals(s))
+			                            .filter((t) -> t.name().equals(s))
 			                            .findFirst().orElse(null)));
 		builder.addProperty(ConfigurationProperty.ofBoolean(PROPERTY_AUTO_UPDATE_CHECK).inGroup(GROUP_GENERAL).withDefaultValue(true));
 		builder.addProperty(ConfigurationProperty.ofBoolean(PROPERTY_CHECK_RESOURCES_INTEGRITY).inGroup(GROUP_GENERAL).withDefaultValue(true));
@@ -163,7 +163,7 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 		language = Optional.ofNullable(ResourceRegistry.language(stringValue(PROPERTY_LANGUAGE)))
 				           .orElseGet(() -> ResourceRegistry.language("english"));
 		theme = Optional.ofNullable(ResourceRegistry.theme(stringValue(PROPERTY_THEME)))
-				        .orElseGet(() -> Theme.getDefault());
+				        .orElseGet(Theme::ofDefault);
 		history_lastDirectory = Optional.<Path>ofNullable(typeValue(PROPERTY_HISTORY_LAST_DIRECTORY))
 				                        .filter(Files::isDirectory)
 				                        .orElse(null);
@@ -323,7 +323,7 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 		@Override
 		public Theme theme() {
 			return Optional.ofNullable(ResourceRegistry.theme(accessor().stringValue(PROPERTY_THEME)))
-					       .orElseGet(() -> Theme.getDefault());
+					       .orElseGet(Theme::ofDefault);
 		}
 		
 		@Override
