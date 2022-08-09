@@ -1,7 +1,6 @@
 package sune.app.mediadown.util;
 
 import java.util.concurrent.Callable;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 
 public final class FXTask<T> implements Runnable {
@@ -18,7 +17,7 @@ public final class FXTask<T> implements Runnable {
 	}
 	
 	public FXTask(Runnable runnable, T result) {
-		this(Executors.callable(runnable, result));
+		this(Utils.callable(Utils.checked(runnable), result));
 	}
 	
 	public FXTask(Callable<T> callable) {

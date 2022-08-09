@@ -16,6 +16,7 @@ import sune.app.mediadown.util.CheckedConsumer;
 import sune.app.mediadown.util.History;
 import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.SyncObject;
+import sune.app.mediadown.util.Threads;
 
 /** @since 00.01.26 */
 public final class Pipeline {
@@ -230,7 +231,7 @@ public final class Pipeline {
 		stopped.set(false);
 		done.set(false);
 		eventRegistry.call(PipelineEvent.BEGIN, this);
-		thread = new Thread(this::invoke);
+		thread = Threads.newThread(this::invoke);
 		thread.start();
 	}
 	

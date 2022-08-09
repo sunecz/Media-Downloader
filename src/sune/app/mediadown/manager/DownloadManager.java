@@ -3,7 +3,6 @@ package sune.app.mediadown.manager;
 import java.nio.file.Path;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import sune.app.mediadown.Disposables;
@@ -14,6 +13,7 @@ import sune.app.mediadown.download.Downloader;
 import sune.app.mediadown.download.Downloaders;
 import sune.app.mediadown.download.MediaDownloadConfiguration;
 import sune.app.mediadown.media.Media;
+import sune.app.mediadown.util.Threads;
 import sune.app.mediadown.util.Utils;
 
 /** @since 00.01.26 */
@@ -23,7 +23,7 @@ public final class DownloadManager {
 	
 	static {
 		int numOfThreads = MediaDownloader.configuration().parallelDownloads();
-		EXECUTOR = Executors.newFixedThreadPool(Math.max(1, numOfThreads));
+		EXECUTOR = Threads.Pools.newFixed(numOfThreads);
 		Disposables.add(DownloadManager::dispose);
 	}
 	

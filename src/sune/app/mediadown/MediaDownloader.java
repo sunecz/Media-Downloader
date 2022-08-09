@@ -992,14 +992,8 @@ public final class MediaDownloader {
 	}
 	
 	private static final void initExceptionHandlers() {
-		Thread.setDefaultUncaughtExceptionHandler((thread, throwable) -> {
-			// If the error is not null, show it
-			if((throwable != null)) error(throwable);
-		});
-		FXUtils.setExceptionHandler((throwable) -> {
-			// If the error is not null, show it
-			if((throwable != null)) error(throwable);
-		});
+		Thread.setDefaultUncaughtExceptionHandler((thread, throwable) -> error(throwable));
+		FXUtils.setExceptionHandler((throwable) -> error(throwable));
 	}
 	
 	private static final void disableIllegalAccessWarnings() {
@@ -1007,7 +1001,7 @@ public final class MediaDownloader {
 	}
 	
 	private static final void initAutoDispose() {
-		Runtime.getRuntime().addShutdownHook(new Thread(MediaDownloader::dispose));
+		Runtime.getRuntime().addShutdownHook(Threads.newThreadUnmanaged(MediaDownloader::dispose));
 	}
 	
 	/** @since 00.02.07 */
@@ -1400,6 +1394,7 @@ public final class MediaDownloader {
 	}
 	
 	public static final void error(Throwable throwable) {
+		if(throwable == null) return; // Do nothing
 		Log.error(throwable, "An error occurred");
 		if((FXUtils.isInitialized())) FXUtils.showExceptionWindow(null, throwable);
 		else throwable.printStackTrace(); // FX not available, print to stderr

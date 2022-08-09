@@ -557,17 +557,13 @@ public final class MainWindow extends Window<BorderPane> {
 				String title = translation.getSingle("labels.update_many.title");
 				String text = translation.getSingle("labels.update_many." + (updated ? "done_any" : "done_none"));
 				Dialog.showInfo(title, text);
+				FXUtils.thread(window::close);
 			}
 			
 			@Override
 			public void cancel() {
 				listener.setText(translation.getSingle("labels.update_many.cancel"));
 				cancelled.set(true);
-			}
-			
-			@Override
-			public void cancelled() {
-				FXUtils.thread(window::close);
 			}
 		};
 	}

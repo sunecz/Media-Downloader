@@ -294,7 +294,7 @@ public final class NIO {
 	private static final void ensureDeleteOnExit() {
 		if((deleteOnExit == null)) {
 			deleteOnExit = new ArrayList<>();
-			Runtime.getRuntime().addShutdownHook(new Thread(NIO::runDeleteOnExit));
+			Runtime.getRuntime().addShutdownHook(Threads.newThreadUnmanaged(NIO::runDeleteOnExit));
 		}
 	}
 	

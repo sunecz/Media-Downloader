@@ -4,7 +4,6 @@ import java.util.Queue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import sune.app.mediadown.Disposables;
@@ -36,7 +35,7 @@ public final class Worker {
 		this.numThreads = numThreads;
 		executor  = createExecutorService(numThreads);
 		lock      = new CounterLock();
-		thread    = new Thread(this::loop);
+		thread    = Threads.newThread(this::loop);
 		Disposables.add(this::interrupt);
 	}
 	
@@ -103,9 +102,7 @@ public final class Worker {
 	}
 	
 	private static final ExecutorService createExecutorService(int numThreads) {
-		return numThreads > 0
-					? Executors.newFixedThreadPool(numThreads)
-					: Executors.newCachedThreadPool();
+		return numThreads > 0 ? Threads.Pools.newFixed(numThreads) : Threads.Pools.newCached();
 	}
 	
 	public static final Worker createWorker(int numThreads) {
@@ -123,11 +120,11 @@ public final class Worker {
 	}
 	
 	public final void submit(Runnable runnable) {
-		submit(Executors.callable(runnable));
+		submit(Utils.callable(Utils.checked(runnable)));
 	}
 	
 	public final void submit(Runnable runnable, Object result) {
-		submit(Executors.callable(runnable, result));
+		submit(Utils.callable(Utils.checked(runnable), result));
 	}
 	
 	public final void submit(Callable<?> callable) {

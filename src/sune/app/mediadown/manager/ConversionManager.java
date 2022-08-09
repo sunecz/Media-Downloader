@@ -3,7 +3,6 @@ package sune.app.mediadown.manager;
 import java.nio.file.Path;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import sune.app.mediadown.Disposables;
@@ -12,6 +11,7 @@ import sune.app.mediadown.convert.ConversionConfiguration;
 import sune.app.mediadown.convert.Converter;
 import sune.app.mediadown.convert.FFMpegConverter;
 import sune.app.mediadown.media.MediaFormat;
+import sune.app.mediadown.util.Threads;
 import sune.app.mediadown.util.Utils;
 
 /** @since 00.01.26 */
@@ -21,7 +21,7 @@ public class ConversionManager {
 	
 	static {
 		int numOfThreads = MediaDownloader.configuration().parallelConversions();
-		EXECUTOR = Executors.newFixedThreadPool(numOfThreads);
+		EXECUTOR = Threads.Pools.newFixed(numOfThreads);
 		Disposables.add(ConversionManager::dispose);
 	}
 	
@@ -31,7 +31,7 @@ public class ConversionManager {
 	}
 	
 	private static final Callable<Void> createCallable(Converter converter) {
-		return Utils.callable(() -> converter.start(), null);
+		return Utils.callable(converter::start);
 	}
 	
 	public static final ManagerSubmitResult<Converter, Void> submit(ConversionConfiguration configuration,

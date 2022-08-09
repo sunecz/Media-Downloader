@@ -2,8 +2,9 @@ package sune.app.mediadown.gui;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javafx.geometry.Insets;
@@ -22,62 +23,16 @@ import javafx.stage.WindowEvent;
 import sune.app.mediadown.Disposables;
 import sune.app.mediadown.util.FXFix;
 import sune.app.mediadown.util.FXUtils;
+import sune.app.mediadown.util.Threads;
 
 public class ProgressWindow extends Window<StackPane> {
 	
 	private static final String WINDOW_NAME = "progress";
 	
-	public static interface ProgressAction {
-		
-		void action(ProgressListener listener);
-		void cancel();
-		
-		default void cancelled() {
-			// Do nothing
-		}
-	}
-	
-	public static interface ProgressListener {
-		
-		public static final double PROGRESS_INDETERMINATE = ProgressBar.INDETERMINATE_PROGRESS;
-		public static final double PROGRESS_NONE = 0.0;
-		public static final double PROGRESS_DONE = 1.0;
-		
-		void setText(String text);
-		void setProgress(double progress);
-	}
-	
-	private final class InternalAction implements Runnable {
-		
-		private final ProgressAction action;
-		private final AtomicBoolean cancelled = new AtomicBoolean();
-		
-		public InternalAction(ProgressAction action) {
-			if((action == null))
-				throw new IllegalArgumentException("Action cannot be null");
-			this.action = action;
-		}
-		
-		@Override
-		public void run() {
-			runningAction_add(this);
-			action.action(listener);
-			runningAction_remove(this);
-			if((cancelled.get())) {
-				// Call the internal method
-				action.cancelled();
-			}
-		}
-		
-		public void cancel() {
-			// Call the internal method
-			action.cancel();
-			cancelled.set(true);
-		}
-	}
+	private static ProgressWindow instance;
 	
 	private final List<InternalAction> running = new ArrayList<>();
-	private final ExecutorService executor = Executors.newFixedThreadPool(1);
+	private final ExecutorService executor = Threads.Pools.newFixed(1);
 	
 	private final ProgressListener listener;
 	
@@ -121,8 +76,9 @@ public class ProgressWindow extends Window<StackPane> {
 		setOnCloseRequest(this::cancelActions);
 		setResizable(false);
 		FXUtils.onWindowShow(this, () -> {
-			if((parent != null))
+			if(parent != null) {
 				FXUtils.centerWindow(this, parent);
+			}
 		});
 		listener = new ProgressListener() {
 			
@@ -138,27 +94,46 @@ public class ProgressWindow extends Window<StackPane> {
 		};
 	}
 	
+	private static final ProgressWindow instance() {
+		if(instance == null) {
+			instance = FXUtils.fxTaskValue(ProgressWindow::new);
+			Disposables.add(instance.executor::shutdownNow);
+		}
+		return instance;
+	}
+	
+	public static final ProgressWindow submitAction(Stage parent, ProgressAction action) {
+		Objects.requireNonNull(action);
+		ProgressWindow instance = instance();
+		instance.setParent(parent); // When it is needed to implement parallel actions, this has to be removed
+		instance.addAction(action);
+		return instance;
+	}
+	
 	private final void runningAction_add(InternalAction action) {
 		reset(); // When it is needed to implement parallel actions, this has to be removed
 		running.add(action);
 		FXUtils.thread(() -> {
-			if(!isShowing())
+			if(!isShowing()) {
 				// Ensure the window is visible
 				show();
+			}
 		});
 	}
 	
 	private final void runningAction_remove(InternalAction action) {
 		running.remove(action);
 		FXUtils.thread(() -> {
-			if((running.isEmpty()))
+			if(running.isEmpty()) {
 				// Ensure the window is closed
 				close();
+			}
 		});
 	}
 	
 	private final void internal_submitAction(ProgressAction action) {
-		executor.submit(new InternalAction(action));
+		InternalAction internal = new InternalAction(action);
+		internal.future(executor.submit(internal));
 	}
 	
 	private final void setParent(Stage parent) {
@@ -179,29 +154,62 @@ public class ProgressWindow extends Window<StackPane> {
 				action.cancel();
 			}
 			// Do not close the window itself
-			if((event != null))
+			if(event != null) {
 				event.consume();
+			}
 		} else {
 			// Otherwise close the window
 			close();
 		}
 	}
 	
-	private static ProgressWindow instance;
-	private static final ProgressWindow instance() {
-		if((instance == null)) {
-			instance = FXUtils.fxTaskValue(ProgressWindow::new);
-			Disposables.add(instance.executor::shutdownNow);
+	private final class InternalAction implements Runnable {
+		
+		private final ProgressAction action;
+		private final AtomicBoolean cancelled = new AtomicBoolean();
+		private Future<?> future;
+		
+		public InternalAction(ProgressAction action) {
+			this.action = Objects.requireNonNull(action);
 		}
-		return instance;
+		
+		@Override
+		public void run() {
+			runningAction_add(this);
+			action.action(listener);
+			runningAction_remove(this);
+		}
+		
+		public void cancel() {
+			// Call the internal method to allow additional canceling
+			action.cancel();
+			
+			// Also interrupt the Future to interrupt the thread
+			if(future != null) {
+				future.cancel(true);
+			}
+			
+			cancelled.set(true);
+		}
+		
+		public void future(Future<?> future) {
+			this.future = future;
+		}
 	}
 	
-	public static final ProgressWindow submitAction(Stage parent, ProgressAction action) {
-		if((action == null))
-			throw new IllegalArgumentException("Action cannot be null");
-		ProgressWindow instance = instance();
-		instance.setParent(parent); // When it is needed to implement parallel actions, this has to be removed
-		instance.addAction(action);
-		return instance;
+	public static interface ProgressAction {
+		
+		void action(ProgressListener listener);
+		void cancel();
+	}
+	
+	public static interface ProgressListener {
+		
+		public static final double PROGRESS_INDETERMINATE = ProgressBar.INDETERMINATE_PROGRESS;
+		public static final double PROGRESS_NONE = 0.0;
+		public static final double PROGRESS_DONE = 1.0;
+		
+		void setText(String text);
+		void setProgress(double progress);
 	}
 }

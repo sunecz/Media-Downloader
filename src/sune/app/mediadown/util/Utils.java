@@ -1222,6 +1222,11 @@ public final class Utils {
 		return (() -> { runnable.run(); return defaultValue; });
 	}
 	
+	/** @since 00.02.07 */
+	public static final CheckedRunnable checked(Runnable runnable) {
+		return runnable::run;
+	}
+	
 	public static final <T> Consumer<T> suppressException(CheckedConsumer<T> consumer) {
 		return suppressException(consumer, null);
 	}

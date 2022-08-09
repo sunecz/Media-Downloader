@@ -1,7 +1,6 @@
 package sune.app.mediadown.util;
 
 import java.util.concurrent.Callable;
-import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 
 public class WorkerTask<T> {
@@ -10,26 +9,24 @@ public class WorkerTask<T> {
 	private final Callable<T> callable;
 	private WorkerResult<T> result;
 	
-	@SuppressWarnings("unchecked")
 	public WorkerTask(Runnable runnable) {
-		this(createWorker(), (Callable<T>) Executors.callable(runnable));
+		this(createWorker(), Utils.<Callable<T>>cast(Utils.callable(Utils.checked(runnable))));
 	}
 	
 	public WorkerTask(Runnable runnable, T result) {
-		this(createWorker(), Executors.callable(runnable, result));
+		this(createWorker(), Utils.callable(Utils.checked(runnable), result));
 	}
 	
 	public WorkerTask(Callable<T> callable) {
 		this(createWorker(), callable);
 	}
 	
-	@SuppressWarnings("unchecked")
 	public WorkerTask(Worker worker, Runnable runnable) {
-		this(worker, (Callable<T>) Executors.callable(runnable));
+		this(worker, Utils.<Callable<T>>cast(Utils.callable(Utils.checked(runnable))));
 	}
 	
 	public WorkerTask(Worker worker, Runnable runnable, T result) {
-		this(worker, Executors.callable(runnable, result));
+		this(worker, Utils.callable(Utils.checked(runnable), result));
 	}
 	
 	public WorkerTask(Worker worker, Callable<T> callable) {
