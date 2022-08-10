@@ -15,6 +15,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.zip.GZIPInputStream;
 
 import sune.app.mediadown.event.EventRegistry;
 import sune.app.mediadown.event.EventType;
@@ -298,9 +299,30 @@ public final class JRE {
 		
 		private final class DownloadByteChannel implements ReadableByteChannel {
 			
-			// The original channel
-			private final ReadableByteChannel channel;
 			private final DownloadEventContext<JRE> context;
+			private final ReadableByteChannel channel;
+			
+			public DownloadByteChannel(DownloadEventContext<JRE> context, InputStream stream, long total)
+					throws IOException {
+				this.context = context;
+				this.context.tracker().updateTotal(total);
+				this.channel = Channels.newChannel(new GZIPInputStream(new UIS(stream)));
+			}
+			
+			@Override
+			public boolean isOpen() {
+				return channel.isOpen();
+			}
+			
+			@Override
+			public void close() throws IOException {
+				channel.close();
+			}
+			
+			@Override
+			public int read(ByteBuffer dst) throws IOException {
+				return channel.read(dst);
+			}
 			
 			// Underlying input stream implementation
 			private final class UIS extends InputStream {
@@ -324,28 +346,6 @@ public final class JRE {
 					eventRegistry.call(JREEvent.DOWNLOAD_UPDATE, context);
 					return read;
 				}
-			}
-			
-			public DownloadByteChannel(DownloadEventContext<JRE> context, InputStream stream, long total)
-					throws IOException {
-				this.channel = Channels.newChannel(new UIS(stream));
-				this.context = context;
-				this.context.tracker().updateTotal(total);
-			}
-			
-			@Override
-			public boolean isOpen() {
-				return channel.isOpen();
-			}
-			
-			@Override
-			public void close() throws IOException {
-				channel.close();
-			}
-			
-			@Override
-			public int read(ByteBuffer dst) throws IOException {
-				return channel.read(dst);
 			}
 		}
 	}
