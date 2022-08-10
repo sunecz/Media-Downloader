@@ -72,4 +72,10 @@ public final class MediaGetterPipelineTask extends TableWindowPipelineTaskBase<M
 	public void beforeReload() {
 		GlobalCache.ofURIs().remove(uri);
 	}
+	
+	/** @since 00.02.07 */
+	@Override
+	protected void onCancelled() throws Exception {
+		beforeReload();
+	}
 }

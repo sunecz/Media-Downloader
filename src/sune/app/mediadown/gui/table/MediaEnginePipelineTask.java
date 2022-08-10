@@ -83,4 +83,10 @@ public final class MediaEnginePipelineTask extends TableWindowPipelineTaskBase<P
 	public void beforeReload() {
 		GlobalCache.ofPrograms().remove(engine.getClass());
 	}
+	
+	/** @since 00.02.07 */
+	@Override
+	protected void onCancelled() throws Exception {
+		beforeReload();
+	}
 }

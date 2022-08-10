@@ -4,6 +4,7 @@ import java.util.Queue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import sune.app.mediadown.Disposables;
@@ -147,11 +148,12 @@ public final class Worker {
 	}
 	
 	public final void waitTillDone() {
-		if(!submitted.get())
-			return;
+		// Check whether anything has been submitted, if not, we're already done.
+		if(!submitted.get()) return;
+		
 		lockExecute.await();
 		do {
-			// Wait till resumed if paused
+			// Wait till resumed, if paused
 			if(!interrupted.get() && paused.get()) {
 				synchronized(lockPause) {
 					if(!interrupted.get() && paused.get()) {
@@ -159,12 +161,22 @@ public final class Worker {
 					}
 				}
 			}
+			
+			// Wait for all the running tasks to be done
 			lock.await();
+			
+			// Check whether there are any pending tasks, if not, we're done
 			synchronized(lockSubmit) {
 				if(callables.isEmpty())
 					break;
 			}
 		} while(!interrupted.get());
+		
+		// Wait for the executor to shutdown
+		Utils.ignore(() -> {
+			executor.shutdown();
+			executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+		});
 	}
 	
 	public final void interrupt() {
@@ -179,6 +191,7 @@ public final class Worker {
 		lockSubmit.unlock();
 		lockExecute.unlock();
 		lock.free();
+		// Force the executor to be shutdown
 		executor.shutdownNow();
 	}
 	

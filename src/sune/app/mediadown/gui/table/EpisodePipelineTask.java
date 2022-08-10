@@ -63,4 +63,10 @@ public final class EpisodePipelineTask extends MediaEnginePipelineTaskBase<Episo
 	public void beforeReload() {
 		items.forEach(GlobalCache.ofMedia()::remove);
 	}
+	
+	/** @since 00.02.07 */
+	@Override
+	protected void onCancelled() throws Exception {
+		beforeReload();
+	}
 }

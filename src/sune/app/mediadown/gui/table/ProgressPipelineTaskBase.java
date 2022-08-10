@@ -25,9 +25,10 @@ import sune.app.mediadown.util.WorkerProxy;
 import sune.app.mediadown.util.WorkerUpdatableTask;
 
 /** @since 00.02.07 */
-public abstract class ProgressPipelineTaskBase<T, R extends PipelineResult<?>> implements PipelineTask<R> {
+public abstract class ProgressPipelineTaskBase<T, R extends PipelineResult<?>, W extends Window<?>>
+		implements PipelineTask<R> {
 	
-	protected final Window<?> window;
+	protected final W window;
 	
 	protected final AtomicBoolean running = new AtomicBoolean();
 	protected final AtomicBoolean started = new AtomicBoolean();
@@ -40,36 +41,56 @@ public abstract class ProgressPipelineTaskBase<T, R extends PipelineResult<?>> i
 	protected final Set<T> resultSet = new HashSet<>();
 	protected final ObservableList<T> result = FXCollections.observableArrayList();
 	
-	public ProgressPipelineTaskBase(Window<?> window) {
+	public ProgressPipelineTaskBase(W window) {
 		this.window = window;
+	}
+	
+	/** @since 00.02.07 */
+	protected void submit(ProgressAction action) {
+		// By default, delegate all to the Progress window
+		ProgressWindow.submitAction(window, action);
 	}
 	
 	protected abstract CheckedFunction<CheckedBiFunction<WorkerProxy, T, Boolean>,
 		WorkerUpdatableTask<CheckedBiFunction<WorkerProxy, T, Boolean>, Void>> getTask();
-	protected abstract R getResult(Window<?> window, List<T> result);
-	protected abstract String getProgressText(Window<?> window);
+	protected abstract R getResult(W window, List<T> result);
+	protected abstract String getProgressText(W window);
+	
+	// ----- "Default" abstract methods
+	
+	/** @since 00.02.07 */
+	protected void onCancelled() throws Exception { /* Do nothing by default */ }
+	
+	// -----
 	
 	@Override
 	public R run(Pipeline pipeline) throws Exception {
 		started.set(true);
 		running.set(true);
+		stopped.set(false);
+		paused.set(false);
 		resultSet.clear();
 		result.clear();
+		
 		final CounterLock lock = new CounterLock();
-		ProgressWindow.submitAction(window, new ProgressAction() {
+		submit(new ProgressAction() {
 			
 			@Override
 			public void action(ProgressListener listener) {
 				try {
 					listener.setProgress(ProgressListener.PROGRESS_INDETERMINATE);
 					listener.setText(getProgressText(window));
+					
 					getTask().apply((proxy, item) -> {
-						if(paused.get())
+						if(paused.get()) {
 							lockPause.await();
+						}
+						
 						if(stopped.get()) {
 							proxy.cancel();
 							return false;
 						}
+						
 						FXUtils.thread(() -> {
 							// Remove duplicates while adding the items
 							if(!resultSet.contains(item)) {
@@ -78,9 +99,15 @@ public abstract class ProgressPipelineTaskBase<T, R extends PipelineResult<?>> i
 							}
 							lock.decrement();
 						});
+						
 						lock.increment();
 						return true;
 					}).startAndWaitChecked();
+					
+					// Check whether the task was cancelled
+					if(stopped.get()) {
+						onCancelled();
+					}
 				} catch(Exception ex) {
 					MediaDownloader.error(ex);
 				} finally {

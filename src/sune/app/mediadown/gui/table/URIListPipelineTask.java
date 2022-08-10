@@ -17,7 +17,8 @@ import sune.app.mediadown.util.WorkerProxy;
 import sune.app.mediadown.util.WorkerUpdatableTask;
 
 /** @since 00.02.07 */
-public final class URIListPipelineTask extends ProgressPipelineTaskBase<Pair<MediaGetter, List<Media>>, URIListPipelineResult> {
+public final class URIListPipelineTask
+		extends ProgressPipelineTaskBase<Pair<MediaGetter, List<Media>>, URIListPipelineResult, Window<?>> {
 	
 	private final List<URI> uris;
 	private final List<URI> errors = new ArrayList<>();

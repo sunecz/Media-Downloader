@@ -112,7 +112,11 @@ public class ProgressWindow extends Window<StackPane> {
 	
 	private final void runningAction_add(InternalAction action) {
 		reset(); // When it is needed to implement parallel actions, this has to be removed
-		running.add(action);
+		
+		synchronized(running) {
+			running.add(action);
+		}
+		
 		FXUtils.thread(() -> {
 			if(!isShowing()) {
 				// Ensure the window is visible
@@ -122,7 +126,10 @@ public class ProgressWindow extends Window<StackPane> {
 	}
 	
 	private final void runningAction_remove(InternalAction action) {
-		running.remove(action);
+		synchronized(running) {
+			running.remove(action);
+		}
+		
 		FXUtils.thread(() -> {
 			if(running.isEmpty()) {
 				// Ensure the window is closed
@@ -149,16 +156,26 @@ public class ProgressWindow extends Window<StackPane> {
 	}
 	
 	private final void cancelActions(WindowEvent event) {
-		if(!running.isEmpty()) {
-			for(InternalAction action : running) {
-				action.cancel();
+		boolean isEmpty;
+		
+		synchronized(running) {
+			isEmpty = running.isEmpty();
+			
+			if(!isEmpty) {
+				for(InternalAction action : running) {
+					action.cancel();
+				}
+				
+				// If any actions are running, do not close the window itself.
+				// It will be closed eventually.
+				if(event != null) {
+					event.consume();
+				}
 			}
-			// Do not close the window itself
-			if(event != null) {
-				event.consume();
-			}
-		} else {
-			// Otherwise close the window
+		}
+		
+		if(isEmpty) {
+			// If no actions are running, close the window
 			close();
 		}
 	}
