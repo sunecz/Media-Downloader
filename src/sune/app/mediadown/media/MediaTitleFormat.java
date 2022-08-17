@@ -1292,11 +1292,15 @@ public final class MediaTitleFormat {
 			
 			private final void readAndMatchSequence(String sequence) throws IOException, ParseException {
 				boolean success = true;
-				for(int i = 0, l = sequence.length(); i < l && (c = next()) != -1; ++i) {
-					if(c != sequence.codePointAt(i)) {
+				for(int i = 0, l = sequence.length(), p, n; i < l && (c = next()) != -1; i += n) {
+					p = sequence.codePointAt(i);
+					n = Character.charCount(p);
+					
+					if(c != p) {
 						success = false;
 						break;
 					}
+					
 					append(c);
 				}
 				

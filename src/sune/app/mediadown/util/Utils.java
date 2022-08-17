@@ -1680,8 +1680,8 @@ public final class Utils {
 	public static final String randomString(int length, String alphabet) {
 		Random random = random();
 		StringBuilder builder = new StringBuilder(length);
-		for(int i = 0, l = alphabet.length(); i < length; ++i) {
-			builder.appendCodePoint(alphabet.codePointAt(random.nextInt(l)));
+		for(int i = 0, l = alphabet.length(), p; i < length; ++i) {
+			builder.appendCodePoint(alphabet.substring((p = random.nextInt(l)), p + 1).codePointAt(0));
 		}
 		return builder.toString();
 	}
@@ -1816,8 +1816,9 @@ public final class Utils {
 				int start = matcher.end();
 				boolean dq = false;
 				boolean sq = false;
-				for(int i = start, l = script.length(), c; i < l; ++i) {
+				for(int i = start, l = script.length(), c, n; i < l; i += n) {
 					c = script.codePointAt(i);
+					n = Character.charCount(c);
 					// Quotes logic
 					if((c == '\"' && !sq)) dq = !dq; else
 					if((c == '\'' && !dq)) sq = !sq;
@@ -1842,8 +1843,9 @@ public final class Utils {
 				int start = matcher.end();
 				boolean dq = false;
 				boolean sq = false;
-				for(int i = start, l = script.length(), c; i < l; ++i) {
+				for(int i = start, l = script.length(), c, n; i < l; i += n) {
 					c = script.codePointAt(i);
+					n = Character.charCount(c);
 					// Quotes logic
 					if((c == '\"' && !sq)) dq = !dq; else
 					if((c == '\'' && !dq)) sq = !sq;

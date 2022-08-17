@@ -76,8 +76,9 @@ public final class Translation {
 		boolean fsign = false;
 		boolean finbr = false;
 		boolean bcadd = true;
-		for(int i = 0, l = value.length(), c; i < l; ++i) {
+		for(int i = 0, l = value.length(), c, n; i < l; i += n) {
 			c     = value.codePointAt(i);
+			n     = Character.charCount(c);
 			bcadd = true;
 			if((finbr)) {
 				if((c == CHAR_CB)) {

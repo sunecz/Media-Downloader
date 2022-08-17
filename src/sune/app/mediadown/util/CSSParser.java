@@ -94,20 +94,24 @@ public final class CSSParser {
 			CSSTokenType type = getTokenType(c);
 			if((c == CHAR_COMMENT_1 && off + 1 < len)) {
 				mark();
-				int a = css.codePointAt(off++);
+				int a = css.codePointAt(off);
+				int n = Character.charCount(a);
+				off += n;
 				if((a != CHAR_COMMENT_2)) {
 					type = CSSTokenType.SKIP;
 					addCharacter(c);
 					reset();
 				} else {
 					// Loop through the whole comment's content
-					for(; off < len; ++off) {
+					for(; off < len; off += n) {
 						a = css.codePointAt(off);
+						n = Character.charCount(a);
 						if((a == CHAR_COMMENT_2)) {
 							mark();
-							a = css.codePointAt(++off);
+							a = css.codePointAt(off += n);
+							int j = Character.charCount(a);
 							if((a == CHAR_COMMENT_1)) {
-								++off; break;
+								off += j; break;
 							}
 							addCharacter(a);
 							reset();
@@ -127,10 +131,11 @@ public final class CSSParser {
 			if((type == CSSTokenType.SELECTOR && c != CHAR_RULE_OPEN)) {
 				addCharacter(c);
 				// Loop through the whole selector's content
-				for(int a; off < len; ++off) {
+				for(int a, n; off < len; off += n) {
 					a = css.codePointAt(off);
+					n = Character.charCount(a);
 					if((a == CHAR_RULE_OPEN)) {
-						--off; break;
+						off -= n; break;
 					}
 					addCharacter(a);
 				}
@@ -147,10 +152,11 @@ public final class CSSParser {
 		}
 		
 		public final CSSToken nextToken() {
-			for(int c; off < len; ++off) {
+			for(int c, n; off < len; off += n) {
 				c = css.codePointAt(off);
+				n = Character.charCount(c);
 				if((isTokenDelimiter(c))) {
-					++off;
+					off += n;
 					return getToken(c);
 				} else {
 					addCharacter(c);

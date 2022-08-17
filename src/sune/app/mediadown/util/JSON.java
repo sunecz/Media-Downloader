@@ -259,11 +259,15 @@ public final class JSON {
 		
 		private final void readAndMatchSequence(String sequence) throws IOException {
 			boolean success = true;
-			for(int i = 0, l = sequence.length(); i < l; ++i) {
-				if(c != sequence.codePointAt(i)) {
+			for(int i = 0, l = sequence.length(), p, n; i < l; i += n) {
+				p = sequence.codePointAt(i);
+				n = Character.charCount(p);
+				
+				if(c != p) {
 					success = false;
 					break;
 				}
+				
 				c = next();
 			}
 			if(success) {
