@@ -1,6 +1,6 @@
 {
 	name:    "english",
-	version: "8",
+	version: "9",
 	title:   "English",
 	code:    "eng",
 	windows: {
@@ -86,7 +86,11 @@
 				},
 				update_resources: {
 					title: "Update resources",
-					text:  "Are you sure you want to update all resources?"
+					text:  "Are you sure you want to update all resources?",
+					success: {
+						title: "Update resources",
+						text:  "Resources have been updated."
+					}
 				}
 			},
 			actions: {

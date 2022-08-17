@@ -24,6 +24,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 import java.util.logging.Level;
+import java.util.stream.Collectors;
 
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
@@ -1105,9 +1106,14 @@ public final class MediaDownloader {
 	
 	private static final class ResourcesUpdater {
 		
+		private static final Set<String> keepFiles = Set.of(
+			"log.txt", "log.txt.lck", "jre_version", "messages.ssdf"
+		);
+		
 		public static final void configuration() {
 			Path configDir  = NIO.localPath(BASE_RESOURCE).resolve("config");
 			Path configPath = configDir.resolve("application.ssdf");
+			
 			if(!NIO.exists(configDir)
 					&& !Utils.ignoreWithCheck(() -> NIO.createDir(configDir), MediaDownloader::error)) {
 				return;
@@ -1217,6 +1223,7 @@ public final class MediaDownloader {
 		
 		private static final Set<String> getLegacyDefaultPlugins() {
 			Set<String> list = new HashSet<>();
+			
 			try {
 				String urlLegacy = URL_BASE_DAT + "plugin/list";
 				try(StreamResponse response = Web.requestStream(new GetRequest(Utils.url(urlLegacy), Shared.USER_AGENT));
@@ -1226,28 +1233,23 @@ public final class MediaDownloader {
 			} catch(Exception ex) {
 				error(ex);
 			}
+			
 			return list;
 		}
 		
 		private static final Set<String> getDefaultPlugins() {
-			Set<String> list = new HashSet<>();
-			try {
-				PluginListObtainer.obtain().stream().map((p) -> p.b).forEach(list::add);
-			} catch(Exception ex) {
-				error(ex);
-			}
-			return list;
+			return Optional.ofNullable(
+				Utils.ignore(() -> PluginListObtainer.obtain().stream()
+				                                     .map((p) -> p.b)
+				                                     .collect(Collectors.toSet()))
+			).orElseGet(Set::of);
 		}
 		
 		private static final void removePlugins(Set<String> plugins) {
 			for(String plugin : plugins) {
 				String fileName = plugin.replaceAll("[^A-Za-z0-9]+", "-") + ".jar";
 				Path path = NIO.localPath(BASE_RESOURCE, "plugin", fileName);
-				try {
-					NIO.deleteFile(path);
-				} catch(IOException ex) {
-					error(ex);
-				}
+				Utils.ignore(() -> NIO.deleteFile(path), MediaDownloader::error);
 			}
 		}
 		
@@ -1260,25 +1262,7 @@ public final class MediaDownloader {
 		}
 		
 		public static final void binary() {
-			Path dir = NIO.localPath(BASE_RESOURCE);
-			try {
-				String fileName;
-				for(Path file : Utils.iterable(Files.list(dir).iterator())) {
-					if(!NIO.isRegularFile(file)
-							// Keep only the log and JRE version file
-							|| (fileName = file.getFileName().toString())
-							            .equals("log.txt")
-							||  fileName.equals("jre_version"))
-						continue;
-					try {
-						NIO.deleteFile(file);
-					} catch(Exception ex) {
-						error(ex);
-					}
-				}
-			} catch(Exception ex) {
-				error(ex);
-			}
+			// Do nothing for now
 		}
 		
 		/** @since 00.02.05 */
@@ -1293,8 +1277,10 @@ public final class MediaDownloader {
 		
 		public static final void clean() {
 			Path dir = NIO.localPath(BASE_RESOURCE);
+			
 			// Delete the old plugins directory
 			Utils.ignore(() -> NIO.deleteDir(dir.resolve("plugins")), MediaDownloader::error);
+			
 			// Delete the old default theme
 			try {
 				NIO.deleteDir(dir.resolve("theme/default"));
@@ -1307,16 +1293,27 @@ public final class MediaDownloader {
 				removeAtInit.add(path.toString().replace('\\', '/'));
 				saveConfiguration();
 			}
+			
+			// Delete non-standard files
+			try {
+				for(Path file : Utils.iterable(Files.list(dir).iterator())) {
+					if(!NIO.isRegularFile(file)
+							|| keepFiles.contains(file.getFileName().toString()))
+						continue;
+					
+					Utils.ignore(() -> NIO.deleteFile(file), MediaDownloader::error);
+				}
+			} catch(Exception ex) {
+				error(ex);
+			}
+			
 			// Delete empty directories
 			try {
 				for(Path file : Utils.iterable(Files.list(dir).iterator())) {
-					if((NIO.isDirectory(file) && NIO.isEmptyDirectory(file))) {
-						try {
-							NIO.deleteFile(file);
-						} catch(Exception ex) {
-							error(ex);
-						}
-					}
+					if(!NIO.isDirectory(file) || !NIO.isEmptyDirectory(file))
+						continue;
+					
+					Utils.ignore(() -> NIO.deleteFile(file), MediaDownloader::error);
 				}
 			} catch(Exception ex) {
 				error(ex);
@@ -1329,19 +1326,24 @@ public final class MediaDownloader {
 				boolean changed = false;
 				Deque<Pair<SSDCollection, SSDCollection>> stack = new LinkedList<>();
 				stack.push(new Pair<>(dst, src));
+				
 				while(!stack.isEmpty()) {
 					Pair<SSDCollection, SSDCollection> pair = stack.pop();
+					
 					for(SSDNode node : pair.b) {
 						String name = node.getName();
+						
 						if(!pair.a.hasDirect(name)) {
 							changed = true; // Data changed
-							if((node.isCollection())) pair.a.set(name, (SSDCollection) node);
-							else                      pair.a.set(name, (SSDObject) node);
+							
+							if(node.isCollection()) pair.a.set(name, (SSDCollection) node);
+							else                    pair.a.set(name, (SSDObject) node);
 						} else if(node.isCollection()) {
 							stack.push(new Pair<>((SSDCollection) node, pair.a.getDirectCollection(name)));
 						}
 					}
 				}
+				
 				return changed;
 			}
 		}

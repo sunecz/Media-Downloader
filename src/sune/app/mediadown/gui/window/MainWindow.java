@@ -299,6 +299,11 @@ public final class MainWindow extends Window<BorderPane> {
 			Translation tr = translation.getTranslation("dialogs.update_resources");
 			if(Dialog.showPrompt(tr.getSingle("title"), tr.getSingle("text"))) {
 				MediaDownloader.updateResources();
+				
+				// Show dialog with a success message. Currently any thrown error is shown to
+				// the user in a dialog but is not taken into consideration here.
+				Translation trDone = tr.getTranslation("success");
+				Dialog.showInfo(trDone.getSingle("title"), trDone.getSingle("text"));
 			}
 		});
 		menuTools.getItems().addAll(menuItemClipboardWatcher, menuItemUpdateResources);

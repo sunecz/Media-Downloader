@@ -1,6 +1,6 @@
 {
 	name:    "czech",
-	version: "8",
+	version: "9",
 	title:   "Čeština",
 	code:    "ces",
 	windows: {
@@ -86,7 +86,11 @@
 				},
 				update_resources: {
 					title: "Aktualizovat prostředky",
-					text:  "Jste si jistí, že chcete aktualizovat všechny prostředky?"
+					text:  "Jste si jistí, že chcete aktualizovat všechny prostředky?",
+					success: {
+						title: "Aktualizovat prostředky",
+						text:  "Prostředky byly aktualizovány."
+					}
 				}
 			},
 			actions: {
