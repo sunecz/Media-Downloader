@@ -8,7 +8,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import sune.api.process.ReadOnlyProcess;
-import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.event.ConversionEvent;
 import sune.app.mediadown.event.EventRegistry;
 import sune.app.mediadown.event.EventType;
@@ -17,7 +16,6 @@ import sune.app.mediadown.event.tracker.ConversionTracker;
 import sune.app.mediadown.event.tracker.TrackerManager;
 import sune.app.mediadown.event.tracker.WaitTracker;
 import sune.app.mediadown.ffmpeg.FFMpeg;
-import sune.app.mediadown.language.Translation;
 import sune.app.mediadown.media.MediaFormat;
 import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.Pair;
@@ -103,12 +101,9 @@ public final class FFMpegConverter implements Converter {
 				NIO.move(fileOutput, dest);
 				done.set(true);
 			} else {
-				// TODO: Move exception up, do not translate or display it here
-				Translation translation = MediaDownloader.translation();
-				String paths = Utils.join(", ", Utils.toList(filesInput).stream()
-					.map(Path::toAbsolutePath).map(Path::toString).toArray(String[]::new));
-				String errorText = translation.getSingle("errors.conversion.cannot_convert", "path", paths);
-				eventRegistry.call(ConversionEvent.ERROR, new Pair<>(this, new IOException(errorText)));
+				Exception ex = new IllegalStateException();
+				eventRegistry.call(ConversionEvent.ERROR, new Pair<>(this, ex));
+				throw ex; // Forward the exception
 			}
 		} finally {
 			if(done.get()) {
