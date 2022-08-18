@@ -38,6 +38,7 @@ import sune.app.mediadown.media.Media;
 import sune.app.mediadown.pipeline.Pipeline;
 import sune.app.mediadown.pipeline.PipelineResult;
 import sune.app.mediadown.resource.ResourceRegistry;
+import sune.app.mediadown.util.ClipboardUtils;
 import sune.app.mediadown.util.FXUtils;
 import sune.app.mediadown.util.Threads;
 import sune.app.mediadown.util.Utils;
@@ -89,6 +90,13 @@ public class MediaGetterWindow extends DraggableWindow<VBox> {
 		VBox.setVgrow(txtURLs, Priority.ALWAYS);
 		HBox.setHgrow(cmbGetters, Priority.ALWAYS);
 		
+		// Try to paste clipboard content (URLs) to the input field when the window is focused.
+		focusedProperty().addListener((o, ov, isFocused) -> {
+			if(isFocused) {
+				pasteClipboardContent();
+			}
+		});
+		
 		FXUtils.onWindowShow(this, () -> {
 			Stage parent = (Stage) args.get("parent");
 			if(parent != null) centerWindow(parent);
@@ -99,6 +107,7 @@ public class MediaGetterWindow extends DraggableWindow<VBox> {
 			cmbGetters.getSelectionModel().selectFirst();
 			txtURLs.setText("");
 			txtURLs.requestFocus();
+			pasteClipboardContent();
 		});
 	}
 	
@@ -108,6 +117,19 @@ public class MediaGetterWindow extends DraggableWindow<VBox> {
 					.filter(Predicate.not(String::isEmpty))
 					.distinct()
 					.collect(Collectors.toList());
+	}
+	
+	/** @since 00.02.07 */
+	private final void pasteClipboardContent() {
+		// Paste the clipboard contents automatically only if the input field is empty
+		if(!txtURLs.getText().isBlank())
+			return;
+		
+		StringBuilder builder = new StringBuilder();
+		ClipboardUtils.uris().stream()
+			.filter((uri) -> MediaGetters.fromURI(uri) != null)
+			.forEachOrdered(builder::append);
+		txtURLs.setText(builder.toString());
 	}
 	
 	/** @since 00.02.07 */
