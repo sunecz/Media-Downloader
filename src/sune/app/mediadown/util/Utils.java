@@ -333,28 +333,36 @@ public final class Utils {
 			throw new IllegalArgumentException(
 				"The given string cannot be null nor empty!");
 		}
-		boolean has	 = false;
-		boolean neg  = false;
-		int value 	 = 0;
-		int temp  	 = 0;
-		char[] chars = string.toCharArray();
-		for(int i = 0, l = chars.length, c; i < l; ++i) {
-			if((c 	 = chars[i]) == '-') neg = true; else
-			if((temp = Character.digit(c, 10)) != -1) {
-				int val = (value * 10) - temp;
-				if((val > value) || (!neg && val == Integer.MIN_VALUE)) {
+		
+		int value = 0;
+		boolean has	= false;
+		boolean neg = false;
+		
+		for(int i = 0, l = string.length(), c, n, t; i < l; i += n) {
+			c = string.codePointAt(i);
+			n = charCount(c);
+			
+			if(c == '-') {
+				neg = true;
+			} else if((t = Character.digit(c, 10)) != -1) {
+				int val = value * 10 - t;
+				
+				if(val > value || (!neg && val == Integer.MIN_VALUE)) {
 					throw new IllegalArgumentException(
 						"The given string contains number outside of " +
 						"the range of a signed integer!");
 				}
+				
 				value = val;
 				has   = true;
 			}
 		}
+		
 		if(!has) {
 			throw new IllegalArgumentException(
 				"The given string does not contain any digit!");
 		}
+		
 		return neg ? value : -value;
 	}
 	
@@ -754,50 +762,62 @@ public final class Utils {
 		return string;
 	}
 	
-	public static final Pair<Integer, Integer> stringBetween(String string, char chOpen, char chClose) {
+	public static final Pair<Integer, Integer> stringBetween(String string, int chOpen, int chClose) {
 		return stringBetween(string, chOpen, chClose, 0, string.length());
 	}
 	
-	public static final Pair<Integer, Integer> stringBetween(String string, char chOpen, char chClose, int start, int end) {
+	public static final Pair<Integer, Integer> stringBetween(String string, int chOpen, int chClose, int start, int end) {
 		int count = 0;
-		for(int i = start, c; i < end; ++i) {
-			c = string.charAt(i);
-			if((c == chOpen)) {
-				if((count == 0)) {
-					start  = i;
+		
+		for(int i = start, c, n; i < end; i += n) {
+			c = string.codePointAt(i);
+			n = charCount(c);
+			
+			if(c == chOpen) {
+				if(count == 0) {
+					start = i;
 				}
+				
 				++count;
-			} else if((c == chClose)) {
+			} else if(c == chClose) {
 				--count;
-				if((count == 0)) {
-					return new Pair<>(start, i + 1);
+				
+				if(count == 0) {
+					return new Pair<>(start, i + n);
 				}
 			}
 		}
+		
 		return new Pair<>(start, end);
 	}
 	
-	public static final Pair<Integer, Integer> stringBetweenReverse(String string, char chOpen, char chClose) {
-		return stringBetweenReverse(string, chOpen, chClose, string.length() - 1, -1);
+	public static final Pair<Integer, Integer> stringBetweenReverse(String string, int chOpen, int chClose) {
+		return stringBetweenReverse(string, chOpen, chClose, codePointAlign(string, string.length() - 1), -1);
 	}
 	
-	public static final Pair<Integer, Integer> stringBetweenReverse(String string, char chOpen, char chClose, int start, int end) {
+	public static final Pair<Integer, Integer> stringBetweenReverse(String string, int chOpen, int chClose, int start, int end) {
 		int count = 0;
-		for(int i = start, c; i > end; --i) {
-			c = string.charAt(i);
-			if((c == chClose)) {
-				if((count == 0)) {
-					start  = i;
+		
+		for(int i = start, c, n; i > end; i -= n) {
+			c = string.codePointAt(i);
+			n = charCount(c);
+			
+			if(c == chClose) {
+				if(count == 0) {
+					start = i;
 				}
+				
 				++count;
-			} else if((c == chOpen)) {
+			} else if(c == chOpen) {
 				--count;
-				if((count == 0)) {
-					return new Pair<>(i, start + 1);
+				
+				if(count == 0) {
+					return new Pair<>(i, start + n);
 				}
 			}
 		}
-		return new Pair<>(0, start + 1);
+		
+		return new Pair<>(0, start + charCount(string, start));
 	}
 	
 	public static final String bracketSubstring(String string) {
@@ -808,11 +828,11 @@ public final class Utils {
 		return bracketSubstring(string, '(', ')', reverse);
 	}
 	
-	public static final String bracketSubstring(String string, char chOpen, char chClose) {
+	public static final String bracketSubstring(String string, int chOpen, int chClose) {
 		return bracketSubstring(string, chOpen, chClose, false);
 	}
 	
-	public static final String bracketSubstring(String string, char chOpen, char chClose, boolean reverse) {
+	public static final String bracketSubstring(String string, int chOpen, int chClose, boolean reverse) {
 		Pair<Integer, Integer> range
 			= reverse
 				? stringBetweenReverse(string, chOpen, chClose)
@@ -820,7 +840,7 @@ public final class Utils {
 		return string.substring(range.a, range.b);
 	}
 	
-	public static final String bracketSubstring(String string, char chOpen, char chClose, boolean reverse, int start, int end) {
+	public static final String bracketSubstring(String string, int chOpen, int chClose, boolean reverse, int start, int end) {
 		Pair<Integer, Integer> range
 			= reverse
 				? stringBetweenReverse(string, chOpen, chClose, start, end)
@@ -828,7 +848,7 @@ public final class Utils {
 		return string.substring(range.a, range.b);
 	}
 	
-	public static final String substringTo(String string, char ch) {
+	public static final String substringTo(String string, int ch) {
 		int index = string.indexOf(ch);
 		return index >= 0 ? string.substring(0, index) : string;
 	}
@@ -874,37 +894,83 @@ public final class Utils {
 		return new String(codePoints, 0, codePoints.length);
 	}
 	
-	public static final int backTill(String string, char ch, int from) {
+	public static final int backTill(String string, int ch, int from) {
 		return backTill(string, ch, from, 1);
 	}
 	
-	public static final int backTill(String string, char ch, int from, int count) {
-		for(int i = from, c; i >= 0; --i) {
-			c = string.charAt(i);
-			if((c == ch)) {
-				if((--count == 0))
-					return i;
+	public static final int backTill(String string, int ch, int from, int count) {
+		for(int i = from, c, n; i >= 0; i -= n) {
+			c = string.codePointAt(i);
+			n = charCount(c);
+			
+			if(c == ch && --count == 0) {
+				return i;
 			}
 		}
+		
 		return 0;
 	}
 	
-	public static final String backTillString(String string, char ch, int from) {
+	public static final String backTillString(String string, int ch, int from) {
 		return backTillString(string, ch, from, 1);
 	}
 	
-	public static final String backTillString(String string, char ch, int from, int count) {
+	public static final String backTillString(String string, int ch, int from, int count) {
+		from = codePointAlign(string, from);
 		int start = backTill(string, ch, from, count);
-		return string.substring(start, from + 1);
+		return string.substring(start, from + charCount(string, from));
 	}
 	
-	public static final String trimEnd(String string, char ch) {
-		int end = string.length();
-		for(int i = end - 1, c; i >= 0; --i) {
-			c = string.charAt(i);
-			if((c == ch)) --end;
-			else          break;
+	/** @since 00.02.07 */
+	public static final int charCount(int codePoint) {
+		return Character.charCount(codePoint);
+	}
+	
+	/** @since 00.02.07 */
+	public static final int charCount(String string, int index) {
+		return charCount(codePointAt(string, index));
+	}
+	
+	/** @since 00.02.07 */
+	public static final int codePointAt(String string, int index) {
+		int c = string.codePointAt(index);
+		
+		if(Character.isBmpCodePoint(c)
+				&& Character.isLowSurrogate((char) c)) {
+			c = string.codePointBefore(index);
 		}
+		
+		return c;
+	}
+	
+	/** @since 00.02.07 */
+	public static final int codePointAlign(String string, int index) {
+		int c = string.codePointAt(index);
+		
+		if(Character.isBmpCodePoint(c)
+				&& Character.isLowSurrogate((char) c)) {
+			return index - 1;
+		}
+		
+		return index;
+	}
+	
+	/** @since 00.02.07 */
+	public static final String substring(String string, int start, int end) {
+		return string.substring(codePointAlign(string, start), codePointAlign(string, end));
+	}
+	
+	public static final String trimEnd(String string, int ch) {
+		int end = string.length();
+		
+		for(int i = codePointAlign(string, end - 1), c, n; i >= 0; i -= n) {
+			c = string.codePointAt(i);
+			n = charCount(c);
+			
+			if(c == ch) --end;
+			else        break;
+		}
+		
 		return string.substring(0, end);
 	}
 	
@@ -1413,27 +1479,34 @@ public final class Utils {
 	public static final String unquote(String string) {
 		StringBuilder builder = new StringBuilder(string);
 		int quoteCharacter = -1, length;
+		
 		length = builder.length();
 		// Remove the first quote
-		for(int i = 0, c; i < length; ++i) {
-			c = builder.charAt(i);
-			if((c == '"' || c == '\'')) {
+		for(int i = 0, c, n; i < length; i += n) {
+			c = builder.codePointAt(i);
+			n = charCount(c);
+			
+			if(c == '"' || c == '\'') {
 				// Remove the quote character
 				builder.deleteCharAt(i);
 				quoteCharacter = c; // Unquote the same quote later
 				break;
 			}
 		}
+		
 		length = builder.length();
 		// Remove the second quote
-		for(int i = length - 1, c; i >= 0; --i) {
-			c = builder.charAt(i);
-			if((c == quoteCharacter)) {
+		for(int i = codePointAlign(string, length - 1), c, n; i >= 0; i -= n) {
+			c = builder.codePointAt(i);
+			n = charCount(c);
+			
+			if(c == quoteCharacter) {
 				// Remove the quote character
 				builder.deleteCharAt(i);
 				break;
 			}
 		}
+		
 		return builder.toString();
 	}
 	
@@ -1680,8 +1753,8 @@ public final class Utils {
 	public static final String randomString(int length, String alphabet) {
 		Random random = random();
 		StringBuilder builder = new StringBuilder(length);
-		for(int i = 0, l = alphabet.length(), p; i < length; ++i) {
-			builder.appendCodePoint(alphabet.substring((p = random.nextInt(l)), p + 1).codePointAt(0));
+		for(int i = 0, l = alphabet.length(); i < length; ++i) {
+			builder.appendCodePoint(alphabet.codePointAt(random.nextInt(l)));
 		}
 		return builder.toString();
 	}
@@ -1818,7 +1891,7 @@ public final class Utils {
 				boolean sq = false;
 				for(int i = start, l = script.length(), c, n; i < l; i += n) {
 					c = script.codePointAt(i);
-					n = Character.charCount(c);
+					n = charCount(c);
 					// Quotes logic
 					if((c == '\"' && !sq)) dq = !dq; else
 					if((c == '\'' && !dq)) sq = !sq;
@@ -1826,10 +1899,7 @@ public final class Utils {
 					if(!dq && !sq) {
 						if((c == ';')) break;
 					}
-					// Optimize character adding for lower positioned characters
-					if((Character.isBmpCodePoint(c)))
-						 builder.append((char) c);
-					else builder.append(Character.toChars(c));
+					builder.appendCodePoint(c);
 				}
 			}
 			return builder.toString();
@@ -1845,7 +1915,7 @@ public final class Utils {
 				boolean sq = false;
 				for(int i = start, l = script.length(), c, n; i < l; i += n) {
 					c = script.codePointAt(i);
-					n = Character.charCount(c);
+					n = charCount(c);
 					// Quotes logic
 					if((c == '\"' && !sq)) dq = !dq; else
 					if((c == '\'' && !dq)) sq = !sq;
@@ -1853,10 +1923,7 @@ public final class Utils {
 					if(!dq && !sq) {
 						if((c == ')')) break;
 					}
-					// Optimize character adding for lower positioned characters
-					if((Character.isBmpCodePoint(c)))
-						 builder.append((char) c);
-					else builder.append(Character.toChars(c));
+					builder.appendCodePoint(c);
 				}
 			}
 			return builder.toString();

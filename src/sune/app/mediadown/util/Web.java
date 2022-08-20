@@ -562,40 +562,47 @@ public final class Web {
 	}
 	
 	public static final Map<String, String> headers(String data) {
-		if((data == null)) return null; // do not continue
+		if(data == null) return null; // Do not continue
+		
 		Map<String, String> map = new LinkedHashMap<>();
 		boolean dq = false;
 		boolean sq = false;
 		String 		  tn = null;
 		StringBuilder sb = new StringBuilder();
-		for(int i = 0, l = data.length(), c; i < l; ++i) {
-			c = data.charAt(i);
-			// quotes logic
-			if((c == CHAR_QUOTES_DOUBLE && !sq)) dq = !dq; else
-			if((c == CHAR_QUOTES_SINGLE && !dq)) sq = !sq;
-			// extract logic
+		
+		for(int i = 0, l = data.length(), c, n; i < l; i += n) {
+			c = data.codePointAt(i);
+			n = Utils.charCount(c);
+			
+			// Quotes logic
+			if(c == CHAR_QUOTES_DOUBLE && !sq) dq = !dq; else
+			if(c == CHAR_QUOTES_SINGLE && !dq) sq = !sq;
+			
+			// Extract logic
 			else {
 				if(!sq && !dq) {
-					if((c == CHAR_HEADER_NV_DELIMITER)) {
+					if(c == CHAR_HEADER_NV_DELIMITER) {
 						tn = sb.toString();
 						sb.setLength(0);
-					} else if((c == CHAR_HEADER_IT_DELIMITER)) {
-						if((tn != null)) {
+					} else if(c == CHAR_HEADER_IT_DELIMITER) {
+						if(tn != null) {
 							map.put(tn, sb.toString());
 							sb.setLength(0);
 							tn = null;
 						}
 					} else {
-						sb.append((char) c);
+						sb.appendCodePoint(c);
 					}
 				} else {
-					sb.append((char) c);
+					sb.appendCodePoint(c);
 				}
 			}
 		}
-		if((tn != null)) {
+		
+		if(tn != null) {
 			map.put(tn, sb.toString());
 		}
+		
 		return map;
 	}
 	

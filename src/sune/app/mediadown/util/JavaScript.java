@@ -239,29 +239,36 @@ public final class JavaScript {
 		StringBuilder sb = new StringBuilder();
 		Pattern pat = Pattern.compile("(?:var\\s+)?" + Pattern.quote(name) + "\\s*=");
 		Matcher mat = pat.matcher(script);
-		if((mat.find())) {
+		
+		if(mat.find()) {
 			int start = mat.end();
 			// Find the end of the var content (by finding ';', or script end)
 			boolean dq = false;
 			boolean sq = false;
 			boolean wq = false;
-			for(int i = start, l = script.length(), c; i < l; ++i) {
-				c = script.charAt(i);
+			
+			for(int i = start, l = script.length(), c, n; i < l; i += n) {
+				c = script.codePointAt(i);
+				n = Utils.charCount(c);
+				
 				// Quotes logic
-				if((c == '\"' && !sq)) dq = !dq; else
-				if((c == '\'' && !dq)) sq = !sq;
+				if(c == '\"' && !sq) dq = !dq; else
+				if(c == '\'' && !dq) sq = !sq;
+				
 				// Finding logic
 				if(!dq && !sq) {
-					if((c == ';'
-							|| (wq && c != '\"' && c != '\'')))
+					if(c == ';' || (wq && c != '\"' && c != '\''))
 						break;
 				} else {
 					wq = true;
 				}
-				sb.append((char) c);
+				
+				sb.appendCodePoint(c);
 			}
+			
 			return sb.toString().trim();
 		}
+		
 		return null;
 	}
 	
@@ -270,31 +277,40 @@ public final class JavaScript {
 		StringBuilder sb = new StringBuilder();
 		Pattern pat = Pattern.compile("(?:var\\s+)?([^\\s=]*)\\s*=");
 		Matcher mat = pat.matcher(script);
-		while((mat.find())) {
+		
+		while(mat.find()) {
 			int    start = mat.end();
 			String name  = mat.group(1);
-			// find the end of the var content (by finding ';', or script end)
+			// Find the end of the var content (by finding ';', or script end)
 			boolean dq = false;
 			boolean sq = false;
 			int i = start;
-			for(int l = script.length(), c; i < l; ++i) {
-				c = script.charAt(i);
-				// quotes logic
-				if((c == '\"' && !sq)) dq = !dq; else
-				if((c == '\'' && !dq)) sq = !sq;
-				// finding logic
+			
+			for(int l = script.length(), c, n; i < l; i += n) {
+				c = script.codePointAt(i);
+				n = Utils.charCount(c);
+				
+				// Quotes logic
+				if(c == '\"' && !sq) dq = !dq; else
+				if(c == '\'' && !dq) sq = !sq;
+				
+				// Finding logic
 				if(!dq && !sq) {
-					if((c == ';' || c == ',' || c == '{'))
+					if(c == ';' || c == ',' || c == '{')
 						break;
 				}
-				sb.append((char) c);
+				
+				sb.appendCodePoint(c);
 			}
+			
 			if(!name.isEmpty()) {
 				vars.put(name, sb.toString().trim());
 			}
+			
 			sb.setLength(0);
 			mat.reset(script = script.substring(i));
 		}
+		
 		return vars;
 	}
 	

@@ -297,7 +297,7 @@ public final class MPD {
 		}
 		
 		private static final Object castToFormatArg(String formatArg, String value) {
-			int type = Character.toLowerCase(formatArg.substring(formatArg.length() - 1).codePointAt(0));
+			int type = Character.toLowerCase(Utils.codePointAt(formatArg, formatArg.length() - 1));
 			switch(type) {
 				case 'b':
 					return Boolean.valueOf(value);

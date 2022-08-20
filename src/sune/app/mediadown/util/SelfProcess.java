@@ -15,24 +15,26 @@ public final class SelfProcess {
 		StringBuilder sb = new StringBuilder();
 		boolean indq = false;
 		boolean insq = false;
-		for(int i = 0, l = command.length(), c; i < l; ++i) {
-			c = command.charAt(i);
+		
+		for(int i = 0, l = command.length(), c, n; i < l; i += n) {
+			c = command.codePointAt(i);
+			n = Character.charCount(c);
+			
 			// Quotes
-			if((c == '\"' && !insq)) indq = !indq; else
-			if((c == '\'' && !indq)) insq = !insq;
+			if(c == '\"' && !insq) indq = !indq; else
+			if(c == '\'' && !indq) insq = !insq;
 			// Parsing
-			else if((c == ' ' && !(indq || insq))) {
+			else if(c == ' ' && !(indq || insq)) {
 				if(sb.length() > 0) {
 					collection.add(sb.toString());
 					sb.setLength(0);
 				}
 			} else {
-				// This creates the char[] only if it is really neeeded
-				if((Character.isBmpCodePoint(c))) sb.append((char) c);
-				else                              sb.append(Character.toChars(c));
+				sb.appendCodePoint(c);
 			}
 		}
-		if((sb.length() > 0)) {
+		
+		if(sb.length() > 0) {
 			// Add the last left-over string
 			collection.add(sb.toString());
 		}
