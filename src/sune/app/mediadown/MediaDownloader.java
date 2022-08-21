@@ -90,7 +90,6 @@ import sune.app.mediadown.update.RemoteConfiguration.Property;
 import sune.app.mediadown.update.Requirements;
 import sune.app.mediadown.update.Updater;
 import sune.app.mediadown.update.Version;
-import sune.app.mediadown.update.VersionType;
 import sune.app.mediadown.util.CheckedFunction;
 import sune.app.mediadown.util.CheckedRunnable;
 import sune.app.mediadown.util.FXUtils;
@@ -1257,10 +1256,7 @@ public final class MediaDownloader {
 				// Add missing fields from the internal to the current configuration
 				Merger.ssdf(current, internal);
 				
-				if(previousVersion.equals(Version.of("00.02.06"))
-						// Check also for the development (pre-release) versions of 00.02.07.
-						|| (previousVersion.type() == VersionType.DEVELOPMENT
-								&& previousVersion.release().equals(Version.of("00.02.07")))) {
+				if(previousVersion.compareTo(Version.of("00.02.07-dev.10")) <= 0) {
 					// Uncheck resources integrity checking
 					current.set("checkResourcesIntegrity", false);
 				}
@@ -1385,7 +1381,7 @@ public final class MediaDownloader {
 		/** @since 00.02.05 */
 		public static final void messages(Version previousVersion) {
 			// 00.02.04 -> 00.02.05: Messages format update (V0 -> V1)
-			if(previousVersion.equals(Version.of("00.02.04"))) {
+			if(previousVersion.compareTo(Version.of("00.02.04")) <= 0) {
 				// Do not bother with conversion and just remove the messages.ssdf file
 				Utils.ignore(() -> NIO.deleteFile(NIO.localPath(BASE_RESOURCE).resolve("messages.ssdf")),
 				             MediaDownloader::error);
@@ -1412,10 +1408,7 @@ public final class MediaDownloader {
 			}
 			
 			// Delete libraries that are not used anymore (are now built-in)
-			if(previousVersion.equals(Version.of("00.02.06"))
-					// Check also for the development (pre-release) versions of 00.02.07.
-					|| (previousVersion.type() == VersionType.DEVELOPMENT
-							&& previousVersion.release().equals(Version.of("00.02.07")))) {
+			if(previousVersion.compareTo(Version.of("00.02.07-dev.10")) <= 0) {
 				// Delete the libraries ONLY if run from the JAR file (not from a development environment)
 				if(SelfProcess.inJAR()) {
 					Utils.ignore(() -> NIO.deleteFile(NIO.localPath("lib/ssdf2.jar")), MediaDownloader::error);
