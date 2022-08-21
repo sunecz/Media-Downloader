@@ -9,6 +9,8 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -20,8 +22,10 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
@@ -30,6 +34,7 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
 import javafx.scene.image.Image;
 import javafx.stage.Stage;
+import sune.app.mediadown.MediaDownloader.Versions.VersionEntryAccessor;
 import sune.app.mediadown.configuration.ApplicationConfiguration;
 import sune.app.mediadown.configuration.ApplicationConfigurationAccessor;
 import sune.app.mediadown.event.EventSupport;
@@ -72,6 +77,7 @@ import sune.app.mediadown.resource.JRE;
 import sune.app.mediadown.resource.JRE.JREEvent;
 import sune.app.mediadown.resource.ResourceRegistry;
 import sune.app.mediadown.resource.Resources;
+import sune.app.mediadown.resource.Resources.InternalResource;
 import sune.app.mediadown.resource.Resources.StringReceiver;
 import sune.app.mediadown.theme.Theme;
 import sune.app.mediadown.update.CheckListener;
@@ -84,7 +90,9 @@ import sune.app.mediadown.update.RemoteConfiguration.Property;
 import sune.app.mediadown.update.Requirements;
 import sune.app.mediadown.update.Updater;
 import sune.app.mediadown.update.Version;
+import sune.app.mediadown.update.VersionType;
 import sune.app.mediadown.util.CheckedFunction;
+import sune.app.mediadown.util.CheckedRunnable;
 import sune.app.mediadown.util.FXUtils;
 import sune.app.mediadown.util.IllegalAccessWarnings;
 import sune.app.mediadown.util.MathUtils;
@@ -99,6 +107,7 @@ import sune.app.mediadown.util.Threads;
 import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Web;
 import sune.app.mediadown.util.Web.GetRequest;
+import sune.app.mediadown.util.Web.HeadRequest;
 import sune.app.mediadown.util.Web.StreamResponse;
 import sune.util.load.Libraries;
 import sune.util.load.Libraries.Library;
@@ -228,8 +237,20 @@ public final class MediaDownloader {
 				if(!args.has("no-startup-gui")) {
 					init(count);
 				}
+				return new InitializeConfiguration();
+			}
+		}
+		
+		public static final class InitializeConfiguration implements InitializationState {
+			
+			@Override
+			public InitializationState run(Arguments args) {
+				initConfiguration();
+				Versions.load();
 				return new CheckJRE();
 			}
+			
+			@Override public String getTitle() { return "Initializing configuration..."; }
 		}
 		
 		// Update the JRE, if needed, as soon as possible, since some libraries and/or plugins
@@ -239,47 +260,58 @@ public final class MediaDownloader {
 			
 			private static final Path oldJREPath()  { return PathSystem.getPath("jre"); }
 			private static final Path newJREPath()  { return PathSystem.getPath("jre-new"); }
-			private static final Path versionPath() { return PathSystem.getPath("resources/jre_version"); }
 			
 			@Override
 			public InitializationState run(Arguments args) {
 				try {
 					// Obtain the required JRE version from the remote configuration
 					jreVersion = remoteConfiguration().value("jre");
+					
 					if(args.has("jre-update") && args.has("pid")) {
 						long pid = Long.valueOf(args.getValue("pid"));
-						if(pid <= 0L) throw new IllegalStateException("Invalid PID");
-						setText("Waiting for process to finish...");
+						
+						if(pid <= 0L) {
+							throw new IllegalStateException("Invalid PID");
+						}
+						
 						// Get the parent process
 						ProcessHandle handle = ProcessHandle.of(pid).orElse(null);
+						
 						// Check whether the old process still exists
 						if(handle != null) {
 							// Wait for it to finish
+							setText("Waiting for process to finish...");
 							handle.onExit().get();
 						}
+						
 						// Move the directories around so that the new JRE is in the correct location
 						Path oldJREPath = oldJREPath();
 						setText("Deleting old JRE...");
 						NIO.deleteDir(oldJREPath);
 						setText("Copying new JRE...");
 						NIO.copyDir(newJREPath(), oldJREPath);
-						// Update the contents of the JRE version file
-						NIO.save(versionPath(), jreVersion);
+						
 						// Launch the previous process again
 						setText("Launching application using the new JRE...");
 						String runCommand = args.getValue("run-command");
 						runCommand = new String(Base64.getDecoder().decode(runCommand), Shared.CHARSET);
 						runCommand += " --jre-update-finish";
 						SelfProcess.launch(runCommand);
+						
 						// Exit normally
 						System.exit(0);
 					} else if(args.has("jre-update-finish")) {
 						// Finish the whole JRE update process by deleting the temporary JRE directory
 						NIO.deleteDir(newJREPath());
+						// Update the JRE version so that we know which version is present
+						Versions.Common.jre().set(Version.fromString(jreVersion));
 					} else {
-						Path path = versionPath();
+						VersionEntryAccessor version = Versions.Common.jre();
+						Version verLocal = version.get();
+						Version verRemote = Version.fromString(jreVersion);
+						
 						// Check the current JRE version and update, if necessary
-						if(!NIO.exists(path) || !NIO.read(path).equals(jreVersion)) {
+						if(verLocal.compareTo(verRemote) != 0 || verLocal == Version.UNKNOWN) {
 							JRE jre = JRE.newInstance();
 							jre.addEventListener(JREEvent.CHECK, (context) -> {
 								setText(String.format("Checking %s...", context.name()));
@@ -297,16 +329,22 @@ public final class MediaDownloader {
 							jre.addEventListener(JREEvent.ERROR, (context) -> {
 								error(context.exception());
 							});
+							
+							boolean checkIntegrity = true; // Always check integrity
 							Path oldJREPath = oldJREPath();
 							Path newJREPath = newJREPath();
 							Set<Path> visitedFiles = new HashSet<>();
+							
 							// Check the files and if any is changed, continue the process
-							if(jre.check(oldJREPath, newJREPath, Requirements.CURRENT, jreVersion, visitedFiles)) {
+							if(jre.check(oldJREPath, newJREPath, Requirements.CURRENT, jreVersion, visitedFiles,
+							             (p) -> checkIntegrity, null)) {
 								// Copy all files that were not updated and exist on the web (were visited)
 								NIO.mergeDirectories(oldJREPath, newJREPath, (p, np) -> visitedFiles.contains(p) && !NIO.exists(np));
+								
 								// Get the current run command, so that the application can be run again
 								String runCommand = SelfProcess.command(List.of(args.args()));
 								runCommand = Base64.getEncoder().encodeToString(runCommand.getBytes(Shared.CHARSET));
+								
 								// Get Java executable in the new directory
 								Path exePath = SelfProcess.exePath();
 								// Check whether the current process was run in the old JRE directory
@@ -316,25 +354,28 @@ public final class MediaDownloader {
 								if(parent != null && parent.equals(oldJREPath)) {
 									exePath = newJREPath.resolve(oldJREPath.relativize(exePath));
 								}
+								
 								// Start a new process to finish updating the JRE
 								SelfProcess.launch(exePath, List.of(
 									"--jre-update",
 									"--pid", String.valueOf(SelfProcess.pid()),
 									"--run-command", runCommand
 								));
+								
 								// Exit normally
 								System.exit(0);
 							} else {
-								// No files changed, just update the contents of the JRE version file
-								NIO.save(versionPath(), jreVersion);
 								// Also delete the empty new JRE directory (from checking)
 								NIO.deleteDir(newJREPath);
+								// Update the JRE version so that we know which version is present
+								version.set(Version.fromString(jreVersion));
 							}
 						}
 					}
 				} catch(Exception ex) {
 					error(ex);
 				}
+				
 				return new RegistrationOfLibrariesAndResources();
 			}
 		}
@@ -534,19 +575,8 @@ public final class MediaDownloader {
 				if(DEBUG) {
 					disposeExternalResources();
 				}
-				return new InitializeConfiguration();
-			}
-		}
-		
-		public static final class InitializeConfiguration implements InitializationState {
-			
-			@Override
-			public InitializationState run(Arguments args) {
-				initConfiguration();
 				return new InitializeInternalResources();
 			}
-			
-			@Override public String getTitle() { return "Initializing configuration..."; }
 		}
 		
 		public static final class InitializeInternalResources implements InitializationState {
@@ -608,7 +638,7 @@ public final class MediaDownloader {
 			
 			@Override
 			public InitializationState run(Arguments args) {
-				if(Update.isAutoUpdateCheckEnabled()) {
+				if(args.has("is-jar-update") || Update.isAutoUpdateCheckEnabled()) {
 					Update.update(args);
 				}
 				return new RegisterWindows();
@@ -767,19 +797,11 @@ public final class MediaDownloader {
 	private static final class Update {
 		
 		private static final StringReceiver receiver = InitializationStates::setText;
-		private static final String NAME_JAR = "media-downloader.jar";
-		private static final String NAME_JAR_NEW = "media-downloader-new.jar";
-		
 		private static Version newestVersion;
 		
 		/** @since 00.02.07 */
 		private static final String versionFileURI() {
 			return URL_BASE_VER + "version" + (configuration.usePreReleaseVersions() ? "_pre" : "");
-		}
-		
-		/** @since 00.02.07 */
-		private static final String remoteJARFileName() {
-			return (configuration.usePreReleaseVersions() ? "pre-release/" : "") + "application.jar";
 		}
 		
 		public static final boolean isAutoUpdateCheckEnabled() {
@@ -790,72 +812,20 @@ public final class MediaDownloader {
 		public static final void update(Arguments args) {
 			if(args.has("is-jar-update") || (checkVersion() && showUpdateDialog())) {
 				try {
-					Path reqJAR = PathSystem.getPath(NAME_JAR);
-					Path newJAR = PathSystem.getPath(NAME_JAR_NEW);
-					if(args.has("jar-update") && args.has("pid")) {
-						long pid = Long.valueOf(args.getValue("pid"));
-						if(pid <= 0L) throw new IllegalStateException("Invalid PID");
-						receiver.receive("Waiting for the previous process to finish...");
-						// Get the parent process
-						ProcessHandle handle = ProcessHandle.of(pid).orElse(null);
-						// Check whether the old process still exists
-						if(handle != null) {
-							// Wait for it to finish
-							handle.onExit().get();
+					boolean needsVersion = (!args.has("jar-update") || !args.has("pid")) && !args.has("jar-update-finish");
+					Version version = Version.UNKNOWN;
+					
+					if(needsVersion) {
+						// Allow manual version selection using arguments
+						String custom = args.getValue("jar-version");
+						version = custom != null ? Version.fromString(custom) : Version.UNKNOWN;
+						
+						if(version == Version.UNKNOWN) {
+							version = newestVersion();
 						}
-						// Copy the new (current) JAR file to the required one
-						receiver.receive("Replacing the old JAR file...");
-						NIO.copyFile(newJAR, reqJAR);
-						// Launch the previous process again
-						receiver.receive("Launching the new version...");
-						String runCommand = args.getValue("run-command");
-						runCommand = new String(Base64.getDecoder().decode(runCommand), Shared.CHARSET);
-						runCommand += " --jar-update-finish";
-						runCommand += " --is-jar-update";
-						SelfProcess.launch(runCommand);
-						// Exit normally
-						System.exit(0);
-					} else if(args.has("jar-update-finish")) {
-						// Finish the whole JAR update process by deleting the new JAR version
-						receiver.receive("Deleting the temporary JAR file...");
-						NIO.deleteFile(newJAR);
-					} else {
-						Version newestVersion = newestVersion();
-						String  newestVersionURL = URL_BASE_VER + newestVersion.stringRelease() + "/" + remoteJARFileName();
-						// Create the download listener using the new event registry support
-						CompatibilityEventRegistry<FileDownloadListener> eventRegistry
-							= EventSupport.compatibilityEventRegistry(FileDownloadListener.class);
-						eventRegistry.add(eventRegistry.typeOf("begin"), (argsWrapper) -> {
-							receiver.receive("Downloading the new version...");
-						});
-						eventRegistry.add(eventRegistry.typeOf("update"), (argsWrapper) -> {
-							long current = argsWrapper.get(2);
-							long total = argsWrapper.get(3);
-							receiver.receive(String.format(Locale.US, "Downloading the new version... %.2f%%", current * 100.0 / total));
-						});
-						eventRegistry.add(eventRegistry.typeOf("end"), (argsWrapper) -> {
-							receiver.receive("Downloading the new version... done");
-						});
-						eventRegistry.add(eventRegistry.typeOf("error"), (argsWrapper) -> {
-							Exception ex = argsWrapper.get(0);
-							MediaDownloader.error(ex);
-						});
-						// Download the new version's JAR file
-						FileDownloader.download(newestVersionURL, newJAR, eventRegistry.proxy());
-						// Get the current run command, so that the application can be run again
-						String runCommand = SelfProcess.command(List.of(args.args()));
-						runCommand = Base64.getEncoder().encodeToString(runCommand.getBytes(Shared.CHARSET));
-						Path exePath = SelfProcess.exePath();
-						// Start a new process to finish updating the application
-						SelfProcess.launchJAR(newJAR, exePath, List.of(
-							"--jar-update",
-							"--pid", String.valueOf(SelfProcess.pid()),
-							"--run-command", runCommand,
-							"--is-jar-update"
-						));
-						// Exit normally
-						System.exit(0);
 					}
+					
+					JarUpdater.doUpdateProcess(version, configuration.usePreReleaseVersions(), args, receiver);
 				} catch(Exception ex) {
 					error(ex);
 				}
@@ -864,8 +834,24 @@ public final class MediaDownloader {
 		
 		public static final void checkLibraries(CheckListener listener) {
 			try {
-				String baseURL = Utils.urlConcat(URL_BASE_LIB, remoteConfiguration().value("lib"));
-				Updater.checkLibraries(baseURL, NIO.localPath(), TIMEOUT, listener);
+				boolean checkIntegrity = configuration.isCheckResourcesIntegrity();
+				boolean checkLibraries = true;
+				String versionLib = remoteConfiguration().value("lib");
+				VersionEntryAccessor version = Versions.Common.lib();
+				
+				// If there is no integrity checking, we have to manually check the versions
+				if(!checkIntegrity) {
+					Version verLocal = version.get();
+					Version verRemote = Version.fromString(versionLib);
+					checkLibraries = verLocal.compareTo(verRemote) != 0 || verLocal == Version.UNKNOWN;
+				}
+				
+				if(checkLibraries) {
+					FileChecker checker = localFileChecker(true, (path) -> true);
+					String baseURL = Utils.urlConcat(URL_BASE_LIB, versionLib);
+					Updater.checkLibraries(baseURL, NIO.localPath(), TIMEOUT, listener, checker, null);
+					version.set(Version.fromString(versionLib));
+				}
 			} catch(IOException ex) {
 				// Config cannot be accessed, just skip it
 			}
@@ -928,6 +914,120 @@ public final class MediaDownloader {
 		}
 	}
 	
+	/** @since 00.02.07 */
+	public static final class JarUpdater {
+		
+		private static final String NAME_JAR = "media-downloader.jar";
+		private static final String NAME_JAR_NEW = "media-downloader-new.jar";
+		
+		// Forbid anyone to create an instance of this class
+		private JarUpdater() {
+		}
+		
+		private static final String remoteJarFileURI(Version version, boolean preRelease) {
+			return URL_BASE_VER + version.stringRelease() + "/" + (preRelease ? "pre-release/" : "") + "application.jar";
+		}
+		
+		public static final void doUpdateProcess(Version version, boolean preRelease, Arguments args,
+				StringReceiver receiver) throws Exception {
+			Path reqJar = PathSystem.getPath(NAME_JAR);
+			Path newJar = PathSystem.getPath(NAME_JAR_NEW);
+			
+			if(args.has("jar-update") && args.has("pid")) {
+				long pid = Long.valueOf(args.getValue("pid"));
+				
+				if(pid <= 0L) {
+					throw new IllegalStateException("Invalid PID");
+				}
+				
+				// Get the parent process
+				ProcessHandle handle = ProcessHandle.of(pid).orElse(null);
+				
+				// Check whether the old process still exists
+				if(handle != null) {
+					// Wait for it to finish
+					receiver.receive("Waiting for the previous process to finish...");
+					handle.onExit().get();
+				}
+				
+				// Copy the new (current) JAR file to the required one
+				receiver.receive("Replacing the old JAR file...");
+				NIO.copyFile(newJar, reqJar);
+				
+				// Launch the previous process again
+				receiver.receive("Launching the new version...");
+				String runCommand = args.getValue("run-command");
+				runCommand = new String(Base64.getDecoder().decode(runCommand), Shared.CHARSET);
+				runCommand += " --jar-update-finish";
+				runCommand += " --is-jar-update";
+				SelfProcess.launch(runCommand);
+				
+				// Exit normally
+				System.exit(0);
+			} else if(args.has("jar-update-finish")) {
+				// Finish the whole JAR update process by deleting the new JAR version
+				receiver.receive("Deleting the temporary JAR file...");
+				NIO.deleteFile(newJar);
+			} else {
+				String jarUrl = remoteJarFileURI(version, preRelease);
+				
+				// Check whether the remote JAR file exists or not
+				do {
+					try(StreamResponse response = Web.peek(new HeadRequest(Utils.url(jarUrl), Shared.USER_AGENT))) {
+						// If the remote file exists, we can continue in the process
+						if(response.code == 200) break;
+						
+						// If pre-release version is not set we cannot do anything else.
+						if(!preRelease) {
+							throw new IllegalStateException("Remote file does not exist: " + jarUrl);
+						}
+						
+						// Otherwise, try the full version instead of the pre-release one.
+						preRelease = false;
+						jarUrl = remoteJarFileURI(version, preRelease);
+					}
+				} while(true);
+				
+				// Create the download listener using the new event registry support
+				CompatibilityEventRegistry<FileDownloadListener> eventRegistry
+					= EventSupport.compatibilityEventRegistry(FileDownloadListener.class);
+				eventRegistry.add(eventRegistry.typeOf("begin"), (argsWrapper) -> {
+					receiver.receive("Downloading the new version...");
+				});
+				eventRegistry.add(eventRegistry.typeOf("update"), (argsWrapper) -> {
+					long current = argsWrapper.get(2);
+					long total = argsWrapper.get(3);
+					receiver.receive(String.format(Locale.US, "Downloading the new version... %.2f%%", current * 100.0 / total));
+				});
+				eventRegistry.add(eventRegistry.typeOf("end"), (argsWrapper) -> {
+					receiver.receive("Downloading the new version... done");
+				});
+				eventRegistry.add(eventRegistry.typeOf("error"), (argsWrapper) -> {
+					error(argsWrapper.get(0));
+				});
+				
+				// Download the new version's JAR file
+				FileDownloader.download(jarUrl, newJar, eventRegistry.proxy());
+				
+				// Get the current run command, so that the application can be run again
+				String runCommand = SelfProcess.command(List.of(args.args()));
+				runCommand = Base64.getEncoder().encodeToString(runCommand.getBytes(Shared.CHARSET));
+				Path exePath = SelfProcess.exePath();
+				
+				// Start a new process to finish updating the application
+				SelfProcess.launchJAR(newJar, exePath, List.of(
+					"--jar-update",
+					"--pid", String.valueOf(SelfProcess.pid()),
+					"--run-command", runCommand,
+					"--is-jar-update"
+				));
+				
+				// Exit normally
+				System.exit(0);
+			}
+		}
+	}
+	
 	private static RemoteConfiguration remoteConfiguration;
 	
 	public static final RemoteConfiguration remoteConfiguration() {
@@ -942,25 +1042,29 @@ public final class MediaDownloader {
 		return remoteConfiguration;
 	}
 	
-	public static final FileChecker localFileChecker(boolean checkRequirements) {
+	/** @since 00.02.07 */
+	public static final FileChecker localFileChecker(boolean checkRequirements, Predicate<Path> predicateComputeHash) {
 		Path currentDir = NIO.localPath();
 		Path dir = NIO.localPath("lib/");
 		FileChecker checker = new FileChecker.PrefixedFileChecker(dir, null, currentDir);
+		
 		// Generate list of all native libraries to check
 		for(NativeLibrary library : NativeLibraries.all()) {
 			Requirements requirements = Requirements.create(library.getOSName(), library.getOSArch());
 			checker.addEntry(library.getPath(), requirements, library.getVersion());
 		}
+		
 		// Generate list of all libraries to check
 		for(Library library : Libraries.all()) {
 			checker.addEntry(library.getPath(), Requirements.ANY, "");
 		}
+		
 		// Generate the list of entries
-		return checker.generate((path) -> true, checkRequirements, true) ? checker : null;
+		return checker.generate((path) -> true, checkRequirements, predicateComputeHash) ? checker : null;
 	}
 	
 	protected static final void generateList() {
-		FileChecker checker = localFileChecker(false);
+		FileChecker checker = localFileChecker(false, (path) -> true);
 		if((checker != null)) {
 			try {
 				// Save the list of entries to a file
@@ -973,7 +1077,7 @@ public final class MediaDownloader {
 	
 	/** @since 00.02.07 */
 	protected static final void generateResourcesList(String dirName) {
-		FileChecker checker = Resources.etcFileChecker(dirName, true);
+		FileChecker checker = Resources.etcFileChecker(dirName, (path) -> true);
 		if((checker != null)) {
 			try {
 				// Save the list of entries to a file
@@ -1025,13 +1129,13 @@ public final class MediaDownloader {
 	private static final void registerLibraries() {
 		Path path = Path.of(PathSystem.getFullPath("lib/"));
 		addLibrary(path.resolve("infomas-asl.jar"),      "infomas.asl");
-		addLibrary(path.resolve("ssdf2.jar"),            "ssdf2");
 		addLibrary(path.resolve("sune-memory.jar"),      "sune.memory");
 		addLibrary(path.resolve("sune-process-api.jar"), "sune.api.process");
 		addLibrary(path.resolve("jsoup.jar"),            "org.jsoup");
 		// Define modules for builtin libraries so that plugins can use them
 		ModuleUtils.defineDummyModule("sune.app.mediadown");
 		ModuleUtils.defineDummyModule("sune.util.load");
+		ModuleUtils.defineDummyModule("ssdf2");
 	}
 	
 	private static final void registerResources() {
@@ -1089,8 +1193,6 @@ public final class MediaDownloader {
 		private static final String OS_UNX64 = OSUtils.OS_NAME_UNIX    + OSUtils.OS_ARCH_64;
 		private static final String OS_MAC64 = OSUtils.OS_NAME_MACOS   + OSUtils.OS_ARCH_64;
 		
-		private static final String WIN_EXT = ".exe";
-		
 		private static final boolean hasFlag(Set<String> flags, String flag) {
 			return flags.isEmpty() || flags.contains(flag);
 		}
@@ -1098,19 +1200,19 @@ public final class MediaDownloader {
 		public static final void addResource(String name, Property property) {
 			Set<String> flags = property.flags();
 			String version = property.value();
-			if(hasFlag(flags, OS_WIN64)) Resources.add(name + WIN_EXT, name, version, OS_WIN64);
-			if(hasFlag(flags, OS_UNX64)) Resources.add(name,           name, version, OS_UNX64);
-			if(hasFlag(flags, OS_MAC64)) Resources.add(name,           name, version, OS_MAC64);
+			if(hasFlag(flags, OS_WIN64)) Resources.add(name, name, version, OS_WIN64);
+			if(hasFlag(flags, OS_UNX64)) Resources.add(name, name, version, OS_UNX64);
+			if(hasFlag(flags, OS_MAC64)) Resources.add(name, name, version, OS_MAC64);
 		}
 	}
 	
 	private static final class ResourcesUpdater {
 		
 		private static final Set<String> keepFiles = Set.of(
-			"log.txt", "log.txt.lck", "jre_version", "messages.ssdf"
+			"log.txt", "log.txt.lck", "versions.ssdf", "messages.ssdf"
 		);
 		
-		public static final void configuration() {
+		public static final void configuration(Version previousVersion) {
 			Path configDir  = NIO.localPath(BASE_RESOURCE).resolve("config");
 			Path configPath = configDir.resolve("application.ssdf");
 			
@@ -1135,19 +1237,32 @@ public final class MediaDownloader {
 				// Get the internal configuration
 				SSDCollection internal = SSDF.read(stream(BASE_RESOURCE, "configuration.ssdf"));
 				internal.set("version", VERSION.string());
+				
 				// Get the current configuration
 				SSDCollection current = configuration.data();
+				
 				// Fix the theme, if needed
 				if(current.getString("theme", "default").equalsIgnoreCase("default"))
 					current.set("theme", Theme.ofDefault().name());
+				
 				// Remove the annotations at every object
 				for(SSDObject object : current.objectsIterable()) {
 					for(SSDAnnotation annotation : object.getAnnotations()) {
 						object.removeAnnotation(annotation);
 					}
 				}
+				
 				// Add missing fields from the internal to the current configuration
 				Merger.ssdf(current, internal);
+				
+				if(previousVersion.equals(Version.fromString("00.02.06"))
+						// Check also for the development (pre-release) versions of 00.02.07.
+						|| (previousVersion.type() == VersionType.DEVELOPMENT
+								&& previousVersion.release().equals(Version.fromString("00.02.07")))) {
+					// Uncheck resources integrity checking
+					current.set("checkResourcesIntegrity", false);
+				}
+				
 				// Save the updated configuration
 				NIO.save(configPath, current.toString());
 			} catch(IOException ex) {
@@ -1275,7 +1390,7 @@ public final class MediaDownloader {
 			}
 		}
 		
-		public static final void clean() {
+		public static final void clean(Version previousVersion) {
 			Path dir = NIO.localPath(BASE_RESOURCE);
 			
 			// Delete the old plugins directory
@@ -1292,6 +1407,17 @@ public final class MediaDownloader {
 				Path path = dir.resolve("theme/default").toAbsolutePath();
 				removeAtInit.add(path.toString().replace('\\', '/'));
 				saveConfiguration();
+			}
+			
+			// Delete libraries that are not used anymore (are now built-in)
+			if(previousVersion.equals(Version.fromString("00.02.06"))
+					// Check also for the development (pre-release) versions of 00.02.07.
+					|| (previousVersion.type() == VersionType.DEVELOPMENT
+							&& previousVersion.release().equals(Version.fromString("00.02.07")))) {
+				// Delete the libraries ONLY if run from the JAR file (not from a development environment)
+				if(SelfProcess.inJAR()) {
+					Utils.ignore(() -> NIO.deleteFile(NIO.localPath("lib/ssdf2.jar")), MediaDownloader::error);
+				}
 			}
 			
 			// Delete non-standard files
@@ -1355,13 +1481,13 @@ public final class MediaDownloader {
 	}
 	
 	private static final void updateResourcesDirectory(Version previousVersion, boolean force) {
-		ResourcesUpdater.configuration();
+		ResourcesUpdater.configuration(previousVersion);
 		ResourcesUpdater.languages(force);
 		ResourcesUpdater.themes(force);
 		ResourcesUpdater.plugins();
 		ResourcesUpdater.binary();
 		ResourcesUpdater.messages(previousVersion);
-		ResourcesUpdater.clean();
+		ResourcesUpdater.clean(previousVersion);
 	}
 	
 	private static final void saveConfiguration() {
@@ -1603,7 +1729,34 @@ public final class MediaDownloader {
 	
 	private static final void loadMiscellaneousResources(StringReceiver stringReceiver) {
 		try {
-			Resources.ensureResources(stringReceiver, configuration.isCheckResourcesIntegrity());
+			boolean checkIntegrity = configuration.isCheckResourcesIntegrity();
+			Set<Path> pathsToCheck = new HashSet<>();
+			Path pathResources = NIO.localPath("resources/binary");
+			
+			// If there is no integrity checking, we have to manually check the versions
+			if(!checkIntegrity) {
+				for(InternalResource resource : Resources.localResources()) {
+					Version verLocal = Versions.get("res_" + resource.name());
+					Version verRemote = Version.fromString(resource.version());
+					
+					if(verLocal.compareTo(verRemote) != 0 || verLocal == Version.UNKNOWN) {
+						Path path = pathResources.resolve(OSUtils.getExecutableName(resource.name()));
+						pathsToCheck.add(path);
+					}
+				}
+			}
+			
+			Resources.ensureResources(stringReceiver, (path) -> checkIntegrity || pathsToCheck.contains(path), null);
+			
+			for(InternalResource resource : Resources.localResources()) {
+				VersionEntryAccessor version = VersionEntryAccessor.of("res_" + resource.name());
+				Version verLocal = version.get();
+				Version verRemote = Version.fromString(resource.version());
+				
+				if(verLocal.compareTo(verRemote) != 0 || verLocal == Version.UNKNOWN) {
+					version.set(verRemote);
+				}
+			}
 		} catch(Exception ex) {
 			error(ex);
 		}
@@ -1968,6 +2121,144 @@ public final class MediaDownloader {
 	
 	// Forbid anyone to create an instance of this class
 	private MediaDownloader() {
+	}
+	
+	/** @since 00.02.07 */
+	public static final class Versions {
+		
+		private static final Map<String, Version> versions = new TreeMap<>(comparator());
+		private static SSDCollection data;
+		
+		// Forbid anyone to create an instance of this class
+		private Versions() {
+		}
+		
+		private static final Comparator<String> comparator() {
+			return Comparator.nullsLast(String::compareTo);
+		}
+		
+		private static final String normalizeName(String name) {
+			return name.strip().toLowerCase();
+		}
+		
+		private static final Path filePath() {
+			return PathSystem.getPath("resources/versions.ssdf");
+		}
+		
+		private static final void unchecked(CheckedRunnable op) {
+			Utils.ignore(op);
+		}
+		
+		public static final void load() {
+			Path path = filePath();
+			
+			if(NIO.exists(path)) {
+				data = SSDF.read(path.toFile());
+				
+				for(SSDObject item : data.objectsIterable()) {
+					String name = normalizeName(item.getName());
+					Version version = Version.fromString(item.stringValue());
+					versions.put(name, version);
+				}
+			} else {
+				data = SSDCollection.empty();
+				save();
+			}
+		}
+		
+		public static final void save() {
+			unchecked(() -> NIO.save(filePath(), data.toString()));
+		}
+		
+		public static final boolean has(String name) {
+			return versions.containsKey(normalizeName(name));
+		}
+		
+		public static final Version get(String name) {
+			return versions.getOrDefault(normalizeName(name), Version.UNKNOWN);
+		}
+		
+		public static final void set(String name, Version version) {
+			Objects.requireNonNull(version);
+			String normalizedName = normalizeName(name);
+			versions.put(normalizedName, version);
+			data.setDirect(normalizedName, version.toString());
+			save();
+		}
+		
+		public static final void remove(String name) {
+			String normalizedName = normalizeName(name);
+			versions.remove(normalizedName);
+			
+			if(data.hasDirect(name)) {
+				data.removeDirect(normalizedName);
+			}
+			
+			save();
+		}
+		
+		public static final Map<String, Version> all() {
+			return Collections.unmodifiableMap(versions);
+		}
+		
+		public static final class Common {
+			
+			// Forbid anyone to create an instance of this class
+			private Common() {
+			}
+			
+			public static final VersionEntryAccessor jre() {
+				return VersionEntryAccessor.of("jre");
+			}
+			
+			public static final VersionEntryAccessor lib() {
+				return VersionEntryAccessor.of("lib");
+			}
+			
+			public static final VersionEntryAccessor ffmpeg() {
+				return VersionEntryAccessor.of("ffmpeg");
+			}
+			
+			public static final VersionEntryAccessor ffprobe() {
+				return VersionEntryAccessor.of("ffprobe");
+			}
+			
+			public static final VersionEntryAccessor pssuspend() {
+				return VersionEntryAccessor.of("pssuspend");
+			}
+		}
+		
+		public static final class VersionEntryAccessor {
+			
+			private final String name;
+			
+			private VersionEntryAccessor(String name) {
+				this.name = checkString(name);
+			}
+			
+			private static final String checkString(String string) {
+				if(string == null || string.isBlank())
+					throw new IllegalArgumentException();
+				
+				return string;
+			}
+			
+			public static final VersionEntryAccessor of(String name) {
+				return new VersionEntryAccessor(name);
+			}
+			
+			public Version get() {
+				return Versions.get(name);
+			}
+			
+			public void set(Version version) {
+				Versions.set(name, version);
+			}
+			
+			public String name() {
+				return name;
+			}
+		}
 	}
 	
 	/** @since 00.02.04 */

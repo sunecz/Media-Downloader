@@ -16,6 +16,7 @@
 		<jar destfile="${dir.ver}/${jarname}-dirty.jar">
 			<!-- Include needed libraries -->
 			<zipfileset src="${dir.lib}/sune-utils-load.jar" excludes="META-INF/*.sf,module-info.class,/*.md" />
+			<zipfileset src="${dir.lib}/ssdf2.jar"           excludes="META-INF/*.sf,module-info.class,/*.md" />
 		</jar>
 		<jar destfile="${dir.ver}/${jarname}.jar">
 			<!-- Configure JAR's Manifest file -->

@@ -13,8 +13,10 @@ import java.nio.channels.ReadableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.zip.GZIPInputStream;
 
 import sune.app.mediadown.event.EventRegistry;
@@ -60,7 +62,7 @@ public final class JRE {
 	
 	private final void generateHashList(FileChecker checker, Path output, boolean checkRequirements)
 			throws IOException {
-		if(!checker.generate((path) -> true, checkRequirements, true)) {
+		if(!checker.generate((path) -> true, checkRequirements, (path) -> true)) {
 			throw new IllegalStateException("Unable to generate hash list.");
 		}
 		// Save the list of entries to a file
@@ -95,15 +97,15 @@ public final class JRE {
 		}
 	}
 	
-	/** @since 00.02.05 */
-	public final boolean check(Path dir, Path output, Requirements requirements, String version, Set<Path> visitedFiles)
-			throws Exception {
+	/** @since 00.02.07 */
+	public final boolean check(Path dir, Path output, Requirements requirements, String version, Set<Path> visitedFiles,
+			Predicate<Path> predicateComputeHash, Collection<Path> updatedPaths) throws Exception {
 		String osInfo = requirements.toString().replace(";", "");
 		String baseURL = "https://app.sune.tech/mediadown/jre/" + osInfo + "/" + version;
 		FileChecker fileChecker = fileChecker(dir, version, requirements);
-		fileChecker.generate((file) -> true, false, true);
+		fileChecker.generate((file) -> true, false, predicateComputeHash);
 		ResourceChecker checker = new ResourceChecker(eventRegistry);
-		return checker.check(baseURL, dir, output, fileChecker, true, true, visitedFiles);
+		return checker.check(baseURL, dir, output, fileChecker, true, true, visitedFiles, updatedPaths);
 	}
 	
 	public final <T> void addEventListener(EventType<JREEvent, T> type, Listener<T> listener) {
@@ -262,7 +264,7 @@ public final class JRE {
 		
 		/** @since 00.02.05 */
 		private final boolean check(String baseURL, Path baseDirOld, Path baseDirNew, FileChecker checker, boolean checkIntegrity,
-				boolean allowNullLocalEntry, Set<Path> visitedFiles) throws Exception {
+				boolean allowNullLocalEntry, Set<Path> visitedFiles, Collection<Path> updatedPaths) throws Exception {
 			if(!NIO.exists(baseDirNew)) NIO.createDir(baseDirNew);
 			Path localPath = PathSystem.getPath(CLAZZ, "");
 			return Updater.checkResources(baseURL, baseDirOld, TIMEOUT, checkListener(), checker,
@@ -279,7 +281,7 @@ public final class JRE {
 							&& ((checkIntegrity // Muse be called before getHash()
 									&& !entryLoc.getHash().equals(entryWeb.getHash()))
 								|| !NIO.exists(ensurePathInDirectory(entryLoc.getPath(), baseDirOld, true)));
-				});
+				}, updatedPaths);
 		}
 		
 		private final CheckListener checkListener() {

@@ -59,10 +59,10 @@ public final class PluginUpdater {
 					: Version.UNKNOWN; // Do not return null
 	}
 	
-	public static final boolean hasNewerVersion(PluginFile file) {
+	public static final boolean isNewestVersion(PluginFile file) {
 		Version newest;
-		return (newest = newestVersion(file)) != Version.UNKNOWN
-					&& newest.compareTo(Version.fromString(file.getPlugin().instance().version())) > 0;
+		return (newest = newestVersion(file)) == Version.UNKNOWN
+					|| newest.compareTo(Version.fromString(file.getPlugin().instance().version())) == 0;
 	}
 	
 	public static final String newestVersionURL(String baseURL) {
@@ -161,12 +161,12 @@ public final class PluginUpdater {
 	}
 	
 	public static final String check(PluginFile file) {
-		return hasNewerVersion(file) ? Utils.urlConcat(newestVersionURL(file), "plugin.jar") : null;
+		return !isNewestVersion(file) ? Utils.urlConcat(newestVersionURL(file), "plugin.jar") : null;
 	}
 	
 	/** @since 00.01.27 */
 	public static final Version checkVersion(PluginFile file) {
-		return hasNewerVersion(file) ? newestVersion(file) : null;
+		return !isNewestVersion(file) ? newestVersion(file) : null;
 	}
 	
 	// Forbid anyone to create an instance of this class

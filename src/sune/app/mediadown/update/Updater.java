@@ -3,10 +3,10 @@ package sune.app.mediadown.update;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
+import java.util.Collection;
 import java.util.function.BiPredicate;
 
 import javafx.util.Callback;
-import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.update.FileChecker.FileCheckerEntry;
 import sune.app.mediadown.util.BiCallback;
 import sune.app.mediadown.util.NIO;
@@ -62,67 +62,87 @@ public final class Updater {
 	}
 	
 	public static final boolean checkRemoteFiles(RemoteConfiguration cfgRemote, String remoteDirURL, Path localDir, int timeout,
-			CheckListener listener) throws IOException {
+			CheckListener listener, FileChecker checker, Collection<Path> updatedPaths) throws IOException {
 		boolean filesChanged = false;
 		String webDir = urlConcat(remoteDirURL, cfgRemote.value("data"));
 		String lsPath = urlConcat(remoteDirURL, cfgRemote.value("list"));
 		FileChecker checkerWeb = FileChecker.parse(NIO.localPath(), content(lsPath, timeout));
-		FileChecker checkerLoc = MediaDownloader.localFileChecker(true);
+		FileChecker checkerLoc = checker;
+		
 		for(FileCheckerEntry entry : checkerWeb.entries()) {
 			Path webPath = localDir.relativize(entry.getPath());
 			String webName = webPath.toString().replace('\\', '/');
 			String webHash = entry.getHash();
 			FileCheckerEntry locEntry = checkerLoc.getEntry(webPath);
+			
 			// Notify the listener, if needed
-			if((listener != null))
+			if(listener != null)
 				listener.compare(webName);
+			
 			// Check whether to download the file
-			if((shouldDownloadEntry(locEntry, webHash))) {
-				FileDownloader.download(urlConcat(webDir, webName), localDir.resolve(webName),
-				                        listener.fileDownloadListener());
+			if(shouldDownloadEntry(locEntry, webHash)) {
+				Path path = localDir.resolve(webName);
+				FileDownloader.download(urlConcat(webDir, webName), path, listener.fileDownloadListener());
+				
+				if(updatedPaths != null) {
+					updatedPaths.add(path);
+				}
+				
 				filesChanged = true;
 			}
 		}
+		
 		return filesChanged;
 	}
 	
 	public static final boolean checkRemoteFiles(RemoteConfiguration cfgRemote, String remoteDirURL, Path dir, int timeout,
 			CheckListener listener, FileChecker checker, ThrowableBiConsumer<String, Path> callback,
 			BiCallback<Path, String, String> urlResolver, Callback<Path, Path> entryPathFixer,
-			BiPredicate<FileCheckerEntry, FileCheckerEntry> shouldDownloadPredicate) throws Exception {
+			BiPredicate<FileCheckerEntry, FileCheckerEntry> shouldDownloadPredicate, Collection<Path> updatedPaths)
+			throws Exception {
 		boolean filesChanged = false;
 		String webDir = urlConcat(remoteDirURL, cfgRemote.value("data"));
 		String lsPath = urlConcat(remoteDirURL, cfgRemote.value("list"));
 		FileChecker checkerWeb = FileChecker.parse(dir, content(lsPath, timeout));
+		
 		for(FileCheckerEntry entry : checkerWeb.entries()) {
 			String webPath = urlResolver.call(entry.getPath(), webDir);
 			Path entryPath = entryPathFixer.call(entry.getPath());
 			FileCheckerEntry locEntry = checker.getEntry(entryPath);
+			
 			// Notify the listener, if needed
-			if((listener != null))
+			if(listener != null)
 				listener.compare(entry.getPath().getFileName().toString());
+			
 			// Check whether to download the file
-			if((shouldDownloadPredicate == null
-					|| shouldDownloadPredicate.test(locEntry, entry))) {
+			if(shouldDownloadPredicate == null
+					|| shouldDownloadPredicate.test(locEntry, entry)) {
 				callback.accept(webPath, entryPath);
+				
+				if(updatedPaths != null) {
+					updatedPaths.add(entryPath);
+				}
+				
 				filesChanged = true;
 			}
 		}
+		
 		return filesChanged;
 	}
 	
-	public static final boolean checkLibraries(String baseURL, Path dir, int timeout, CheckListener listener)
-			throws IOException {
+	public static final boolean checkLibraries(String baseURL, Path dir, int timeout, CheckListener listener,
+			FileChecker checker, Collection<Path> updatedPaths) throws IOException {
 		RemoteConfiguration cfg = RemoteConfiguration.from(stream(urlConcat(baseURL, NAME_CONFIG), timeout));
-		return checkRemoteFiles(cfg, baseURL, dir, timeout, listener);
+		return checkRemoteFiles(cfg, baseURL, dir, timeout, listener, checker, updatedPaths);
 	}
 	
 	public static final boolean checkResources(String baseURL, Path dir, int timeout, CheckListener listener,
 			FileChecker checker, ThrowableBiConsumer<String, Path> callback,
 			BiCallback<Path, String, String> urlResolver, Callback<Path, Path> entryPathFixer,
-			BiPredicate<FileCheckerEntry, FileCheckerEntry> shouldDownloadPredicate) throws Exception {
+			BiPredicate<FileCheckerEntry, FileCheckerEntry> shouldDownloadPredicate, Collection<Path> updatedPaths)
+			throws Exception {
 		RemoteConfiguration cfg = RemoteConfiguration.from(stream(urlConcat(baseURL, NAME_CONFIG), timeout));
 		return checkRemoteFiles(cfg, baseURL, dir, timeout, listener, checker, callback,
-		                        urlResolver, entryPathFixer, shouldDownloadPredicate);
+		                        urlResolver, entryPathFixer, shouldDownloadPredicate, updatedPaths);
 	}
 }

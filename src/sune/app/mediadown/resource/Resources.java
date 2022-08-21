@@ -12,8 +12,10 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.zip.GZIPInputStream;
 
@@ -45,7 +47,7 @@ public final class Resources {
 		void end();
 	}
 	
-	private static final class InternalResource {
+	public static final class InternalResource {
 		
 		private final String name;
 		private final String app;
@@ -53,28 +55,37 @@ public final class Resources {
 		private final String os;
 		
 		public InternalResource(String name, String app, String version, String os) {
-			if((name == null || app == null || version == null || os == null ||
-					name.isEmpty() || app.isEmpty() || version.isEmpty() || os.isEmpty()))
-				throw new IllegalArgumentException();
-			this.name = name;
-			this.app = app;
-			this.version = version;
-			this.os = os;
+			this.name = checkString(name);
+			this.app = checkString(app);
+			this.version = checkString(version);
+			this.os = checkString(os);
 		}
 		
-		public String getName() {
+		/** @since 00.02.07 */
+		private static final String checkString(String string) {
+			if(string == null || string.isEmpty())
+				throw new IllegalArgumentException();
+			
+			return string;
+		}
+		
+		/** @since 00.02.07 */
+		public String name() {
 			return name;
 		}
 		
-		public String getApp() {
+		/** @since 00.02.07 */
+		public String app() {
 			return app;
 		}
 		
-		public String getVersion() {
+		/** @since 00.02.07 */
+		public String version() {
 			return version;
 		}
 		
-		public String getOS() {
+		/** @since 00.02.07 */
+		public String os() {
 			return os;
 		}
 	}
@@ -266,9 +277,9 @@ public final class Resources {
 		return Requirements.create(pair.a, pair.b);
 	}
 	
-	private static final List<InternalResource> localResources() {
+	public static final List<InternalResource> localResources() {
 		return RESOURCES.stream()
-			.filter((resource) -> requirements(resource.getOS()).equals(Requirements.CURRENT))
+			.filter((resource) -> requirements(resource.os()).equals(Requirements.CURRENT))
 			.collect(Collectors.toList());
 	}
 	
@@ -280,11 +291,15 @@ public final class Resources {
 		return NIO.exists(PATH_RESOURCES.resolve(path.getFileName()));
 	}
 	
-	public static final void ensureResources(StringReceiver receiver, boolean checkIntegrity)
-			throws Exception {
-		if(!NIO.exists(PATH_RESOURCES)) NIO.createDir(PATH_RESOURCES);
+	/** @since 00.02.07 */
+	public static final void ensureResources(StringReceiver receiver, Predicate<Path> predicateComputeHash,
+			Collection<Path> updatedPaths) throws Exception {
+		if(!NIO.exists(PATH_RESOURCES)) {
+			NIO.createDir(PATH_RESOURCES);
+		}
+		
 		Updater.checkResources(URL_BASE, PATH_RESOURCES, TIMEOUT,
-			checkListener(receiver), localFileChecker(checkIntegrity),
+			checkListener(receiver), localFileChecker(predicateComputeHash),
 			(url, file) -> download(Utils.url(url), file, downloadListener(file.getFileName().toString(), receiver)),
 			(file, webDir) -> Utils.urlConcat(webDir, NIO.localPath().relativize(file).toString().replace('\\', '/')),
 			(file) -> PATH_RESOURCES.resolve(file.getFileName()),
@@ -294,40 +309,46 @@ public final class Resources {
 				return (requirements == Requirements.ANY
 							|| requirements.equals(Requirements.CURRENT))
 						&& (entryLoc.getVersion().equals(entryWeb.getVersion())) // Version check
-						&& ((checkIntegrity // Muse be called before getHash()
+						&& ((predicateComputeHash.test(entryLoc.getPath()) // Muse be called before getHash()
 								&& !entryLoc.getHash().equals(entryWeb.getHash()))
 							|| !resourceExists(entryLoc.getPath()));
-			});
+			}, updatedPaths);
+		
 		// Make sure all the binaries are executable (Unix systems)
 		if(!OSUtils.isWindows()) {
 			for(InternalResource resource : localResources()) {
-				NIO.chmod(PATH_RESOURCES.resolve(resource.getName()), 7, 7, 7);
+				NIO.chmod(PATH_RESOURCES.resolve(OSUtils.getExecutableName(resource.name())), 7, 7, 7);
 			}
 		}
 	}
 	
 	/** @since 00.02.07 */
-	public static final FileChecker etcFileChecker(String dirName, boolean computeHashes) {
+	public static final FileChecker etcFileChecker(String dirName, Predicate<Path> predicateComputeHash) {
 		Path dir = PATH_ETC.resolve(dirName);
 		FileChecker checker = new FileChecker.PrefixedFileChecker(dir.getParent(), null, dir);
+		
 		for(InternalResource resource : RESOURCES) {
-			checker.addEntry(dir.resolve(resource.getOS())
-			                    .resolve(resource.getApp())
-			                    .resolve(resource.getVersion())
-			                    .resolve(resource.getName()),
-			                 requirements(resource.getOS()),
-			                 resource.getVersion());
+			checker.addEntry(dir.resolve(resource.os())
+			                    .resolve(resource.app())
+			                    .resolve(resource.version())
+			                    .resolve(OSUtils.getExecutableName(resource.name())),
+			                 requirements(resource.os()),
+			                 resource.version());
 		}
-		return checker.generate((path) -> true, false, computeHashes) ? checker : null;
+		
+		return checker.generate((path) -> true, false, predicateComputeHash) ? checker : null;
 	}
 	
-	public static final FileChecker localFileChecker(boolean computeHashes) {
+	/** @since 00.02.07 */
+	public static final FileChecker localFileChecker(Predicate<Path> predicateComputeHash) {
 		FileChecker checker = new FileChecker.PrefixedFileChecker(PATH_RESOURCES, null, PATH_RESOURCES);
+		
 		for(InternalResource resource : localResources()) {
-			checker.addEntry(PATH_RESOURCES.resolve(resource.getName()),
-			                 requirements(resource.getOS()),
-			                 resource.getVersion());
+			checker.addEntry(PATH_RESOURCES.resolve(OSUtils.getExecutableName(resource.name())),
+			                 requirements(resource.os()),
+			                 resource.version());
 		}
-		return checker.generate((path) -> true, true, computeHashes) ? checker : null;
+		
+		return checker.generate((path) -> true, true, predicateComputeHash) ? checker : null;
 	}
 }

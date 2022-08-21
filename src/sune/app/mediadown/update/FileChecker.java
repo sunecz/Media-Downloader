@@ -170,7 +170,8 @@ public class FileChecker {
 		add(new FileCheckerEntry(path.toAbsolutePath(), requirements, version, null));
 	}
 	
-	public final boolean generate(Predicate<Path> filter, boolean checkRequirements, boolean computeHashes) {
+	/** @since 00.02.07 */
+	public final boolean generate(Predicate<Path> filter, boolean checkRequirements, Predicate<Path> predicateComputeHash) {
 		try {
 			// Notify the listener, if needed
 			if((listener != null))
@@ -189,7 +190,7 @@ public class FileChecker {
 				if((checkRequirements && requirements != Requirements.ANY
 						&& !requirements.equals(Requirements.CURRENT)))
 					continue;
-				String hash = computeHashes ? Hash.sha1(path).toLowerCase() : null;
+				String hash = predicateComputeHash.test(path) ? Hash.sha1(path).toLowerCase() : null;
 				Path relPath = relativePath(path);
 				String version = entry.getVersion();
 				FileCheckerEntry newEntry = new FileCheckerEntry(relPath, requirements, version, hash);
