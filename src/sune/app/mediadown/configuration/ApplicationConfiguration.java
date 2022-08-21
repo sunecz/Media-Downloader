@@ -11,8 +11,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import sune.app.mediadown.MediaDownloader;
-import sune.app.mediadown.gui.form.field.TextFieldMediaTitleFormat;
-import sune.app.mediadown.gui.window.ConfigurationWindow;
 import sune.app.mediadown.language.Language;
 import sune.app.mediadown.media.MediaFormat;
 import sune.app.mediadown.media.MediaTitleFormat;
@@ -141,10 +139,6 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 		builder.addProperty(ConfigurationProperty.ofBoolean(PROPERTY_AUTO_ENABLE_CLIPBOARD_WATCHER)
 			.inGroup(GROUP_OTHER)
 			.withDefaultValue(false));
-		
-		// Register custom configuration fields that will be display in the Configuration window
-		ConfigurationWindow.registerFormField(PROPERTY_NAMING_CUSTOM_MEDIA_TITLE_FORMAT,
-		                                      TextFieldMediaTitleFormat::new);
 		
 		return builder;
 	}

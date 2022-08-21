@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -58,7 +59,6 @@ import sune.app.mediadown.util.FXUtils;
 import sune.app.mediadown.util.HorizontalLeftTabPaneSkin;
 import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.Password;
-import sune.app.mediadown.util.TriFunction;
 import sune.app.mediadown.util.Utils;
 import sune.util.ssdf2.SSDCollection;
 import sune.util.ssdf2.SSDObject;
@@ -70,11 +70,8 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 	
 	/** @since 00.02.07 */
 	private static final List<Form> forms = new ArrayList<>();
-	/** @since 00.02.05 */
-	private static final Map<String, TriFunction<ConfigurationFormFieldProperty,
-	                                             String, String,
-	                                             FormField<ConfigurationFormFieldProperty>>>
-		formFieldsRegistry = new HashMap<>();
+	/** @since 00.02.07 */
+	private static final List<FormFieldSupplierFactory> formFieldSupplierFactories = new LinkedList<>();
 	/** @since 00.02.07 */
 	private static final Map<String, FormBuilder> formBuilders = new LinkedHashMap<>();
 	/** @since 00.02.07 */
@@ -89,6 +86,12 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 			ApplicationConfigurationAccessor.GROUP_NAMING,
 			ApplicationConfigurationAccessor.GROUP_PLUGINS
 		).forEach((s) -> formBuilders.put(s, new FormBuilder()));
+		
+		// Built-in form fields
+		registerFormField(isOfTypeClass(Password.class, PasswordField::new));
+		registerFormField(isOfTypeClass(Language.class, SelectLanguageField::new));
+		registerFormField(isOfTypeClass(Theme.class, SelectThemeField::new));
+		registerFormField(isOfTypeClass(NamedMediaTitleFormat.class, SelectMediaTitleFormatField::new));
 	}
 	
 	private final TabPane tabPane;
@@ -133,49 +136,50 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 		centerWindowAfterLayoutUpdate();
 	}
 	
-	/** @since 00.02.04 */
-	private static final ConfigurationFormFieldType getFieldType(ConfigurationProperty<?> property) {
-		ConfigurationPropertyType type = property.type();
-		if(type == ConfigurationPropertyType.ARRAY || type == ConfigurationPropertyType.OBJECT)
-			return null; // No fields for containers
-		if(type == ConfigurationPropertyType.STRING
-				// Must use instanceof since no isTyped()-like method exists
-				&& (property instanceof TypeConfigurationProperty || property instanceof NullTypeConfigurationProperty)) {
-			Class<?> typeClass = (
-				property instanceof TypeConfigurationProperty     ? ((TypeConfigurationProperty<?>)     property).typeClass() :
-				property instanceof NullTypeConfigurationProperty ? ((NullTypeConfigurationProperty<?>) property).typeClass() :
-				null
-			);
-			if(typeClass == null) return ConfigurationFormFieldType.TEXT;
-			return typeClass == Language.class              ? ConfigurationFormFieldType.SELECT_LANGUAGE :
-				   typeClass == Theme.class                 ? ConfigurationFormFieldType.SELECT_THEME :
-				   typeClass == NamedMediaTitleFormat.class ? ConfigurationFormFieldType.SELECT_MEDIA_TITLE_FORMAT :
-				   typeClass == Password.class              ? ConfigurationFormFieldType.TEXT_PASSWORD :
-				   ConfigurationFormFieldType.TEXT;
-		}
-		switch(type) {
-			case BOOLEAN: return ConfigurationFormFieldType.CHECKBOX;
-			case INTEGER: return ConfigurationFormFieldType.INTEGER;
-			case DECIMAL: return ConfigurationFormFieldType.TEXT; // Currently no decimal field type
-			case STRING:
-			case NULL:
-				return ConfigurationFormFieldType.TEXT;
-			default:
-				throw new IllegalStateException("Unsupported field type for type: " + type); // Should not happen
-		}
+	/** @since 00.02.07 */
+	private static final FormFieldSupplier findFormFieldSupplier(String name,
+			ConfigurationFormFieldProperty fieldProperty) {
+		return formFieldSupplierFactories.stream()
+					.map((factory) -> factory.create(name, fieldProperty))
+					.filter(Objects::nonNull)
+					.findFirst().orElse(null);
 	}
 	
-	/** @since 00.02.05 */
-	public static final void registerFormField(String name,
-			TriFunction<ConfigurationFormFieldProperty,
-			            String, String,
-			            FormField<ConfigurationFormFieldProperty>> supplier) {
-		formFieldsRegistry.put(Objects.requireNonNull(name), Objects.requireNonNull(supplier));
+	/** @since 00.02.07 */
+	public static final FormFieldSupplierFactory isOfTypeClass(Class<?> targetTypeClass, FormFieldSupplier supplier) {
+		return ((name, fieldProperty) -> {
+			ConfigurationProperty<?> property = fieldProperty.property();
+			ConfigurationPropertyType type = property.type();
+			
+			if(type == ConfigurationPropertyType.ARRAY || type == ConfigurationPropertyType.OBJECT)
+				return null; // No fields for containers
+			
+			if(type == ConfigurationPropertyType.STRING
+					// Must use instanceof since no isTyped()-like method exists
+					&& (property instanceof TypeConfigurationProperty || property instanceof NullTypeConfigurationProperty)) {
+				Class<?> typeClass = (
+					property instanceof TypeConfigurationProperty     ? ((TypeConfigurationProperty<?>)     property).typeClass() :
+					property instanceof NullTypeConfigurationProperty ? ((NullTypeConfigurationProperty<?>) property).typeClass() :
+					null
+				);
+				
+				if(typeClass == targetTypeClass) {
+					return supplier;
+				}
+			}
+			
+			return null;
+		});
 	}
 	
-	/** @since 00.02.05 */
-	public static final void unregisterFormField(String name) {
-		formFieldsRegistry.remove(Objects.requireNonNull(name));
+	/** @since 00.02.07 */
+	public static final void registerFormField(FormFieldSupplierFactory factory) {
+		formFieldSupplierFactories.add(Objects.requireNonNull(factory));
+	}
+	
+	/** @since 00.02.07 */
+	public static final void unregisterFormField(FormFieldSupplierFactory factory) {
+		formFieldSupplierFactories.remove(Objects.requireNonNull(factory));
 	}
 	
 	/** @since 00.02.04 */
@@ -285,20 +289,22 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 		ConfigurationFormFieldProperty fieldProperty = new ConfigurationFormFieldProperty(configuration, property);
 		
 		// Allow injection of custom form fields
-		TriFunction<ConfigurationFormFieldProperty, String, String, FormField<ConfigurationFormFieldProperty>> supplier;
-		if((supplier = formFieldsRegistry.get(name)) != null) {
-			FormField<ConfigurationFormFieldProperty> field = supplier.apply(fieldProperty, name, title);
-			if(field != null) return field; // Custom form fields may be null
+		FormFieldSupplier supplier;
+		if((supplier = findFormFieldSupplier(name, fieldProperty)) != null) {
+			FormField<ConfigurationFormFieldProperty> field = supplier.get(fieldProperty, name, title);
+			if(field != null) return field; // Custom form fields may be null, so the check is needed
 		}
 		
-		switch(getFieldType(property)) {
-			case CHECKBOX:                  return new CheckBoxField<>(fieldProperty, name, title);
-			case INTEGER:                   return new IntegerField<>(fieldProperty, name, title);
-			case SELECT_LANGUAGE:           return new SelectLanguageField<>(fieldProperty, name, title);
-			case SELECT_THEME:              return new SelectThemeField<>(fieldProperty, name, title);
-			case SELECT_MEDIA_TITLE_FORMAT: return new SelectMediaTitleFormatField<>(fieldProperty, name, title);
-			case TEXT_PASSWORD:             return new PasswordField<>(fieldProperty, name, title);
-			default:                        return new TextField<>(fieldProperty, name, title);
+		ConfigurationPropertyType type = property.type();
+		switch(type) {
+			case BOOLEAN: return new CheckBoxField<>(fieldProperty, name, title);
+			case INTEGER: return new IntegerField<>(fieldProperty, name, title);
+			case DECIMAL: return new TextField<>(fieldProperty, name, title); // Currently no decimal field type
+			case STRING:
+			case NULL:
+				return new TextField<>(fieldProperty, name, title);
+			default:
+				throw new IllegalStateException("Unsupported field type for type: " + type); // Should not happen
 		}
 	}
 	
@@ -354,17 +360,6 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 	}
 	
 	/** @since 00.02.07 */
-	private static enum ConfigurationFormFieldType {
-		
-		// General types
-		CHECKBOX, INTEGER, TEXT, TEXT_PASSWORD,
-		// Specific types (should be removed in the future)
-		SELECT_LANGUAGE, SELECT_THEME,
-		/** @since 00.02.05 */
-		SELECT_MEDIA_TITLE_FORMAT;
-	}
-	
-	/** @since 00.02.07 */
 	public static final class ConfigurationFormFieldProperty {
 		
 		private final Configuration configuration;
@@ -382,5 +377,20 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 		public ConfigurationProperty<?> property() {
 			return property;
 		}
+	}
+	
+	/** @since 00.02.07 */
+	@FunctionalInterface
+	public static interface FormFieldSupplier {
+		
+		FormField<ConfigurationFormFieldProperty> get(ConfigurationFormFieldProperty fieldProperty,
+				String name, String title);
+	}
+	
+	/** @since 00.02.07 */
+	@FunctionalInterface
+	public static interface FormFieldSupplierFactory {
+		
+		FormFieldSupplier create(String name, ConfigurationFormFieldProperty fieldProperty);
 	}
 }
