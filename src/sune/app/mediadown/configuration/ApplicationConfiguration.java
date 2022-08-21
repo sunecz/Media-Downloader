@@ -151,7 +151,7 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 	
 	/** @since 00.02.05 */
 	private final void loadFields() {
-		version = Version.fromString(stringValue(PROPERTY_LANGUAGE));
+		version = Version.of(stringValue(PROPERTY_LANGUAGE));
 		autoUpdateCheck = booleanValue(PROPERTY_AUTO_UPDATE_CHECK);
 		acceleratedDownload = intValue(PROPERTY_ACCELERATED_DOWNLOAD);
 		parallelDownloads = intValue(PROPERTY_PARALLEL_DOWNLOADS);
@@ -311,7 +311,7 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 		
 		@Override
 		public Version version() {
-			return Version.fromString(accessor().stringValue(PROPERTY_VERSION));
+			return Version.of(accessor().stringValue(PROPERTY_VERSION));
 		}
 		
 		@Override

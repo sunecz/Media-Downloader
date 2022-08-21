@@ -334,7 +334,7 @@ public class Theme implements Extractable {
 			
 			String name = info.getDirectString("name").toLowerCase();
 			builder.name(name);
-			builder.version(Version.fromString(info.getDirectString("version")));
+			builder.version(Version.of(info.getDirectString("version")));
 			
 			builder.titles(
 				Utils.stream(info.getDirectCollection("title").objectsIterable())

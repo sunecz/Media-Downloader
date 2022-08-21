@@ -108,6 +108,7 @@ import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Web;
 import sune.app.mediadown.util.Web.GetRequest;
 import sune.app.mediadown.util.Web.HeadRequest;
+import sune.app.mediadown.util.Web.Request;
 import sune.app.mediadown.util.Web.StreamResponse;
 import sune.util.load.Libraries;
 import sune.util.load.Libraries.Library;
@@ -125,7 +126,7 @@ public final class MediaDownloader {
 	private static final boolean GENERATE_LISTS = false;
 	
 	public static final String  TITLE   = "Media Downloader";
-	public static final Version VERSION = Version.fromString("00.02.07-dev.11");
+	public static final Version VERSION = Version.of("00.02.07-dev.11");
 	public static final String  DATE    = "2022-08-21";
 	public static final String  AUTHOR  = "Sune";
 	public static final Image   ICON    = icon("app.png");
@@ -304,11 +305,11 @@ public final class MediaDownloader {
 						// Finish the whole JRE update process by deleting the temporary JRE directory
 						NIO.deleteDir(newJREPath());
 						// Update the JRE version so that we know which version is present
-						Versions.Common.jre().set(Version.fromString(jreVersion));
+						Versions.Common.jre().set(Version.of(jreVersion));
 					} else {
 						VersionEntryAccessor version = Versions.Common.jre();
 						Version verLocal = version.get();
-						Version verRemote = Version.fromString(jreVersion);
+						Version verRemote = Version.of(jreVersion);
 						
 						// Check the current JRE version and update, if necessary
 						if(verLocal.compareTo(verRemote) != 0 || verLocal == Version.UNKNOWN) {
@@ -368,7 +369,7 @@ public final class MediaDownloader {
 								// Also delete the empty new JRE directory (from checking)
 								NIO.deleteDir(newJREPath);
 								// Update the JRE version so that we know which version is present
-								version.set(Version.fromString(jreVersion));
+								version.set(Version.of(jreVersion));
 							}
 						}
 					}
@@ -818,7 +819,7 @@ public final class MediaDownloader {
 					if(needsVersion) {
 						// Allow manual version selection using arguments
 						String custom = args.getValue("jar-version");
-						version = custom != null ? Version.fromString(custom) : Version.UNKNOWN;
+						version = custom != null ? Version.of(custom) : Version.UNKNOWN;
 						
 						if(version == Version.UNKNOWN) {
 							version = newestVersion();
@@ -842,7 +843,7 @@ public final class MediaDownloader {
 				// If there is no integrity checking, we have to manually check the versions
 				if(!checkIntegrity) {
 					Version verLocal = version.get();
-					Version verRemote = Version.fromString(versionLib);
+					Version verRemote = Version.of(versionLib);
 					checkLibraries = verLocal.compareTo(verRemote) != 0 || verLocal == Version.UNKNOWN;
 				}
 				
@@ -850,7 +851,7 @@ public final class MediaDownloader {
 					FileChecker checker = localFileChecker(true, (path) -> true);
 					String baseURL = Utils.urlConcat(URL_BASE_LIB, versionLib);
 					Updater.checkLibraries(baseURL, NIO.localPath(), TIMEOUT, listener, checker, null);
-					version.set(Version.fromString(versionLib));
+					version.set(Version.of(versionLib));
 				}
 			} catch(IOException ex) {
 				// Config cannot be accessed, just skip it
@@ -870,7 +871,8 @@ public final class MediaDownloader {
 			if(newestVersion == null
 					// The version can be obtained again once set, if needed
 					|| forceGet) {
-				newestVersion = Version.fromURL(versionFileURI(), TIMEOUT);
+				Request request = new GetRequest(Utils.url(versionFileURI()), Shared.USER_AGENT);
+				newestVersion = Utils.ignore(() -> Version.of(Web.request(request).content), Version.UNKNOWN);
 			}
 			return newestVersion;
 		}
@@ -1255,10 +1257,10 @@ public final class MediaDownloader {
 				// Add missing fields from the internal to the current configuration
 				Merger.ssdf(current, internal);
 				
-				if(previousVersion.equals(Version.fromString("00.02.06"))
+				if(previousVersion.equals(Version.of("00.02.06"))
 						// Check also for the development (pre-release) versions of 00.02.07.
 						|| (previousVersion.type() == VersionType.DEVELOPMENT
-								&& previousVersion.release().equals(Version.fromString("00.02.07")))) {
+								&& previousVersion.release().equals(Version.of("00.02.07")))) {
 					// Uncheck resources integrity checking
 					current.set("checkResourcesIntegrity", false);
 				}
@@ -1383,7 +1385,7 @@ public final class MediaDownloader {
 		/** @since 00.02.05 */
 		public static final void messages(Version previousVersion) {
 			// 00.02.04 -> 00.02.05: Messages format update (V0 -> V1)
-			if(previousVersion.equals(Version.fromString("00.02.04"))) {
+			if(previousVersion.equals(Version.of("00.02.04"))) {
 				// Do not bother with conversion and just remove the messages.ssdf file
 				Utils.ignore(() -> NIO.deleteFile(NIO.localPath(BASE_RESOURCE).resolve("messages.ssdf")),
 				             MediaDownloader::error);
@@ -1410,10 +1412,10 @@ public final class MediaDownloader {
 			}
 			
 			// Delete libraries that are not used anymore (are now built-in)
-			if(previousVersion.equals(Version.fromString("00.02.06"))
+			if(previousVersion.equals(Version.of("00.02.06"))
 					// Check also for the development (pre-release) versions of 00.02.07.
 					|| (previousVersion.type() == VersionType.DEVELOPMENT
-							&& previousVersion.release().equals(Version.fromString("00.02.07")))) {
+							&& previousVersion.release().equals(Version.of("00.02.07")))) {
 				// Delete the libraries ONLY if run from the JAR file (not from a development environment)
 				if(SelfProcess.inJAR()) {
 					Utils.ignore(() -> NIO.deleteFile(NIO.localPath("lib/ssdf2.jar")), MediaDownloader::error);
@@ -1512,7 +1514,7 @@ public final class MediaDownloader {
 			saveConfiguration();
 		}
 		if(applicationUpdated) {
-			Version previousVersion = Version.fromString(data.getString("version", VERSION.string()));
+			Version previousVersion = Version.of(data.getString("version", VERSION.string()));
 			// Automatically (i.e. without a prompt) update the resources directory
 			updateResourcesDirectory(previousVersion, false);
 			// Update the version in the configuration file (even if the resources directory is not updated)
@@ -1737,7 +1739,7 @@ public final class MediaDownloader {
 			if(!checkIntegrity) {
 				for(InternalResource resource : Resources.localResources()) {
 					Version verLocal = Versions.get("res_" + resource.name());
-					Version verRemote = Version.fromString(resource.version());
+					Version verRemote = Version.of(resource.version());
 					
 					if(verLocal.compareTo(verRemote) != 0 || verLocal == Version.UNKNOWN) {
 						Path path = pathResources.resolve(OSUtils.getExecutableName(resource.name()));
@@ -1751,7 +1753,7 @@ public final class MediaDownloader {
 			for(InternalResource resource : Resources.localResources()) {
 				VersionEntryAccessor version = VersionEntryAccessor.of("res_" + resource.name());
 				Version verLocal = version.get();
-				Version verRemote = Version.fromString(resource.version());
+				Version verRemote = Version.of(resource.version());
 				
 				if(verLocal.compareTo(verRemote) != 0 || verLocal == Version.UNKNOWN) {
 					version.set(verRemote);
@@ -2157,7 +2159,7 @@ public final class MediaDownloader {
 				
 				for(SSDObject item : data.objectsIterable()) {
 					String name = normalizeName(item.getName());
-					Version version = Version.fromString(item.stringValue());
+					Version version = Version.of(item.stringValue());
 					versions.put(name, version);
 				}
 			} else {

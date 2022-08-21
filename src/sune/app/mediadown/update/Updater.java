@@ -34,7 +34,7 @@ public final class Updater {
 	}
 	
 	public static final boolean compare(String currentVersion, String newestVersion) {
-		return compare(Version.fromString(currentVersion), Version.fromString(newestVersion));
+		return compare(Version.of(currentVersion), Version.of(newestVersion));
 	}
 	
 	/** @since 00.02.07 */

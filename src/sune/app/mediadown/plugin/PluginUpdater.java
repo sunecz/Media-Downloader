@@ -39,9 +39,9 @@ public final class PluginUpdater {
 				if((line.isEmpty())) continue;
 				int index = line.indexOf(':');
 				if((index >= 0)) {
-					Version remoteAppVersion = Version.fromString(line.substring(0, index)).release();
+					Version remoteAppVersion = Version.of(line.substring(0, index)).release();
 					if((localAppVersion.compareTo(remoteAppVersion) >= 0)) {
-						versionPlugin = Version.fromString(line.substring(index + 1));
+						versionPlugin = Version.of(line.substring(index + 1));
 					} else break;
 				}
 			}
@@ -55,14 +55,14 @@ public final class PluginUpdater {
 		Plugin plugin = file.getPlugin().instance();
 		return plugin.updatable()
 					? newestVersion(plugin.updateBaseURL(),
-					                Version.fromString(plugin.version()))
+					                Version.of(plugin.version()))
 					: Version.UNKNOWN; // Do not return null
 	}
 	
 	public static final boolean isNewestVersion(PluginFile file) {
 		Version newest;
 		return (newest = newestVersion(file)) == Version.UNKNOWN
-					|| newest.compareTo(Version.fromString(file.getPlugin().instance().version())) == 0;
+					|| newest.compareTo(Version.of(file.getPlugin().instance().version())) == 0;
 	}
 	
 	public static final String newestVersionURL(String baseURL) {
@@ -87,7 +87,7 @@ public final class PluginUpdater {
 	}
 	
 	public static final String versionURL(PluginFile file) {
-		return versionURL(file, Version.fromString(file.getPlugin().instance().version()));
+		return versionURL(file, Version.of(file.getPlugin().instance().version()));
 	}
 	
 	public static final Download update(String pluginURL, Path file) {

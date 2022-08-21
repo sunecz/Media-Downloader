@@ -30,7 +30,7 @@ public final class Language {
 	public static final Language from(String path, InputStream stream) {
 		SSDCollection data = SSDF.read(stream);
 		String name     = data.getDirectString("name");
-		Version version = Version.fromString(data.getDirectString("version"));
+		Version version = Version.of(data.getDirectString("version"));
 		String title    = data.getDirectString("title");
 		String code     = data.getDirectString("code");
 		return new Language(path, name, version, title, code, new Translation(data));

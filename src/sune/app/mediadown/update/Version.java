@@ -1,16 +1,10 @@
 package sune.app.mediadown.update;
 
-import java.io.InputStream;
-import java.net.URL;
-import java.net.URLConnection;
 import java.util.Comparator;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import sune.app.mediadown.Shared;
-import sune.app.mediadown.util.Utils;
 
 public final class Version implements Comparable<Version> {
 	
@@ -55,18 +49,24 @@ public final class Version implements Comparable<Version> {
 		return value;
 	}
 	
+	@Deprecated(since="00.02.07", forRemoval=true)
 	public static final Version fromString(String string) {
+		return of(string);
+	}
+	
+	/** @since 00.02.07 */
+	public static final Version of(String string) {
 		return Parser.instance().parse(string);
 	}
 	
-	public static final Version fromURL(String url, int timeout) {
-		return Utils.ignore(() -> {
-			URLConnection connection = new URL(url).openConnection();
-			connection.setConnectTimeout(timeout);
-			try(InputStream stream = connection.getInputStream()) {
-				return fromString(new String(stream.readAllBytes(), Shared.CHARSET));
-			}
-		}, UNKNOWN);
+	/** @since 00.02.07 */
+	public static final Version of(VersionType type, int major, int minor, int patch, int value) {
+		return builder().type(type).major(major).minor(minor).patch(patch).value(value).build();
+	}
+	
+	/** @since 00.02.07 */
+	public static final Builder builder() {
+		return new Builder();
 	}
 	
 	/** @since 00.02.07 */
@@ -257,6 +257,73 @@ public final class Version implements Comparable<Version> {
 			StringBuilder builder = new StringBuilder();
 			full(version, builder, isCompact);
 			return builder.toString();
+		}
+	}
+	
+	/** @since 00.02.07 */
+	public static final class Builder {
+		
+		private VersionType type;
+		private int major;
+		private int minor;
+		private int patch;
+		private int value;
+		
+		private Builder() {
+			this.type = VersionType.UNKNOWN;
+			this.major = 0;
+			this.minor = 0;
+			this.patch = 0;
+			this.value = 0;
+		}
+		
+		public Version build() {
+			return new Version(type, major, minor, patch, value);
+		}
+		
+		public Builder type(VersionType type) {
+			this.type = Objects.requireNonNull(type);
+			return this;
+		}
+		
+		public Builder major(int major) {
+			this.major = checkInteger(major);
+			return this;
+		}
+		
+		public Builder minor(int minor) {
+			this.minor = checkInteger(minor);
+			return this;
+		}
+		
+		public Builder patch(int patch) {
+			this.patch = checkInteger(patch);
+			return this;
+		}
+		
+		public Builder value(int value) {
+			this.value = checkInteger(value);
+			return this;
+		}
+		
+		public VersionType type() {
+			return type;
+		}
+		
+		public int major() {
+			return major;
+		}
+		
+		public int minor() {
+			return minor;
+		}
+		
+		public int patch() {
+			return patch;
+		}
+		
+		public int value() {
+			return value;
 		}
 	}
 }
