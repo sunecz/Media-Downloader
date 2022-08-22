@@ -75,9 +75,15 @@ public interface ApplicationConfigurationAccessor {
 	/** @since 00.02.05 */
 	String customMediaTitleFormat();
 	/** @since 00.02.07 */
-	boolean usePreReleaseVersions();
+	UsePreReleaseVersions usePreReleaseVersions();
 	/** @since 00.02.07 */
 	boolean autoEnableClipboardWatcher();
 	
 	SSDCollection data();
+	
+	/** @since 00.02.07 */
+	public static enum UsePreReleaseVersions {
+		
+		ALWAYS, TILL_NEXT_RELEASE, NEVER;
+	}
 }

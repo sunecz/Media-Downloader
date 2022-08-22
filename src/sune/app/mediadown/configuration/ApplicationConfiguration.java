@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -53,7 +54,7 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 	/** @since 00.02.05 */
 	private String naming_customMediaTitleFormat;
 	/** @since 00.02.07 */
-	private boolean usePreReleaseVersions;
+	private UsePreReleaseVersions usePreReleaseVersions;
 	/** @since 00.02.07 */
 	private boolean autoEnableClipboardWatcher;
 	
@@ -92,10 +93,19 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 			                            .findFirst().orElse(null)));
 		builder.addProperty(ConfigurationProperty.ofBoolean(PROPERTY_AUTO_UPDATE_CHECK).inGroup(GROUP_GENERAL).withDefaultValue(true));
 		builder.addProperty(ConfigurationProperty.ofBoolean(PROPERTY_CHECK_RESOURCES_INTEGRITY).inGroup(GROUP_GENERAL).withDefaultValue(true));
-		builder.addProperty(ConfigurationProperty.ofBoolean(PROPERTY_USE_PRE_RELEASE_VERSIONS)
+		builder.addProperty(ConfigurationProperty.ofType(PROPERTY_USE_PRE_RELEASE_VERSIONS, String.class)
 			.inGroup(GROUP_GENERAL)
-			.withDefaultValue(MediaDownloader.version().type() != VersionType.RELEASE));
-
+			.withFactory(() -> Stream.of(UsePreReleaseVersions.values())
+			                         .map(Enum::name)
+			                         .map(String::toLowerCase)
+			                         .collect(Collectors.toList()))
+			.withTransformer(Function.identity(),
+			                 String::toUpperCase)
+			.withDefaultValue((MediaDownloader.version().type() != VersionType.RELEASE
+			                      ? UsePreReleaseVersions.ALWAYS
+			                      : UsePreReleaseVersions.NEVER
+			                  ).name()));
+		
 		// ----- Download
 		builder.addProperty(ConfigurationProperty.ofInteger(PROPERTY_ACCELERATED_DOWNLOAD).inGroup(GROUP_DOWNLOAD).withDefaultValue(1));
 		builder.addProperty(ConfigurationProperty.ofInteger(PROPERTY_PARALLEL_DOWNLOADS).inGroup(GROUP_DOWNLOAD).withDefaultValue(1));
@@ -181,7 +191,8 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 				                          .map(NamedMediaTitleFormat::format)
 				                          .orElseGet(MediaTitleFormats::ofDefault);
 		
-		usePreReleaseVersions = booleanValue(PROPERTY_USE_PRE_RELEASE_VERSIONS);
+		usePreReleaseVersions = Optional.ofNullable(UsePreReleaseVersions.valueOf(stringValue(PROPERTY_USE_PRE_RELEASE_VERSIONS)))
+				                        .orElse(UsePreReleaseVersions.NEVER);
 		autoEnableClipboardWatcher = booleanValue(PROPERTY_AUTO_ENABLE_CLIPBOARD_WATCHER);
 	}
 	
@@ -277,7 +288,7 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 	
 	/** @since 00.02.07 */
 	@Override
-	public boolean usePreReleaseVersions() {
+	public UsePreReleaseVersions usePreReleaseVersions() {
 		return usePreReleaseVersions;
 	}
 	
@@ -396,8 +407,9 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 		
 		/** @since 00.02.07 */
 		@Override
-		public boolean usePreReleaseVersions() {
-			return accessor().booleanValue(PROPERTY_USE_PRE_RELEASE_VERSIONS);
+		public UsePreReleaseVersions usePreReleaseVersions() {
+			return Optional.ofNullable(UsePreReleaseVersions.valueOf(accessor().stringValue(PROPERTY_USE_PRE_RELEASE_VERSIONS)))
+					       .orElse(UsePreReleaseVersions.NEVER);
 		}
 		
 		/** @since 00.02.07 */

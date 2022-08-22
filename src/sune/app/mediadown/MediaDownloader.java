@@ -37,6 +37,7 @@ import javafx.stage.Stage;
 import sune.app.mediadown.MediaDownloader.Versions.VersionEntryAccessor;
 import sune.app.mediadown.configuration.ApplicationConfiguration;
 import sune.app.mediadown.configuration.ApplicationConfigurationAccessor;
+import sune.app.mediadown.configuration.ApplicationConfigurationAccessor.UsePreReleaseVersions;
 import sune.app.mediadown.event.EventSupport;
 import sune.app.mediadown.event.EventSupport.CompatibilityEventRegistry;
 import sune.app.mediadown.gui.Dialog;
@@ -800,8 +801,13 @@ public final class MediaDownloader {
 		private static Version newestVersion;
 		
 		/** @since 00.02.07 */
+		private static final boolean usePreReleaseVersions() {
+			return configuration.usePreReleaseVersions() != UsePreReleaseVersions.NEVER;
+		}
+		
+		/** @since 00.02.07 */
 		private static final String versionFileURI() {
-			return URL_BASE_VER + "version" + (configuration.usePreReleaseVersions() ? "_pre" : "");
+			return URL_BASE_VER + "version" + (usePreReleaseVersions() ? "_pre" : "");
 		}
 		
 		public static final boolean isAutoUpdateCheckEnabled() {
@@ -825,7 +831,7 @@ public final class MediaDownloader {
 						}
 					}
 					
-					JarUpdater.doUpdateProcess(version, configuration.usePreReleaseVersions(), args, receiver);
+					JarUpdater.doUpdateProcess(version, usePreReleaseVersions(), args, receiver);
 				} catch(Exception ex) {
 					error(ex);
 				}
@@ -881,7 +887,7 @@ public final class MediaDownloader {
 			// This is due to the fact that all pre-release versions share configuration
 			// and sometimes there can be incompatibilities, so just always use
 			// the latest pre-release version.
-			return configuration.usePreReleaseVersions()
+			return usePreReleaseVersions()
 						|| FXUtils.fxTaskValue(() -> new UpdateDialog().wasAccepted());
 		}
 		
@@ -2301,7 +2307,7 @@ public final class MediaDownloader {
 		/** @since 00.02.05 */
 		@Override public String customMediaTitleFormat() { return accessor().customMediaTitleFormat(); }
 		/** @since 00.02.07 */
-		@Override public boolean usePreReleaseVersions() { return accessor().usePreReleaseVersions(); }
+		@Override public UsePreReleaseVersions usePreReleaseVersions() { return accessor().usePreReleaseVersions(); }
 		/** @since 00.02.07 */
 		@Override public boolean autoEnableClipboardWatcher() { return accessor().autoEnableClipboardWatcher(); }
 		@Override public SSDCollection data() { return accessor().data(); }
