@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -68,8 +67,9 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 		ApplicationConfiguration.Builder builder = new ApplicationConfiguration.Builder(path);
 		
 		// ----- Hidden
-		builder.addProperty(ConfigurationProperty.ofString(PROPERTY_VERSION).asHidden(true));
-		builder.addProperty(ConfigurationProperty.ofArray("removeAtInit").asHidden(true));
+		builder.addProperty(ConfigurationProperty.ofString(PROPERTY_VERSION).asHidden(true)
+			.withDefaultValue(MediaDownloader.version().toString()));
+		builder.addProperty(ConfigurationProperty.ofArray(PROPERTY_REMOVE_AT_INIT).asHidden(true));
 		
 		// ----- General
 		builder.addProperty(ConfigurationProperty.ofType(PROPERTY_LANGUAGE, Language.class)
@@ -81,7 +81,8 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 			.withTransformer((v) -> v.name(),
 			                 (s) -> ResourceRegistry.languages.values().stream()
 			                            .filter((l) -> l.name().equals(s))
-			                            .findFirst().orElse(null)));
+			                            .findFirst().orElse(null))
+			.withDefaultValue("auto"));
 		builder.addProperty(ConfigurationProperty.ofType(PROPERTY_THEME, Theme.class)
 			.inGroup(GROUP_GENERAL)
 			.withFactory(() -> ResourceRegistry.themes.values().stream()
@@ -90,25 +91,28 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 			.withTransformer((v) -> v.name(),
 			                 (s) -> ResourceRegistry.themes.values().stream()
 			                            .filter((t) -> t.name().equals(s))
-			                            .findFirst().orElse(null)));
+			                            .findFirst().orElse(null))
+			.withDefaultValue(Theme.ofDefault().name()));
 		builder.addProperty(ConfigurationProperty.ofBoolean(PROPERTY_AUTO_UPDATE_CHECK).inGroup(GROUP_GENERAL).withDefaultValue(true));
-		builder.addProperty(ConfigurationProperty.ofBoolean(PROPERTY_CHECK_RESOURCES_INTEGRITY).inGroup(GROUP_GENERAL).withDefaultValue(true));
-		builder.addProperty(ConfigurationProperty.ofType(PROPERTY_USE_PRE_RELEASE_VERSIONS, String.class)
+		builder.addProperty(ConfigurationProperty.ofBoolean(PROPERTY_CHECK_RESOURCES_INTEGRITY).inGroup(GROUP_GENERAL).withDefaultValue(false));
+		builder.addProperty(ConfigurationProperty.ofType(PROPERTY_USE_PRE_RELEASE_VERSIONS, UsePreReleaseVersions.class)
 			.inGroup(GROUP_GENERAL)
-			.withFactory(() -> Stream.of(UsePreReleaseVersions.values())
-			                         .map(Enum::name)
-			                         .map(String::toLowerCase)
-			                         .collect(Collectors.toList()))
-			.withTransformer(Function.identity(),
-			                 String::toUpperCase)
+			.withFactory(() -> Stream.concat(
+			                       // Compatibility with old boolean values
+			                       Stream.of("true", "false"),
+			                       Stream.of(UsePreReleaseVersions.values())
+			                             .map(Enum::name)
+			                   ).collect(Collectors.toList()))
+			.withTransformer(Enum::name,
+			                 UsePreReleaseVersions::of)
 			.withDefaultValue((MediaDownloader.version().type() != VersionType.RELEASE
 			                      ? UsePreReleaseVersions.ALWAYS
 			                      : UsePreReleaseVersions.NEVER
 			                  ).name()));
 		
 		// ----- Download
-		builder.addProperty(ConfigurationProperty.ofInteger(PROPERTY_ACCELERATED_DOWNLOAD).inGroup(GROUP_DOWNLOAD).withDefaultValue(1));
-		builder.addProperty(ConfigurationProperty.ofInteger(PROPERTY_PARALLEL_DOWNLOADS).inGroup(GROUP_DOWNLOAD).withDefaultValue(1));
+		builder.addProperty(ConfigurationProperty.ofInteger(PROPERTY_ACCELERATED_DOWNLOAD).inGroup(GROUP_DOWNLOAD).withDefaultValue(4));
+		builder.addProperty(ConfigurationProperty.ofInteger(PROPERTY_PARALLEL_DOWNLOADS).inGroup(GROUP_DOWNLOAD).withDefaultValue(3));
 		builder.addProperty(ConfigurationProperty.ofBoolean(PROPERTY_COMPUTE_STREAM_SIZE).inGroup(GROUP_DOWNLOAD).withDefaultValue(true));
 		builder.addProperty(ConfigurationProperty.ofInteger(PROPERTY_REQUEST_TIMEOUT).inGroup(GROUP_DOWNLOAD).withDefaultValue(5000));
 		
@@ -155,7 +159,7 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 	
 	/** @since 00.02.05 */
 	private final void loadFields() {
-		version = Version.of(stringValue(PROPERTY_LANGUAGE));
+		version = Version.of(stringValue(PROPERTY_VERSION));
 		autoUpdateCheck = booleanValue(PROPERTY_AUTO_UPDATE_CHECK);
 		acceleratedDownload = intValue(PROPERTY_ACCELERATED_DOWNLOAD);
 		parallelDownloads = intValue(PROPERTY_PARALLEL_DOWNLOADS);
@@ -191,12 +195,19 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 				                          .map(NamedMediaTitleFormat::format)
 				                          .orElseGet(MediaTitleFormats::ofDefault);
 		
-		usePreReleaseVersions = Optional.ofNullable(UsePreReleaseVersions.valueOf(stringValue(PROPERTY_USE_PRE_RELEASE_VERSIONS)))
-				                        .orElse(UsePreReleaseVersions.NEVER);
+		usePreReleaseVersions = UsePreReleaseVersions.of(stringValue(PROPERTY_USE_PRE_RELEASE_VERSIONS));
 		autoEnableClipboardWatcher = booleanValue(PROPERTY_AUTO_ENABLE_CLIPBOARD_WATCHER);
 	}
 	
+	/** @since 00.02.07 */
+	@Override
+	public boolean reload() {
+		loadFields();
+		return true;
+	}
+	
 	/** @since 00.02.05 */
+	@Override
 	public Path path() {
 		return path;
 	}
@@ -408,8 +419,7 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 		/** @since 00.02.07 */
 		@Override
 		public UsePreReleaseVersions usePreReleaseVersions() {
-			return Optional.ofNullable(UsePreReleaseVersions.valueOf(accessor().stringValue(PROPERTY_USE_PRE_RELEASE_VERSIONS)))
-					       .orElse(UsePreReleaseVersions.NEVER);
+			return UsePreReleaseVersions.of(accessor().stringValue(PROPERTY_USE_PRE_RELEASE_VERSIONS));
 		}
 		
 		/** @since 00.02.07 */
@@ -421,6 +431,19 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 		@Override
 		public SSDCollection data() {
 			return accessor().data();
+		}
+		
+		/** @since 00.02.07 */
+		@Override
+		public boolean reload() {
+			// Do nothing
+			return true;
+		}
+		
+		/** @since 00.02.07 */
+		@Override
+		public Path path() {
+			return path;
 		}
 	}
 }

@@ -802,7 +802,8 @@ public final class MediaDownloader {
 		
 		/** @since 00.02.07 */
 		private static final boolean usePreReleaseVersions() {
-			return configuration.usePreReleaseVersions() != UsePreReleaseVersions.NEVER;
+			UsePreReleaseVersions value = configuration.usePreReleaseVersions();
+			return value != UsePreReleaseVersions.NEVER && value != UsePreReleaseVersions.UNKNOWN;
 		}
 		
 		/** @since 00.02.07 */
@@ -1152,46 +1153,15 @@ public final class MediaDownloader {
 	}
 	
 	private static final void initConfiguration() {
-		boolean wasLoadedFromInternal = false;
-		Path configDir  = NIO.localPath(BASE_RESOURCE).resolve("config");
-		Path configPath = configDir.resolve("application.ssdf");
-		
-		if((NIO.exists(configDir)
-				|| Utils.ignoreWithCheck(() -> NIO.createDir(configDir), MediaDownloader::error))
-			&& !NIO.exists(configPath)) {
-			try {
-				// Copy the configuration data to the destination file
-				NIO.copy(stream(BASE_RESOURCE, "configuration.ssdf"), configPath);
-				wasLoadedFromInternal = true;
-			} catch(IOException ex) {
-				throw new RuntimeException("Unable to extract the default configuration", ex);
-			}
-		}
-		
-		SSDCollection data = SSDF.read(configPath.toFile());
-		// Add a version field to the configuration
-		if(wasLoadedFromInternal) {
-			data.set("version", VERSION.string());
-			Utils.ignore(() -> NIO.save(configPath, data.toString()), MediaDownloader::error);
-		}
-		// Check whether the external configuration has all the properties
-		else {
-			if((ResourcesUpdater.Merger.ssdf(data, SSDF.read(stream(BASE_RESOURCE, "configuration.ssdf"))))) {
-				Utils.ignore(() -> NIO.save(configPath, data.toString()), MediaDownloader::error);
-			}
-		}
+		Path configPath = NIO.localPath(BASE_RESOURCE).resolve("config/application.ssdf");
+		SSDCollection data = NIO.exists(configPath) ? SSDF.read(configPath.toFile()) : SSDCollection.empty();
 		
 		// Load the configuration
 		configuration = new ApplicationConfigurationWrapper(configPath);
 		configuration.loadData(data);
-		// Check whether the application was updated (probably)
-		Version versionCurrent = VERSION;
-		Version versionLast    = configuration.version();
-		if((versionLast == Version.UNKNOWN
-				|| versionCurrent.compareTo(versionLast) > 0)) {
-			// Show the prompt later on so that the message shown can be translated
-			applicationUpdated = true;
-		}
+		
+		// Check whether the application was probably updated
+		applicationUpdated = !VERSION.equals(configuration.version());
 	}
 	
 	private static final class ResourcesManager {
@@ -1241,16 +1211,12 @@ public final class MediaDownloader {
 			
 			// Update content of the application configuration
 			try {
-				// Get the internal configuration
-				SSDCollection internal = SSDF.read(stream(BASE_RESOURCE, "configuration.ssdf"));
-				internal.set("version", VERSION.string());
-				
-				// Get the current configuration
 				SSDCollection current = configuration.data();
 				
 				// Fix the theme, if needed
-				if(current.getString("theme", "default").equalsIgnoreCase("default"))
-					current.set("theme", Theme.ofDefault().name());
+				if(current.getString(ApplicationConfiguration.PROPERTY_THEME, "default")
+						  .equalsIgnoreCase("default"))
+					current.set(ApplicationConfiguration.PROPERTY_THEME, Theme.ofDefault().name());
 				
 				// Remove the annotations at every object
 				for(SSDObject object : current.objectsIterable()) {
@@ -1259,12 +1225,22 @@ public final class MediaDownloader {
 					}
 				}
 				
-				// Add missing fields from the internal to the current configuration
-				Merger.ssdf(current, internal);
-				
 				if(previousVersion.compareTo(Version.of("00.02.07-dev.10")) <= 0) {
 					// Uncheck resources integrity checking
-					current.set("checkResourcesIntegrity", false);
+					current.set(ApplicationConfiguration.PROPERTY_CHECK_RESOURCES_INTEGRITY, false);
+				}
+				
+				if(configuration.usePreReleaseVersions() == UsePreReleaseVersions.UNKNOWN) {
+					String preReleaseVersions = current.getString(ApplicationConfiguration.PROPERTY_USE_PRE_RELEASE_VERSIONS);
+					// Convert the old boolean value to a new one
+					UsePreReleaseVersions newValue
+						= preReleaseVersions.equalsIgnoreCase("true")
+								? UsePreReleaseVersions.TILL_NEXT_RELEASE
+								: UsePreReleaseVersions.NEVER;
+					
+					configuration.configuration().writer()
+						.set(ApplicationConfiguration.PROPERTY_USE_PRE_RELEASE_VERSIONS, newValue.name());
+					configuration.reload();
 				}
 				
 				// Save the updated configuration
@@ -1492,32 +1468,35 @@ public final class MediaDownloader {
 	}
 	
 	private static final void saveConfiguration() {
-		try {
-			Path configDir  = NIO.localPath(BASE_RESOURCE).resolve("config");
-			Path pathConfig = configDir.resolve("application.ssdf");
-			NIO.save(pathConfig, configuration.data().toString());
-		} catch(IOException ex) {
-			error(ex);
-		}
+		Utils.ignore(() -> NIO.save(configuration.path(), configuration.data().toString()), MediaDownloader::error);
 	}
 	
 	private static final void finalizeConfiguration() {
 		configuration.build();
-		// Remove specified files, if any
+		
 		SSDCollection data = configuration.data();
-		if(data.has("removeAtInit")) {
-			for(SSDObject path : data.getCollection("removeAtInit").objectsIterable()) {
+		String propertyName;
+		
+		// Remove specified files, if any
+		propertyName = ApplicationConfiguration.PROPERTY_REMOVE_AT_INIT;
+		if(data.hasCollection(propertyName)) {
+			for(SSDObject path : data.getCollection(propertyName).objectsIterable()) {
 				Utils.ignore(() -> NIO.delete(NIO.path(path.stringValue())), MediaDownloader::error);
 			}
-			data.remove("removeAtInit");
+			
+			data.remove(propertyName);
 			saveConfiguration();
 		}
+		
 		if(applicationUpdated) {
-			Version previousVersion = Version.of(data.getString("version", VERSION.string()));
+			propertyName = ApplicationConfiguration.PROPERTY_VERSION;
+			Version previousVersion = Version.of(data.getString(propertyName, VERSION.string()));
+			
 			// Automatically (i.e. without a prompt) update the resources directory
 			updateResourcesDirectory(previousVersion, false);
+			
 			// Update the version in the configuration file (even if the resources directory is not updated)
-			data.set("version", VERSION.string());
+			data.set(propertyName, VERSION.string());
 			saveConfiguration();
 		}
 	}
@@ -2181,10 +2160,14 @@ public final class MediaDownloader {
 		
 		public static final void set(String name, Version version) {
 			Objects.requireNonNull(version);
+			
 			String normalizedName = normalizeName(name);
-			versions.put(normalizedName, version);
-			data.setDirect(normalizedName, version.toString());
-			save();
+			Version previous = versions.put(normalizedName, version);
+			
+			if(previous == null || !previous.equals(version)) {
+				data.setDirect(normalizedName, version.string());
+				save();
+			}
 		}
 		
 		public static final void remove(String name) {
@@ -2311,6 +2294,10 @@ public final class MediaDownloader {
 		/** @since 00.02.07 */
 		@Override public boolean autoEnableClipboardWatcher() { return accessor().autoEnableClipboardWatcher(); }
 		@Override public SSDCollection data() { return accessor().data(); }
+		/** @since 00.02.07 */
+		@Override public boolean reload() { return accessor().reload(); }
+		/** @since 00.02.07 */
+		@Override public Path path() { return accessor().path(); }
 		
 		public ApplicationConfiguration configuration() { return configuration; }
 	}

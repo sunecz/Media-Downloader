@@ -474,6 +474,7 @@ public class Configuration implements ConfigurationAccessor {
 			
 			public Builder(String name) {
 				super(name, ConfigurationPropertyType.BOOLEAN);
+				defaultValue = false;
 			}
 			
 			/** @since 00.02.07 */
@@ -491,7 +492,7 @@ public class Configuration implements ConfigurationAccessor {
 			@Override
 			public Builder loadData(SSDNode node) {
 				if(!node.isObject()) return this;
-				return (Builder) withValue(resolveNull((SSDObject) node, SSDValue::booleanValue, false));
+				return (Builder) withValue(resolveNull((SSDObject) node, SSDValue::booleanValue, defaultValue));
 			}
 			
 			@Override
@@ -536,6 +537,7 @@ public class Configuration implements ConfigurationAccessor {
 			
 			public Builder(String name) {
 				super(name, ConfigurationPropertyType.INTEGER);
+				defaultValue = 0L;
 			}
 			
 			/** @since 00.02.07 */
@@ -585,7 +587,7 @@ public class Configuration implements ConfigurationAccessor {
 			@Override
 			public Builder loadData(SSDNode node) {
 				if(!node.isObject()) return this;
-				return (Builder) withValue(resolveNull((SSDObject) node, SSDValue::longValue, 0L));
+				return (Builder) withValue(resolveNull((SSDObject) node, SSDValue::longValue, defaultValue));
 			}
 			
 			@Override
@@ -618,6 +620,7 @@ public class Configuration implements ConfigurationAccessor {
 			
 			public Builder(String name) {
 				super(name, ConfigurationPropertyType.DECIMAL);
+				defaultValue = 0.0;
 			}
 			
 			/** @since 00.02.07 */
@@ -643,7 +646,7 @@ public class Configuration implements ConfigurationAccessor {
 			@Override
 			public Builder loadData(SSDNode node) {
 				if(!node.isObject()) return this;
-				return (Builder) withValue(resolveNull((SSDObject) node, SSDValue::doubleValue, 0.0));
+				return (Builder) withValue(resolveNull((SSDObject) node, SSDValue::doubleValue, defaultValue));
 			}
 			
 			@Override
@@ -673,6 +676,7 @@ public class Configuration implements ConfigurationAccessor {
 			
 			public Builder(String name) {
 				super(name, ConfigurationPropertyType.STRING);
+				defaultValue = "";
 			}
 			
 			/** @since 00.02.07 */
@@ -690,7 +694,7 @@ public class Configuration implements ConfigurationAccessor {
 			@Override
 			public Builder loadData(SSDNode node) {
 				if(!node.isObject()) return this;
-				return (Builder) withValue(resolveNull((SSDObject) node, SSDValue::stringValue, null));
+				return (Builder) withValue(resolveNull((SSDObject) node, SSDValue::stringValue, defaultValue));
 			}
 			
 			@Override
@@ -748,6 +752,8 @@ public class Configuration implements ConfigurationAccessor {
 			protected Supplier<Collection<String>> factory;
 			protected Function<T, String> transformer;
 			protected Function<String, T> inverseTransformer;
+			/** @since 00.02.07 */
+			protected Function<String, String> rawValueTransformer;
 			
 			public Builder(String name, Class<? extends T> typeClass) {
 				super(name, ConfigurationPropertyType.STRING);
@@ -775,6 +781,12 @@ public class Configuration implements ConfigurationAccessor {
 			
 			public Builder<T> withFactory(Supplier<Collection<String>> factory) {
 				this.factory = factory;
+				return this;
+			}
+			
+			/** @since 00.02.07 */
+			public Builder<T> withRawValueTransformer(Function<String, String> rawValueTransformer) {
+				this.rawValueTransformer = rawValueTransformer;
 				return this;
 			}
 			
@@ -839,12 +851,17 @@ public class Configuration implements ConfigurationAccessor {
 			@Override
 			public Builder<T> loadData(SSDNode node) {
 				if(!node.isObject()) return this;
-				return (Builder<T>) withValue(resolveNull((SSDObject) node, SSDValue::stringValue, null));
+				return (Builder<T>) withValue(resolveNull((SSDObject) node, SSDValue::stringValue, defaultValue));
 			}
 			
 			@Override
 			public TypeConfigurationPropertyBase<T> build() {
 				String transformedValue = value();
+				
+				if(rawValueTransformer != null) {
+					transformedValue = rawValueTransformer.apply(transformedValue);
+				}
+				
 				return factory == null || values().contains(transformedValue)
 							? new TypeConfigurationProperty<T>(name, typeClass, transformedValue, isHidden,
 									factory, transformer, inverseTransformer, group)

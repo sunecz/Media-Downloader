@@ -1,6 +1,8 @@
 package sune.app.mediadown.configuration;
 
 import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.stream.Stream;
 
 import sune.app.mediadown.language.Language;
 import sune.app.mediadown.media.MediaFormat;
@@ -28,6 +30,8 @@ public interface ApplicationConfigurationAccessor {
 	
 	// ----- Names of configuration properties
 	public static final String PROPERTY_VERSION = "version";
+	/** @since 00.02.07 */
+	public static final String PROPERTY_REMOVE_AT_INIT = "removeAtInit";
 	public static final String PROPERTY_LANGUAGE = "language";
 	public static final String PROPERTY_THEME = "theme";
 	public static final String PROPERTY_AUTO_UPDATE_CHECK = "autoUpdateCheck";
@@ -80,10 +84,37 @@ public interface ApplicationConfigurationAccessor {
 	boolean autoEnableClipboardWatcher();
 	
 	SSDCollection data();
+	/** @since 00.02.07 */
+	boolean reload();
+	/** @since 00.02.07 */
+	Path path();
 	
 	/** @since 00.02.07 */
 	public static enum UsePreReleaseVersions {
 		
-		ALWAYS, TILL_NEXT_RELEASE, NEVER;
+		ALWAYS, TILL_NEXT_RELEASE, NEVER, UNKNOWN;
+		
+		private static UsePreReleaseVersions[] validValues;
+		
+		public static final UsePreReleaseVersions[] validValues() {
+			if(validValues == null) {
+				UsePreReleaseVersions[] values = values();
+				validValues = Arrays.copyOfRange(values, 0, values.length - 1);
+			}
+			
+			return validValues;
+		}
+		
+		// Utility method for use where the exception of Enum#valueOf(String) method
+		// would cause problems.
+		public static final UsePreReleaseVersions of(String string) {
+			if(string == null || string.isBlank())
+				return UNKNOWN;
+			
+			String normalized = string.strip().toUpperCase();
+			return Stream.of(values())
+					     .filter((v) -> normalized.equals(v.name()))
+					     .findFirst().orElse(UNKNOWN);
+		}
 	}
 }

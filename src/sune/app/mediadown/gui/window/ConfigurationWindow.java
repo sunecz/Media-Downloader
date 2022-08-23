@@ -13,6 +13,8 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
@@ -32,6 +34,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.configuration.ApplicationConfigurationAccessor;
+import sune.app.mediadown.configuration.ApplicationConfigurationAccessor.UsePreReleaseVersions;
 import sune.app.mediadown.configuration.Configuration;
 import sune.app.mediadown.configuration.Configuration.ConfigurationProperty;
 import sune.app.mediadown.configuration.Configuration.ConfigurationPropertyType;
@@ -45,10 +48,13 @@ import sune.app.mediadown.gui.form.FormField;
 import sune.app.mediadown.gui.form.field.CheckBoxField;
 import sune.app.mediadown.gui.form.field.IntegerField;
 import sune.app.mediadown.gui.form.field.PasswordField;
+import sune.app.mediadown.gui.form.field.SelectField;
 import sune.app.mediadown.gui.form.field.SelectLanguageField;
 import sune.app.mediadown.gui.form.field.SelectMediaTitleFormatField;
 import sune.app.mediadown.gui.form.field.SelectThemeField;
 import sune.app.mediadown.gui.form.field.TextField;
+import sune.app.mediadown.gui.form.field.TranslatableSelectField;
+import sune.app.mediadown.gui.form.field.TranslatableSelectField.ValueTransformer;
 import sune.app.mediadown.language.Language;
 import sune.app.mediadown.language.Translation;
 import sune.app.mediadown.media.MediaTitleFormats.NamedMediaTitleFormat;
@@ -91,6 +97,11 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 		registerFormField(isOfTypeClass(Password.class, PasswordField::new));
 		registerFormField(isOfTypeClass(Language.class, SelectLanguageField::new));
 		registerFormField(isOfTypeClass(Theme.class, SelectThemeField::new));
+		registerFormField(isOfEnumClass(UsePreReleaseVersions.class, UsePreReleaseVersions::validValues,
+			ValueTransformer.of(UsePreReleaseVersions::of, Enum::name, localValueTranslator(
+				ApplicationConfigurationAccessor.PROPERTY_USE_PRE_RELEASE_VERSIONS, Enum::name
+			))
+		));
 		registerFormField(isOfTypeClass(NamedMediaTitleFormat.class, SelectMediaTitleFormatField::new));
 	}
 	
@@ -146,6 +157,31 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 	}
 	
 	/** @since 00.02.07 */
+	private static final <T> Function<T, String> localValueTranslator(String propertyName,
+			Function<T, String> stringConverter) {
+		Objects.requireNonNull(propertyName);
+		return valueTranslator("windows." + NAME + ".values." + propertyName, stringConverter);
+	}
+	
+	/** @since 00.02.07 */
+	public static final <T extends Enum<?>> FormFieldSupplier enumFormFieldSupplier(Class<T> enumClass) {
+		return enumFormFieldSupplier(enumClass, enumClass::getEnumConstants);
+	}
+	
+	/** @since 00.02.07 */
+	public static final <T extends Enum<?>> FormFieldSupplier enumFormFieldSupplier(Class<T> enumClass,
+			Supplier<T[]> valuesSupplier) {
+		return ((property, name, title) -> new SelectField<>(property, name, title, List.of(valuesSupplier.get())));
+	}
+	
+	/** @since 00.02.07 */
+	public static final <T extends Enum<?>> FormFieldSupplier enumFormFieldSupplier(Class<T> enumClass,
+			Supplier<T[]> valuesSupplier, ValueTransformer<T> transformer) {
+		return ((property, name, title) -> new TranslatableSelectField<>(property, name, title,
+				List.of(valuesSupplier.get()), transformer));
+	}
+	
+	/** @since 00.02.07 */
 	public static final FormFieldSupplierFactory isOfTypeClass(Class<?> targetTypeClass, FormFieldSupplier supplier) {
 		return ((name, fieldProperty) -> {
 			ConfigurationProperty<?> property = fieldProperty.property();
@@ -173,6 +209,23 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 	}
 	
 	/** @since 00.02.07 */
+	public static final <T extends Enum<?>> FormFieldSupplierFactory isOfEnumTypeClass(Class<T> targetEnumClass) {
+		return isOfTypeClass(targetEnumClass, enumFormFieldSupplier(targetEnumClass));
+	}
+	
+	/** @since 00.02.07 */
+	public static final <T extends Enum<?>> FormFieldSupplierFactory isOfEnumClass(Class<T> targetEnumClass,
+			Supplier<T[]> valuesSupplier) {
+		return isOfTypeClass(targetEnumClass, enumFormFieldSupplier(targetEnumClass, valuesSupplier));
+	}
+	
+	/** @since 00.02.07 */
+	public static final <T extends Enum<?>> FormFieldSupplierFactory isOfEnumClass(Class<T> targetEnumClass,
+			Supplier<T[]> valuesSupplier, ValueTransformer<T> transformer) {
+		return isOfTypeClass(targetEnumClass, enumFormFieldSupplier(targetEnumClass, valuesSupplier, transformer));
+	}
+	
+	/** @since 00.02.07 */
 	public static final void registerFormField(FormFieldSupplierFactory factory) {
 		formFieldSupplierFactories.add(Objects.requireNonNull(factory));
 	}
@@ -180,6 +233,16 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 	/** @since 00.02.07 */
 	public static final void unregisterFormField(FormFieldSupplierFactory factory) {
 		formFieldSupplierFactories.remove(Objects.requireNonNull(factory));
+	}
+	
+	/** @since 00.02.07 */
+	public static final <T> Function<T, String> valueTranslator(String translationPath,
+			Function<T, String> stringConverter) {
+		Objects.requireNonNull(translationPath);
+		Objects.requireNonNull(stringConverter);
+		
+		Translation tr = MediaDownloader.translation().getTranslation(translationPath);
+		return ((v) -> tr.getSingle(stringConverter.apply(v)));
 	}
 	
 	/** @since 00.02.04 */

@@ -1,6 +1,6 @@
 {
 	name:    "czech",
-	version: "9",
+	version: "10",
 	title:   "Čeština",
 	code:    "ces",
 	windows: {
@@ -349,6 +349,14 @@
 				save_title:   "Nastavení",
 				save_success: "Nastavení bylo uloženo. Možná bude potřeba restartovat aplikaci.",
 				save_fail:    "Nelze uložit nastavení. Prosím, zkuste to znovu."
+			},
+			values: {
+				usePreReleaseVersions: {
+					ALWAYS:            "Vždy",
+					TILL_NEXT_RELEASE: "Do další plné verze",
+					NEVER:             "Nikdy",
+					UNKNOWN:           "Neznámá hodnota"
+				}
 			}
 		},
 		message: {

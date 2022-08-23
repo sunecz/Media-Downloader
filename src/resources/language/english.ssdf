@@ -1,6 +1,6 @@
 {
 	name:    "english",
-	version: "9",
+	version: "10",
 	title:   "English",
 	code:    "eng",
 	windows: {
@@ -349,6 +349,14 @@
 				save_title:   "Configuration",
 				save_success: "Configuration has been saved. You may want to restart the application.",
 				save_fail:    "Cannot save configuration. Please, try that again."
+			},
+			values: {
+				usePreReleaseVersions: {
+					ALWAYS:            "Always",
+					TILL_NEXT_RELEASE: "Till the next release",
+					NEVER:             "Never",
+					UNKNOWN:           "Unknown value"
+				}
 			}
 		},
 		message: {

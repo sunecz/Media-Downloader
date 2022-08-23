@@ -55,6 +55,7 @@ public class SelectThemeField<T> extends FormField<T> {
 			if(!empty) {
 				setText(themeToString(item));
 			} else {
+				setText(null);
 				setGraphic(null);
 			}
 		}
