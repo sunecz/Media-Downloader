@@ -1,6 +1,6 @@
 {
 	name:    "czech",
-	version: "10",
+	version: "11",
 	title:   "Čeština",
 	code:    "ces",
 	windows: {
@@ -353,7 +353,7 @@
 			values: {
 				usePreReleaseVersions: {
 					ALWAYS:            "Vždy",
-					TILL_NEXT_RELEASE: "Do další plné verze",
+					TILL_NEXT_RELEASE: "Do další hlavní verze",
 					NEVER:             "Nikdy",
 					UNKNOWN:           "Neznámá hodnota"
 				}
@@ -406,6 +406,24 @@
 				title:       "Chyba",
 				url_empty:   "Zadejte URL adresu",
 				url_invalid: "Neplatná URL adresa"
+			}
+		}
+	},
+	dialogs: {
+		update_available: {
+			title: "Aktualizace k dispozici",
+			text:  "Nová verze je k dispozici! Chcete program aktualizovat?"
+		},
+		pre_release_versions: {
+			application_updated: {
+				title: "Předběžné verze",
+				text:  "Program byl aktualizován na novější hlavní verzi. "
+				     + "Chcete i nadále používat předběžné verze?"
+			},
+			configuration_changed: {
+				title: "Předběžné verze",
+				text:  "Nastavení bylo změněno tak, aby se nepoužívaly předběžné verze. "
+				     + "Chcete se vrátit zpět k hlavní verzi?"
 			}
 		}
 	},

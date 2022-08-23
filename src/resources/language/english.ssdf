@@ -1,6 +1,6 @@
 {
 	name:    "english",
-	version: "10",
+	version: "11",
 	title:   "English",
 	code:    "eng",
 	windows: {
@@ -406,6 +406,24 @@
 				title:       "Error",
 				url_empty:   "Enter URL address",
 				url_invalid: "Invalid URL address"
+			}
+		}
+	},
+	dialogs: {
+		update_available: {
+			title: "Update available",
+			text:  "A new version is available! Do you want to update the application?"
+		},
+		pre_release_versions: {
+			application_updated: {
+				title: "Pre-release versions",
+				text:  "The application has been updated to a newer release version. "
+				     + "Do you want to keep using pre-release versions?"
+			},
+			configuration_changed: {
+				title: "Pre-release versions",
+				text:  "Configuration has been changed to not use pre-release versions. "
+				     + "Do you want to revert back to the release version?"
 			}
 		}
 	},

@@ -1351,14 +1351,38 @@ public class Configuration implements ConfigurationAccessor {
 			this.refProperties = Objects.requireNonNull(refProperties);
 		}
 		
-		// Unsafe, must check whether property::type == ConfigurationPropertyType::from(V)
-		private final <T, V> void setValue(ConfigurationProperty<T> property, V value) {
+		/** @since 00.02.07 */
+		private static final Object checkValue(Object value) {
+			if(value == null) {
+				return null;
+			}
+			
+			Class<?> clazz = value.getClass();
+			
+			if(clazz == Boolean.class)   return (boolean)        value;
+			if(clazz == Byte.class)      return (long)   (byte)  value;
+			if(clazz == Character.class) return (long)   (char)  value;
+			if(clazz == Short.class)     return (long)   (short) value;
+			if(clazz == Integer.class)   return (long)   (int)   value;
+			if(clazz == Long.class)      return (long)           value;
+			if(clazz == Float.class)     return (double) (float) value;
+			if(clazz == Double.class)    return (double)         value;
+			
+			if(clazz != String.class) {
+				value = String.valueOf(value);
+			}
+			
+			return value;
+		}
+		
+		private static final <T, V> void setValue(ConfigurationProperty<T> property, V value) {
 			property.value(Utils.cast(value));
 		}
 		
-		private final void setData(String name, Object value) {
+		/** @since 00.02.07 */
+		private static final void setData(SSDCollection data, String name, Object value) {
 			try {
-				mh_SSDCollection_set.invoke(refData, name, SSDType.recognize(value), value);
+				mh_SSDCollection_set.invoke(data, name, SSDType.recognize(value), SSDObject.of("", value));
 			} catch(Throwable ex) {
 				throw new AssertionError(ex);
 			}
@@ -1367,8 +1391,12 @@ public class Configuration implements ConfigurationAccessor {
 		public final Writer set(String name, Object value) {
 			ConfigurationProperty<?> existing;
 			if((existing = refProperties.get(name)) != null) {
-				setValue(existing, value);
-				setData(name, value);
+				// First, check whether the value is of a supported/compatible type,
+				// i.e. not Integer but Long, not Float but Double, etc.
+				Object checked = checkValue(value);
+				
+				setValue(existing, checked);
+				setData(refData, name, checked);
 			}
 			return this;
 		}

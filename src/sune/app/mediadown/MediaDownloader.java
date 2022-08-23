@@ -30,10 +30,7 @@ import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
 
-import javafx.scene.control.Alert;
-import javafx.scene.control.ButtonType;
 import javafx.scene.image.Image;
-import javafx.stage.Stage;
 import sune.app.mediadown.MediaDownloader.Versions.VersionEntryAccessor;
 import sune.app.mediadown.configuration.ApplicationConfiguration;
 import sune.app.mediadown.configuration.ApplicationConfigurationAccessor;
@@ -91,6 +88,7 @@ import sune.app.mediadown.update.RemoteConfiguration.Property;
 import sune.app.mediadown.update.Requirements;
 import sune.app.mediadown.update.Updater;
 import sune.app.mediadown.update.Version;
+import sune.app.mediadown.update.VersionType;
 import sune.app.mediadown.util.CheckedFunction;
 import sune.app.mediadown.util.CheckedRunnable;
 import sune.app.mediadown.util.FXUtils;
@@ -639,7 +637,7 @@ public final class MediaDownloader {
 			
 			@Override
 			public InitializationState run(Arguments args) {
-				if(args.has("is-jar-update") || Update.isAutoUpdateCheckEnabled()) {
+				if(args.has("is-jar-update") || Update.canAutoUpdate()) {
 					Update.update(args);
 				}
 				return new RegisterWindows();
@@ -803,7 +801,8 @@ public final class MediaDownloader {
 		/** @since 00.02.07 */
 		private static final boolean usePreReleaseVersions() {
 			UsePreReleaseVersions value = configuration.usePreReleaseVersions();
-			return value != UsePreReleaseVersions.NEVER && value != UsePreReleaseVersions.UNKNOWN;
+			return (value != UsePreReleaseVersions.NEVER && value != UsePreReleaseVersions.UNKNOWN)
+						|| VERSION.type() != VersionType.RELEASE;
 		}
 		
 		/** @since 00.02.07 */
@@ -811,13 +810,20 @@ public final class MediaDownloader {
 			return URL_BASE_VER + "version" + (usePreReleaseVersions() ? "_pre" : "");
 		}
 		
-		public static final boolean isAutoUpdateCheckEnabled() {
-			return configuration.isAutoUpdateCheck();
+		/** @since 00.02.07 */
+		private static final boolean showUpdateDialog() {
+			Translation tr = translation().getTranslation("dialogs.update_available");
+			return Dialog.showPrompt(tr.getSingle("title"), tr.getSingle("text"));
+		}
+		
+		/** @since 00.02.07 */
+		public static final boolean canAutoUpdate() {
+			return configuration.isAutoUpdateCheck() || VERSION.type() != VersionType.RELEASE;
 		}
 		
 		/** @since 00.02.04 */
 		public static final void update(Arguments args) {
-			if(args.has("is-jar-update") || (checkVersion() && showUpdateDialog())) {
+			if(args.has("is-jar-update") || (checkVersion() && updateDialog())) {
 				try {
 					boolean needsVersion = (!args.has("jar-update") || !args.has("pid")) && !args.has("jar-update-finish");
 					Version version = Version.UNKNOWN;
@@ -883,42 +889,13 @@ public final class MediaDownloader {
 			return newestVersion;
 		}
 		
-		public static final boolean showUpdateDialog() {
+		public static final boolean updateDialog() {
 			// If pre-release versions should be used, automatically accept the update.
 			// This is due to the fact that all pre-release versions share configuration
 			// and sometimes there can be incompatibilities, so just always use
 			// the latest pre-release version.
 			return usePreReleaseVersions()
-						|| FXUtils.fxTaskValue(() -> new UpdateDialog().wasAccepted());
-		}
-		
-		private static final class UpdateDialog extends Alert {
-			
-			static final String TITLE;
-			static final String TEXT;
-			static final ButtonType[] BUTTONS;
-			static {
-				TITLE   = "Update available";
-				TEXT    = "A new version is available! Do you want to update the application?";
-				BUTTONS = new ButtonType[] {
-					ButtonType.YES,
-					ButtonType.NO
-				};
-			}
-			
-			public UpdateDialog() {
-				super(AlertType.CONFIRMATION);
-				Stage stage = (Stage) getDialogPane().getScene().getWindow();
-				stage.getIcons().setAll(ICON);
-				setHeaderText(null);
-				setTitle(TITLE);
-				setContentText(TEXT);
-				getButtonTypes().setAll(BUTTONS);
-			}
-			
-			public boolean wasAccepted() {
-				return showAndWait().get() == ButtonType.YES;
-			}
+						|| FXUtils.fxTaskValue(Update::showUpdateDialog);
 		}
 	}
 	
@@ -1494,6 +1471,23 @@ public final class MediaDownloader {
 			
 			// Automatically (i.e. without a prompt) update the resources directory
 			updateResourcesDirectory(previousVersion, false);
+			
+			// Check configuration of using pre-release versions
+			if(configuration.usePreReleaseVersions() == UsePreReleaseVersions.TILL_NEXT_RELEASE
+					&& previousVersion.type() != VersionType.RELEASE
+					&& VERSION        .type() == VersionType.RELEASE) {
+				// Only ask if the current version is actually newer than the previous one
+				if(VERSION.compareTo(previousVersion) > 0) {
+					Translation tr = translation().getTranslation("dialogs.pre_release_versions.application_updated");
+					if(!Dialog.showPrompt(tr.getSingle("title"), tr.getSingle("text"))) {
+						configuration.configuration().writer().set(
+							ApplicationConfigurationAccessor.PROPERTY_USE_PRE_RELEASE_VERSIONS,
+							UsePreReleaseVersions.NEVER
+						);
+						configuration.reload();
+					}
+				}
+			}
 			
 			// Update the version in the configuration file (even if the resources directory is not updated)
 			data.set(propertyName, VERSION.string());
