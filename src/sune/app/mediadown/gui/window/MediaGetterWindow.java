@@ -128,8 +128,10 @@ public class MediaGetterWindow extends DraggableWindow<VBox> {
 		StringBuilder builder = new StringBuilder();
 		ClipboardUtils.uris().stream()
 			.filter((uri) -> MediaGetters.fromURI(uri) != null)
+			.map((uri) -> uri.toString() + '\n')
 			.forEachOrdered(builder::append);
 		txtURLs.setText(builder.toString());
+		txtURLs.positionCaret(txtURLs.getLength());
 	}
 	
 	/** @since 00.02.07 */
