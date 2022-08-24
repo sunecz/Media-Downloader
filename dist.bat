@@ -6,13 +6,16 @@ REM Included files:
 REM     - etc\jre\jre\%OS%\*
 REM     - media-downloader.jar
 REM     - Media Downloader executable for %OS%
+REM Optional files, not added by default:
 REM     - lib\*.jar
 REM     - resources\binary\* for %OS%
-REM     - resources\jre_version
 
 :init
 set DIR=%cd%
 set DIR_DIST=%DIR%\dist
+
+set INCLUDE_LIB=false
+set INCLUDE_BIN=false
 
 REM ----- Vars: Windows
 set OS_WIN_ARF=windows-x64
@@ -212,27 +215,30 @@ echo Adding custom JRE...
 call :fn_copydir "%PATH_JRE%\%JRE%", "%OUT_JRE%"
 
 :resources
-echo Adding resources...
-call :fn_copyfile "%PATH_RES%\jre_version" "%OUT_RES%\jre_version"
+REM Currently no resources are added
 
 :resources_binary
-echo Adding binary resources: FFMpeg...
-call :fn_copydir "%PATH_BIN%\%BIN%\%APP_NAME_FFMPEG%\%APP_VERSION_FFMPEG%" "%OUT_BIN%"
+if "%INCLUDE_BIN%" == "true" (
+	echo Adding binary resources: FFMpeg...
+	call :fn_copydir "%PATH_BIN%\%BIN%\%APP_NAME_FFMPEG%\%APP_VERSION_FFMPEG%" "%OUT_BIN%"
 
-echo Adding binary resources: FFProbe...
-call :fn_copydir "%PATH_BIN%\%BIN%\%APP_NAME_FFPROBE%\%APP_VERSION_FFPROBE%" "%OUT_BIN%"
+	echo Adding binary resources: FFProbe...
+	call :fn_copydir "%PATH_BIN%\%BIN%\%APP_NAME_FFPROBE%\%APP_VERSION_FFPROBE%" "%OUT_BIN%"
 
-if "%OS%" == "windows" (
-	echo Adding binary resources: PsSuspend...
-	call :fn_copydir "%PATH_BIN%\%BIN%\%APP_NAME_PSSUSPEND%\%APP_VERSION_PSSUSPEND%" "%OUT_BIN%"
+	if "%OS%" == "windows" (
+		echo Adding binary resources: PsSuspend...
+		call :fn_copydir "%PATH_BIN%\%BIN%\%APP_NAME_PSSUSPEND%\%APP_VERSION_PSSUSPEND%" "%OUT_BIN%"
+	)
 )
 
 :libraries
-echo Adding libraries...
-call :fn_copyfiles "%PATH_LIB%" "%OUT_LIB%" "*.jar"
+if "%INCLUDE_LIB%" == "true" (
+	echo Adding libraries...
+	call :fn_copyfiles "%PATH_LIB%" "%OUT_LIB%" "*.jar"
 
-for %%f in (%LIB_EXCLUDE%) do (
-	call :fn_delfile "%OUT_LIB%\%%f"
+	for %%f in (%LIB_EXCLUDE%) do (
+		call :fn_delfile "%OUT_LIB%\%%f"
+	)
 )
 
 :jar
