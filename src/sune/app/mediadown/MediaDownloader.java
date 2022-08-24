@@ -1130,7 +1130,10 @@ public final class MediaDownloader {
 	}
 	
 	private static final void initConfiguration() {
-		Path configPath = NIO.localPath(BASE_RESOURCE).resolve("config/application.ssdf");
+		Path configDir = NIO.localPath(BASE_RESOURCE).resolve("config");
+		Utils.ignore(() -> NIO.createDir(configDir), MediaDownloader::error);
+		
+		Path configPath = configDir.resolve("application.ssdf");
 		SSDCollection data = NIO.exists(configPath) ? SSDF.read(configPath.toFile()) : SSDCollection.empty();
 		
 		// Load the configuration
