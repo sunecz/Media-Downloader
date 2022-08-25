@@ -14,6 +14,7 @@ import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
@@ -35,6 +36,7 @@ import sune.app.mediadown.MediaDownloader.Versions.VersionEntryAccessor;
 import sune.app.mediadown.configuration.ApplicationConfiguration;
 import sune.app.mediadown.configuration.ApplicationConfigurationAccessor;
 import sune.app.mediadown.configuration.ApplicationConfigurationAccessor.UsePreReleaseVersions;
+import sune.app.mediadown.configuration.Configuration;
 import sune.app.mediadown.event.EventSupport;
 import sune.app.mediadown.event.EventSupport.CompatibilityEventRegistry;
 import sune.app.mediadown.gui.Dialog;
@@ -60,6 +62,7 @@ import sune.app.mediadown.library.NativeLibrary;
 import sune.app.mediadown.logging.Log;
 import sune.app.mediadown.media.MediaFormat;
 import sune.app.mediadown.media.MediaTitleFormat;
+import sune.app.mediadown.plugin.PluginConfiguration;
 import sune.app.mediadown.plugin.PluginFile;
 import sune.app.mediadown.plugin.PluginLoadListener;
 import sune.app.mediadown.plugin.PluginUpdater;
@@ -1435,6 +1438,27 @@ public final class MediaDownloader {
 	/** @since 00.02.07 */
 	public static final void updateResources() {
 		updateResourcesDirectory(VERSION, true);
+		
+		// To prevent more issues delete the versions.ssdf file so that
+		// all resources will have to be checked on the next start up.
+		Utils.ignore(() -> NIO.deleteFile(NIO.localPath(BASE_RESOURCE).resolve("versions.ssdf")),
+		             MediaDownloader::error);
+		
+		// To prevent even more issues, resave all registered configurations
+		// to force all properties to be revalidated.
+		Set<Configuration> configurations = new LinkedHashSet<>();
+		
+		configurations.add(MediaDownloader.configuration());
+		Plugins.allLoaded().stream()
+			.map(PluginFile::getConfiguration)
+			.filter(Objects::nonNull)
+			.filter(Predicate.not(PluginConfiguration::isEmpty))
+			.forEach(configurations::add);
+		
+		Path configDir = NIO.localPath(BASE_RESOURCE).resolve("config");
+		configurations.stream()
+			.forEach((c) -> Utils.ignore(() -> c.writer().save(configDir.resolve(c.name() + ".ssdf")),
+			                             MediaDownloader::error));
 	}
 	
 	private static final void updateResourcesDirectory(Version previousVersion, boolean force) {

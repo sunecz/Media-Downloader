@@ -1368,6 +1368,12 @@ public class Configuration implements ConfigurationAccessor {
 			if(clazz == Float.class)     return (double) (float) value;
 			if(clazz == Double.class)    return (double)         value;
 			
+			// Special case for collections (objects and arrays)
+			if(value instanceof Map) {
+				// Cannot check key class at run-time, so just let it through
+				return value;
+			}
+			
 			if(clazz != String.class) {
 				value = String.valueOf(value);
 			}
@@ -1375,14 +1381,29 @@ public class Configuration implements ConfigurationAccessor {
 			return value;
 		}
 		
-		private static final <T, V> void setValue(ConfigurationProperty<T> property, V value) {
+		/** @since 00.02.07 */
+		private static final <T> SSDNode ssdValue(ConfigurationProperty<T> property) {
+			// We cheat here a little bit and delegate all the conversion
+			// to the standard toNode method. This way we don't have to do
+			// it ourselves. Also, in this time the value should already
+			// be updated to the new one.
+			return property.toNode();
+		}
+		
+		/** @since 00.02.07 */
+		private static final <T> SSDType ssdType(SSDNode node) {
+			return node.isObject() ? ((SSDObject) node).getType() : SSDType.UNKNOWN;
+		}
+		
+		/** @since 00.02.07 */
+		private static final <T> void setValue(ConfigurationProperty<T> property, Object value) {
 			property.value(Utils.cast(value));
 		}
 		
 		/** @since 00.02.07 */
-		private static final void setData(SSDCollection data, String name, Object value) {
+		private static final <T> void setData(SSDCollection data, String name, SSDNode value) {
 			try {
-				mh_SSDCollection_set.invoke(data, name, SSDType.recognize(value), SSDObject.of("", value));
+				mh_SSDCollection_set.invoke(data, name, ssdType(value), value);
 			} catch(Throwable ex) {
 				throw new AssertionError(ex);
 			}
@@ -1395,8 +1416,8 @@ public class Configuration implements ConfigurationAccessor {
 				// i.e. not Integer but Long, not Float but Double, etc.
 				Object checked = checkValue(value);
 				
-				setValue(existing, checked);
-				setData(refData, name, checked);
+				setValue(existing, checked); // Must be called first
+				setData(refData, name, ssdValue(existing));
 			}
 			return this;
 		}
