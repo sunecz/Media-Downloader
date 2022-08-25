@@ -16,7 +16,6 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 import sune.app.mediadown.util.MutablePair;
 import sune.app.mediadown.util.NIO;
@@ -25,6 +24,7 @@ import sune.app.mediadown.util.Reflection2;
 import sune.app.mediadown.util.Reflection2.InstanceCreationException;
 import sune.app.mediadown.util.Utils;
 import sune.util.ssdf2.SSDCollection;
+import sune.util.ssdf2.SSDCollectionType;
 import sune.util.ssdf2.SSDNode;
 import sune.util.ssdf2.SSDObject;
 import sune.util.ssdf2.SSDType;
@@ -888,51 +888,51 @@ public class Configuration implements ConfigurationAccessor {
 	}
 	
 	protected static abstract class ObjectConfigurationPropertyBase
-			extends ConfigurationProperty<Map<String, ConfigurationProperty<?>>> {
+			extends ConfigurationProperty<Map<String, Object>> {
 		
 		private ObjectConfigurationPropertyBase(String name, ConfigurationPropertyType type,
-				Map<String, ConfigurationProperty<?>> value, boolean isHidden, String group) {
+				Map<String, Object> value, boolean isHidden, String group) {
 			super(name, type, value, isHidden, group);
+		}
+		
+		/** @since 00.02.07 */
+		protected final SSDNode valueToNode(Object value) {
+			// Currently there is no support for collections inside collections
+			return SSDObject.of("", value);
 		}
 		
 		/** @since 00.02.07 */
 		protected abstract SSDCollection createCollection();
 		/** @since 00.02.07 */
-		protected abstract void addNode(SSDCollection collection, ConfigurationProperty<?> property, SSDNode node);
+		protected abstract void addNode(SSDCollection collection, SSDNode node);
 		
 		@Override
 		public SSDNode toNode(Map<String, ConfigurationProperty<?>> builtProperties) {
-			Map<String, ConfigurationProperty<?>> localBuiltProperties
-				= builtProperties != null ? new LinkedHashMap<>() : null;
 			SSDCollection collection = createCollection();
-			if(builtProperties != null)
+			
+			if(builtProperties != null) {
 				builtProperties.put(name, this);
-			for(ConfigurationProperty<?> property : value().values()) {
-				addNode(collection, property, property.toNode(localBuiltProperties));
 			}
-			// Add all locally built properties to the given collection of built properties
-			// prefixed with the name of the current property.
-			if(localBuiltProperties != null) {
-				builtProperties.putAll(localBuiltProperties.entrySet().stream()
-				                            .map((e) -> Map.entry(name + "." + e.getKey(), e.getValue()))
-				                            .collect(Collectors.toMap(Map.Entry::getKey,
-				                                                      Map.Entry::getValue)));
+			
+			for(Object value : value().values()) {
+				addNode(collection, valueToNode(value));
 			}
+			
 			return collection;
 		}
 		
-		protected static abstract class Builder<T extends ConfigurationProperty<Map<String, ConfigurationProperty<?>>>>
-				extends ConfigurationProperty.BuilderBase<Map<String, ConfigurationProperty<?>>, T> {
+		protected static abstract class Builder<T extends ConfigurationProperty<Map<String, Object>>>
+				extends ConfigurationProperty.BuilderBase<Map<String, Object>, T> {
 			
-			protected Map<String, ConfigurationProperty.BuilderBase<?, ?>> value;
+			protected Map<String, Object> value;
 			protected boolean useValue;
-			protected Map<String, ConfigurationProperty.BuilderBase<?, ?>> defaultValue;
+			protected Map<String, Object> defaultValue;
 			
 			public Builder(String name, ConfigurationPropertyType type) {
 				super(name, type);
 				this.value = new LinkedHashMap<>();
 				this.useValue = false;
-				this.defaultValue = Map.of();
+				this.defaultValue = new LinkedHashMap<>();
 			}
 			
 			@Override
@@ -945,69 +945,24 @@ public class Configuration implements ConfigurationAccessor {
 				return (Builder<T>) super.inGroup(group);
 			}
 			
-			protected Map<String, ConfigurationProperty.BuilderBase<?, ?>> valueOfBuilders() {
-				return useValue ? value : defaultValue;
-			}
-			
-			public final Builder<T> addProperty(ConfigurationProperty.BuilderBase<?, ?> property) {
-				value.put(property.name(), property);
-				return this;
-			}
-			
-			public final Builder<T> removeProperty(String propertyName) {
-				value.remove(propertyName);
-				return this;
-			}
-			
-			public final Builder<T> removeProperty(ConfigurationProperty.BuilderBase<?, ?> property) {
-				value.remove(property.name(), property);
-				return this;
-			}
-			
-			public final Builder<T> withProperties(ConfigurationProperty.BuilderBase<?, ?>... properties) {
-				return withProperties(List.of(properties));
-			}
-			
-			public final Builder<T> withProperties(List<ConfigurationProperty.BuilderBase<?, ?>> properties) {
-				properties.forEach((p) -> value.put(p.name(), p));
-				useValue = true;
-				return this;
-			}
-			
-			public final Builder<T> withDefaultProperties(ConfigurationProperty.BuilderBase<?, ?>... properties) {
-				return withDefaultProperties(List.of(properties));
-			}
-			
-			public final Builder<T> withDefaultProperties(List<ConfigurationProperty.BuilderBase<?, ?>> properties) {
-				defaultValue = properties.stream()
-						.collect(Collectors.toMap(ConfigurationProperty.BuilderBase::name,
-												  Function.identity(),
-												  (a, b) -> a, LinkedHashMap::new));
-				return this;
-			}
-			
 			/** @since 00.02.07 */
 			@Override
-			public Map<String, ConfigurationProperty<?>> value() {
-				Map<String, ConfigurationProperty<?>> builtProperites = new LinkedHashMap<>();
-				for(ConfigurationProperty.BuilderBase<?, ?> builder : valueOfBuilders().values()) {
-					ConfigurationProperty<?> property = builder.build();
-					builtProperites.put(property.name(), property);
-				}
-				return builtProperites;
+			public Map<String, Object> value() {
+				return value;
 			}
 			
 			/** @since 00.02.07 */
 			@Override
 			public Builder<T> loadData(SSDNode node) {
 				if(!node.isCollection()) return this;
-				Map<String, ConfigurationProperty.BuilderBase<?, ?>> properties = valueOfBuilders();
-				ConfigurationProperty.BuilderBase<?, ?> builder;
+				
 				for(SSDNode subNode : ((SSDCollection) node).nodes()) {
-					if((builder = properties.get(subNode.getName())) != null) {
-						builder.loadData(subNode);
-					}
+					String name = subNode.getName();
+					
+					if(subNode.isObject()) value.put(name, ((SSDObject) subNode).value());
+					else                   value.put(name, subNode);
 				}
+				
 				return this;
 			}
 		}
@@ -1016,8 +971,7 @@ public class Configuration implements ConfigurationAccessor {
 	/** @since 00.02.04 */
 	public static final class ArrayConfigurationProperty extends ObjectConfigurationPropertyBase {
 		
-		private ArrayConfigurationProperty(String name, Map<String, ConfigurationProperty<?>> value,
-				boolean isHidden, String group) {
+		private ArrayConfigurationProperty(String name, Map<String, Object> value, boolean isHidden, String group) {
 			super(name, ConfigurationPropertyType.ARRAY, value, isHidden, group);
 		}
 		
@@ -1029,7 +983,7 @@ public class Configuration implements ConfigurationAccessor {
 		
 		/** @since 00.02.07 */
 		@Override
-		protected void addNode(SSDCollection collection, ConfigurationProperty<?> property, SSDNode node) {
+		protected void addNode(SSDCollection collection, SSDNode node) {
 			// Unfortunatelly, there is no add(SSDNode) method
 			if(node.isObject()) collection.add((SSDObject)     node);
 			else                collection.add((SSDCollection) node);
@@ -1037,13 +991,181 @@ public class Configuration implements ConfigurationAccessor {
 		
 		public static final class Builder extends ObjectConfigurationPropertyBase.Builder<ArrayConfigurationProperty> {
 			
+			/** @since 00.02.07 */
+			protected final MapAsArray valueArray;
+			/** @since 00.02.07 */
+			protected final MapAsArray defaultValueArray;
+			
 			public Builder(String name) {
 				super(name, ConfigurationPropertyType.ARRAY);
+				valueArray = new MapAsArray(value);
+				defaultValueArray = new MapAsArray(defaultValue);
+			}
+			
+			/** @since 00.02.07 */
+			protected final void addValues(MapAsArray array, List<Object> values) {
+				int size = values.size();
+				
+				if((size & 1) != 0) {
+					throw new IllegalArgumentException("Number of values must be even");
+				}
+				
+				values.forEach(array::add);
 			}
 			
 			@Override
 			public ArrayConfigurationProperty build() {
 				return new ArrayConfigurationProperty(name, value(), isHidden, group);
+			}
+			
+			/** @since 00.02.07 */
+			public final Builder addValue(Object value) {
+				valueArray.add(value);
+				return this;
+			}
+			
+			/** @since 00.02.07 */
+			public final Builder removeValue(int index) {
+				valueArray.remove(index);
+				return this;
+			}
+			
+			/** @since 00.02.07 */
+			public final Builder withValues(Object... values) {
+				return withValues(List.of(values));
+			}
+			
+			/** @since 00.02.07 */
+			public final Builder withValues(List<Object> values) {
+				addValues(valueArray, values);
+				useValue = true;
+				return this;
+			}
+			
+			/** @since 00.02.07 */
+			public final Builder withDefaultValues(Object... values) {
+				return withDefaultValues(List.of(values));
+			}
+			
+			/** @since 00.02.07 */
+			public final Builder withDefaultValues(List<Object> values) {
+				addValues(defaultValueArray, values);
+				return this;
+			}
+			
+			/** @since 00.02.07 */
+			@Override
+			public Builder loadData(SSDNode node) {
+				if(!node.isCollection()) return this;
+				
+				// Load the data normally
+				super.loadData(node);
+				
+				// Make sure that the indicies are correct
+				valueArray.check();
+				
+				return this;
+			}
+			
+			/** @since 00.02.07 */
+			protected static final class MapAsArray {
+				
+				private final Map<String, Object> map;
+				private int nextId;
+				
+				public MapAsArray(Map<String, Object> map) {
+					this.map = Objects.requireNonNull(map);
+					this.check();
+				}
+				
+				private final String index(int index) {
+					return String.valueOf(index);
+				}
+				
+				private final String nextId() {
+					return index(nextId++);
+				}
+				
+				private final void reindex(int removed) {
+					if(removed < 0 || removed >= map.size()) {
+						return; // Nothing to do
+					}
+					
+					int max = map.size() + 1;
+					for(int i = removed; i < max; ++i) {
+						map.put(index(i), map.get(index(i + 1)));
+					}
+					
+					map.remove(index(max));
+				}
+				
+				public void add(Object value) {
+					map.put(nextId(), value);
+				}
+				
+				public void remove(int index) {
+					map.remove(index(index));
+					reindex(index);
+				}
+				
+				public void check() {
+					if(map.isEmpty()) return; // Nothing to do
+					
+					Map<String, Object> temp = new LinkedHashMap<>();
+					int size = map.size(), last = -1, max = -1;
+					
+					for(Entry<String, Object> entry : map.entrySet()) {
+						int index = Integer.valueOf(entry.getKey());
+						Object value = entry.getValue();
+						
+						// Keep the range updated
+						if(index > max) {
+							max = index;
+						}
+						
+						// Ignore indicies outside of the range
+						if(index < 0 || index >= size) {
+							continue;
+						}
+						
+						// Check for continuity of the sequence
+						if(last + 1 == index) {
+							last = index;
+							
+							temp.put(index(index), value);
+							
+							// Check whether some more elements can be added to the sequence
+							for(int i = last + 1; i <= max; ++i, ++last) {
+								Object v; String s = index(i);
+								
+								if((v = map.get(s)) == null
+										&& !map.containsKey(s)) {
+									break;
+								}
+								
+								temp.put(s, v);
+							}
+						}
+					}
+					
+					// Reindex all the left-over elements
+					for(int i = last + 1, k = i; i <= max; ++i) {
+						Object v; String s = index(i);
+						
+						if((v = map.get(s)) == null
+								&& !map.containsKey(s)) {
+							continue;
+						}
+						
+						temp.put(index(k++), v);
+					}
+					
+					map.clear();
+					map.putAll(temp);
+					temp = null;
+					
+					nextId = map.size();
+				}
 			}
 		}
 	}
@@ -1051,8 +1173,7 @@ public class Configuration implements ConfigurationAccessor {
 	/** @since 00.02.04 */
 	public static final class ObjectConfigurationProperty extends ObjectConfigurationPropertyBase {
 		
-		private ObjectConfigurationProperty(String name, Map<String, ConfigurationProperty<?>> value,
-				boolean isHidden, String group) {
+		private ObjectConfigurationProperty(String name, Map<String, Object> value, boolean isHidden, String group) {
 			super(name, ConfigurationPropertyType.OBJECT, value, isHidden, group);
 		}
 		
@@ -1064,10 +1185,10 @@ public class Configuration implements ConfigurationAccessor {
 		
 		/** @since 00.02.07 */
 		@Override
-		protected void addNode(SSDCollection collection, ConfigurationProperty<?> property, SSDNode node) {
+		protected void addNode(SSDCollection collection, SSDNode node) {
 			// Unfortunatelly, there is no set(String, SSDNode) method
-			if(node.isObject()) collection.set(property.name(), (SSDObject)     node);
-			else                collection.set(property.name(), (SSDCollection) node);
+			if(node.isObject()) collection.set(node.getName(), (SSDObject)     node);
+			else                collection.set(node.getName(), (SSDCollection) node);
 		}
 		
 		public static final class Builder extends ObjectConfigurationPropertyBase.Builder<ObjectConfigurationProperty> {
@@ -1076,9 +1197,57 @@ public class Configuration implements ConfigurationAccessor {
 				super(name, ConfigurationPropertyType.OBJECT);
 			}
 			
+			/** @since 00.02.07 */
+			protected final void addValues(Map<String, Object> map, List<Object> values) {
+				int size = values.size();
+				
+				if((size & 1) != 0) {
+					throw new IllegalArgumentException("Number of values must be even");
+				}
+				
+				for(int i = 0; i < size; i += 2) {
+					map.put((String) values.get(i), values.get(i + 1));
+				}
+			}
+			
 			@Override
 			public ObjectConfigurationProperty build() {
 				return new ObjectConfigurationProperty(name, value(), isHidden, group);
+			}
+			
+			/** @since 00.02.07 */
+			public final Builder addValue(String name, Object value) {
+				this.value.put(name, value);
+				return this;
+			}
+			
+			/** @since 00.02.07 */
+			public final Builder removeValue(String name) {
+				this.value.remove(name);
+				return this;
+			}
+			
+			/** @since 00.02.07 */
+			public final Builder withValues(Object... values) {
+				return withValues(List.of(values));
+			}
+			
+			/** @since 00.02.07 */
+			public final Builder withValues(List<Object> values) {
+				addValues(this.value, values);
+				useValue = true;
+				return this;
+			}
+			
+			/** @since 00.02.07 */
+			public final Builder withDefaultValues(Object... values) {
+				return withDefaultValues(List.of(values));
+			}
+			
+			/** @since 00.02.07 */
+			public final Builder withDefaultValues(List<Object> values) {
+				addValues(this.defaultValue, values);
+				return this;
 			}
 		}
 	}
@@ -1352,9 +1521,31 @@ public class Configuration implements ConfigurationAccessor {
 		}
 		
 		/** @since 00.02.07 */
+		private static final Map<String, Object> ssdCollectionToMap(SSDCollection collection) {
+			String name = collection.getName();
+			ObjectConfigurationPropertyBase.Builder<?> builder
+				= collection.getType() == SSDCollectionType.ARRAY
+					? new ArrayConfigurationProperty .Builder(name)
+					: new ObjectConfigurationProperty.Builder(name);
+			
+			builder.loadData(collection);
+			
+			return builder.value();
+		}
+		
+		/** @since 00.02.07 */
 		private static final Object checkValue(Object value) {
 			if(value == null) {
 				return null;
+			}
+			
+			// Special cases for values of SSD* classes
+			if(value instanceof SSDObject) {
+				value = ((SSDObject) value).value();
+				// Fall through to continue checking the value
+			} else if(value instanceof SSDCollection) {
+				value = ssdCollectionToMap((SSDCollection) value);
+				return value; // No need to check, it is a Map
 			}
 			
 			Class<?> clazz = value.getClass();
