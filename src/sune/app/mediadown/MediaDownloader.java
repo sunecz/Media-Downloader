@@ -1439,13 +1439,14 @@ public final class MediaDownloader {
 	public static final void updateResources() {
 		updateResourcesDirectory(VERSION, true);
 		
-		// To prevent more issues delete the versions.ssdf file so that
+		// To prevent some issues delete the versions.ssdf file so that
 		// all resources will have to be checked on the next start up.
 		Utils.ignore(() -> NIO.deleteFile(NIO.localPath(BASE_RESOURCE).resolve("versions.ssdf")),
 		             MediaDownloader::error);
-		
-		// To prevent even more issues, resave all registered configurations
-		// to force all properties to be revalidated.
+	}
+	
+	/** @since 00.02.07 */
+	private static final void saveAllConfigurations() {
 		Set<Configuration> configurations = new LinkedHashSet<>();
 		
 		configurations.add(MediaDownloader.configuration());
@@ -1469,6 +1470,10 @@ public final class MediaDownloader {
 		ResourcesUpdater.binary();
 		ResourcesUpdater.messages(previousVersion);
 		ResourcesUpdater.clean(previousVersion);
+		
+		// To prevent some issues, re-save all registered configurations
+		// to force all properties to be revalidated.
+		saveAllConfigurations();
 	}
 	
 	private static final void saveConfiguration() {
