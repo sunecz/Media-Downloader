@@ -729,10 +729,25 @@ public final class MediaDownloader {
 						else System.err.println(text + "\n" + content.toString()); // FX not available, print to stderr
 					}
 				});
-				return new MaybeRunStandalonePlugin();
+				return new Finalization();
 			}
 			
 			@Override public String getTitle() { return "Initializing plugins..."; }
+		}
+		
+		/** @since 00.02.07 */
+		public static final class Finalization implements InitializationState {
+			
+			@Override
+			public InitializationState run(Arguments args) {
+				if(applicationUpdated) {
+					// To prevent some issues, re-save all registered configurations
+					// to force all properties to be revalidated.
+					saveAllConfigurations();
+				}
+				
+				return new MaybeRunStandalonePlugin();
+			}
 		}
 		
 		/** @since 00.02.02 */
@@ -1443,6 +1458,10 @@ public final class MediaDownloader {
 		// all resources will have to be checked on the next start up.
 		Utils.ignore(() -> NIO.deleteFile(NIO.localPath(BASE_RESOURCE).resolve("versions.ssdf")),
 		             MediaDownloader::error);
+		
+		// To prevent some issues, re-save all registered configurations
+		// to force all properties to be revalidated.
+		saveAllConfigurations();
 	}
 	
 	/** @since 00.02.07 */
@@ -1470,10 +1489,6 @@ public final class MediaDownloader {
 		ResourcesUpdater.binary();
 		ResourcesUpdater.messages(previousVersion);
 		ResourcesUpdater.clean(previousVersion);
-		
-		// To prevent some issues, re-save all registered configurations
-		// to force all properties to be revalidated.
-		saveAllConfigurations();
 	}
 	
 	private static final void saveConfiguration() {
