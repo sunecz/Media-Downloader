@@ -1,3 +1,64 @@
+# 00.02.07 (2022-08-27)
+
+CORE
+* Added support for concatenation of texts in translation files.
+* Added ability to not convert season or episode string to an integer at media titles.
+* Added support for groups in the configuration.
+* Added global caching.
+* Added ClipboardWatcher class for watching clipboard changes.
+* Added versioning for Languages and Themes.
+* Added options for using pre-release versions in the configuration.
+* Added re-saving of configurations and deletion of versions information upon application update and when doing manual resources update.
+* Updated handling of version strings.
+* Done refactoring of some classes: FFMpegConverter, MediaGetter, Requirements, MediaDownloader.
+* Updated the SHA1 list generation procedure.
+* Moved cache-related classes to the cache package.
+* Refactored some OS-dependant code.
+* Changed the distribution script so that it generates an archive with an extractor.
+* Updated downloading of custom JRE to use GZIP decompression.
+* Updated the Threads system.
+* Improved the accelerated downloader.
+* Updated the Process API library to version 2.1.2.
+* Integrated the SSDF2 library to the JAR file.
+* Improved the startup time.
+* Updated various methods to better support Unicode characters.
+* Improved configuration- and version-related processes.
+* Fixed issue with parsing some JSON files.
+* Fixed NPE when getting subtitles (or any other media type) from a media.
+* Fixed NPE when a Task is cancelled.
+* Fixed issues with highlighting some files on Windows.
+* Fixed issues with loading the configuration file.
+* Fixed some issues with Unicode strings, such as file names.
+* Fixed some general issues with updating and versioning.
+* Fixed issue with saving arrays and objects in configuration.
+* Fixed various configuration-related issues.
+
+GUI
+* Added a dialog window for manual resources updating when the process is finished.
+* Added a new tool: Clipboard watcher.
+* Added a new window: Clipboard watcher window.
+* Updated some texts in both English and Czech languages.
+* Fixed rendering of text area controls.
+* Fixed typos in the Czech language.
+* Main window:
+	* Added a menu bar.
+	* Reorganized the buttons.
+* Table window:
+	* Added ability to reload some tasks.
+* Download configuration window:
+	* Fixed graphical issues with combo boxes.
+* Configuration window:
+	* Added an option to use pre-release versions.
+	* Added an option for enabling the clipboard watching automatically upon application start up.
+	* Reorganized configuration properties to various groups.
+* Progress window:
+	* Improved cancellation of actions.
+* Media getter window:
+	* Added ability to add multiple URLs at once.
+	* Added error dialog for unrecognized URLs.
+	* Added automatic pasting of clipboard contents, if it contains supported URLs.
+	* Use monospaced font for URLs input.
+
 # 00.02.06 (2022-06-16)
 
 CORE
