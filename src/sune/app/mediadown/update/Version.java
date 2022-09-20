@@ -49,6 +49,11 @@ public final class Version implements Comparable<Version> {
 		return value;
 	}
 	
+	/** @since 00.02.08 */
+	private static final FormatterSettings formatterSettings(boolean isCompact) {
+		return isCompact ? FormatterSettings.ofCompact() : FormatterSettings.ofDefault();
+	}
+	
 	@Deprecated(since="00.02.07", forRemoval=true)
 	public static final Version fromString(String string) {
 		return of(string);
@@ -71,12 +76,12 @@ public final class Version implements Comparable<Version> {
 	
 	/** @since 00.02.07 */
 	private final String string(boolean isCompact) {
-		return Formatter.instance().full(this, isCompact);
+		return string(formatterSettings(isCompact));
 	}
 	
 	/** @since 00.02.07 */
 	private final String stringRelease(boolean isCompact) {
-		return Formatter.instance().release(this, isCompact);
+		return stringRelease(formatterSettings(isCompact));
 	}
 	
 	/** @since 00.02.07 */
@@ -125,6 +130,16 @@ public final class Version implements Comparable<Version> {
 	/** @since 00.02.07 */
 	public String compactStringRelease() {
 		return stringRelease(true);
+	}
+	
+	/** @since 00.02.08 */
+	public final String string(FormatterSettings settings) {
+		return Formatter.instance().full(this, Objects.requireNonNull(settings));
+	}
+	
+	/** @since 00.02.08 */
+	public final String stringRelease(FormatterSettings settings) {
+		return Formatter.instance().release(this, Objects.requireNonNull(settings));
 	}
 	
 	@Override
@@ -214,49 +229,125 @@ public final class Version implements Comparable<Version> {
 			return INSTANCE == null ? (INSTANCE = new Formatter()) : INSTANCE;
 		}
 		
-		private final String format(int value, boolean isCompact) {
-			return isCompact ? Integer.toString(value) : String.format("%02d", value);
+		/** @since 00.02.08 */
+		private static final String format(int value, int numberOfDigits) {
+			return numberOfDigits <= 1 ? Integer.toString(value) : String.format("%0" + numberOfDigits + "d", value);
 		}
 		
-		private final void release(Version version, StringBuilder builder, boolean isCompact) {
+		private final void release(Version version, StringBuilder builder, FormatterSettings settings) {
 			if(version == null || version.type() == VersionType.UNKNOWN) {
 				builder.append("UNKNOWN");
 			} else {
-				builder.append(format(version.major(), isCompact)).append('.');
-				builder.append(format(version.minor(), isCompact)).append('.');
-				builder.append(format(version.patch(), isCompact));
+				builder.append(format(version.major(), settings.numberOfDigits(FormatterDigitsType.MAJOR))).append('.');
+				builder.append(format(version.minor(), settings.numberOfDigits(FormatterDigitsType.MINOR))).append('.');
+				builder.append(format(version.patch(), settings.numberOfDigits(FormatterDigitsType.PATCH)));
 			}
 		}
 		
-		private final void full(Version version, StringBuilder builder, boolean isCompact) {
-			release(version, builder, isCompact);
+		private final void full(Version version, StringBuilder builder, FormatterSettings settings) {
+			release(version, builder, settings);
 			
 			VersionType type = version.type();
 			switch(type) {
 				case UNKNOWN:
-				case RELEASE:
 					// Do nothing
 					break;
 				default:
-					builder.append('-').append(type.string());
+					boolean isTypePresent = !type.string().isEmpty();
+					boolean isValuePresent = version.value() > 0;
 					
-					if(version.value() > 0) {
-						builder.append('.').append(version.value());
+					if(isTypePresent) {
+						builder.append('-').append(type.string());
+					}
+					
+					if(isValuePresent) {
+						if(isTypePresent) {
+							builder.append('.');
+						} else {
+							builder.append('-');
+						}
+						
+						builder.append(format(version.value(), settings.numberOfDigits(FormatterDigitsType.VALUE)));
 					}
 					break;
 			}
 		}
 		
-		public final String release(Version version, boolean isCompact) {
+		public final String release(Version version, FormatterSettings settings) {
 			StringBuilder builder = new StringBuilder();
-			release(version, builder, isCompact);
+			release(version, builder, settings);
 			return builder.toString();
 		}
 		
-		public final String full(Version version, boolean isCompact) {
+		public final String full(Version version, FormatterSettings settings) {
 			StringBuilder builder = new StringBuilder();
-			full(version, builder, isCompact);
+			full(version, builder, settings);
 			return builder.toString();
+		}
+	}
+	
+	/** @since 00.02.08 */
+	public static final class FormatterSettings {
+		
+		private static FormatterSettings DEFAULT;
+		private static FormatterSettings COMPACT;
+		
+		private final int[] numberOfDigits;
+		
+		private FormatterSettings(int... numberOfDigits) {
+			this.numberOfDigits = Objects.requireNonNull(numberOfDigits);
+		}
+		
+		public static final FormatterSettings of(int... numberOfDigits) {
+			Objects.requireNonNull(numberOfDigits);
+			FormatterDigitsType[] digitsTypes = FormatterDigitsType.values();
+			
+			for(int i = 0, l = numberOfDigits.length; i < l; ++i) {
+				numberOfDigits[i] = Math.max(numberOfDigits[i], FormatterDigitsType.MIN_DIGITS);
+			}
+			
+			if(numberOfDigits.length < digitsTypes.length) {
+				int[] complete = new int[digitsTypes.length];
+				System.arraycopy(numberOfDigits, 0, complete, 0, numberOfDigits.length);
+				
+				for(int i = numberOfDigits.length, l = digitsTypes.length; i < l; ++i) {
+					complete[i] = digitsTypes[i].defaultNumberOfDigits();
+				}
+				
+				numberOfDigits = complete;
+			}
+			
+			return new FormatterSettings(numberOfDigits);
+		}
+		
+		public static final FormatterSettings ofDefault() {
+			return DEFAULT == null ? (DEFAULT = of()) : DEFAULT;
+		}
+		
+		public static final FormatterSettings ofCompact() {
+			return COMPACT == null ? (COMPACT = of(1, 1, 1, 1)) : COMPACT;
+		}
+		
+		public int numberOfDigits(FormatterDigitsType digitsType) {
+			return numberOfDigits[Objects.requireNonNull(digitsType).ordinal()];
+		}
+	}
+	
+	/** @since 00.02.08 */
+	public static enum FormatterDigitsType {
+		
+		MAJOR(2), MINOR(2), PATCH(2), VALUE(1);
+		
+		public static final int MIN_DIGITS = 1;
+		
+		private final int defaultNumberOfDigits;
+		
+		private FormatterDigitsType(int defaultNumberOfDigits) {
+			this.defaultNumberOfDigits = defaultNumberOfDigits;
+		}
+		
+		public int defaultNumberOfDigits() {
+			return defaultNumberOfDigits;
 		}
 	}
 	
