@@ -171,7 +171,7 @@ public final class Version implements Comparable<Version> {
 	/** @since 00.02.07 */
 	private static final class Parser {
 		
-		private static final Pattern REGEX = Pattern.compile("^(\\d+)(?:\\.(\\d+)(?:\\.(\\d+)(?:-([a-z]+)(?:\\.(\\d+))?)?)?)?$");
+		private static final Pattern REGEX = Pattern.compile("^(\\d+)(?:\\.(\\d+)(?:\\.(\\d+)(?:-(?:([a-z]+)\\.)?(\\d+))?)?)?$");
 		private static Parser INSTANCE;
 		
 		// Forbid anyone to create an instance of this class
