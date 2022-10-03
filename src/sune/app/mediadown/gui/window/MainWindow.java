@@ -796,7 +796,7 @@ public final class MainWindow extends Window<BorderPane> {
 		if((pipeline.isStarted()))
 			return;
 		pipeline.setInput(MediaPipelineResult.of(info.getMedia(), info.getPath(), info.getMediaConfiguration(),
-		                                         DownloadConfiguration.getDefault()));
+		                                         DownloadConfiguration.ofDefault()));
 		Utils.ignore(pipeline::start, this::showError);
 	}
 	

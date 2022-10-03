@@ -40,9 +40,10 @@ public interface MediaGetter {
 		return false;
 	}
 	
+	@Deprecated(forRemoval=true)
 	default DownloadConfiguration getDownloadConfiguration() {
 		// Just return the default configuration, this method is not needed to be implemented
-		return DownloadConfiguration.getDefault();
+		return DownloadConfiguration.ofDefault();
 	}
 	
 	/** @since 00.02.07 */
