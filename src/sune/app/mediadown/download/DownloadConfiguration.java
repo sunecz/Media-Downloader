@@ -1,6 +1,7 @@
 package sune.app.mediadown.download;
 
 /** @since 00.01.15 */
+@Deprecated(forRemoval=true)
 public class DownloadConfiguration {
 	
 	private final boolean accelerated;

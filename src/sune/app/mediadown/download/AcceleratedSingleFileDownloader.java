@@ -27,6 +27,7 @@ import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Web;
 import sune.app.mediadown.util.Web.GetRequest;
 
+@Deprecated(forRemoval=true)
 public class AcceleratedSingleFileDownloader implements IInternalDownloader {
 	
 	private final TrackerManager manager;

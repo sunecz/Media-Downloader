@@ -2,6 +2,7 @@ package sune.app.mediadown.update;
 
 import java.nio.file.Path;
 
+@Deprecated(forRemoval=true)
 public interface FileDownloadListener {
 	
 	void begin (String url, Path file);

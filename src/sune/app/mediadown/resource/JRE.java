@@ -220,6 +220,7 @@ public final class JRE {
 			return new DownloadByteChannel(context, url.openStream(), total);
 		}
 		
+		@Deprecated(forRemoval=true)
 		private final void download(URL url, Path dest) throws Exception {
 			if(url == null || dest == null)
 				throw new IllegalArgumentException();
@@ -299,6 +300,7 @@ public final class JRE {
 			};
 		}
 		
+		@Deprecated(forRemoval=true)
 		private final class DownloadByteChannel implements ReadableByteChannel {
 			
 			private final DownloadEventContext<JRE> context;

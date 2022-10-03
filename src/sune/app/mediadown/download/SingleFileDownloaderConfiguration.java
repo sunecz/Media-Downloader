@@ -1,5 +1,6 @@
 package sune.app.mediadown.download;
 
+@Deprecated(forRemoval=true)
 public class SingleFileDownloaderConfiguration {
 	
 	private final boolean noSizeCheck;

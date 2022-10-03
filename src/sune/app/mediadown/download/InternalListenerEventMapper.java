@@ -5,6 +5,7 @@ import sune.app.mediadown.event.EventType;
 import sune.app.mediadown.event.IEventMapper;
 import sune.app.mediadown.event.Listener;
 
+@Deprecated(forRemoval=true)
 public final class InternalListenerEventMapper implements IEventMapper<DownloadEvent> {
 	
 	private final IInternalListener listener;

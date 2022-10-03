@@ -40,6 +40,7 @@ public final class Resources {
 		void receive(String text);
 	}
 	
+	@Deprecated(forRemoval=true)
 	public static interface ResourceDownloadListener {
 		
 		void begin();

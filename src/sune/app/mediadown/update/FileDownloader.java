@@ -12,6 +12,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 
+@Deprecated(forRemoval=true)
 public final class FileDownloader {
 	
 	// interface used as a listener for DownloadByteChannel

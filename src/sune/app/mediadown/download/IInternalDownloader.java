@@ -10,6 +10,7 @@ import sune.app.mediadown.event.tracker.DownloadTracker;
 import sune.app.mediadown.util.Range;
 import sune.app.mediadown.util.Web.GetRequest;
 
+@Deprecated(forRemoval=true)
 public interface IInternalDownloader extends EventBindable<DownloadEvent>, EventCallable<DownloadEvent> {
 	
 	long start(GetRequest request, Path file, Download download);

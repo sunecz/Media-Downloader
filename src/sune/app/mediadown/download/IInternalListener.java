@@ -2,6 +2,7 @@ package sune.app.mediadown.download;
 
 import sune.app.mediadown.event.Listener;
 
+@Deprecated(forRemoval=true)
 public interface IInternalListener {
 	
 	<E> Listener<E> beginListener();
