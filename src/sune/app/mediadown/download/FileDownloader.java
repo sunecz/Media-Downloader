@@ -13,7 +13,6 @@ import java.nio.file.Path;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 
-import sune.app.mediadown.Download;
 import sune.app.mediadown.event.DownloadEvent;
 import sune.app.mediadown.event.EventRegistry;
 import sune.app.mediadown.event.EventType;
@@ -33,20 +32,43 @@ import sune.app.mediadown.util.Web.StreamResponse;
 /** @since 00.02.08 */
 public class FileDownloader implements InternalDownloader {
 	
+	/* Implementation note:
+	 * All ranges passed to this class as arguments must be exclusive,
+	 * they will be treated as such and will be converted to inclusive
+	 * versions to be passed to the Web API.
+	 * 
+	 * Range(s, e)
+	 *     - s = start of range (inclusive)
+	 *     - e = end   of range (exclusive)
+	 *     - suppose s < e
+	 *     - cases:
+	 *         - if s <= -1 and e <= -1, the the range is not set
+	 *             - all bytes are requested
+	 *         - if s == -1, then the range starts at some relative offset
+	 *             - bytes are requested from the relative offset
+	 *         - if s > -1, then the range starts at offset = s
+	 *             - bytes are requested from offset = s
+	 *         - if e == 0, then the range represents the zero range
+	 *             - value of s is ignored and no bytes are requested
+	 *         - if e > 0, then the range ends at offset = e - 1
+	 *             - bytes are requested to and including offset = e - 1
+	 *         - if e > 0 and s >= 0, then the range is a normal range
+	 *             - bytes are requested from offset = s to and including
+	 *               offset = e -1
+	 */
+	
+	private static final Range<Long> RANGE_UNSET = new Range<>(-1L, -1L);
+	private static final int DEFAULT_BUFFER_SIZE = 8192;
+	private static final int FILE_STORE_BLOCKS_COUNT = 16;
+	
 	private final InternalState state = new InternalState(TaskStates.INITIAL);
 	private final EventRegistry<DownloadEvent> eventRegistry = new EventRegistry<>();
 	private final SyncObject lockPause = new SyncObject();
+	private final TrackerManager trackerManager;
 	
 	private Request request;
 	private Path output;
 	private DownloadConfiguration configuration;
-	
-	// ----- Not needed properties, just here for compatibility
-	@Deprecated(forRemoval=true)
-	private Download download;
-	@Deprecated(forRemoval=true)
-	private final TrackerManager trackerManager;
-	// -----
 	
 	private DownloadTracker tracker;
 	
@@ -65,6 +87,10 @@ public class FileDownloader implements InternalDownloader {
 		this.trackerManager = Objects.requireNonNull(trackerManager);
 	}
 	
+	private static final Range<Long> newRange(long from, long to) {
+		return from < 0L && to < 0L ? RANGE_UNSET : new Range<>(from, to);
+	}
+	
 	private static final boolean isValidRange(Range<Long> range) {
 		return range.from() >= 0L && range.to() >= 0L;
 	}
@@ -72,22 +98,18 @@ public class FileDownloader implements InternalDownloader {
 	private static final Range<Long> checkRange(Range<Long> range, long limit) {
 		long from = range.from(), to = range.to();
 		
-		if(from == -1L && to == -1L) {
-			return range;
-		}
-		
 		if(from < 0L && to < 0L) {
-			return new Range<>(-1L, -1L);
+			return RANGE_UNSET;
 		}
 		
 		if(from < 0L) {
-			return new Range<>(-1L, Math.min(to, limit));
+			return newRange(-1L, Math.min(to, limit));
 		} else if(to < 0L) {
-			return new Range<>(from, -1L);
+			return newRange(from, -1L);
 		} else {
 			long min = Math.min(from, to);
 			long max = Math.max(from, to);
-			return new Range<>(min, Math.min(max, min + limit));
+			return newRange(min, Math.min(max, min + Math.max(0L, limit)));
 		}
 	}
 	
@@ -100,20 +122,27 @@ public class FileDownloader implements InternalDownloader {
 	}
 	
 	private static final int bufferSize(Path path) {
-		try { return (int) (16 * Files.getFileStore(path).getBlockSize()); } catch(Exception ex) {} return 8192;
+		try {
+			return (int) (FILE_STORE_BLOCKS_COUNT * Files.getFileStore(path).getBlockSize());
+		} catch(IOException ex) {
+			// Ignore
+		}
+		
+		return DEFAULT_BUFFER_SIZE;
 	}
 	
 	// Utility method. Will be removed when the Web API is updated and it supports this functionality.
 	private static final Request toRangedRequest(Request request, String identifier, Range<Long> range) {
+		if(request instanceof HeadRequest) {
+			return request;
+		}
+		
 		if(request instanceof GetRequest) {
 			return new GetRequest(request.url, request.userAgent, request.cookies, request.headers,
-			                      request.followRedirects, identifier, range.from(), range.to(), request.timeout);
+				request.followRedirects, identifier, range.from(), range.to() - 1L, request.timeout);
 		} else if(request instanceof PostRequest) {
 			return new PostRequest(request.url, request.userAgent, request.params, request.cookies, request.headers,
-			                       request.followRedirects, identifier, range.from(), range.to(), request.timeout);
-		} else if(request instanceof HeadRequest) {
-			return new HeadRequest(request.url, request.userAgent, request.cookies, request.headers,
-			                       request.followRedirects, request.timeout);
+				request.followRedirects, identifier, range.from(), range.to() - 1L, request.timeout);
 		}
 		
 		throw new IllegalStateException("Invalid request type");
@@ -154,10 +183,10 @@ public class FileDownloader implements InternalDownloader {
 			rangeOutput = checkRange(rangeOutput, size);
 			tracker.updateTotal(size);
 		} else if(isValidRange(rangeOutput)) {
-			rangeOutput = new Range<>(rangeOutput.from(), -1L);
+			rangeOutput = newRange(rangeOutput.from(), -1L);
 			tracker.updateTotal(-1L);
 		} else {
-			rangeOutput = new Range<>(-1L, -1L);
+			rangeOutput = RANGE_UNSET;
 			tracker.updateTotal(-1L);
 		}
 		
@@ -177,13 +206,28 @@ public class FileDownloader implements InternalDownloader {
 	private final void update(long readBytes) {
 		bytes.getAndAdd(readBytes);
 		tracker.update(readBytes);
-		eventRegistry.call(DownloadEvent.UPDATE, new Pair<>(download, trackerManager));
+		eventRegistry.call(DownloadEvent.UPDATE, new Pair<>(this, trackerManager));
 	}
 	
 	private final boolean doDownload() throws Exception {
 		boolean reachedEOF = false;
 		rangeOutput  = checkRange(rangeOutput, -1L);
 		rangeRequest = checkRange(rangeRequest, rangeLength(rangeOutput));
+		
+		if(rangeRequest.to() == 0L) {
+			// Given Range(s, e), does not make logical sense to
+			// download anything, because:
+			//     if s <= -1, then starts from some relative offset,
+			//     if s >=  0, then starts from offset = s,
+			//     if e <= -1, then ends at EOF,
+			//     if e >   0, then ends at offset = e - 1,
+			// but if e ==  0, then even the byte at offset = 0
+			//         is not included, therefore nothing should
+			//         be downloaded, regardless of the value of s.
+			//         It is debatable whether to allow such
+			//         ranges where e <= s, but we ignore it here.
+			return true;
+		}
 		
 		if(tracker == null) {
 			tracker = new DownloadTracker(-1L);
@@ -248,8 +292,7 @@ public class FileDownloader implements InternalDownloader {
 	}
 	
 	@Override
-	public long start(Download download, Request request, Path output, DownloadConfiguration configuration) throws Exception {
-		this.download      = Objects.requireNonNull(download);
+	public long start(Request request, Path output, DownloadConfiguration configuration) throws Exception {
 		this.request       = Objects.requireNonNull(request);
 		this.output        = Objects.requireNonNull(output);
 		this.configuration = Objects.requireNonNull(configuration);
@@ -262,17 +305,17 @@ public class FileDownloader implements InternalDownloader {
 		state.clear(TaskStates.STARTED);
 		
 		try {
-			eventRegistry.call(DownloadEvent.BEGIN);
+			eventRegistry.call(DownloadEvent.BEGIN, this);
 			doStart();
 		} catch(Exception ex) {
 			state.set(TaskStates.ERROR);
-			eventRegistry.call(DownloadEvent.ERROR, new Pair<>(download, ex));
+			eventRegistry.call(DownloadEvent.ERROR, new Pair<>(this, ex));
 			throw ex; // Propagate the error
 		} finally {
 			doStop();
 			
 			if(isDone()) {
-				eventRegistry.call(DownloadEvent.END);
+				eventRegistry.call(DownloadEvent.END, this);
 			}
 		}
 		
@@ -333,10 +376,6 @@ public class FileDownloader implements InternalDownloader {
 	@Override
 	public <E> void call(EventType<DownloadEvent, E> type, E value) {
 		eventRegistry.call(type, value);
-	}
-	
-	public EventRegistry<DownloadEvent> getEventRegistry() {
-		return eventRegistry;
 	}
 	
 	@Override

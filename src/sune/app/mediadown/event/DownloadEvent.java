@@ -1,27 +1,30 @@
 package sune.app.mediadown.event;
 
-import sune.app.mediadown.Download;
+import sune.app.mediadown.download.InternalDownloader;
 import sune.app.mediadown.event.tracker.TrackerManager;
 import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.Utils;
 
 public final class DownloadEvent implements IEventType {
 	
-	public static final EventType<DownloadEvent, Download>                       BEGIN  = new EventType<>();
-	public static final EventType<DownloadEvent, Pair<Download, TrackerManager>> UPDATE = new EventType<>();
-	public static final EventType<DownloadEvent, Download>                       END    = new EventType<>();
-	public static final EventType<DownloadEvent, Pair<Download, Exception>>      ERROR  = new EventType<>();
-	/** @since 00.01.18 */
-	public static final EventType<DownloadEvent, Download>                       PAUSE  = new EventType<>();
-	/** @since 00.01.18 */
-	public static final EventType<DownloadEvent, Download>                       RESUME = new EventType<>();
+	public static final EventType<DownloadEvent, InternalDownloader>                       BEGIN  = new EventType<>();
+	public static final EventType<DownloadEvent, Pair<InternalDownloader, TrackerManager>> UPDATE = new EventType<>();
+	public static final EventType<DownloadEvent, InternalDownloader>                       END    = new EventType<>();
+	public static final EventType<DownloadEvent, Pair<InternalDownloader, Exception>>      ERROR  = new EventType<>();
+	public static final EventType<DownloadEvent, InternalDownloader>                       PAUSE  = new EventType<>();
+	public static final EventType<DownloadEvent, InternalDownloader>                       RESUME = new EventType<>();
 	
-	private static final EventType<DownloadEvent, ?>[] VALUES = Utils.array(BEGIN, UPDATE, END, ERROR, PAUSE, RESUME);
-	public  static final EventType<DownloadEvent, ?>[] values() {
-		return VALUES;
-	}
+	private static EventType<DownloadEvent, ?>[] VALUES;
 	
 	// Forbid anyone to create an instance of this class
 	private DownloadEvent() {
+	}
+	
+	public static final EventType<DownloadEvent, ?>[] values() {
+		if(VALUES == null) {
+			VALUES = Utils.array(BEGIN, UPDATE, END, ERROR, PAUSE, RESUME);
+		}
+		
+		return VALUES;
 	}
 }

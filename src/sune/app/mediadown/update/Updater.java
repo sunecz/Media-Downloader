@@ -7,11 +7,15 @@ import java.util.Collection;
 import java.util.function.BiPredicate;
 
 import javafx.util.Callback;
+import sune.app.mediadown.download.DownloadConfiguration;
+import sune.app.mediadown.download.FileDownloader;
+import sune.app.mediadown.event.tracker.TrackerManager;
 import sune.app.mediadown.update.FileChecker.FileCheckerEntry;
 import sune.app.mediadown.util.BiCallback;
 import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.ThrowableBiConsumer;
 import sune.app.mediadown.util.Utils;
+import sune.app.mediadown.util.Web.GetRequest;
 
 public final class Updater {
 	
@@ -82,7 +86,16 @@ public final class Updater {
 			// Check whether to download the file
 			if(shouldDownloadEntry(locEntry, webHash)) {
 				Path path = localDir.resolve(webName);
-				FileDownloader.download(urlConcat(webDir, webName), path, listener.fileDownloadListener());
+				
+				FileDownloader downloader = new FileDownloader(new TrackerManager());
+				GetRequest request = new GetRequest(Utils.url(urlConcat(webDir, webName)));
+				try {
+					downloader.start(request, path, DownloadConfiguration.ofDefault());
+				} catch(Exception ex) {
+					// Cannot throw Exception, so just translate it
+					// TODO: Allow throwing Exception
+					throw new IOException(ex);
+				}
 				
 				if(updatedPaths != null) {
 					updatedPaths.add(path);
