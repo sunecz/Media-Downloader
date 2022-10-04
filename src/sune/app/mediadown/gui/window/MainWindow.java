@@ -43,13 +43,11 @@ import sune.app.mediadown.Disposables;
 import sune.app.mediadown.Download;
 import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.download.DownloadConfiguration;
-import sune.app.mediadown.download.IInternalListener;
 import sune.app.mediadown.download.MediaDownloadConfiguration;
 import sune.app.mediadown.engine.MediaEngine;
 import sune.app.mediadown.engine.MediaEngines;
 import sune.app.mediadown.event.ConversionEvent;
 import sune.app.mediadown.event.DownloadEvent;
-import sune.app.mediadown.event.Listener;
 import sune.app.mediadown.event.PipelineEvent;
 import sune.app.mediadown.event.tracker.ConversionTracker;
 import sune.app.mediadown.event.tracker.DownloadTracker;
@@ -668,118 +666,80 @@ public final class MainWindow extends Window<BorderPane> {
 	private final PipelineInfo getPipelineInfo(ResolvedMedia media) {
 		Pipeline pipeline = Pipeline.create();
 		PipelineInfo info = new PipelineInfo(pipeline, media);
-		IInternalListener internalListener = new IInternalListener() {
-			
-			private final PipelineInfo _info = info;
-			private boolean wasEnded;
-			
-			private Listener<Object> listenerBegin;
-			private Listener<Object> listenerUpdate;
-			private Listener<Object> listenerEnd;
-			private Listener<Object> listenerError;
-			
-			@Override
-			public Listener<Object> beginListener() {
-				if((listenerBegin == null)) {
-					listenerBegin = ((o) -> {
-						_info.update(translation.getSingle("progress.initialization"));
-					});
-				}
-				return listenerBegin;
+		
+		// TODO: Tidy up
+		
+		pipeline.addEventListener(PipelineEvent.BEGIN, (o) -> {
+			info.update(translation.getSingle("progress.initialization"));
+		});
+		
+		pipeline.addEventListener(PipelineEvent.END, (o) -> {
+			Pipeline p = (Pipeline) o;
+			String text = translation.getSingle("progress."
+													+ (p.isStopped()
+															? "stopped"
+															: "completed"));
+            info.update(text);
+		});
+		
+		pipeline.addEventListener(PipelineEvent.ERROR, (o) -> {
+			Pair<Pipeline, Exception> pair = (Pair<Pipeline, Exception>) o;
+			// Display the error message
+			info.update(translation.getSingle("progress.error", "text", pair.b.getMessage()));
+			MediaDownloader.error(pair.b); // Show the error
+		});
+		
+		pipeline.getEventRegistry().addMany((o) -> {
+			boolean wasEnded = !pipeline.isRunning();
+			if((wasEnded)) return; // Check the flag first
+			Pair<?, ?> rawPair = (Pair<?, ?>) o;
+			// Check whether it is the PipelineEvent.UPDATE call
+			if((rawPair.a instanceof Pipeline)) {
+				String progress = translation.getSingle("progress.waiting");
+				info.update(progress);
+				return; // Do not continue
 			}
-			
-			@Override
-			public Listener<Object> updateListener() {
-				if((listenerUpdate == null)) {
-					listenerUpdate = ((o) -> {
-						if((wasEnded)) return; // Check the flag first
-						Pair<?, ?> rawPair = (Pair<?, ?>) o;
-						// Check whether it is the PipelineEvent.UPDATE call
-						if((rawPair.a instanceof Pipeline)) {
-							String progress = translation.getSingle("progress.waiting");
-							_info.update(progress);
-							return; // Do not continue
-						}
-						// Otherwise continue to update the state using a tracker
-						@SuppressWarnings("unchecked")
-						Pair<?, TrackerManager> pair = (Pair<?, TrackerManager>) o;
-						Tracker currentTracker = pair.b.getTracker();
-						if((currentTracker instanceof DownloadTracker)) {
-							DownloadTracker downloadTracker = (DownloadTracker) currentTracker;
-							double percent  = downloadTracker.getProgress() * 100.0;
-							String speedVal = Utils.formatSize(downloadTracker.getSpeed(), 2);
-							double timeLeft = downloadTracker.getTimeLeft();
-							String progress = translation.getSingle("progress.download.update",
-							                                        "percent",   Utils.num2string(percent,  2),
-							                                        "speed",     speedVal,
-							                                        "time_left", Utils.num2string(timeLeft, 0));
-							_info.update(progress);
-						} else if((currentTracker instanceof ConversionTracker)) {
-							ConversionTracker conversionTracker = (ConversionTracker) currentTracker;
-							double percent     = conversionTracker.getProgress() * 100.0;
-							double timeCurrent = conversionTracker.getCurrentTime();
-							double timeTotal   = conversionTracker.getTotalTime();
-							String progress = translation.getSingle("progress.conversion.update",
-							                                        "percent",      Utils.num2string(percent,     2),
-							                                        "time_current", Utils.num2string(timeCurrent, 2),
-							                                        "time_total",   Utils.num2string(timeTotal,   2));
-							_info.update(progress);
-						} else if((currentTracker instanceof PlainTextTracker)) {
-							PlainTextTracker textTracker = (PlainTextTracker) currentTracker;
-							double percent  = textTracker.getProgress() * 100.0;
-							String text     = textTracker.getText();
-							String progress = translation.getSingle("progress.plain",
-							                                        "percent", Utils.num2string(percent, 2),
-							                                        "text",    text);
-							_info.update(progress);
-						} else if((currentTracker instanceof WaitTracker)) {
-							String progress = translation.getSingle("progress.waiting");
-							_info.update(progress);
-						} else {
-							String progress = currentTracker.getTextProgress();
-							if(progress != null) _info.update(progress);
-						}
-					});
-				}
-				return listenerUpdate;
+			// Otherwise continue to update the state using a tracker
+			@SuppressWarnings("unchecked")
+			Pair<?, TrackerManager> pair = (Pair<?, TrackerManager>) o;
+			Tracker currentTracker = pair.b.getTracker();
+			if((currentTracker instanceof DownloadTracker)) {
+				DownloadTracker downloadTracker = (DownloadTracker) currentTracker;
+				double percent  = downloadTracker.getProgress() * 100.0;
+				String speedVal = Utils.formatSize(downloadTracker.getSpeed(), 2);
+				double timeLeft = downloadTracker.getTimeLeft();
+				String progress = translation.getSingle("progress.download.update",
+				                                        "percent",   Utils.num2string(percent,  2),
+				                                        "speed",     speedVal,
+				                                        "time_left", Utils.num2string(timeLeft, 0));
+				info.update(progress);
+			} else if((currentTracker instanceof ConversionTracker)) {
+				ConversionTracker conversionTracker = (ConversionTracker) currentTracker;
+				double percent     = conversionTracker.getProgress() * 100.0;
+				double timeCurrent = conversionTracker.getCurrentTime();
+				double timeTotal   = conversionTracker.getTotalTime();
+				String progress = translation.getSingle("progress.conversion.update",
+				                                        "percent",      Utils.num2string(percent,     2),
+				                                        "time_current", Utils.num2string(timeCurrent, 2),
+				                                        "time_total",   Utils.num2string(timeTotal,   2));
+				info.update(progress);
+			} else if((currentTracker instanceof PlainTextTracker)) {
+				PlainTextTracker textTracker = (PlainTextTracker) currentTracker;
+				double percent  = textTracker.getProgress() * 100.0;
+				String text     = textTracker.getText();
+				String progress = translation.getSingle("progress.plain",
+				                                        "percent", Utils.num2string(percent, 2),
+				                                        "text",    text);
+				info.update(progress);
+			} else if((currentTracker instanceof WaitTracker)) {
+				String progress = translation.getSingle("progress.waiting");
+				info.update(progress);
+			} else {
+				String progress = currentTracker.getTextProgress();
+				if(progress != null) info.update(progress);
 			}
-			
-			@Override
-			public Listener<Object> endListener() {
-				if((listenerEnd == null)) {
-					listenerEnd = ((o) -> {
-						wasEnded = true; // Update the end flag
-						Pipeline pipeline = (Pipeline) o;
-						String text = translation.getSingle("progress."
-																+ (pipeline.isStopped()
-																		? "stopped"
-																		: "completed"));
-	                    _info.update(text);
-					});
-				}
-				return listenerEnd;
-			}
-			
-			@Override
-			public Listener<Object> errorListener() {
-				if((listenerError == null)) {
-					listenerError = ((o) -> {
-						@SuppressWarnings("unchecked")
-						Pair<Pipeline, Exception> pair = (Pair<Pipeline, Exception>) o;
-						// Display the error message
-						_info.update(translation.getSingle("progress.error", "text", pair.b.getMessage()));
-						MediaDownloader.error(pair.b); // Show the error
-					});
-				}
-				return listenerError;
-			}
-		};
-		pipeline.addEventListener(PipelineEvent.BEGIN,    internalListener.beginListener());
-		pipeline.addEventListener(PipelineEvent.UPDATE,   internalListener.updateListener());
-		pipeline.addEventListener(PipelineEvent.END,      internalListener.endListener());
-		pipeline.addEventListener(PipelineEvent.ERROR,    internalListener.errorListener());
-		pipeline.addEventListener(DownloadEvent.UPDATE,   internalListener.updateListener());
-		pipeline.addEventListener(ConversionEvent.UPDATE, internalListener.updateListener());
+		}, PipelineEvent.UPDATE, DownloadEvent.UPDATE, ConversionEvent.UPDATE);
+		
 		return info;
 	}
 	
