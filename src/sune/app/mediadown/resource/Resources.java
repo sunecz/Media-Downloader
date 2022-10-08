@@ -23,7 +23,6 @@ import sune.app.mediadown.Shared;
 import sune.app.mediadown.update.CheckListener;
 import sune.app.mediadown.update.FileCheckListener;
 import sune.app.mediadown.update.FileChecker;
-import sune.app.mediadown.update.FileDownloadListener;
 import sune.app.mediadown.update.Requirements;
 import sune.app.mediadown.update.Updater;
 import sune.app.mediadown.util.NIO;
@@ -179,11 +178,6 @@ public final class Resources {
 							receiver.receive(String.format("Error: %s", ex.getMessage()));
 					}
 				};
-			}
-			
-			@Override
-			public FileDownloadListener fileDownloadListener() {
-				return null; // Not used
 			}
 		};
 	}

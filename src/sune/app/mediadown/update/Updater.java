@@ -9,9 +9,12 @@ import java.util.function.BiPredicate;
 import javafx.util.Callback;
 import sune.app.mediadown.download.DownloadConfiguration;
 import sune.app.mediadown.download.FileDownloader;
+import sune.app.mediadown.event.DownloadEvent;
+import sune.app.mediadown.event.EventRegistry;
 import sune.app.mediadown.event.tracker.TrackerManager;
 import sune.app.mediadown.update.FileChecker.FileCheckerEntry;
 import sune.app.mediadown.util.BiCallback;
+import sune.app.mediadown.util.EventUtils;
 import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.ThrowableBiConsumer;
 import sune.app.mediadown.util.Utils;
@@ -65,13 +68,17 @@ public final class Updater {
 		return !hash.equals(requiredHash);
 	}
 	
-	public static final boolean checkRemoteFiles(RemoteConfiguration cfgRemote, String remoteDirURL, Path localDir, int timeout,
-			CheckListener listener, FileChecker checker, Collection<Path> updatedPaths) throws IOException {
+	public static final boolean checkRemoteFiles(RemoteConfiguration cfgRemote, String remoteDirURL, Path localDir,
+			int timeout, CheckListener listener, EventRegistry<DownloadEvent> eventRegistry, FileChecker checker,
+			Collection<Path> updatedPaths) throws Exception {
 		boolean filesChanged = false;
 		String webDir = urlConcat(remoteDirURL, cfgRemote.value("data"));
 		String lsPath = urlConcat(remoteDirURL, cfgRemote.value("list"));
 		FileChecker checkerWeb = FileChecker.parse(NIO.localPath(), content(lsPath, timeout));
 		FileChecker checkerLoc = checker;
+		
+		FileDownloader downloader = new FileDownloader(new TrackerManager());
+		EventUtils.bind(downloader, eventRegistry, DownloadEvent.values());
 		
 		for(FileCheckerEntry entry : checkerWeb.entries()) {
 			Path webPath = localDir.relativize(entry.getPath());
@@ -86,16 +93,9 @@ public final class Updater {
 			// Check whether to download the file
 			if(shouldDownloadEntry(locEntry, webHash)) {
 				Path path = localDir.resolve(webName);
-				
-				FileDownloader downloader = new FileDownloader(new TrackerManager());
 				GetRequest request = new GetRequest(Utils.url(urlConcat(webDir, webName)));
-				try {
-					downloader.start(request, path, DownloadConfiguration.ofDefault());
-				} catch(Exception ex) {
-					// Cannot throw Exception, so just translate it
-					// TODO: Allow throwing Exception
-					throw new IOException(ex);
-				}
+				
+				downloader.start(request, path, DownloadConfiguration.ofDefault());
 				
 				if(updatedPaths != null) {
 					updatedPaths.add(path);
@@ -144,9 +144,10 @@ public final class Updater {
 	}
 	
 	public static final boolean checkLibraries(String baseURL, Path dir, int timeout, CheckListener listener,
-			FileChecker checker, Collection<Path> updatedPaths) throws IOException {
+			EventRegistry<DownloadEvent> eventRegistry, FileChecker checker, Collection<Path> updatedPaths)
+			throws Exception {
 		RemoteConfiguration cfg = RemoteConfiguration.from(stream(urlConcat(baseURL, NAME_CONFIG), timeout));
-		return checkRemoteFiles(cfg, baseURL, dir, timeout, listener, checker, updatedPaths);
+		return checkRemoteFiles(cfg, baseURL, dir, timeout, listener, eventRegistry, checker, updatedPaths);
 	}
 	
 	public static final boolean checkResources(String baseURL, Path dir, int timeout, CheckListener listener,
