@@ -1,9 +1,11 @@
 package sune.app.mediadown.pipeline;
 
 import java.nio.file.Path;
+import java.util.Objects;
 
 import sune.app.mediadown.Download;
 import sune.app.mediadown.download.DownloadConfiguration;
+import sune.app.mediadown.download.DownloadResult;
 import sune.app.mediadown.download.MediaDownloadConfiguration;
 import sune.app.mediadown.event.DownloadEvent;
 import sune.app.mediadown.event.EventType;
@@ -20,16 +22,14 @@ public final class DownloadPipelineTask implements PipelineTask<DownloadPipeline
 	private final MediaDownloadConfiguration mediaConfiguration;
 	private final DownloadConfiguration configuration;
 	
-	private ManagerSubmitResult<Download, Long> result;
+	private ManagerSubmitResult<DownloadResult, Long> result;
 	
 	private DownloadPipelineTask(Media media, Path destination, MediaDownloadConfiguration mediaConfiguration,
 			DownloadConfiguration configuration) {
-		if(media == null || destination == null || mediaConfiguration == null || configuration == null)
-			throw new IllegalArgumentException();
-		this.media = media;
-		this.destination = destination;
-		this.mediaConfiguration = mediaConfiguration;
-		this.configuration = configuration;
+		this.media = Objects.requireNonNull(media);
+		this.destination = Objects.requireNonNull(destination);
+		this.mediaConfiguration = Objects.requireNonNull(mediaConfiguration);
+		this.configuration = Objects.requireNonNull(configuration);
 	}
 	
 	public static final DownloadPipelineTask of(Media media, Path destination,
@@ -40,18 +40,21 @@ public final class DownloadPipelineTask implements PipelineTask<DownloadPipeline
 	@Override
 	public final DownloadPipelineResult run(Pipeline pipeline) throws Exception {
 		result = DownloadManager.submit(media, destination, mediaConfiguration, configuration);
+		DownloadResult downloadResult = result.getValue();
+		
 		// Bind all events from the pipeline
 		PipelineEventRegistry eventRegistry = pipeline.getEventRegistry();
-		Download download = result.getValue();
+		Download download = downloadResult.download();
 		for(EventType<DownloadEvent, ?> type : DownloadEvent.values()) {
 			eventRegistry.bindEvents(download, type);
 		}
+		
 		result.get(); // Wait for the download to finish
-		return download.getResult();
+		return (DownloadPipelineResult) downloadResult.pipelineResult();
 	}
 	
 	private final Download download() {
-		return result.getValue();
+		return result.getValue().download();
 	}
 	
 	@Override

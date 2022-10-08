@@ -2,13 +2,12 @@ package sune.app.mediadown.download;
 
 import java.nio.file.Path;
 
-import sune.app.mediadown.Download;
 import sune.app.mediadown.media.Media;
 
 /** @since 00.02.05 */
 public interface Downloader {
 	
-	Download download(Media media, Path destination, MediaDownloadConfiguration configuration) throws Exception;
+	DownloadResult download(Media media, Path destination, MediaDownloadConfiguration configuration) throws Exception;
 	boolean isDownloadable(Media media);
 	
 	String title();

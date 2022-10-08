@@ -4,6 +4,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import sune.app.mediadown.configuration.Configuration;
+import sune.app.mediadown.configuration.Configuration.ConfigurationProperty;
 import sune.util.ssdf2.SSDCollection;
 
 /** @since 00.02.04 */

@@ -11,6 +11,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import sune.app.mediadown.MediaDownloader;
+import sune.app.mediadown.configuration.ApplicationConfigurationAccessor.UsePreReleaseVersions;
+import sune.app.mediadown.configuration.Configuration.ConfigurationProperty;
 import sune.app.mediadown.language.Language;
 import sune.app.mediadown.media.MediaFormat;
 import sune.app.mediadown.media.MediaTitleFormat;
