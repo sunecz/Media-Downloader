@@ -1948,6 +1948,7 @@ public final class MediaDownloader {
 						String jarUrl = Utils.urlConcat(versionUrl, "plugin.jar");
 						GetRequest request = new GetRequest(Utils.url(jarUrl), Shared.USER_AGENT);
 						
+						NIO.createDir(path.getParent()); // Ensure parent directory
 						downloader.start(request, path, downloadConfiguration);
 					}
 				}
@@ -2026,6 +2027,7 @@ public final class MediaDownloader {
 								Path file = Path.of(plugin.getPath());
 								GetRequest request = new GetRequest(Utils.url(pluginURL), Shared.USER_AGENT);
 								
+								NIO.createDir(file.getParent()); // Ensure parent directory
 								downloader.start(request, file, downloadConfiguration);
 								
 								// Must reload the plugin, otherwise it will have incorrect information

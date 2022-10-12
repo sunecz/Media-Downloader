@@ -109,7 +109,7 @@ public final class Resources {
 		
 		final String fileName = destination.getFileName().toString();
 		final long minTime = 500000000L; // 500ms
-		final Property<Long> lastTime = new Property<>();
+		final Property<Long> lastTime = new Property<>(0L);
 		
 		downloader.addEventListener(DownloadEvent.BEGIN, (d) -> {
 			if(receiver != null) {
