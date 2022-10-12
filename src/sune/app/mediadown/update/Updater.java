@@ -95,6 +95,7 @@ public final class Updater {
 				Path path = localDir.resolve(webName);
 				GetRequest request = new GetRequest(Utils.url(urlConcat(webDir, webName)));
 				
+				NIO.createDir(path.getParent()); // Ensure parent directory
 				downloader.start(request, path, DownloadConfiguration.ofDefault());
 				
 				if(updatedPaths != null) {
