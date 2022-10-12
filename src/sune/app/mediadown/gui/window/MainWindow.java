@@ -667,76 +667,79 @@ public final class MainWindow extends Window<BorderPane> {
 		Pipeline pipeline = Pipeline.create();
 		PipelineInfo info = new PipelineInfo(pipeline, media);
 		
-		// TODO: Tidy up
-		
 		pipeline.addEventListener(PipelineEvent.BEGIN, (o) -> {
 			info.update(translation.getSingle("progress.initialization"));
 		});
 		
 		pipeline.addEventListener(PipelineEvent.END, (o) -> {
 			Pipeline p = (Pipeline) o;
-			String text = translation.getSingle("progress."
-													+ (p.isStopped()
-															? "stopped"
-															: "completed"));
-            info.update(text);
+            info.update(translation.getSingle("progress." + (p.isStopped() ? "stopped" : "completed")));
 		});
 		
 		pipeline.addEventListener(PipelineEvent.ERROR, (o) -> {
 			Pair<Pipeline, Exception> pair = (Pair<Pipeline, Exception>) o;
-			// Display the error message
 			info.update(translation.getSingle("progress.error", "text", pair.b.getMessage()));
-			MediaDownloader.error(pair.b); // Show the error
+			showError(pair.b);
 		});
 		
 		pipeline.getEventRegistry().addMany((o) -> {
-			boolean wasEnded = !pipeline.isRunning();
-			if((wasEnded)) return; // Check the flag first
+			if(!pipeline.isRunning())
+				return; // Not running, don't change anything
+			
 			Pair<?, ?> rawPair = (Pair<?, ?>) o;
+			
 			// Check whether it is the PipelineEvent.UPDATE call
-			if((rawPair.a instanceof Pipeline)) {
-				String progress = translation.getSingle("progress.waiting");
-				info.update(progress);
+			if(rawPair.a instanceof Pipeline) {
+				info.update(translation.getSingle("progress.waiting"));
 				return; // Do not continue
 			}
-			// Otherwise continue to update the state using a tracker
+			
 			@SuppressWarnings("unchecked")
 			Pair<?, TrackerManager> pair = (Pair<?, TrackerManager>) o;
-			Tracker currentTracker = pair.b.getTracker();
-			if((currentTracker instanceof DownloadTracker)) {
-				DownloadTracker downloadTracker = (DownloadTracker) currentTracker;
+			Tracker tracker = pair.b.getTracker();
+			
+			if(tracker instanceof DownloadTracker) {
+				DownloadTracker downloadTracker = (DownloadTracker) tracker;
 				double percent  = downloadTracker.getProgress() * 100.0;
 				String speedVal = Utils.formatSize(downloadTracker.getSpeed(), 2);
 				double timeLeft = downloadTracker.getTimeLeft();
-				String progress = translation.getSingle("progress.download.update",
-				                                        "percent",   Utils.num2string(percent,  2),
-				                                        "speed",     speedVal,
-				                                        "time_left", Utils.num2string(timeLeft, 0));
-				info.update(progress);
-			} else if((currentTracker instanceof ConversionTracker)) {
-				ConversionTracker conversionTracker = (ConversionTracker) currentTracker;
+				
+				info.update(translation.getSingle(
+					"progress.download.update",
+					"percent",   Utils.num2string(percent,  2),
+					"speed",     speedVal,
+					"time_left", Utils.num2string(timeLeft, 0)
+				));
+			} else if(tracker instanceof ConversionTracker) {
+				ConversionTracker conversionTracker = (ConversionTracker) tracker;
 				double percent     = conversionTracker.getProgress() * 100.0;
 				double timeCurrent = conversionTracker.getCurrentTime();
 				double timeTotal   = conversionTracker.getTotalTime();
-				String progress = translation.getSingle("progress.conversion.update",
-				                                        "percent",      Utils.num2string(percent,     2),
-				                                        "time_current", Utils.num2string(timeCurrent, 2),
-				                                        "time_total",   Utils.num2string(timeTotal,   2));
-				info.update(progress);
-			} else if((currentTracker instanceof PlainTextTracker)) {
-				PlainTextTracker textTracker = (PlainTextTracker) currentTracker;
+				
+				info.update(translation.getSingle(
+					"progress.conversion.update",
+					"percent",      Utils.num2string(percent,     2),
+					"time_current", Utils.num2string(timeCurrent, 2),
+					"time_total",   Utils.num2string(timeTotal,   2)
+				));
+			} else if(tracker instanceof PlainTextTracker) {
+				PlainTextTracker textTracker = (PlainTextTracker) tracker;
 				double percent  = textTracker.getProgress() * 100.0;
 				String text     = textTracker.getText();
-				String progress = translation.getSingle("progress.plain",
-				                                        "percent", Utils.num2string(percent, 2),
-				                                        "text",    text);
-				info.update(progress);
-			} else if((currentTracker instanceof WaitTracker)) {
-				String progress = translation.getSingle("progress.waiting");
-				info.update(progress);
+				
+				info.update(translation.getSingle(
+					"progress.plain",
+					"percent", Utils.num2string(percent, 2),
+					"text",    text
+				));
+			} else if(tracker instanceof WaitTracker) {
+				info.update(translation.getSingle("progress.waiting"));
 			} else {
-				String progress = currentTracker.getTextProgress();
-				if(progress != null) info.update(progress);
+				String progress = tracker.getTextProgress();
+				
+				if(progress != null) {
+					info.update(progress);
+				}
 			}
 		}, PipelineEvent.UPDATE, DownloadEvent.UPDATE, ConversionEvent.UPDATE);
 		

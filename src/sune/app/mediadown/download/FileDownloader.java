@@ -14,6 +14,8 @@ import java.nio.file.Path;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 
+import sune.app.mediadown.InternalState;
+import sune.app.mediadown.TaskStates;
 import sune.app.mediadown.event.DownloadEvent;
 import sune.app.mediadown.event.EventRegistry;
 import sune.app.mediadown.event.EventType;

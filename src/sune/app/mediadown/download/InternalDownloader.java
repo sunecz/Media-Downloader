@@ -2,6 +2,7 @@ package sune.app.mediadown.download;
 
 import java.nio.file.Path;
 
+import sune.app.mediadown.HasTaskState;
 import sune.app.mediadown.event.DownloadEvent;
 import sune.app.mediadown.event.EventBindable;
 import sune.app.mediadown.event.EventCallable;

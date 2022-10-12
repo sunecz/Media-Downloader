@@ -20,8 +20,6 @@ public final class Downloaders {
 	
 	public static final Downloader forMedia(Media media) {
 		Objects.requireNonNull(media);
-		return holder.stream()
-				.filter((d) -> d.isDownloadable(media))
-				.findFirst().orElse(null);
+		return holder.stream().filter((d) -> d.isDownloadable(media)).findFirst().orElse(null);
 	}
 }

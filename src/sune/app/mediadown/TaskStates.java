@@ -1,4 +1,4 @@
-package sune.app.mediadown.download;
+package sune.app.mediadown;
 
 /** @since 00.02.08 */
 public final class TaskStates {

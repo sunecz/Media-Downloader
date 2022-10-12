@@ -1,4 +1,4 @@
-package sune.app.mediadown.download;
+package sune.app.mediadown;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.IntUnaryOperator;
@@ -19,6 +19,7 @@ public final class InternalState {
 	private final void setValue(IntUnaryOperator op) {
 		int oldValue = state.get();
 		int newValue = op.applyAsInt(oldValue);
+		
 		while(oldValue != newValue
 				&& !state.compareAndSet(oldValue, newValue)) {
 			oldValue = state.get();

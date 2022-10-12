@@ -13,7 +13,7 @@ public interface InputStreamChannelFactory {
 	static class GZIP implements InputStreamChannelFactory {
 		
 		private static final int DEFAULT_BUFFER_SIZE = 8192;
-		private static GZIP INSTANCE_DEFAULT;
+		private static GZIP DEFAULT;
 		
 		private final int bufferSize;
 		
@@ -22,7 +22,7 @@ public interface InputStreamChannelFactory {
 		}
 		
 		public static GZIP ofDefault() {
-			return INSTANCE_DEFAULT == null ? (INSTANCE_DEFAULT = new GZIP(DEFAULT_BUFFER_SIZE)) : INSTANCE_DEFAULT;
+			return DEFAULT == null ? (DEFAULT = new GZIP(DEFAULT_BUFFER_SIZE)) : DEFAULT;
 		}
 		
 		public static GZIP of(int bufferSize) {
