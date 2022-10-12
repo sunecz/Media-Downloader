@@ -4,6 +4,7 @@ import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.WRITE;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
@@ -71,6 +72,7 @@ public class FileDownloader implements InternalDownloader {
 	private DownloadConfiguration configuration;
 	
 	private DownloadTracker tracker;
+	private InputStreamChannelFactory responseChannelFactory;
 	
 	private String identifier;
 	private AtomicLong bytes = new AtomicLong();
@@ -196,7 +198,19 @@ public class FileDownloader implements InternalDownloader {
 		}
 		
 		// Finally, convert the response to readable channel
-		return Channels.newChannel(response.stream);
+		ReadableByteChannel channel = null;
+		InputStream stream = response.stream;
+		
+		if(responseChannelFactory != null) {
+			channel = responseChannelFactory.create(stream);
+		}
+		
+		// Default case, but the factory may also return null
+		if(channel == null) {
+			channel = Channels.newChannel(stream);
+		}
+		
+		return channel;
 	}
 	
 	private final ByteBuffer buffer() {
@@ -230,7 +244,7 @@ public class FileDownloader implements InternalDownloader {
 		}
 		
 		if(tracker == null) {
-			tracker = new DownloadTracker(-1L);
+			tracker = new DownloadTracker(-1L, false);
 			trackerManager.setTracker(tracker);
 		}
 		
@@ -356,6 +370,11 @@ public class FileDownloader implements InternalDownloader {
 	public void setTracker(DownloadTracker tracker) {
 		this.tracker = tracker;
 		trackerManager.setTracker(tracker);
+	}
+	
+	@Override
+	public void setResponseChannelFactory(InputStreamChannelFactory factory) {
+		this.responseChannelFactory = factory;
 	}
 	
 	@Override

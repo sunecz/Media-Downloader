@@ -17,6 +17,7 @@ public interface InternalDownloader extends EventBindable<DownloadEvent>, EventC
 	void stop() throws Exception;
 	
 	void setTracker(DownloadTracker tracker);
+	void setResponseChannelFactory(InputStreamChannelFactory factory);
 	
 	Request request();
 	Path output();
