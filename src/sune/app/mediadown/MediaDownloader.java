@@ -37,8 +37,12 @@ import sune.app.mediadown.configuration.ApplicationConfiguration;
 import sune.app.mediadown.configuration.ApplicationConfigurationAccessor;
 import sune.app.mediadown.configuration.ApplicationConfigurationAccessor.UsePreReleaseVersions;
 import sune.app.mediadown.configuration.Configuration;
-import sune.app.mediadown.event.EventSupport;
-import sune.app.mediadown.event.EventSupport.CompatibilityEventRegistry;
+import sune.app.mediadown.download.DownloadConfiguration;
+import sune.app.mediadown.download.FileDownloader;
+import sune.app.mediadown.event.DownloadEvent;
+import sune.app.mediadown.event.EventRegistry;
+import sune.app.mediadown.event.tracker.DownloadTracker;
+import sune.app.mediadown.event.tracker.TrackerManager;
 import sune.app.mediadown.gui.Dialog;
 import sune.app.mediadown.gui.DialogWindow;
 import sune.app.mediadown.gui.Menu;
@@ -84,10 +88,7 @@ import sune.app.mediadown.theme.Theme;
 import sune.app.mediadown.update.CheckListener;
 import sune.app.mediadown.update.FileCheckListener;
 import sune.app.mediadown.update.FileChecker;
-import sune.app.mediadown.update.FileDownloadListener;
-import sune.app.mediadown.update.FileDownloader;
 import sune.app.mediadown.update.RemoteConfiguration;
-import sune.app.mediadown.update.RemoteConfiguration.Property;
 import sune.app.mediadown.update.Requirements;
 import sune.app.mediadown.update.Updater;
 import sune.app.mediadown.update.Version;
@@ -101,6 +102,7 @@ import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.OSUtils;
 import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.PathSystem;
+import sune.app.mediadown.util.Property;
 import sune.app.mediadown.util.Reflection2;
 import sune.app.mediadown.util.Reflection3;
 import sune.app.mediadown.util.SelfProcess;
@@ -414,6 +416,45 @@ public final class MediaDownloader {
 			
 			@Override
 			public InitializationState run(Arguments args) {
+				final Path rootDir = Path.of(PathSystem.getCurrentDirectory());
+				final Property<Double> progressValue = new Property<>();
+				EventRegistry<DownloadEvent> eventRegistry = new EventRegistry<>();
+				
+				eventRegistry.add(DownloadEvent.BEGIN, (downloader) -> {
+					Path file = downloader.output();
+					String path = file.subpath(rootDir.getNameCount(), file.getNameCount()).toString();
+					
+					progressValue.setValue(getProgress());
+					setText(String.format("Downloading library %s...", path));
+					setProgress(0.0);
+				});
+				
+				eventRegistry.add(DownloadEvent.UPDATE, (pair) -> {
+					Path file = pair.a.output();
+					DownloadTracker tracker = (DownloadTracker) pair.b.getTracker();
+					double current = tracker.getCurrent();
+					double total = tracker.getTotal();
+					double percent0 = (current / (double) total);
+					double percent1 = (percent0 * 100.0);
+					
+					String path = file.subpath(rootDir.getNameCount(), file.getNameCount()).toString();
+					setText(String.format("Downloading library %s... %s%%", path, MathUtils.round(percent1, 2)));
+					setProgress(percent0);
+				});
+				
+				eventRegistry.add(DownloadEvent.END, (downloader) -> {
+					Path file = downloader.output();
+					String path = file.subpath(rootDir.getNameCount(), file.getNameCount()).toString();
+					
+					setText(String.format("Downloading library %s... Done", path));
+					setProgress(progressValue.getValue());
+				});
+				
+				eventRegistry.add(DownloadEvent.ERROR, (pair) -> {
+					setText(String.format("Downloading library... Error"));
+					setProgress(progressValue.getValue());
+				});
+				
 				Update.checkLibraries(new CheckListener() {
 					
 					@Override
@@ -455,46 +496,8 @@ public final class MediaDownloader {
 							}
 						};
 					}
-					
-					@Override
-					public FileDownloadListener fileDownloadListener() {
-						return new FileDownloadListener() {
-							
-							private final Path rootDir = Path.of(PathSystem.getCurrentDirectory());
-							private double pvalue;
-							
-							@Override
-							public void begin(String url, Path file) {
-								String path = file.subpath(rootDir.getNameCount(), file.getNameCount()).toString();
-								setText(String.format("Downloading library %s...", path));
-								pvalue = getProgress();
-								setProgress(0.0);
-							}
-							
-							@Override
-							public void update(String url, Path file, long current, long total) {
-								double percent0 = (current / (double) total);
-								double percent1 = (percent0 * 100.0);
-								String path = file.subpath(rootDir.getNameCount(), file.getNameCount()).toString();
-								setText(String.format("Downloading library %s... %s%%", path, MathUtils.round(percent1, 2)));
-								setProgress(percent0);
-							}
-							
-							@Override
-							public void end(String url, Path file) {
-								String path = file.subpath(rootDir.getNameCount(), file.getNameCount()).toString();
-								setText(String.format("Downloading library %s... Done", path));
-								setProgress(pvalue);
-							}
-							
-							@Override
-							public void error(Exception ex) {
-								setText(String.format("Downloading library... Error"));
-								setProgress(pvalue);
-							}
-						};
-					}
-				});
+				}, eventRegistry);
+				
 				return new LoadNativeLibraries();
 			}
 			
@@ -863,7 +866,7 @@ public final class MediaDownloader {
 			}
 		}
 		
-		public static final void checkLibraries(CheckListener listener) {
+		public static final void checkLibraries(CheckListener listener, EventRegistry<DownloadEvent> eventRegistry) {
 			try {
 				boolean checkIntegrity = configuration.isCheckResourcesIntegrity();
 				boolean checkLibraries = true;
@@ -880,10 +883,10 @@ public final class MediaDownloader {
 				if(checkLibraries) {
 					FileChecker checker = localFileChecker(true, (path) -> true);
 					String baseURL = Utils.urlConcat(URL_BASE_LIB, versionLib);
-					Updater.checkLibraries(baseURL, NIO.localPath(), TIMEOUT, listener, checker, null);
+					Updater.checkLibraries(baseURL, NIO.localPath(), TIMEOUT, listener, eventRegistry, checker, null);
 					version.set(Version.of(versionLib));
 				}
-			} catch(IOException ex) {
+			} catch(Exception ex) {
 				// Config cannot be accessed, just skip it
 			}
 		}
@@ -991,26 +994,30 @@ public final class MediaDownloader {
 					}
 				} while(true);
 				
-				// Create the download listener using the new event registry support
-				CompatibilityEventRegistry<FileDownloadListener> eventRegistry
-					= EventSupport.compatibilityEventRegistry(FileDownloadListener.class);
-				eventRegistry.add(eventRegistry.typeOf("begin"), (argsWrapper) -> {
+				FileDownloader downloader = new FileDownloader(new TrackerManager());
+				
+				downloader.addEventListener(DownloadEvent.BEGIN, (d) -> {
 					receiver.receive("Downloading the new version...");
 				});
-				eventRegistry.add(eventRegistry.typeOf("update"), (argsWrapper) -> {
-					long current = argsWrapper.get(2);
-					long total = argsWrapper.get(3);
+				
+				downloader.addEventListener(DownloadEvent.UPDATE, (pair) -> {
+					DownloadTracker tracker = (DownloadTracker) pair.b.getTracker();
+					long current = tracker.getCurrent();
+					long total = tracker.getTotal();
 					receiver.receive(String.format(Locale.US, "Downloading the new version... %.2f%%", current * 100.0 / total));
 				});
-				eventRegistry.add(eventRegistry.typeOf("end"), (argsWrapper) -> {
+				
+				downloader.addEventListener(DownloadEvent.END, (d) -> {
 					receiver.receive("Downloading the new version... done");
 				});
-				eventRegistry.add(eventRegistry.typeOf("error"), (argsWrapper) -> {
-					error(argsWrapper.get(0));
+				
+				downloader.addEventListener(DownloadEvent.ERROR, (pair) -> {
+					error(pair.b);
 				});
 				
 				// Download the new version's JAR file
-				FileDownloader.download(jarUrl, newJar, eventRegistry.proxy());
+				GetRequest request = new GetRequest(Utils.url(jarUrl), Shared.USER_AGENT);
+				downloader.start(request, newJar, DownloadConfiguration.ofDefault());
 				
 				// Get the current run command, so that the application can be run again
 				String runCommand = SelfProcess.command(List.of(args.args()));
@@ -1172,7 +1179,7 @@ public final class MediaDownloader {
 			return flags.isEmpty() || flags.contains(flag);
 		}
 		
-		public static final void addResource(String name, Property property) {
+		public static final void addResource(String name, RemoteConfiguration.Property property) {
 			Set<String> flags = property.flags();
 			String version = property.value();
 			if(hasFlag(flags, OS_WIN64)) Resources.add(name, name, version, OS_WIN64);
@@ -1821,39 +1828,6 @@ public final class MediaDownloader {
 		}
 	}
 	
-	private static final class PluginFileDownloadListener implements FileDownloadListener {
-		
-		private final StringReceiver receiver = InitializationStates::setText;
-		
-		@Override
-		public void begin(String url, Path file) {
-			String text = String.format("Downloading plugin %s...",
-			                            file.getFileName().toString());
-			receiver.receive(text);
-		}
-		
-		@Override
-		public void end(String url, Path file) {
-			String text = String.format("Downloading plugin %s... done",
-			                            file.getFileName().toString());
-			receiver.receive(text);
-		}
-		
-		@Override
-		public void update(String url, Path file, long current, long total) {
-			double percent = current / (double) total;
-			String text = String.format("Downloading plugin %s... %.2f%%",
-			                            file.getFileName().toString(),
-			                            percent);
-			receiver.receive(text);
-		}
-		
-		@Override
-		public void error(Exception ex) {
-			MediaDownloader.error(ex);
-		}
-	}
-	
 	private static final class PluginListObtainer {
 		
 		private static final String URL_DIR = URL_BASE_DAT + "plugin/";
@@ -1920,18 +1894,62 @@ public final class MediaDownloader {
 		}
 	}
 	
+	/** @since 00.02.08 */
+	private static final void bindPluginDownloadEvents(FileDownloader downloader) {
+		final StringReceiver receiver = InitializationStates::setText;
+		
+		downloader.addEventListener(DownloadEvent.BEGIN, (d) -> {
+			receiver.receive(String.format(
+				"Downloading plugin %s...",
+				d.output().getFileName().toString()
+			));
+		});
+		
+		downloader.addEventListener(DownloadEvent.END, (d) -> {
+			receiver.receive(String.format(
+				"Downloading plugin %s... done",
+				d.output().getFileName().toString()
+			));
+		});
+		
+		downloader.addEventListener(DownloadEvent.UPDATE, (pair) -> {
+			DownloadTracker tracker = (DownloadTracker) pair.b.getTracker();
+			long current = tracker.getCurrent();
+			long total = tracker.getTotal();
+			double percent = current / (double) total;
+			
+			receiver.receive(String.format(
+				"Downloading plugin %s... %.2f%%",
+				pair.a.output().getFileName().toString(),
+				percent
+			));
+		});
+		
+		downloader.addEventListener(DownloadEvent.ERROR, (pair) -> {
+			error(pair.b);
+		});
+	}
+	
 	private static final void initDefaultPlugins() {
 		try {
-			FileDownloadListener listener = new PluginFileDownloadListener();
+			FileDownloader downloader = new FileDownloader(new TrackerManager());
+			DownloadConfiguration downloadConfiguration = DownloadConfiguration.ofDefault();
+			bindPluginDownloadEvents(downloader);
+			
 			for(Pair<String, String> plugin : PluginListObtainer.obtain()) {
 				String fileName = plugin.b.replaceAll("[^A-Za-z0-9]+", "-").replaceFirst("^plugin-", "") + ".jar";
 				Path path = NIO.localPath(BASE_RESOURCE, "plugin", fileName);
+				
 				if(!NIO.exists(path)) {
-					String versionURL = PluginUpdater.newestVersionURL(plugin.a);
+					String versionUrl = PluginUpdater.newestVersionURL(plugin.a);
+					
 					// Check whether there is a file available for the current application version
-					if((versionURL != null)) {
-						String jarURL = Utils.urlConcat(versionURL, "plugin.jar");
-						FileDownloader.download(jarURL, path, listener);
+					if(versionUrl != null) {
+						String jarUrl = Utils.urlConcat(versionUrl, "plugin.jar");
+						GetRequest request = new GetRequest(Utils.url(jarUrl), Shared.USER_AGENT);
+						
+						NIO.createDir(path.getParent()); // Ensure parent directory
+						downloader.start(request, path, downloadConfiguration);
 					}
 				}
 			}
@@ -1941,17 +1959,21 @@ public final class MediaDownloader {
 	}
 	
 	private static final void registerPlugins() {
-		Path folder = NIO.localPath(BASE_RESOURCE, "plugin");
+		Path dir = NIO.localPath(BASE_RESOURCE, "plugin");
+		
 		// Ignore, if no such folder exists
-		if(!NIO.exists(folder))
-			return;
+		if(!NIO.exists(dir)) return;
+		
 		// Find and register all the plugins
 		try {
-			StringReceiver receiver = InitializationStates::setText;
-			FileDownloadListener listener = new PluginFileDownloadListener();
-			Files.walk(folder)
+			final StringReceiver receiver = InitializationStates::setText;
+			FileDownloader downloader = new FileDownloader(new TrackerManager());
+			DownloadConfiguration downloadConfiguration = DownloadConfiguration.ofDefault();
+			bindPluginDownloadEvents(downloader);
+			
+			Files.walk(dir)
 				// Filter out only the files
-				.filter((p) -> Files.isRegularFile(p))
+				.filter(Files::isRegularFile)
 				// Sort files in the same directory lexicographically but put shorter names first
 				.sorted((a, b) -> {
 					// Check whether the files are in the same directory
@@ -1959,18 +1981,21 @@ public final class MediaDownloader {
 						String[] aNames = Utils.fileNameNoType(a.getFileName().toString()).split("-");
 						String[] bNames = Utils.fileNameNoType(b.getFileName().toString()).split("-");
 						int cmp, i = 0, l = Math.min(aNames.length, bNames.length);
+						
 						do {
 							String aName = aNames[i];
 							String bName = bNames[i];
 							cmp = aName.compareTo(bName);
 							++i;
 						} while(cmp == 0 && i < l);
+						
 						// The names are the same up to the smallest length
 						if(cmp == 0) {
 							// Select the path with smaller length
 							return aNames.length < bNames.length ? -1 : 1;
 						}
 					}
+					
 					// If they are not in the same directory, use default comparison
 					return a.compareTo(b);
 				})
@@ -1981,29 +2006,44 @@ public final class MediaDownloader {
 					} catch(Exception ex) {
 						error(ex);
 					}
+					
 					// Cannot load, will be filtered out
 					return null;
 				})
-				.filter((plugin) -> plugin != null)
+				.filter(Objects::nonNull)
 				.map((plugin) -> {
 					try {
 						// Update the plugin, if needed
-						if((configuration.isPluginsAutoUpdateCheck() || forceCheckPlugins)) {
-							receiver.receive(String.format("Checking plugin %s...", plugin.getPlugin().instance().name()));
+						if(configuration.isPluginsAutoUpdateCheck() || forceCheckPlugins) {
+							receiver.receive(String.format(
+								"Checking plugin %s...",
+								plugin.getPlugin().instance().name()
+							));
+							
 							String pluginURL = PluginUpdater.check(plugin);
+							
 							// Check whether there is a newer version of the plugin
-							if((pluginURL != null)) {
+							if(pluginURL != null) {
 								Path file = Path.of(plugin.getPath());
-								FileDownloader.download(pluginURL, file, listener);
+								GetRequest request = new GetRequest(Utils.url(pluginURL), Shared.USER_AGENT);
+								
+								NIO.createDir(file.getParent()); // Ensure parent directory
+								downloader.start(request, file, downloadConfiguration);
+								
 								// Must reload the plugin, otherwise it will have incorrect information
 								PluginFile.resetPluginFileLoader();
 								plugin = PluginFile.from(file);
 							}
-							receiver.receive(String.format("Checking plugin %s... done", plugin.getPlugin().instance().name()));
+							
+							receiver.receive(String.format(
+								"Checking plugin %s... done",
+								plugin.getPlugin().instance().name()
+							));
 						}
 					} catch(Exception ex) {
 						error(ex);
 					}
+					
 					return plugin;
 				})
 				// Add the plugin to the list, so it will be loaded

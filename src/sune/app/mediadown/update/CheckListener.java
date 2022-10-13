@@ -7,6 +7,5 @@ public interface CheckListener {
 	void compare(String name);
 	void end();
 	// Listeners
-	FileCheckListener    fileCheckListener();
-	FileDownloadListener fileDownloadListener();
+	FileCheckListener fileCheckListener();
 }

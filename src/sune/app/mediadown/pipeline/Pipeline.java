@@ -58,6 +58,15 @@ public final class Pipeline {
 				eventBindable.addEventListener(type, (Listener<E>) listener);
 			}
 		}
+		
+		/** @since 00.02.08 */
+		@SuppressWarnings("unchecked")
+		@SafeVarargs
+		public final void addMany(Listener<?> listener, EventType<? extends IEventType, ?>... types) {
+			for(EventType<? extends IEventType, ?> type : types) {
+				add((EventType<? extends IEventType, Object>) type, (Listener<Object>) listener);
+			}
+		}
 	}
 	
 	private final PipelineEventRegistry eventRegistry = new PipelineEventRegistry();

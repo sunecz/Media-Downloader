@@ -1,24 +1,21 @@
 package sune.app.mediadown.resource;
 
-import static java.nio.file.StandardOpenOption.CREATE;
-import static java.nio.file.StandardOpenOption.WRITE;
-
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.URL;
-import java.nio.ByteBuffer;
-import java.nio.channels.Channels;
-import java.nio.channels.FileChannel;
-import java.nio.channels.ReadableByteChannel;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Predicate;
-import java.util.zip.GZIPInputStream;
 
+import sune.app.mediadown.Shared;
+import sune.app.mediadown.download.DownloadConfiguration;
+import sune.app.mediadown.download.FileDownloader;
+import sune.app.mediadown.download.InputStreamChannelFactory;
+import sune.app.mediadown.event.DownloadEvent;
 import sune.app.mediadown.event.EventRegistry;
 import sune.app.mediadown.event.EventType;
 import sune.app.mediadown.event.IEventType;
@@ -28,16 +25,13 @@ import sune.app.mediadown.event.tracker.TrackerManager;
 import sune.app.mediadown.update.CheckListener;
 import sune.app.mediadown.update.FileCheckListener;
 import sune.app.mediadown.update.FileChecker;
-import sune.app.mediadown.update.FileDownloadListener;
 import sune.app.mediadown.update.Requirements;
 import sune.app.mediadown.update.Updater;
 import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.PathSystem;
-import sune.app.mediadown.util.UserAgent;
 import sune.app.mediadown.util.Utils;
-import sune.app.mediadown.util.Web;
-import sune.app.mediadown.util.Web.HeadRequest;
+import sune.app.mediadown.util.Web.GetRequest;
 
 /** @since 00.02.02 */
 public final class JRE {
@@ -131,19 +125,21 @@ public final class JRE {
 	
 	public static final class DownloadEventContext<C> extends EventContext<C> {
 		
-		private final URL url;
+		/** @since 00.02.08 */
+		private final URI uri;
 		private final Path path;
 		private final DownloadTracker tracker;
-
-		public DownloadEventContext(C context, URL url, Path path, DownloadTracker tracker) {
+		
+		public DownloadEventContext(C context, URI uri, Path path, DownloadTracker tracker) {
 			super(context);
-			this.url = url;
-			this.path = path;
-			this.tracker = tracker;
+			this.uri = Objects.requireNonNull(uri);
+			this.path = Objects.requireNonNull(path);
+			this.tracker = Objects.requireNonNull(tracker);
 		}
 		
-		public URL url() {
-			return url;
+		/** @since 00.02.08 */
+		public URI uri() {
+			return uri;
 		}
 		
 		public Path path() {
@@ -215,30 +211,38 @@ public final class JRE {
 			this.eventRegistry = eventRegistry;
 		}
 		
-		private final ReadableByteChannel channel(DownloadEventContext<JRE> context, URL url) throws Exception {
-			long total = Web.size(new HeadRequest(url, UserAgent.CHROME));
-			return new DownloadByteChannel(context, url.openStream(), total);
-		}
-		
-		private final void download(URL url, Path dest) throws Exception {
-			if(url == null || dest == null)
-				throw new IllegalArgumentException();
-			DownloadTracker tracker = new DownloadTracker(0L, false);
-			tracker.setTrackerManager(manager);
-			DownloadEventContext<JRE> context
-				= new DownloadEventContext<>(JRE.this, url, dest, tracker);
+		/** @since 00.02.08 */
+		private final void download(URI uri, Path destination) throws Exception {
+			Objects.requireNonNull(uri);
+			Objects.requireNonNull(destination);
+			
 			// To be sure, delete the file first, so a fresh copy is downloaded.
-			NIO.deleteFile(dest);
-			NIO.createDir(dest.getParent());
-			try(ReadableByteChannel dbc = channel(context, url);
-				FileChannel         fch = FileChannel.open(dest, CREATE, WRITE)) {
-				// Notify the listener, if needed
+			NIO.deleteFile(destination);
+			NIO.createDir(destination.getParent());
+			
+			FileDownloader downloader = new FileDownloader(manager);
+			downloader.setResponseChannelFactory(InputStreamChannelFactory.GZIP.ofDefault());
+			
+			DownloadTracker tracker = new DownloadTracker(-1L, false);
+			downloader.setTracker(tracker);
+			
+			DownloadEventContext<JRE> context
+				= new DownloadEventContext<>(JRE.this, uri, destination, tracker);
+			
+			downloader.addEventListener(DownloadEvent.BEGIN, (d) -> {
 				eventRegistry.call(JREEvent.DOWNLOAD_BEGIN, context);
-				// Actually download the file
-				fch.transferFrom(dbc, 0L, Long.MAX_VALUE);
-				// Notify the listener, if needed
+			});
+			
+			downloader.addEventListener(DownloadEvent.UPDATE, (pair) -> {
+				eventRegistry.call(JREEvent.DOWNLOAD_UPDATE, context);
+			});
+			
+			downloader.addEventListener(DownloadEvent.END, (d) -> {
 				eventRegistry.call(JREEvent.DOWNLOAD_END, context);
-			}
+			});
+			
+			GetRequest request = new GetRequest(Utils.url(uri), Shared.USER_AGENT);
+			downloader.start(request, destination, DownloadConfiguration.ofDefault());
 		}
 		
 		private final Path ensurePathInDirectory(Path file, Path dir, boolean resolve) {
@@ -268,7 +272,7 @@ public final class JRE {
 			if(!NIO.exists(baseDirNew)) NIO.createDir(baseDirNew);
 			Path localPath = PathSystem.getPath(CLAZZ, "");
 			return Updater.checkResources(baseURL, baseDirOld, TIMEOUT, checkListener(), checker,
-				(url, file) -> download(Utils.url(url), ensurePathInDirectory(baseDirOld.relativize(file), baseDirNew, true)),
+				(url, file) -> download(Utils.uri(url), ensurePathInDirectory(baseDirOld.relativize(file), baseDirNew, true)),
 				(file, webDir) -> Utils.urlConcat(webDir, ensurePathInDirectory(localPath.relativize(file), baseDirOld, false).toString().replace('\\', '/')),
 				(file) -> ensurePathInDirectory(localPath.relativize(file), baseDirOld, true),
 				(entryLoc, entryWeb) -> {
@@ -295,60 +299,7 @@ public final class JRE {
 				@Override public void begin() {}
 				@Override public void end() {}
 				@Override public FileCheckListener fileCheckListener() { return null; /* Not used */ }
-				@Override public FileDownloadListener fileDownloadListener() { return null; /* Not used */ }
 			};
-		}
-		
-		private final class DownloadByteChannel implements ReadableByteChannel {
-			
-			private final DownloadEventContext<JRE> context;
-			private final ReadableByteChannel channel;
-			
-			public DownloadByteChannel(DownloadEventContext<JRE> context, InputStream stream, long total)
-					throws IOException {
-				this.context = context;
-				this.context.tracker().updateTotal(total);
-				this.channel = Channels.newChannel(new GZIPInputStream(new UIS(stream)));
-			}
-			
-			@Override
-			public boolean isOpen() {
-				return channel.isOpen();
-			}
-			
-			@Override
-			public void close() throws IOException {
-				channel.close();
-			}
-			
-			@Override
-			public int read(ByteBuffer dst) throws IOException {
-				return channel.read(dst);
-			}
-			
-			// Underlying input stream implementation
-			private final class UIS extends InputStream {
-				
-				private final InputStream stream;
-				
-				public UIS(InputStream stream) {
-					this.stream = stream;
-				}
-				
-				@Override
-				public int read() throws IOException {
-					return stream.read();
-				}
-				
-				@Override
-				public int read(byte[] buf, int off, int len) throws IOException {
-					// Call the underlying method
-					int read = stream.read(buf, off, len);
-					context.tracker().update(read);
-					eventRegistry.call(JREEvent.DOWNLOAD_UPDATE, context);
-					return read;
-				}
-			}
 		}
 	}
 }

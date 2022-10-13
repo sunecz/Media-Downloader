@@ -8,7 +8,8 @@ import java.nio.file.Path;
 import sune.app.mediadown.Download;
 import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.Shared;
-import sune.app.mediadown.download.SingleFileDownloader;
+import sune.app.mediadown.download.DownloadConfiguration;
+import sune.app.mediadown.download.FileDownloader;
 import sune.app.mediadown.event.DownloadEvent;
 import sune.app.mediadown.event.EventType;
 import sune.app.mediadown.event.Listener;
@@ -93,39 +94,28 @@ public final class PluginUpdater {
 	public static final Download update(String pluginURL, Path file) {
 		return new Download() {
 			
-			private final GetRequest request;
-			private final long size;
-			private final SingleFileDownloader downloader;
+			private final FileDownloader downloader = new FileDownloader(new TrackerManager());
 			
-			{
-				request    = new GetRequest(Utils.url(pluginURL), Shared.USER_AGENT);
-				size       = Utils.ignore(() -> Web.size(request.toHeadRequest()), -1L);
-				downloader = new SingleFileDownloader(new TrackerManager());
+			@Override
+			public void start() throws Exception {
+				GetRequest request = new GetRequest(Utils.url(pluginURL), Shared.USER_AGENT);
+				long size = Utils.ignore(() -> Web.size(request.toHeadRequest()), -1L);
+				downloader.start(request, file, new DownloadConfiguration(size));
 			}
 			
 			@Override
-			public void start() {
-				downloader.start(request, file, this, size);
-			}
-			
-			@Override
-			public void stop() {
+			public void stop() throws Exception {
 				downloader.stop();
 			}
 			
 			@Override
-			public void pause() {
+			public void pause() throws Exception {
 				downloader.pause();
 			}
 			
 			@Override
-			public void resume() {
+			public void resume() throws Exception {
 				downloader.resume();
-			}
-			
-			@Override
-			public boolean isStarted() {
-				return downloader.isStarted();
 			}
 			
 			@Override
@@ -134,18 +124,28 @@ public final class PluginUpdater {
 			}
 			
 			@Override
-			public boolean isPaused() {
-				return downloader.isPaused();
-			}
-			
-			@Override
 			public boolean isDone() {
 				return downloader.isDone();
 			}
 			
 			@Override
+			public boolean isStarted() {
+				return downloader.isStarted();
+			}
+			
+			@Override
+			public boolean isPaused() {
+				return downloader.isPaused();
+			}
+			
+			@Override
 			public boolean isStopped() {
 				return downloader.isStopped();
+			}
+			
+			@Override
+			public boolean isError() {
+				return downloader.isError();
 			}
 			
 			@Override

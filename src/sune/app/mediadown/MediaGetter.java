@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Map;
 
 import javafx.scene.image.Image;
-import sune.app.mediadown.download.DownloadConfiguration;
 import sune.app.mediadown.media.Media;
 import sune.app.mediadown.util.CheckedBiFunction;
 import sune.app.mediadown.util.WorkerProxy;
@@ -38,11 +37,6 @@ public interface MediaGetter {
 	default boolean isCompatibleURL(String url) {
 		// Just return false, this method is not needed to be implemented
 		return false;
-	}
-	
-	default DownloadConfiguration getDownloadConfiguration() {
-		// Just return the default configuration, this method is not needed to be implemented
-		return DownloadConfiguration.getDefault();
 	}
 	
 	/** @since 00.02.07 */
