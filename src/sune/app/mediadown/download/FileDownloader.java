@@ -201,18 +201,21 @@ public class FileDownloader implements InternalDownloader {
 		
 		// Finally, convert the response to readable channel
 		ReadableByteChannel channel = null;
+		InternalInputStream iis = null;
 		InputStream stream = response.stream;
 		
 		if(responseChannelFactory != null) {
-			channel = responseChannelFactory.create(stream);
+			iis = new InternalInputStream(stream);
+			channel = responseChannelFactory.create(iis);
 		}
 		
 		// Default case, but the factory may also return null
 		if(channel == null) {
+			iis = null;
 			channel = Channels.newChannel(stream);
 		}
 		
-		return channel;
+		return InternalChannel.maybeWrap(channel, iis);
 	}
 	
 	private final ByteBuffer buffer() {
@@ -442,5 +445,69 @@ public class FileDownloader implements InternalDownloader {
 	@Override
 	public boolean isError() {
 		return state.is(TaskStates.ERROR);
+	}
+	
+	private static final class InternalInputStream extends InputStream {
+		
+		private final InputStream stream;
+		private int lastBytesCount;
+		
+		public InternalInputStream(InputStream stream) {
+			this.stream = Objects.requireNonNull(stream);
+		}
+		
+		@Override
+		public int read() throws IOException {
+			int b = stream.read();
+			lastBytesCount = 1;
+			return b;
+		}
+		
+		@Override
+		public int read(byte[] b) throws IOException {
+			return lastBytesCount = stream.read(b);
+		}
+		
+		@Override
+		public int read(byte[] b, int off, int len) throws IOException {
+			return lastBytesCount = stream.read(b, off, len);
+		}
+		
+		public void resetLastBytesCount() {
+			lastBytesCount = 0;
+		}
+		
+		public int lastBytesCount() {
+			return lastBytesCount;
+		}
+	}
+	
+	private static final class InternalChannel implements ReadableByteChannel {
+		
+		private final ReadableByteChannel channel;
+		private final InternalInputStream stream;
+		
+		private InternalChannel(ReadableByteChannel channel, InternalInputStream stream) {
+			this.channel = Objects.requireNonNull(channel);
+			this.stream = Objects.requireNonNull(stream);
+		}
+		
+		public static final ReadableByteChannel maybeWrap(ReadableByteChannel channel, InternalInputStream stream) {
+			return stream != null ? new InternalChannel(channel, stream) : channel;
+		}
+		
+		@Override public boolean isOpen() { return channel.isOpen(); }
+		@Override public void close() throws IOException { channel.close(); }
+		
+		@Override
+		public int read(ByteBuffer dst) throws IOException {
+			stream.resetLastBytesCount();
+			
+			if(channel.read(dst) < 0) {
+				return -1; // Forward EOS
+			}
+			
+			return stream.lastBytesCount();
+		}
 	}
 }
