@@ -1,4 +1,5 @@
 package sune.app.mediadown.event;
 
-public class EventType<T extends IEventType, E> {
+/** @since 00.02.08 */
+public interface EventType {
 }

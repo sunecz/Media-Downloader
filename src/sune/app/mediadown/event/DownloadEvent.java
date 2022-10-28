@@ -5,26 +5,26 @@ import sune.app.mediadown.event.tracker.TrackerManager;
 import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.Utils;
 
-public final class DownloadEvent implements IEventType {
+public final class DownloadEvent implements EventType {
 	
-	public static final EventType<DownloadEvent, InternalDownloader>                       BEGIN  = new EventType<>();
-	public static final EventType<DownloadEvent, Pair<InternalDownloader, TrackerManager>> UPDATE = new EventType<>();
-	public static final EventType<DownloadEvent, InternalDownloader>                       END    = new EventType<>();
-	public static final EventType<DownloadEvent, Pair<InternalDownloader, Exception>>      ERROR  = new EventType<>();
-	public static final EventType<DownloadEvent, InternalDownloader>                       PAUSE  = new EventType<>();
-	public static final EventType<DownloadEvent, InternalDownloader>                       RESUME = new EventType<>();
+	public static final Event<DownloadEvent, InternalDownloader>                       BEGIN  = new Event<>();
+	public static final Event<DownloadEvent, Pair<InternalDownloader, TrackerManager>> UPDATE = new Event<>();
+	public static final Event<DownloadEvent, InternalDownloader>                       END    = new Event<>();
+	public static final Event<DownloadEvent, Pair<InternalDownloader, Exception>>      ERROR  = new Event<>();
+	public static final Event<DownloadEvent, InternalDownloader>                       PAUSE  = new Event<>();
+	public static final Event<DownloadEvent, InternalDownloader>                       RESUME = new Event<>();
 	
-	private static EventType<DownloadEvent, ?>[] VALUES;
+	private static Event<DownloadEvent, ?>[] values;
 	
 	// Forbid anyone to create an instance of this class
 	private DownloadEvent() {
 	}
 	
-	public static final EventType<DownloadEvent, ?>[] values() {
-		if(VALUES == null) {
-			VALUES = Utils.array(BEGIN, UPDATE, END, ERROR, PAUSE, RESUME);
+	public static final Event<DownloadEvent, ?>[] values() {
+		if(values == null) {
+			values = Utils.array(BEGIN, UPDATE, END, ERROR, PAUSE, RESUME);
 		}
 		
-		return VALUES;
+		return values;
 	}
 }

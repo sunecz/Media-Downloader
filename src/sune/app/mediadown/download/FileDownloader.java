@@ -17,8 +17,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import sune.app.mediadown.InternalState;
 import sune.app.mediadown.TaskStates;
 import sune.app.mediadown.event.DownloadEvent;
+import sune.app.mediadown.event.Event;
 import sune.app.mediadown.event.EventRegistry;
-import sune.app.mediadown.event.EventType;
 import sune.app.mediadown.event.Listener;
 import sune.app.mediadown.event.tracker.DownloadTracker;
 import sune.app.mediadown.event.tracker.TrackerManager;
@@ -383,23 +383,23 @@ public class FileDownloader implements InternalDownloader {
 	}
 	
 	@Override
-	public <E> void addEventListener(EventType<DownloadEvent, E> type, Listener<E> listener) {
-		eventRegistry.add(type, listener);
+	public <V> void addEventListener(Event<? extends DownloadEvent, V> event, Listener<V> listener) {
+		eventRegistry.add(event, listener);
 	}
 	
 	@Override
-	public <E> void removeEventListener(EventType<DownloadEvent, E> type, Listener<E> listener) {
-		eventRegistry.remove(type, listener);
+	public <V> void removeEventListener(Event<? extends DownloadEvent, V> event, Listener<V> listener) {
+		eventRegistry.remove(event, listener);
 	}
 	
 	@Override
-	public <E> void call(EventType<DownloadEvent, E> type) {
-		eventRegistry.call(type);
+	public <V> void call(Event<? extends DownloadEvent, V> event) {
+		eventRegistry.call(event);
 	}
 	
 	@Override
-	public <E> void call(EventType<DownloadEvent, E> type, E value) {
-		eventRegistry.call(type, value);
+	public <V> void call(Event<? extends DownloadEvent, V> event, V value) {
+		eventRegistry.call(event, value);
 	}
 	
 	@Override

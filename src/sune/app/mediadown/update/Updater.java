@@ -14,7 +14,6 @@ import sune.app.mediadown.event.EventRegistry;
 import sune.app.mediadown.event.tracker.TrackerManager;
 import sune.app.mediadown.update.FileChecker.FileCheckerEntry;
 import sune.app.mediadown.util.BiCallback;
-import sune.app.mediadown.util.EventUtils;
 import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.ThrowableBiConsumer;
 import sune.app.mediadown.util.Utils;
@@ -78,7 +77,7 @@ public final class Updater {
 		FileChecker checkerLoc = checker;
 		
 		FileDownloader downloader = new FileDownloader(new TrackerManager());
-		EventUtils.bind(downloader, eventRegistry, DownloadEvent.values());
+		eventRegistry.bindAll(downloader, DownloadEvent.values());
 		
 		for(FileCheckerEntry entry : checkerWeb.entries()) {
 			Path webPath = localDir.relativize(entry.getPath());

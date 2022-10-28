@@ -50,13 +50,13 @@ public final class EventSupport {
 		}
 	}
 	
-	public static class CompatibilityEventRegistry<T> extends EventRegistry<IEventType> {
+	public static class CompatibilityEventRegistry<T> extends EventRegistry<EventType> {
 		
 		private final Class<T> clazz;
 		private final Class<?>[] interfaces;
 		private T proxy;
 		
-		private final Map<String, EventType<IEventType, ArgsWrapper>> eventTypes = new HashMap<>();
+		private final Map<String, Event<EventType, ArgsWrapper>> events = new HashMap<>();
 		
 		private CompatibilityEventRegistry(Class<T> clazz) {
 			if(!clazz.isInterface())
@@ -146,40 +146,40 @@ public final class EventSupport {
 			return builder.toString();
 		}
 		
-		private final EventType<IEventType, ArgsWrapper> typeOf(boolean givenArgs, String methodId, Method method) {
-			EventType<IEventType, ArgsWrapper> eventType = new EventType<>();
-			eventTypes.put(methodId, eventType);
+		private final Event<EventType, ArgsWrapper> eventOf(boolean givenArgs, String methodId, Method method) {
+			Event<EventType, ArgsWrapper> eventType = new Event<>();
+			events.put(methodId, eventType);
 			if(!givenArgs) {
-				// Recompute method id and values to the maps, so that the event type can also be obtained
+				// Recompute method id and values to the maps, so that the event can also be obtained
 				// using a method instance in the proxy class.
 				methodId = methodId(method);
-				eventTypes.put(methodId, eventType);
+				events.put(methodId, eventType);
 			}
 			return eventType;
 		}
 		
-		private final EventType<IEventType, ArgsWrapper> typeOf(Method method) {
+		private final Event<EventType, ArgsWrapper> eventOf(Method method) {
 			String methodId = methodId(method);
-			EventType<IEventType, ArgsWrapper> eventType;
-			return (eventType = eventTypes.get(methodId)) != null
+			Event<EventType, ArgsWrapper> eventType;
+			return (eventType = events.get(methodId)) != null
 						? eventType
-						: typeOf(true, methodId, method);
+						: eventOf(true, methodId, method);
 		}
 		
-		public EventType<IEventType, ArgsWrapper> typeOf(String methodName) {
+		public Event<EventType, ArgsWrapper> eventOf(String methodName) {
 			String methodId = methodId(false, methodName);
-			EventType<IEventType, ArgsWrapper> eventType;
-			return (eventType = eventTypes.get(methodId)) != null
+			Event<EventType, ArgsWrapper> eventType;
+			return (eventType = events.get(methodId)) != null
 						? eventType
-						: typeOf(false, methodId, findMethodNoArgs(methodName));
+						: eventOf(false, methodId, findMethodNoArgs(methodName));
 		}
 		
-		public EventType<IEventType, ArgsWrapper> typeOfWithArgs(String methodName, Class<?>... classes) {
+		public Event<EventType, ArgsWrapper> eventOfWithArgs(String methodName, Class<?>... classes) {
 			String methodId = methodId(true, methodName, classes);
-			EventType<IEventType, ArgsWrapper> eventType;
-			return (eventType = eventTypes.get(methodId)) != null
+			Event<EventType, ArgsWrapper> eventType;
+			return (eventType = events.get(methodId)) != null
 						? eventType
-						: typeOf(true, methodId, findMethodWithArgs(methodName, classes));
+						: eventOf(true, methodId, findMethodWithArgs(methodName, classes));
 		}
 		
 		public T proxy() {
@@ -195,7 +195,7 @@ public final class EventSupport {
 			
 			@Override
 			public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-				call0(typeOf(method), new ArgsWrapper(args));
+				call(eventOf(method), new ArgsWrapper(args));
 				return null;
 			}
 		}

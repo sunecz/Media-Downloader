@@ -1,67 +1,67 @@
 package sune.app.mediadown.event;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
-public class EventRegistry<T extends IEventType> {
+import sune.app.mediadown.util.Utils;
+
+public class EventRegistry<T extends EventType> implements EventCallable<T> {
 	
-	private final ListMap<EventType<T, ?>, Listener<?>>
-		listeners = new ListMap<>();
+	protected final Map<Event<?, ?>, Queue<Listener<?>>> listeners = new ConcurrentHashMap<>();
 	
-	public <E> void add(EventType<T, E> type, Listener<E> listener) {
-		if(type == null || listener == null) {
-			throw new IllegalArgumentException(
-				"Event type and listener cannot be null!");
-		}
-		synchronized(listeners) {
-			listeners.ensure(type).add(listener);
+	@SuppressWarnings("unchecked")
+	protected final <V> void invokeListeners(Event<? extends T, V> event, V value) {
+		Optional.ofNullable(listeners.get(event)).ifPresent((q) -> q.forEach((l) -> ((Listener<V>) l).call(value)));
+	}
+	
+	public final <V> void add(Event<? extends T, V> event, Listener<V> listener) {
+		listeners.computeIfAbsent(event, (k) -> new ConcurrentLinkedQueue<>()).add(listener);
+	}
+	
+	@SafeVarargs
+	public final void addMany(Listener<?> listener, Event<? extends T, ?>... events) {
+		for(Event<? extends T, ?> event : events) {
+			add(Utils.<Event<? extends T, Object>>cast(event), Utils.<Listener<Object>>cast(listener));
 		}
 	}
 	
-	public <E> void remove(EventType<T, E> type, Listener<E> listener) {
-		if(type == null || listener == null) {
-			throw new IllegalArgumentException(
-				"Event type and listener cannot be null!");
-		}
-		synchronized(listeners) {
-			listeners.ensure(type).remove(listener);
-		}
+	public final <V> void remove(Event<? extends T, V> event) {
+		listeners.remove(event);
 	}
 	
-	public <E> void call(EventType<T, E> type) {
-		call0(type, null);
+	public final <V> void remove(Event<? extends T, V> event, Listener<V> listener) {
+		Optional.ofNullable(listeners.get(event)).ifPresent((q) -> q.remove(listener));
 	}
 	
-	public <E> void call(EventType<T, E> type, E value) {
-		call0(type, value);
+	@Override
+	public final <V> void call(Event<? extends T, V> event) {
+		invokeListeners(event, null);
+	}
+	
+	@Override
+	public final <V> void call(Event<? extends T, V> event, V value) {
+		invokeListeners(event, value);
+	}
+	
+	public final <V> List<Listener<?>> listenersOfEvent(Event<? extends T, V> event) {
+		return List.copyOf(Optional.ofNullable(listeners.get(event)).orElseGet(() -> new ConcurrentLinkedQueue<>()));
+	}
+	
+	public final void clear() {
+		listeners.clear();
 	}
 	
 	@SuppressWarnings("unchecked")
-	<E> void call0(EventType<T, E> type, E value) {
-		if(type == null) {
-			throw new IllegalArgumentException(
-				"Event type cannot be null!");
-		}
-		synchronized(listeners) {
-			if(listeners.has(type)) {
-				List<Listener<?>> list = listeners.get(type);
-				synchronized(list) {
-					for(Listener<?> listener : list) {
-						((Listener<E>) listener).call(value);
-					}
-				}
-			}
-		}
+	public final <E extends T, V> void bind(EventBindable<E> bindable, Event<E, V> event) {
+		listenersOfEvent(event).forEach((listener) -> bindable.addEventListener(event, (Listener<V>) listener));
 	}
 	
-	public void clear() {
-		synchronized(listeners) {
-			listeners.clear();
-		}
-	}
-	
-	public ListMap<EventType<T, ?>, Listener<?>> getListeners() {
-		synchronized(listeners) {
-			return listeners.copy();
-		}
+	@SafeVarargs
+	public final <E extends T> void bindAll(EventBindable<E> bindable, Event<E, ?>... events) {
+		for(Event<E, ?> event : events) bind(bindable, event);
 	}
 }

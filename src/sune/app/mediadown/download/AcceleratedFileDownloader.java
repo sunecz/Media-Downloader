@@ -12,8 +12,8 @@ import java.util.function.Predicate;
 
 import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.event.DownloadEvent;
+import sune.app.mediadown.event.Event;
 import sune.app.mediadown.event.EventRegistry;
-import sune.app.mediadown.event.EventType;
 import sune.app.mediadown.event.Listener;
 import sune.app.mediadown.event.tracker.DownloadTracker;
 import sune.app.mediadown.event.tracker.TrackerManager;
@@ -337,22 +337,22 @@ public class AcceleratedFileDownloader implements InternalDownloader {
 	}
 	
 	@Override
-	public <E> void addEventListener(EventType<DownloadEvent, E> type, Listener<E> listener) {
-		eventRegistry.add(type, listener);
+	public <V> void addEventListener(Event<? extends DownloadEvent, V> event, Listener<V> listener) {
+		eventRegistry.add(event, listener);
 	}
 	
 	@Override
-	public <E> void removeEventListener(EventType<DownloadEvent, E> type, Listener<E> listener) {
-		eventRegistry.remove(type, listener);
+	public <V> void removeEventListener(Event<? extends DownloadEvent, V> event, Listener<V> listener) {
+		eventRegistry.remove(event, listener);
 	}
 	
 	@Override
-	public <E> void call(EventType<DownloadEvent, E> type) {
-		Utils.ignore(() -> doAction((downloader) -> downloader.call(type)));
+	public <V> void call(Event<? extends DownloadEvent, V> event) {
+		Utils.ignore(() -> doAction((downloader) -> downloader.call(event)));
 	}
 	
 	@Override
-	public <E> void call(EventType<DownloadEvent, E> type, E value) {
-		Utils.ignore(() -> doAction((downloader) -> downloader.call(type, value)));
+	public <V> void call(Event<? extends DownloadEvent, V> event, V value) {
+		Utils.ignore(() -> doAction((downloader) -> downloader.call(event, value)));
 	}
 }

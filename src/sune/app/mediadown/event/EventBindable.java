@@ -1,7 +1,8 @@
 package sune.app.mediadown.event;
 
-public interface EventBindable<E extends IEventType> {
+/** @since 00.02.08 */
+public interface EventBindable<T extends EventType> {
 	
-	<T> void addEventListener(EventType<E, T> type, Listener<T> listener);
-	<T> void removeEventListener(EventType<E, T> type, Listener<T> listener);
+	<V> void addEventListener(Event<? extends T, V> event, Listener<V> listener);
+	<V> void removeEventListener(Event<? extends T, V> event, Listener<V> listener);
 }

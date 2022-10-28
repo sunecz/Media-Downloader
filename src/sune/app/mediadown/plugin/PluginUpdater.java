@@ -11,7 +11,7 @@ import sune.app.mediadown.Shared;
 import sune.app.mediadown.download.DownloadConfiguration;
 import sune.app.mediadown.download.FileDownloader;
 import sune.app.mediadown.event.DownloadEvent;
-import sune.app.mediadown.event.EventType;
+import sune.app.mediadown.event.Event;
 import sune.app.mediadown.event.Listener;
 import sune.app.mediadown.event.tracker.TrackerManager;
 import sune.app.mediadown.update.Version;
@@ -149,13 +149,13 @@ public final class PluginUpdater {
 			}
 			
 			@Override
-			public <E> void addEventListener(EventType<DownloadEvent, E> type, Listener<E> listener) {
-				downloader.addEventListener(type, listener);
+			public <V> void addEventListener(Event<? extends DownloadEvent, V> event, Listener<V> listener) {
+				downloader.addEventListener(event, listener);
 			}
 			
 			@Override
-			public <E> void removeEventListener(EventType<DownloadEvent, E> type, Listener<E> listener) {
-				downloader.removeEventListener(type, listener);
+			public <V> void removeEventListener(Event<? extends DownloadEvent, V> event, Listener<V> listener) {
+				downloader.removeEventListener(event, listener);
 			}
 		};
 	}

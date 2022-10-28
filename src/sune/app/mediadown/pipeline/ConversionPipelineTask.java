@@ -6,12 +6,12 @@ import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.convert.ConversionConfiguration;
 import sune.app.mediadown.convert.Converter;
 import sune.app.mediadown.event.ConversionEvent;
+import sune.app.mediadown.event.EventRegistry;
 import sune.app.mediadown.event.EventType;
 import sune.app.mediadown.language.Translation;
 import sune.app.mediadown.manager.ConversionManager;
 import sune.app.mediadown.manager.ManagerSubmitResult;
 import sune.app.mediadown.media.MediaFormat;
-import sune.app.mediadown.pipeline.Pipeline.PipelineEventRegistry;
 import sune.app.mediadown.util.Utils;
 
 /** @since 00.01.26 */
@@ -47,11 +47,9 @@ public final class ConversionPipelineTask implements PipelineTask<ConversionPipe
 		result = ConversionManager.submit(configuration, formatInput, formatOutput, fileOutput, filesInput);
 		
 		// Bind all events from the pipeline
-		PipelineEventRegistry eventRegistry = pipeline.getEventRegistry();
+		EventRegistry<EventType> eventRegistry = pipeline.getEventRegistry();
 		Converter converter = result.getValue();
-		for(EventType<ConversionEvent, ?> type : ConversionEvent.values()) {
-			eventRegistry.bindEvents(converter, type);
-		}
+		eventRegistry.bindAll(converter, ConversionEvent.values());
 		
 		try {
 			result.get(); // Wait for the conversion to finish

@@ -1,15 +1,14 @@
 package sune.app.mediadown.pipeline;
 
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+import sune.app.mediadown.event.Event;
 import sune.app.mediadown.event.EventBindable;
 import sune.app.mediadown.event.EventRegistry;
 import sune.app.mediadown.event.EventType;
-import sune.app.mediadown.event.IEventType;
 import sune.app.mediadown.event.Listener;
 import sune.app.mediadown.event.PipelineEvent;
 import sune.app.mediadown.util.CheckedConsumer;
@@ -19,57 +18,9 @@ import sune.app.mediadown.util.SyncObject;
 import sune.app.mediadown.util.Threads;
 
 /** @since 00.01.26 */
-public final class Pipeline {
+public final class Pipeline implements EventBindable<EventType> {
 	
-	public static final class PipelineEventRegistry {
-		
-		private final EventRegistry<IEventType> eventRegistry = new EventRegistry<>();
-		
-		@SuppressWarnings("unchecked")
-		public final <E> void call(EventType<? extends IEventType, E> type) {
-			eventRegistry.call((EventType<IEventType, E>) type);
-		}
-		
-		@SuppressWarnings("unchecked")
-		public final <E> void call(EventType<? extends IEventType, E> type, E value) {
-			eventRegistry.call((EventType<IEventType, E>) type, value);
-		}
-		
-		@SuppressWarnings("unchecked")
-		public final <E> void add(EventType<? extends IEventType, E> type, Listener<E> listener) {
-			eventRegistry.add((EventType<IEventType, E>) type, listener);
-		}
-		
-		@SuppressWarnings("unchecked")
-		public final <E> void remove(EventType<? extends IEventType, E> type, Listener<E> listener) {
-			eventRegistry.remove((EventType<IEventType, E>) type, listener);
-		}
-		
-		@SuppressWarnings("unchecked")
-		public final <E> List<Listener<?>> getListeners(EventType<? extends IEventType, E> type) {
-			return eventRegistry.getListeners().get((EventType<IEventType, E>) type);
-		}
-		
-		@SuppressWarnings("unchecked")
-		public final <T extends IEventType, E> void bindEvents(EventBindable<T> eventBindable, EventType<T, E> type) {
-			List<Listener<?>> listeners = getListeners(type);
-			if((listeners == null)) return; // Nothing to do
-			for(Listener<?> listener : listeners) {
-				eventBindable.addEventListener(type, (Listener<E>) listener);
-			}
-		}
-		
-		/** @since 00.02.08 */
-		@SuppressWarnings("unchecked")
-		@SafeVarargs
-		public final void addMany(Listener<?> listener, EventType<? extends IEventType, ?>... types) {
-			for(EventType<? extends IEventType, ?> type : types) {
-				add((EventType<? extends IEventType, Object>) type, (Listener<Object>) listener);
-			}
-		}
-	}
-	
-	private final PipelineEventRegistry eventRegistry = new PipelineEventRegistry();
+	private final EventRegistry<EventType> eventRegistry = new EventRegistry<>();
 	
 	private final SyncObject lockPause = new SyncObject();
 	private final SyncObject lockDone = new SyncObject();
@@ -293,12 +244,14 @@ public final class Pipeline {
 		return stopped.get();
 	}
 	
-	public final <T> void addEventListener(EventType<? extends IEventType, T> type, Listener<T> listener) {
-		eventRegistry.add(type, listener);
+	@Override
+	public final <V> void addEventListener(Event<? extends EventType, V> event, Listener<V> listener) {
+		eventRegistry.add(event, listener);
 	}
 	
-	public final <T> void removeEventListener(EventType<? extends IEventType, T> type, Listener<T> listener) {
-		eventRegistry.remove(type, listener);
+	@Override
+	public final <V> void removeEventListener(Event<? extends EventType, V> event, Listener<V> listener) {
+		eventRegistry.remove(event, listener);
 	}
 	
 	public final PipelineTask<?> getTask() {
@@ -314,7 +267,7 @@ public final class Pipeline {
 		return exception.get();
 	}
 	
-	public final PipelineEventRegistry getEventRegistry() {
+	public final EventRegistry<EventType> getEventRegistry() {
 		return eventRegistry;
 	}
 	

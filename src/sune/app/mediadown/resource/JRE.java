@@ -16,12 +16,14 @@ import sune.app.mediadown.download.DownloadConfiguration;
 import sune.app.mediadown.download.FileDownloader;
 import sune.app.mediadown.download.InputStreamChannelFactory;
 import sune.app.mediadown.event.DownloadEvent;
+import sune.app.mediadown.event.Event;
+import sune.app.mediadown.event.EventBindable;
 import sune.app.mediadown.event.EventRegistry;
 import sune.app.mediadown.event.EventType;
-import sune.app.mediadown.event.IEventType;
 import sune.app.mediadown.event.Listener;
 import sune.app.mediadown.event.tracker.DownloadTracker;
 import sune.app.mediadown.event.tracker.TrackerManager;
+import sune.app.mediadown.resource.JRE.JREEvent;
 import sune.app.mediadown.update.CheckListener;
 import sune.app.mediadown.update.FileCheckListener;
 import sune.app.mediadown.update.FileChecker;
@@ -34,7 +36,7 @@ import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Web.GetRequest;
 
 /** @since 00.02.02 */
-public final class JRE {
+public final class JRE implements EventBindable<JREEvent> {
 	
 	private static final Class<?> CLAZZ = JRE.class;
 	private static final int TIMEOUT = 8000;
@@ -102,12 +104,14 @@ public final class JRE {
 		return checker.check(baseURL, dir, output, fileChecker, true, true, visitedFiles, updatedPaths);
 	}
 	
-	public final <T> void addEventListener(EventType<JREEvent, T> type, Listener<T> listener) {
-		eventRegistry.add(type, listener);
+	@Override
+	public <V> void addEventListener(Event<? extends JREEvent, V> event, Listener<V> listener) {
+		eventRegistry.add(event, listener);
 	}
 	
-	public final <T> void removeEventListener(EventType<JREEvent, T> type, Listener<T> listener) {
-		eventRegistry.remove(type, listener);
+	@Override
+	public <V> void removeEventListener(Event<? extends JREEvent, V> event, Listener<V> listener) {
+		eventRegistry.remove(event, listener);
 	}
 	
 	public static class EventContext<C> {
@@ -179,26 +183,30 @@ public final class JRE {
 		}
 	}
 	
-	public static final class JREEvent implements IEventType {
+	public static final class JREEvent implements EventType {
 		
-		public static final EventType<JREEvent, CheckEventContext<JRE>>    CHECK           = new EventType<>();
-		public static final EventType<JREEvent, DownloadEventContext<JRE>> DOWNLOAD_BEGIN  = new EventType<>();
-		public static final EventType<JREEvent, DownloadEventContext<JRE>> DOWNLOAD_UPDATE = new EventType<>();
-		public static final EventType<JREEvent, DownloadEventContext<JRE>> DOWNLOAD_END    = new EventType<>();
-		public static final EventType<JREEvent, ErrorEventContext<JRE>>    ERROR           = new EventType<>();
+		public static final Event<JREEvent, CheckEventContext<JRE>>    CHECK           = new Event<>();
+		public static final Event<JREEvent, DownloadEventContext<JRE>> DOWNLOAD_BEGIN  = new Event<>();
+		public static final Event<JREEvent, DownloadEventContext<JRE>> DOWNLOAD_UPDATE = new Event<>();
+		public static final Event<JREEvent, DownloadEventContext<JRE>> DOWNLOAD_END    = new Event<>();
+		public static final Event<JREEvent, ErrorEventContext<JRE>>    ERROR           = new Event<>();
 		
-		private static final EventType<JREEvent, ?>[] VALUES = Utils.array(
-			CHECK,
-			DOWNLOAD_BEGIN, DOWNLOAD_UPDATE, DOWNLOAD_END,
-			ERROR
-		);
-		
-		public static final EventType<JREEvent, ?>[] values() {
-			return VALUES;
-		}
+		private static Event<JREEvent, ?>[] values;
 		
 		// Forbid anyone to create an instance of this class
 		private JREEvent() {
+		}
+		
+		public static final Event<JREEvent, ?>[] values() {
+			if(values == null) {
+				values = Utils.array(
+					CHECK,
+					DOWNLOAD_BEGIN, DOWNLOAD_UPDATE, DOWNLOAD_END,
+					ERROR
+				);
+			}
+			
+			return values;
 		}
 	}
 	

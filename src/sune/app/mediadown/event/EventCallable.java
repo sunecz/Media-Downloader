@@ -1,8 +1,8 @@
 package sune.app.mediadown.event;
 
-/** @since 00.01.26 */
-public interface EventCallable<T extends IEventType> {
+/** @since 00.02.08 */
+public interface EventCallable<T extends EventType> {
 	
-	<E> void call(EventType<T, E> type);
-	<E> void call(EventType<T, E> type, E value);
+	<V> void call(Event<? extends T, V> event);
+	<V> void call(Event<? extends T, V> event, V value);
 }

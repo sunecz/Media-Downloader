@@ -6,21 +6,26 @@ import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.Utils;
 
 /** @since 00.01.26 */
-public final class ConversionEvent implements IEventType {
+public final class ConversionEvent implements EventType {
 	
-	public static final EventType<ConversionEvent, Converter>                       BEGIN  = new EventType<>();
-	public static final EventType<ConversionEvent, Pair<Converter, TrackerManager>> UPDATE = new EventType<>();
-	public static final EventType<ConversionEvent, Converter>                       END    = new EventType<>();
-	public static final EventType<ConversionEvent, Pair<Converter, Exception>>      ERROR  = new EventType<>();
-	public static final EventType<ConversionEvent, Converter>                       PAUSE  = new EventType<>();
-	public static final EventType<ConversionEvent, Converter>                       RESUME = new EventType<>();
+	public static final Event<ConversionEvent, Converter>                       BEGIN  = new Event<>();
+	public static final Event<ConversionEvent, Pair<Converter, TrackerManager>> UPDATE = new Event<>();
+	public static final Event<ConversionEvent, Converter>                       END    = new Event<>();
+	public static final Event<ConversionEvent, Pair<Converter, Exception>>      ERROR  = new Event<>();
+	public static final Event<ConversionEvent, Converter>                       PAUSE  = new Event<>();
+	public static final Event<ConversionEvent, Converter>                       RESUME = new Event<>();
 	
-	private static final EventType<ConversionEvent, ?>[] VALUES = Utils.array(BEGIN, UPDATE, END, ERROR, PAUSE, RESUME);
-	public  static final EventType<ConversionEvent, ?>[] values() {
-		return VALUES;
-	}
+	private static Event<ConversionEvent, ?>[] values;
 	
 	// Forbid anyone to create an instance of this class
 	private ConversionEvent() {
+	}
+	
+	public static final Event<ConversionEvent, ?>[] values() {
+		if(values == null) {
+			values = Utils.array(BEGIN, UPDATE, END, ERROR, PAUSE, RESUME);
+		}
+		
+		return values;
 	}
 }

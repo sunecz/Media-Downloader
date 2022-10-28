@@ -8,11 +8,11 @@ import sune.app.mediadown.download.DownloadConfiguration;
 import sune.app.mediadown.download.DownloadResult;
 import sune.app.mediadown.download.MediaDownloadConfiguration;
 import sune.app.mediadown.event.DownloadEvent;
+import sune.app.mediadown.event.EventRegistry;
 import sune.app.mediadown.event.EventType;
 import sune.app.mediadown.manager.DownloadManager;
 import sune.app.mediadown.manager.ManagerSubmitResult;
 import sune.app.mediadown.media.Media;
-import sune.app.mediadown.pipeline.Pipeline.PipelineEventRegistry;
 
 /** @since 00.01.26 */
 public final class DownloadPipelineTask implements PipelineTask<DownloadPipelineResult> {
@@ -43,11 +43,9 @@ public final class DownloadPipelineTask implements PipelineTask<DownloadPipeline
 		DownloadResult downloadResult = result.getValue();
 		
 		// Bind all events from the pipeline
-		PipelineEventRegistry eventRegistry = pipeline.getEventRegistry();
+		EventRegistry<EventType> eventRegistry = pipeline.getEventRegistry();
 		Download download = downloadResult.download();
-		for(EventType<DownloadEvent, ?> type : DownloadEvent.values()) {
-			eventRegistry.bindEvents(download, type);
-		}
+		eventRegistry.bindAll(download, DownloadEvent.values());
 		
 		result.get(); // Wait for the download to finish
 		return (DownloadPipelineResult) downloadResult.pipelineResult();

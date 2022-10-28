@@ -7,23 +7,28 @@ import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.Utils;
 
 /** @since 00.01.26 */
-public final class PipelineEvent implements IEventType {
+public final class PipelineEvent implements EventType {
 	
-	public static final EventType<PipelineEvent, Pipeline>                          BEGIN  = new EventType<>();
-	public static final EventType<PipelineEvent, Pair<Pipeline, PipelineTask<?>>>   UPDATE = new EventType<>();
+	public static final Event<PipelineEvent, Pipeline>                          BEGIN  = new Event<>();
+	public static final Event<PipelineEvent, Pair<Pipeline, PipelineTask<?>>>   UPDATE = new Event<>();
 	/** @since 00.01.27 */
-	public static final EventType<PipelineEvent, Pair<Pipeline, PipelineResult<?>>> INPUT  = new EventType<>();
-	public static final EventType<PipelineEvent, Pipeline>                          END    = new EventType<>();
-	public static final EventType<PipelineEvent, Pair<Pipeline, Exception>>         ERROR  = new EventType<>();
-	public static final EventType<PipelineEvent, Pipeline>                          PAUSE  = new EventType<>();
-	public static final EventType<PipelineEvent, Pipeline>                          RESUME = new EventType<>();
+	public static final Event<PipelineEvent, Pair<Pipeline, PipelineResult<?>>> INPUT  = new Event<>();
+	public static final Event<PipelineEvent, Pipeline>                          END    = new Event<>();
+	public static final Event<PipelineEvent, Pair<Pipeline, Exception>>         ERROR  = new Event<>();
+	public static final Event<PipelineEvent, Pipeline>                          PAUSE  = new Event<>();
+	public static final Event<PipelineEvent, Pipeline>                          RESUME = new Event<>();
 	
-	private static final EventType<PipelineEvent, ?>[] VALUES = Utils.array(BEGIN, UPDATE, INPUT, END, ERROR, PAUSE, RESUME);
-	public  static final EventType<PipelineEvent, ?>[] values() {
-		return VALUES;
-	}
+	private static Event<PipelineEvent, ?>[] values;
 	
 	// Forbid anyone to create an instance of this class
 	private PipelineEvent() {
+	}
+	
+	public static final Event<PipelineEvent, ?>[] values() {
+		if(values == null) {
+			values = Utils.array(BEGIN, UPDATE, INPUT, END, ERROR, PAUSE, RESUME);
+		}
+		
+		return values;
 	}
 }

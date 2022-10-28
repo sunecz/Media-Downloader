@@ -9,8 +9,8 @@ import java.util.regex.Pattern;
 
 import sune.api.process.ReadOnlyProcess;
 import sune.app.mediadown.event.ConversionEvent;
+import sune.app.mediadown.event.Event;
 import sune.app.mediadown.event.EventRegistry;
-import sune.app.mediadown.event.EventType;
 import sune.app.mediadown.event.Listener;
 import sune.app.mediadown.event.tracker.ConversionTracker;
 import sune.app.mediadown.event.tracker.TrackerManager;
@@ -182,12 +182,12 @@ public final class FFMpegConverter implements Converter {
 	}
 	
 	@Override
-	public <T> void addEventListener(EventType<ConversionEvent, T> type, Listener<T> listener) {
-		eventRegistry.add(type, listener);
+	public <V> void addEventListener(Event<? extends ConversionEvent, V> event, Listener<V> listener) {
+		eventRegistry.add(event, listener);
 	}
 	
 	@Override
-	public <T> void removeEventListener(EventType<ConversionEvent, T> type, Listener<T> listener) {
-		eventRegistry.remove(type, listener);
+	public <V> void removeEventListener(Event<? extends ConversionEvent, V> event, Listener<V> listener) {
+		eventRegistry.remove(event, listener);
 	}
 }

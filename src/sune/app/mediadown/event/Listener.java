@@ -1,6 +1,6 @@
 package sune.app.mediadown.event;
 
-public interface Listener<T> {
+public interface Listener<V> {
 	
-	void call(T value);
+	void call(V value);
 }
