@@ -1,45 +1,56 @@
 package sune.app.mediadown.event.tracker;
 
-public class TrackerManager {
+import sune.app.mediadown.event.Event;
+import sune.app.mediadown.event.EventBindable;
+import sune.app.mediadown.event.EventRegistry;
+import sune.app.mediadown.event.Listener;
+
+public class TrackerManager implements EventBindable<TrackerEvent> {
 	
-	public static interface UpdateListener {
-		
-		void update();
-	}
-	
-	private UpdateListener listener;
+	private final Listener<Tracker> onUpdate = this::update;
+	private final EventRegistry<TrackerEvent> eventRegistry = new EventRegistry<>();
 	private Tracker tracker;
 	
-	public TrackerManager() {
+	private final void update(Tracker tracker) {
+		eventRegistry.call(TrackerEvent.UPDATE, tracker);
 	}
 	
-	public TrackerManager(UpdateListener listener) {
-		setUpdateListener(listener);
+	private final void unbind() {
+		if(tracker == null) {
+			return;
+		}
+		
+		tracker.removeEventListener(TrackerEvent.UPDATE, onUpdate);
 	}
 	
-	public TrackerManager(UpdateListener listener, Tracker tracker) {
-		setUpdateListener(listener);
-		setTracker(tracker);
+	private final void bind() {
+		if(tracker == null) {
+			return;
+		}
+		
+		tracker.addEventListener(TrackerEvent.UPDATE, onUpdate);
 	}
 	
-	public void update() {
-		if((listener != null))
-			listener.update();
+	public void tracker(Tracker tracker) {
+		unbind();
+		this.tracker = tracker; // May be null
+		bind();
+		update(tracker);
 	}
 	
-	public void setUpdateListener(UpdateListener listener) {
-		this.listener = listener;
-	}
-	
-	public void setTracker(Tracker tracker) {
-		if((this.tracker != null))
-			this.tracker.setTrackerManager(null);
-		this.tracker = tracker;
-		if((this.tracker != null))
-			this.tracker.setTrackerManager(this);
-	}
-	
-	public Tracker getTracker() {
+	public Tracker tracker() {
 		return tracker;
+	}
+	
+	/** @since 00.02.08 */
+	@Override
+	public <V> void addEventListener(Event<? extends TrackerEvent, V> event, Listener<V> listener) {
+		eventRegistry.add(event, listener);
+	}
+	
+	/** @since 00.02.08 */
+	@Override
+	public <V> void removeEventListener(Event<? extends TrackerEvent, V> event, Listener<V> listener) {
+		eventRegistry.remove(event, listener);
 	}
 }

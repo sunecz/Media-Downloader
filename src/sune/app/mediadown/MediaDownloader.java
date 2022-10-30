@@ -325,7 +325,7 @@ public final class MediaDownloader {
 							});
 							jre.addEventListener(JREEvent.DOWNLOAD_UPDATE, (context) -> {
 								setText(String.format("Downloading %s... %s%%", context.path().getFileName().toString(),
-								                      MathUtils.round(context.tracker().getProgress() * 100.0, 2)));
+								                      MathUtils.round(context.tracker().progress() * 100.0, 2)));
 							});
 							jre.addEventListener(JREEvent.DOWNLOAD_END, (context) -> {
 								setText(String.format("Downloading %s... done", context.path().getFileName().toString()));
@@ -431,9 +431,9 @@ public final class MediaDownloader {
 				
 				eventRegistry.add(DownloadEvent.UPDATE, (pair) -> {
 					Path file = pair.a.output();
-					DownloadTracker tracker = (DownloadTracker) pair.b.getTracker();
-					double current = tracker.getCurrent();
-					double total = tracker.getTotal();
+					DownloadTracker tracker = (DownloadTracker) pair.b.tracker();
+					double current = tracker.current();
+					double total = tracker.total();
 					double percent0 = (current / (double) total);
 					double percent1 = (percent0 * 100.0);
 					
@@ -1001,9 +1001,9 @@ public final class MediaDownloader {
 				});
 				
 				downloader.addEventListener(DownloadEvent.UPDATE, (pair) -> {
-					DownloadTracker tracker = (DownloadTracker) pair.b.getTracker();
-					long current = tracker.getCurrent();
-					long total = tracker.getTotal();
+					DownloadTracker tracker = (DownloadTracker) pair.b.tracker();
+					long current = tracker.current();
+					long total = tracker.total();
 					receiver.receive(String.format(Locale.US, "Downloading the new version... %.2f%%", current * 100.0 / total));
 				});
 				
@@ -1913,9 +1913,9 @@ public final class MediaDownloader {
 		});
 		
 		downloader.addEventListener(DownloadEvent.UPDATE, (pair) -> {
-			DownloadTracker tracker = (DownloadTracker) pair.b.getTracker();
-			long current = tracker.getCurrent();
-			long total = tracker.getTotal();
+			DownloadTracker tracker = (DownloadTracker) pair.b.tracker();
+			long current = tracker.current();
+			long total = tracker.total();
 			double percent = current / (double) total;
 			
 			receiver.receive(String.format(

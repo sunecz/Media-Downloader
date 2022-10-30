@@ -121,9 +121,9 @@ public final class Resources {
 			if(receiver != null
 					// Throttle to remove flickering
 					&& System.nanoTime() - lastTime.getValue() >= minTime) {
-				DownloadTracker tracker = (DownloadTracker) pair.b.getTracker();
-				long current = tracker.getCurrent();
-				long total = tracker.getTotal();
+				DownloadTracker tracker = (DownloadTracker) pair.b.tracker();
+				long current = tracker.current();
+				long total = tracker.total();
 				double percent = current * 100.0 / total;
 				receiver.receive(String.format(Locale.US, "Downloading %s... %.2f%%", fileName, percent));
 				lastTime.setValue(System.nanoTime());

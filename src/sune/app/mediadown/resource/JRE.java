@@ -231,7 +231,7 @@ public final class JRE implements EventBindable<JREEvent> {
 			FileDownloader downloader = new FileDownloader(manager);
 			downloader.setResponseChannelFactory(InputStreamChannelFactory.GZIP.ofDefault());
 			
-			DownloadTracker tracker = new DownloadTracker(-1L, false);
+			DownloadTracker tracker = new DownloadTracker();
 			downloader.setTracker(tracker);
 			
 			DownloadEventContext<JRE> context

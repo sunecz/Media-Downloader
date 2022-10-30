@@ -11,20 +11,22 @@ public class ConversionTracker extends SimpleTracker {
 	
 	public void update(double currentTime) {
 		this.currentTime = currentTime;
-		// notify the tracker manager
-		manager.update();
+		update();
 	}
 	
+	/** @since 00.02.08 */
 	@Override
-	public double getProgress() {
+	public double progress() {
 		return currentTime / totalTime;
 	}
 	
-	public double getCurrentTime() {
+	/** @since 00.02.08 */
+	public double currentTime() {
 		return currentTime;
 	}
 	
-	public double getTotalTime() {
+	/** @since 00.02.08 */
+	public double totalTime() {
 		return totalTime;
 	}
 }

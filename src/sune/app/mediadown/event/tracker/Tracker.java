@@ -1,10 +1,11 @@
 package sune.app.mediadown.event.tracker;
 
-public interface Tracker {
+import sune.app.mediadown.event.EventBindable;
+
+public interface Tracker extends EventBindable<TrackerEvent> {
 	
-	double getProgress();
-	/** @since 00.02.02 */
-	String getTextProgress();
-	void setTrackerManager(TrackerManager manager);
-	TrackerManager getTrackerManager();
+	/** @since 00.02.08 */
+	double progress();
+	/** @since 00.02.08 */
+	String textProgress();
 }

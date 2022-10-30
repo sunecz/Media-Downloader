@@ -249,8 +249,8 @@ public class FileDownloader implements InternalDownloader {
 		}
 		
 		if(tracker == null) {
-			tracker = new DownloadTracker(-1L, false);
-			trackerManager.setTracker(tracker);
+			tracker = new DownloadTracker();
+			trackerManager.tracker(tracker);
 		}
 		
 		try(ReadableByteChannel input = doRequest(rangeRequest)) {
@@ -374,7 +374,7 @@ public class FileDownloader implements InternalDownloader {
 	@Override
 	public void setTracker(DownloadTracker tracker) {
 		this.tracker = tracker;
-		trackerManager.setTracker(tracker);
+		trackerManager.tracker(tracker);
 	}
 	
 	@Override

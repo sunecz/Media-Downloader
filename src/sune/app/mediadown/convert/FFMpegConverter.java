@@ -13,6 +13,7 @@ import sune.app.mediadown.event.Event;
 import sune.app.mediadown.event.EventRegistry;
 import sune.app.mediadown.event.Listener;
 import sune.app.mediadown.event.tracker.ConversionTracker;
+import sune.app.mediadown.event.tracker.TrackerEvent;
 import sune.app.mediadown.event.tracker.TrackerManager;
 import sune.app.mediadown.event.tracker.WaitTracker;
 import sune.app.mediadown.ffmpeg.FFMpeg;
@@ -52,7 +53,7 @@ public final class FFMpegConverter implements Converter {
 		this.formatOutput = Objects.requireNonNull(formatOutput);
 		this.fileOutput = Objects.requireNonNull(fileOutput);
 		this.filesInput = checkNonEmptyArray(filesInput);
-		manager.setTracker(new WaitTracker());
+		manager.tracker(new WaitTracker());
 	}
 	
 	private static final <T> T[] checkNonEmptyArray(T[] array) {
@@ -92,9 +93,9 @@ public final class FFMpegConverter implements Converter {
 			running.set(true);
 			started.set(true);
 			eventRegistry.call(ConversionEvent.BEGIN, this);
-			manager.setUpdateListener(() -> eventRegistry.call(ConversionEvent.UPDATE, new Pair<>(this, manager)));
+			manager.addEventListener(TrackerEvent.UPDATE, (t) -> eventRegistry.call(ConversionEvent.UPDATE, new Pair<>(this, manager)));
 			conversionTracker = new ConversionTracker(configuration.getDuration());
-			manager.setTracker(conversionTracker);
+			manager.tracker(conversionTracker);
 			if(convertOp(formatInput, formatOutput, fileOutput, filesInput)) {
 				Path dest = configuration.getDestination();
 				NIO.deleteFile(dest);

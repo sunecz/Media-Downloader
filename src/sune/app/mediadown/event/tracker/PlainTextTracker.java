@@ -5,24 +5,26 @@ public class PlainTextTracker extends SimpleTracker {
 	private double progress;
 	private String text;
 	
-	public void setProgress(double progress) {
+	/** @since 00.02.08 */
+	public void progress(double progress) {
 		this.progress = progress;
-		// notify the tracker manager
-		manager.update();
+		update();
 	}
 	
-	public void setText(String text) {
+	/** @since 00.02.08 */
+	public void text(String text) {
 		this.text = text;
-		// notify the tracker manager
-		manager.update();
+		update();
 	}
 	
+	/** @since 00.02.08 */
 	@Override
-	public double getProgress() {
+	public double progress() {
 		return progress;
 	}
 	
-	public String getText() {
+	/** @since 00.02.08 */
+	public String text() {
 		return text;
 	}
 }

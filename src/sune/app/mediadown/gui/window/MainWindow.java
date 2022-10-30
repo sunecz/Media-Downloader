@@ -504,14 +504,14 @@ public final class MainWindow extends Window<BorderPane> {
 						downloadUpdate.addEventListener(DownloadEvent.BEGIN,
 							(data) -> listener.setText(translation.getSingle("labels.update.download.begin", "name", pluginTitle)));
 						downloadUpdate.addEventListener(DownloadEvent.UPDATE, (data) -> {
-							Tracker tracker = data.b.getTracker();
+							Tracker tracker = data.b.tracker();
 							if((tracker instanceof DownloadTracker)) {
 								DownloadTracker downloadTracker = (DownloadTracker) tracker;
 								String progress = translation.getSingle("labels.update.download.progress",
 									"name",    pluginTitle,
-									"current", downloadTracker.getCurrent(),
-									"total",   downloadTracker.getTotal(),
-									"percent", MathUtils.round(downloadTracker.getProgress() * 100.0, 2));
+									"current", downloadTracker.current(),
+									"total",   downloadTracker.total(),
+									"percent", MathUtils.round(downloadTracker.progress() * 100.0, 2));
 								listener.setText(progress);
 							}
 						});
@@ -696,13 +696,13 @@ public final class MainWindow extends Window<BorderPane> {
 			
 			@SuppressWarnings("unchecked")
 			Pair<?, TrackerManager> pair = (Pair<?, TrackerManager>) o;
-			Tracker tracker = pair.b.getTracker();
+			Tracker tracker = pair.b.tracker();
 			
 			if(tracker instanceof DownloadTracker) {
 				DownloadTracker downloadTracker = (DownloadTracker) tracker;
-				double percent  = downloadTracker.getProgress() * 100.0;
-				String speedVal = Utils.formatSize(downloadTracker.getSpeed(), 2);
-				double timeLeft = downloadTracker.getTimeLeft();
+				double percent  = downloadTracker.progress() * 100.0;
+				String speedVal = Utils.formatSize(downloadTracker.speed(), 2);
+				double timeLeft = downloadTracker.secondsLeft();
 				
 				info.update(translation.getSingle(
 					"progress.download.update",
@@ -712,9 +712,9 @@ public final class MainWindow extends Window<BorderPane> {
 				));
 			} else if(tracker instanceof ConversionTracker) {
 				ConversionTracker conversionTracker = (ConversionTracker) tracker;
-				double percent     = conversionTracker.getProgress() * 100.0;
-				double timeCurrent = conversionTracker.getCurrentTime();
-				double timeTotal   = conversionTracker.getTotalTime();
+				double percent     = conversionTracker.progress() * 100.0;
+				double timeCurrent = conversionTracker.currentTime();
+				double timeTotal   = conversionTracker.totalTime();
 				
 				info.update(translation.getSingle(
 					"progress.conversion.update",
@@ -724,8 +724,8 @@ public final class MainWindow extends Window<BorderPane> {
 				));
 			} else if(tracker instanceof PlainTextTracker) {
 				PlainTextTracker textTracker = (PlainTextTracker) tracker;
-				double percent  = textTracker.getProgress() * 100.0;
-				String text     = textTracker.getText();
+				double percent  = textTracker.progress() * 100.0;
+				String text     = textTracker.text();
 				
 				info.update(translation.getSingle(
 					"progress.plain",
@@ -735,7 +735,7 @@ public final class MainWindow extends Window<BorderPane> {
 			} else if(tracker instanceof WaitTracker) {
 				info.update(translation.getSingle("progress.waiting"));
 			} else {
-				String progress = tracker.getTextProgress();
+				String progress = tracker.textProgress();
 				
 				if(progress != null) {
 					info.update(progress);
