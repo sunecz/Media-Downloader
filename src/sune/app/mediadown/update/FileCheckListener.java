@@ -2,6 +2,7 @@ package sune.app.mediadown.update;
 
 import java.nio.file.Path;
 
+@Deprecated
 public interface FileCheckListener {
 	
 	void begin (Path dir);

@@ -1,5 +1,6 @@
 package sune.app.mediadown.update;
 
+@Deprecated
 public interface CheckListener {
 	
 	// Methods

@@ -34,7 +34,7 @@ public class ProgressWindow extends Window<StackPane> {
 	private final List<InternalAction> running = new ArrayList<>();
 	private final ExecutorService executor = Threads.Pools.newFixed(1);
 	
-	private final ProgressListener listener;
+	private final ProgressContext context;
 	
 	private Stage parent;
 	private VBox boxContent;
@@ -80,7 +80,7 @@ public class ProgressWindow extends Window<StackPane> {
 				FXUtils.centerWindow(this, parent);
 			}
 		});
-		listener = new ProgressListener() {
+		context = new ProgressContext() {
 			
 			@Override
 			public void setText(String text) {
@@ -193,7 +193,7 @@ public class ProgressWindow extends Window<StackPane> {
 		@Override
 		public void run() {
 			runningAction_add(this);
-			action.action(listener);
+			action.action(context);
 			runningAction_remove(this);
 		}
 		
@@ -216,11 +216,11 @@ public class ProgressWindow extends Window<StackPane> {
 	
 	public static interface ProgressAction {
 		
-		void action(ProgressListener listener);
+		void action(ProgressContext context);
 		void cancel();
 	}
 	
-	public static interface ProgressListener {
+	public static interface ProgressContext {
 		
 		public static final double PROGRESS_INDETERMINATE = ProgressBar.INDETERMINATE_PROGRESS;
 		public static final double PROGRESS_NONE = 0.0;

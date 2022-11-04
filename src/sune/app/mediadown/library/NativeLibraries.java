@@ -16,6 +16,7 @@ import sune.app.mediadown.util.Pair;
 
 public final class NativeLibraries {
 	
+	@Deprecated
 	public static interface NativeLibraryLoadListener {
 		
 		void onLoading  (NativeLibrary   library);

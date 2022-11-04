@@ -1,5 +1,6 @@
 package sune.app.mediadown.plugin;
 
+@Deprecated
 public interface PluginLoadListener {
 	
 	void onLoading  (PluginFile   plugin);

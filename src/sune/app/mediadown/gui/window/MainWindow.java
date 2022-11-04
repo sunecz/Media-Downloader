@@ -64,7 +64,7 @@ import sune.app.mediadown.gui.InformationItems.ItemSearchEngine;
 import sune.app.mediadown.gui.InformationItems.ItemServer;
 import sune.app.mediadown.gui.ProgressWindow;
 import sune.app.mediadown.gui.ProgressWindow.ProgressAction;
-import sune.app.mediadown.gui.ProgressWindow.ProgressListener;
+import sune.app.mediadown.gui.ProgressWindow.ProgressContext;
 import sune.app.mediadown.gui.Window;
 import sune.app.mediadown.gui.table.ResolvedMedia;
 import sune.app.mediadown.gui.table.ResolvedMediaPipelineResult;
@@ -412,9 +412,9 @@ public final class MainWindow extends Window<BorderPane> {
 		actions.submit(new ProgressAction() {
 			
 			@Override
-			public void action(ProgressListener listener) {
-				listener.setProgress(ProgressListener.PROGRESS_INDETERMINATE);
-				listener.setText(translation.getSingle("actions.messages.checking"));
+			public void action(ProgressContext context) {
+				context.setProgress(ProgressContext.PROGRESS_INDETERMINATE);
+				context.setText(translation.getSingle("actions.messages.checking"));
 				Utils.ignore(MainWindow.this::showMessages, MediaDownloader::error);
 			}
 			
@@ -433,9 +433,9 @@ public final class MainWindow extends Window<BorderPane> {
 		actions.submit(new ProgressAction() {
 			
 			@Override
-			public void action(ProgressListener listener) {
-				listener.setProgress(ProgressListener.PROGRESS_INDETERMINATE);
-				listener.setText(translation.getSingle("actions.messages.checking"));
+			public void action(ProgressContext context) {
+				context.setProgress(ProgressContext.PROGRESS_INDETERMINATE);
+				context.setText(translation.getSingle("actions.messages.checking"));
 				if(!resetAndShowMessages()) {
 					// Show the dialog in the next pulse so that the progress window can be closed
 					FXUtils.thread(() -> {
@@ -491,7 +491,7 @@ public final class MainWindow extends Window<BorderPane> {
 		return new ProgressAction() {
 			
 			private final AtomicBoolean cancelled = new AtomicBoolean();
-			private ProgressListener listener;
+			private ProgressContext context;
 			private double pluginsCount;
 			private Download downloadUpdate;
 			
@@ -503,7 +503,7 @@ public final class MainWindow extends Window<BorderPane> {
 						String pluginTitle = pluginFile.getPlugin().instance().title();
 						downloadUpdate = PluginUpdater.update(pluginURL, Path.of(pluginFile.getPath()));
 						downloadUpdate.addEventListener(DownloadEvent.BEGIN,
-							(data) -> listener.setText(translation.getSingle("labels.update.download.begin", "name", pluginTitle)));
+							(data) -> context.setText(translation.getSingle("labels.update.download.begin", "name", pluginTitle)));
 						downloadUpdate.addEventListener(DownloadEvent.UPDATE, (data) -> {
 							DownloadTracker tracker = Utils.cast(data.b.tracker());
 							String progress = translation.getSingle("labels.update.download.progress",
@@ -511,12 +511,12 @@ public final class MainWindow extends Window<BorderPane> {
 								"current", tracker.current(),
 								"total",   tracker.total(),
 								"percent", MathUtils.round(tracker.progress() * 100.0, 2));
-							listener.setText(progress);
+							context.setText(progress);
 						});
 						downloadUpdate.addEventListener(DownloadEvent.ERROR,
-							(data) -> listener.setText(translation.getSingle("labels.update.download.error", "message", data.b)));
+							(data) -> context.setText(translation.getSingle("labels.update.download.error", "message", data.b)));
 						downloadUpdate.addEventListener(DownloadEvent.END,
-						    (data) -> listener.setText(translation.getSingle("labels.update.download.end", "name", pluginTitle)));
+						    (data) -> context.setText(translation.getSingle("labels.update.download.end", "name", pluginTitle)));
 						downloadUpdate.start();
 						return true;
 					}
@@ -536,11 +536,11 @@ public final class MainWindow extends Window<BorderPane> {
 			}
 			
 			@Override
-			public void action(ProgressListener listener) {
-				this.listener = listener;
-				listener.setText(translation.getSingle("labels.update_many.init"));
+			public void action(ProgressContext context) {
+				this.context = context;
+				context.setText(translation.getSingle("labels.update_many.init"));
 				if((cancelled.get())) return;
-				listener.setProgress(ProgressListener.PROGRESS_NONE);
+				context.setProgress(ProgressContext.PROGRESS_NONE);
 				pluginsCount = plugins.size();
 				boolean updated = false;
 				int ctr = 0;
@@ -550,10 +550,10 @@ public final class MainWindow extends Window<BorderPane> {
 						break;
 					}
 					String pluginTitle = MediaDownloader.translation().getSingle(pluginFile.getPlugin().instance().title());
-					listener.setText(translation.getSingle("labels.update_many.item_init", "name", pluginTitle));
+					context.setText(translation.getSingle("labels.update_many.item_init", "name", pluginTitle));
 					updated = update(pluginFile) || updated;
-					listener.setProgress(++ctr / pluginsCount);
-					listener.setText(translation.getSingle("labels.update_many.item_done", "name", pluginTitle));
+					context.setProgress(++ctr / pluginsCount);
+					context.setText(translation.getSingle("labels.update_many.item_done", "name", pluginTitle));
 				}
 				String title = translation.getSingle("labels.update_many.title");
 				String text = translation.getSingle("labels.update_many." + (updated ? "done_any" : "done_none"));
@@ -563,7 +563,7 @@ public final class MainWindow extends Window<BorderPane> {
 			
 			@Override
 			public void cancel() {
-				listener.setText(translation.getSingle("labels.update_many.cancel"));
+				context.setText(translation.getSingle("labels.update_many.cancel"));
 				cancelled.set(true);
 			}
 		};

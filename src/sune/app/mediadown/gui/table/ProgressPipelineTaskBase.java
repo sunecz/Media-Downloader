@@ -10,7 +10,7 @@ import javafx.collections.ObservableList;
 import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.gui.ProgressWindow;
 import sune.app.mediadown.gui.ProgressWindow.ProgressAction;
-import sune.app.mediadown.gui.ProgressWindow.ProgressListener;
+import sune.app.mediadown.gui.ProgressWindow.ProgressContext;
 import sune.app.mediadown.gui.Window;
 import sune.app.mediadown.pipeline.Pipeline;
 import sune.app.mediadown.pipeline.PipelineResult;
@@ -76,10 +76,10 @@ public abstract class ProgressPipelineTaskBase<T, R extends PipelineResult<?>, W
 		submit(new ProgressAction() {
 			
 			@Override
-			public void action(ProgressListener listener) {
+			public void action(ProgressContext context) {
 				try {
-					listener.setProgress(ProgressListener.PROGRESS_INDETERMINATE);
-					listener.setText(getProgressText(window));
+					context.setProgress(ProgressContext.PROGRESS_INDETERMINATE);
+					context.setText(getProgressText(window));
 					
 					getTask().apply((proxy, item) -> {
 						if(paused.get()) {
@@ -111,7 +111,7 @@ public abstract class ProgressPipelineTaskBase<T, R extends PipelineResult<?>, W
 				} catch(Exception ex) {
 					MediaDownloader.error(ex);
 				} finally {
-					listener.setProgress(ProgressListener.PROGRESS_DONE);
+					context.setProgress(ProgressContext.PROGRESS_DONE);
 					running.set(false);
 					lockResult.unlock();
 				}
