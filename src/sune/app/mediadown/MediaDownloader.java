@@ -127,6 +127,7 @@ public final class MediaDownloader {
 	
 	private static final boolean DEBUG = false;
 	private static final boolean GENERATE_LISTS = false;
+	private static final boolean DO_UPDATE = true;
 	
 	public static final String  TITLE   = "Media Downloader";
 	public static final Version VERSION = Version.of("00.02.07");
@@ -309,7 +310,7 @@ public final class MediaDownloader {
 						NIO.deleteDir(newJREPath());
 						// Update the JRE version so that we know which version is present
 						Versions.Common.jre().set(Version.of(jreVersion));
-					} else {
+					} else if(DO_UPDATE) {
 						VersionEntryAccessor version = Versions.Common.jre();
 						Version verLocal = version.get();
 						Version verRemote = Version.of(jreVersion);
@@ -416,87 +417,89 @@ public final class MediaDownloader {
 			
 			@Override
 			public InitializationState run(Arguments args) {
-				final Path rootDir = Path.of(PathSystem.getCurrentDirectory());
-				final Property<Double> progressValue = new Property<>();
-				EventRegistry<DownloadEvent> eventRegistry = new EventRegistry<>();
-				
-				eventRegistry.add(DownloadEvent.BEGIN, (downloader) -> {
-					Path file = downloader.output();
-					String path = file.subpath(rootDir.getNameCount(), file.getNameCount()).toString();
+				if(DO_UPDATE) {
+					final Path rootDir = Path.of(PathSystem.getCurrentDirectory());
+					final Property<Double> progressValue = new Property<>();
+					EventRegistry<DownloadEvent> eventRegistry = new EventRegistry<>();
 					
-					progressValue.setValue(getProgress());
-					setText(String.format("Downloading library %s...", path));
-					setProgress(0.0);
-				});
-				
-				eventRegistry.add(DownloadEvent.UPDATE, (pair) -> {
-					Path file = pair.a.output();
-					DownloadTracker tracker = (DownloadTracker) pair.b.tracker();
-					double current = tracker.current();
-					double total = tracker.total();
-					double percent0 = (current / (double) total);
-					double percent1 = (percent0 * 100.0);
+					eventRegistry.add(DownloadEvent.BEGIN, (downloader) -> {
+						Path file = downloader.output();
+						String path = file.subpath(rootDir.getNameCount(), file.getNameCount()).toString();
+						
+						progressValue.setValue(getProgress());
+						setText(String.format("Downloading library %s...", path));
+						setProgress(0.0);
+					});
 					
-					String path = file.subpath(rootDir.getNameCount(), file.getNameCount()).toString();
-					setText(String.format("Downloading library %s... %s%%", path, MathUtils.round(percent1, 2)));
-					setProgress(percent0);
-				});
-				
-				eventRegistry.add(DownloadEvent.END, (downloader) -> {
-					Path file = downloader.output();
-					String path = file.subpath(rootDir.getNameCount(), file.getNameCount()).toString();
+					eventRegistry.add(DownloadEvent.UPDATE, (pair) -> {
+						Path file = pair.a.output();
+						DownloadTracker tracker = (DownloadTracker) pair.b.tracker();
+						double current = tracker.current();
+						double total = tracker.total();
+						double percent0 = (current / (double) total);
+						double percent1 = (percent0 * 100.0);
+						
+						String path = file.subpath(rootDir.getNameCount(), file.getNameCount()).toString();
+						setText(String.format("Downloading library %s... %s%%", path, MathUtils.round(percent1, 2)));
+						setProgress(percent0);
+					});
 					
-					setText(String.format("Downloading library %s... Done", path));
-					setProgress(progressValue.getValue());
-				});
-				
-				eventRegistry.add(DownloadEvent.ERROR, (pair) -> {
-					setText(String.format("Downloading library... Error"));
-					setProgress(progressValue.getValue());
-				});
-				
-				Update.checkLibraries(new CheckListener() {
+					eventRegistry.add(DownloadEvent.END, (downloader) -> {
+						Path file = downloader.output();
+						String path = file.subpath(rootDir.getNameCount(), file.getNameCount()).toString();
+						
+						setText(String.format("Downloading library %s... Done", path));
+						setProgress(progressValue.getValue());
+					});
 					
-					@Override
-					public void begin() {
-					}
+					eventRegistry.add(DownloadEvent.ERROR, (pair) -> {
+						setText(String.format("Downloading library... Error"));
+						setProgress(progressValue.getValue());
+					});
 					
-					@Override
-					public void compare(String name) {
-						setText(String.format("Checking library %s...", name));
-					}
-					
-					@Override
-					public void end() {
-					}
-					
-					@Override
-					public FileCheckListener fileCheckListener() {
-						return new FileCheckListener() {
-							
-							private final Path rootDir = Path.of(PathSystem.getCurrentDirectory());
-							
-							@Override
-							public void begin(Path dir) {
-							}
-							
-							@Override
-							public void update(Path file, String hash) {
-								String path = file.subpath(rootDir.getNameCount(), file.getNameCount()).toString();
-								setText(String.format("Checking %s...%s", path, hash != null ? " done" : ""));
-							}
-							
-							@Override
-							public void end(Path dir) {
-							}
-							
-							@Override
-							public void error(Exception ex) {
-								setText(String.format("Checking... Error"));
-							}
-						};
-					}
-				}, eventRegistry);
+					Update.checkLibraries(new CheckListener() {
+						
+						@Override
+						public void begin() {
+						}
+						
+						@Override
+						public void compare(String name) {
+							setText(String.format("Checking library %s...", name));
+						}
+						
+						@Override
+						public void end() {
+						}
+						
+						@Override
+						public FileCheckListener fileCheckListener() {
+							return new FileCheckListener() {
+								
+								private final Path rootDir = Path.of(PathSystem.getCurrentDirectory());
+								
+								@Override
+								public void begin(Path dir) {
+								}
+								
+								@Override
+								public void update(Path file, String hash) {
+									String path = file.subpath(rootDir.getNameCount(), file.getNameCount()).toString();
+									setText(String.format("Checking %s...%s", path, hash != null ? " done" : ""));
+								}
+								
+								@Override
+								public void end(Path dir) {
+								}
+								
+								@Override
+								public void error(Exception ex) {
+									setText(String.format("Checking... Error"));
+								}
+							};
+						}
+					}, eventRegistry);
+				}
 				
 				return new LoadNativeLibraries();
 			}
@@ -643,9 +646,12 @@ public final class MediaDownloader {
 			
 			@Override
 			public InitializationState run(Arguments args) {
-				if(args.has("is-jar-update") || Update.canAutoUpdate()) {
-					Update.update(args);
+				if(DO_UPDATE) {
+					if(args.has("is-jar-update") || Update.canAutoUpdate()) {
+						Update.update(args);
+					}
 				}
+				
 				return new RegisterWindows();
 			}
 			
@@ -1931,6 +1937,8 @@ public final class MediaDownloader {
 	}
 	
 	private static final void initDefaultPlugins() {
+		if(!DO_UPDATE) return;
+		
 		try {
 			FileDownloader downloader = new FileDownloader(new TrackerManager());
 			DownloadConfiguration downloadConfiguration = DownloadConfiguration.ofDefault();
@@ -2013,32 +2021,34 @@ public final class MediaDownloader {
 				.filter(Objects::nonNull)
 				.map((plugin) -> {
 					try {
-						// Update the plugin, if needed
-						if(configuration.isPluginsAutoUpdateCheck() || forceCheckPlugins) {
-							receiver.receive(String.format(
-								"Checking plugin %s...",
-								plugin.getPlugin().instance().name()
-							));
-							
-							String pluginURL = PluginUpdater.check(plugin);
-							
-							// Check whether there is a newer version of the plugin
-							if(pluginURL != null) {
-								Path file = Path.of(plugin.getPath());
-								GetRequest request = new GetRequest(Utils.url(pluginURL), Shared.USER_AGENT);
+						if(DO_UPDATE) {
+							// Update the plugin, if needed
+							if(configuration.isPluginsAutoUpdateCheck() || forceCheckPlugins) {
+								receiver.receive(String.format(
+									"Checking plugin %s...",
+									plugin.getPlugin().instance().name()
+								));
 								
-								NIO.createDir(file.getParent()); // Ensure parent directory
-								downloader.start(request, file, downloadConfiguration);
+								String pluginURL = PluginUpdater.check(plugin);
 								
-								// Must reload the plugin, otherwise it will have incorrect information
-								PluginFile.resetPluginFileLoader();
-								plugin = PluginFile.from(file);
+								// Check whether there is a newer version of the plugin
+								if(pluginURL != null) {
+									Path file = Path.of(plugin.getPath());
+									GetRequest request = new GetRequest(Utils.url(pluginURL), Shared.USER_AGENT);
+									
+									NIO.createDir(file.getParent()); // Ensure parent directory
+									downloader.start(request, file, downloadConfiguration);
+									
+									// Must reload the plugin, otherwise it will have incorrect information
+									PluginFile.resetPluginFileLoader();
+									plugin = PluginFile.from(file);
+								}
+								
+								receiver.receive(String.format(
+									"Checking plugin %s... done",
+									plugin.getPlugin().instance().name()
+								));
 							}
-							
-							receiver.receive(String.format(
-								"Checking plugin %s... done",
-								plugin.getPlugin().instance().name()
-							));
 						}
 					} catch(Exception ex) {
 						error(ex);
