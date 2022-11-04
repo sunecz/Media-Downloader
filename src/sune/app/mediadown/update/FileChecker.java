@@ -71,44 +71,36 @@ public class FileChecker implements EventBindable<FileCheckEvent> {
 	}
 	
 	/** @since 00.02.07 */
-	public final boolean generate(Predicate<Path> filter, boolean checkRequirements, Predicate<Path> predicateComputeHash) {
-		try {
-			for(Entry<Path, FileCheckerEntry> mapEntry : entries.entrySet()) {
-				Path path = mapEntry.getKey();
-				FileCheckerEntry entry = mapEntry.getValue();
-				
+	public final void generate(Predicate<Path> filter, boolean checkRequirements, Predicate<Path> predicateComputeHash)
+			throws Exception {
+		for(Entry<Path, FileCheckerEntry> mapEntry : entries.entrySet()) {
+			Path path = mapEntry.getKey();
+			FileCheckerEntry entry = mapEntry.getValue();
+			
+			try {
 				call(FileCheckEvent.BEGIN, path);
 				
-				try {
-					if(!filter.test(path)) {
-						continue;
-					}
-					
-					Requirements requirements = entry.getRequirements();
-					if(checkRequirements && requirements != Requirements.ANY
-							&& !requirements.equals(Requirements.CURRENT)) {
-						continue;
-					}
-					
-					String hash = predicateComputeHash.test(path) ? Hash.sha1(path).toLowerCase() : null;
-					Path relPath = relativePath(path);
-					String version = entry.getVersion();
-					FileCheckerEntry newEntry = new FileCheckerEntry(relPath, requirements, version, hash);
-					mapEntry.setValue(newEntry);
-					
-					call(FileCheckEvent.UPDATE, new Pair<>(path, hash));
-				} finally {
-					call(FileCheckEvent.END, path);
+				if(!filter.test(path)) {
+					continue;
 				}
+				
+				Requirements requirements = entry.getRequirements();
+				if(checkRequirements && requirements != Requirements.ANY
+						&& !requirements.equals(Requirements.CURRENT)) {
+					continue;
+				}
+				
+				String hash = predicateComputeHash.test(path) ? Hash.sha1(path).toLowerCase() : null;
+				Path relPath = relativePath(path);
+				String version = entry.getVersion();
+				FileCheckerEntry newEntry = new FileCheckerEntry(relPath, requirements, version, hash);
+				mapEntry.setValue(newEntry);
+				
+				call(FileCheckEvent.UPDATE, new Pair<>(path, hash));
+			} finally {
+				call(FileCheckEvent.END, path);
 			}
-			
-			return true;
-		} catch(Exception ex) {
-			// TODO: Propagate exception
-			call(FileCheckEvent.ERROR, ex);
 		}
-		
-		return false;
 	}
 	
 	@Override

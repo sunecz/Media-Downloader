@@ -56,10 +56,8 @@ public final class JRE implements EventBindable<JREEvent> {
 	}
 	
 	private final void generateHashList(FileChecker checker, Path output, boolean checkRequirements)
-			throws IOException {
-		if(!checker.generate((path) -> true, checkRequirements, (path) -> true)) {
-			throw new IllegalStateException("Unable to generate hash list.");
-		}
+			throws Exception {
+		checker.generate((path) -> true, checkRequirements, (path) -> true);
 		// Save the list of entries to a file
 		NIO.save(output, checker.toString());
 	}
@@ -77,7 +75,7 @@ public final class JRE implements EventBindable<JREEvent> {
 		return checker;
 	}
 	
-	private final void generateHashList(String osName, String osArch, String version) throws IOException {
+	private final void generateHashList(String osName, String osArch, String version) throws Exception {
 		Requirements requirements = Requirements.create(osName, osArch);
 		String osInfo = requirements.toString().replace(";", "");
 		String relativePath = "etc/jre/version/" + osInfo + "/" + version;
@@ -86,7 +84,7 @@ public final class JRE implements EventBindable<JREEvent> {
 		generateHashList(checker, currentDir.resolve("jre." + osInfo + ".sha1"), false);
 	}
 	
-	public final void generateHashLists(String version) throws IOException {
+	public final void generateHashLists(String version) throws Exception {
 		for(Pair<String, String> os : supportedOS) {
 			generateHashList(os.a, os.b, version);
 		}

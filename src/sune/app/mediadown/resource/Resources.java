@@ -187,7 +187,8 @@ public final class Resources {
 	}
 	
 	/** @since 00.02.07 */
-	public static final FileChecker etcFileChecker(String dirName, Predicate<Path> predicateComputeHash) {
+	public static final FileChecker etcFileChecker(String dirName, Predicate<Path> predicateComputeHash)
+			throws Exception {
 		Path dir = PATH_ETC.resolve(dirName);
 		FileChecker checker = new FileChecker.PrefixedFileChecker(dir.getParent(), dir);
 		
@@ -200,11 +201,12 @@ public final class Resources {
 			                 resource.version());
 		}
 		
-		return checker.generate((path) -> true, false, predicateComputeHash) ? checker : null;
+		checker.generate((path) -> true, false, predicateComputeHash);
+		return checker;
 	}
 	
 	/** @since 00.02.07 */
-	public static final FileChecker localFileChecker(Predicate<Path> predicateComputeHash) {
+	public static final FileChecker localFileChecker(Predicate<Path> predicateComputeHash) throws Exception {
 		FileChecker checker = new FileChecker.PrefixedFileChecker(PATH_RESOURCES, PATH_RESOURCES);
 		
 		for(InternalResource resource : localResources()) {
@@ -213,7 +215,8 @@ public final class Resources {
 			                 resource.version());
 		}
 		
-		return checker.generate((path) -> true, true, predicateComputeHash) ? checker : null;
+		checker.generate((path) -> true, true, predicateComputeHash);
+		return checker;
 	}
 	
 	public static interface StringReceiver {

@@ -404,13 +404,20 @@ public final class MediaDownloader {
 			@Override
 			public InitializationState run(Arguments args) {
 				if(GENERATE_LISTS) {
-					generateList();
-					generateResourcesList("original");
-					generateResourcesList("compressed");
-					generateJREList();
-					close();
-					return null; // Do not continue
+					try {
+						generateList();
+						generateResourcesList("original");
+						generateResourcesList("compressed");
+						generateJREList();
+						
+						return null; // Do not continue
+					} catch(Exception ex) {
+						error(ex);
+					} finally {
+						close();
+					}
 				}
+				
 				return new CheckLibraries();
 			}
 		}
@@ -477,7 +484,7 @@ public final class MediaDownloader {
 						
 						action.execute();
 					} catch(Exception ex) {
-						// Config cannot be accessed, just skip it
+						error(ex);
 					}
 				}
 				
@@ -1068,7 +1075,8 @@ public final class MediaDownloader {
 	}
 	
 	/** @since 00.02.07 */
-	public static final FileChecker localFileChecker(boolean checkRequirements, Predicate<Path> predicateComputeHash) {
+	public static final FileChecker localFileChecker(boolean checkRequirements, Predicate<Path> predicateComputeHash)
+			throws Exception {
 		Path currentDir = NIO.localPath();
 		Path dir = NIO.localPath("lib/");
 		FileChecker checker = new FileChecker.PrefixedFileChecker(dir, currentDir);
@@ -1085,38 +1093,31 @@ public final class MediaDownloader {
 		}
 		
 		// Generate the list of entries
-		return checker.generate((path) -> true, checkRequirements, predicateComputeHash) ? checker : null;
+		checker.generate((path) -> true, checkRequirements, predicateComputeHash);
+		return checker;
 	}
 	
-	protected static final void generateList() {
+	protected static final void generateList() throws Exception {
 		FileChecker checker = localFileChecker(false, (path) -> true);
-		if((checker != null)) {
-			try {
-				// Save the list of entries to a file
-				NIO.save(NIO.localPath("list.sha1"), checker.toString());
-			} catch(IOException ex) {
-				error(ex);
-			}
+		
+		if(checker != null) {
+			NIO.save(NIO.localPath("list.sha1"), checker.toString());
 		}
 	}
 	
 	/** @since 00.02.07 */
-	protected static final void generateResourcesList(String dirName) {
+	protected static final void generateResourcesList(String dirName) throws Exception {
 		FileChecker checker = Resources.etcFileChecker(dirName, (path) -> true);
-		if((checker != null)) {
-			try {
-				// Save the list of entries to a file
-				NIO.save(NIO.localPath("list_resources_" + Utils.fileName(dirName) + ".sha1"), checker.toString());
-			} catch(IOException ex) {
-				error(ex);
-			}
+		
+		if(checker != null) {
+			NIO.save(NIO.localPath("list_resources_" + Utils.fileName(dirName) + ".sha1"), checker.toString());
 		}
 	}
 	
 	protected static final void generateJREList() {
 		try {
 			JRE.newInstance().generateHashLists(jreVersion);
-		} catch(IOException ex) {
+		} catch(Exception ex) {
 			error(ex);
 		}
 	}
