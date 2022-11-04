@@ -37,9 +37,4 @@ public abstract class SimpleTracker implements Tracker {
 	public <V> void removeEventListener(Event<? extends TrackerEvent, V> event, Listener<V> listener) {
 		eventRegistry.remove(event, listener);
 	}
-	
-	@Override
-	public String textProgress() {
-		return String.valueOf(progress());
-	}
 }

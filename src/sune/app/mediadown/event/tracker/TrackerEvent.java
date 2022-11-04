@@ -4,6 +4,7 @@ import sune.app.mediadown.event.Event;
 import sune.app.mediadown.event.EventType;
 import sune.app.mediadown.util.Utils;
 
+/** @since 00.02.08 */
 public final class TrackerEvent implements EventType {
 	
 	public static final Event<TrackerEvent, Tracker> UPDATE = new Event<>();

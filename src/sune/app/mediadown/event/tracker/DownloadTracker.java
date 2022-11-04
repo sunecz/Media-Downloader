@@ -68,6 +68,11 @@ public class DownloadTracker extends SimpleTracker {
 		prevTime   .set(0L);
 	}
 	
+	@Override
+	public void visit(TrackerVisitor visitor) {
+		visitor.visit(this);
+	}
+	
 	/** @since 00.02.08 */
 	public long current() {
 		return current.get();

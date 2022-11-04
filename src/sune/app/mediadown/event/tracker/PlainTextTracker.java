@@ -17,6 +17,11 @@ public class PlainTextTracker extends SimpleTracker {
 		update();
 	}
 	
+	@Override
+	public void visit(TrackerVisitor visitor) {
+		visitor.visit(this);
+	}
+	
 	/** @since 00.02.08 */
 	@Override
 	public double progress() {

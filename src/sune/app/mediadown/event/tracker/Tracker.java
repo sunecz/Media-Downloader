@@ -6,6 +6,14 @@ public interface Tracker extends EventBindable<TrackerEvent> {
 	
 	/** @since 00.02.08 */
 	double progress();
+	
 	/** @since 00.02.08 */
-	String textProgress();
+	default String textProgress() {
+		return String.valueOf(progress());
+	}
+	
+	/** @since 00.02.08 */
+	default void visit(TrackerVisitor visitor) {
+		visitor.visit(this);
+	}
 }
