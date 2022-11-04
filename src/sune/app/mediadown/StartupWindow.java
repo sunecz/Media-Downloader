@@ -2,7 +2,9 @@ package sune.app.mediadown;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.concurrent.Callable;
 
+import javafx.application.Platform;
 import javafx.scene.Cursor;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
@@ -13,7 +15,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
-import sune.app.mediadown.util.FXUtils;
+import sune.app.mediadown.util.FXTask;
 
 // Since this window is shown well before anything else is initialized,
 // we must use only basic methods and components.
@@ -78,27 +80,45 @@ public final class StartupWindow extends Stage {
 		return StartupWindow.class.getResource("/resources/theme/" + name).toExternalForm();
 	}
 	
+	private static final void fxThread(Runnable r) {
+		if(!Platform.isFxApplicationThread()) Platform.runLater(r); else r.run();
+	}
+	
+	private static final <T> FXTask<T> fxTask(Callable<T> callable) {
+		FXTask<T> task = new FXTask<>(callable);
+		fxThread(task);
+		return task;
+	}
+	
+	private static final <T> T fxTaskValue(Callable<T> callable) {
+		try {
+			return fxTask(callable).get();
+		} catch(Exception ex) {
+			throw new IllegalStateException(ex);
+		}
+	}
+	
 	public final void update(String text) {
-		FXUtils.thread(() -> {
+		fxThread(() -> {
 			setProgress(++current / total);
 			setText(text);
 		});
 	}
 	
 	public final void setText(String text) {
-		FXUtils.thread(() -> lblStatus.setText(text));
+		fxThread(() -> lblStatus.setText(text));
 	}
 	
 	public final void setTotal(int value) {
 		total = value;
-		FXUtils.thread(() -> prgbar.setProgress(current / total));
+		fxThread(() -> prgbar.setProgress(current / total));
 	}
 	
 	public final void setProgress(double value) {
-		FXUtils.thread(() -> prgbar.setProgress(value));
+		fxThread(() -> prgbar.setProgress(value));
 	}
 	
 	public final double getProgress() {
-		return FXUtils.fxTaskValue(prgbar::getProgress);
+		return fxTaskValue(prgbar::getProgress);
 	}
 }

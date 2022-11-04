@@ -796,7 +796,7 @@ public final class MainWindow extends Window<BorderPane> {
 		
 		public final void submit(ProgressAction action) {
 			progressWindow = ProgressWindow.submitAction(MainWindow.this, action);
-			FXUtils.thread(progressWindow::show);
+			FXUtils.thread(progressWindow::showAndWait);
 		}
 		
 		public final void terminate() {

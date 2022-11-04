@@ -175,8 +175,12 @@ public final class MediaDownloader {
 		}
 		
 		public static final void close() {
-			if(window != null)
-				FXUtils.thread(window::close);
+			if(window != null) {
+				FXUtils.thread(() -> {
+					window.close();
+					window = null;
+				});
+			}
 		}
 		
 		public static final void update(String text) {
@@ -796,9 +800,11 @@ public final class MediaDownloader {
 			@Override
 			public InitializationState run(Arguments args) {
 				FXUtils.thread(() -> {
-					window("main").show();
+					window(MainWindow.NAME).show();
 					close();
+					FXUtils.refreshExceptionWindow();
 				});
+				
 				return null;
 			}
 			
@@ -1568,7 +1574,7 @@ public final class MediaDownloader {
 	public static final void error(Throwable throwable) {
 		if(throwable == null) return; // Do nothing
 		Log.error(throwable, "An error occurred");
-		if((FXUtils.isInitialized())) FXUtils.showExceptionWindow(null, throwable);
+		if(FXUtils.isInitialized()) FXUtils.showExceptionWindow(throwable);
 		else throwable.printStackTrace(); // FX not available, print to stderr
 	}
 	

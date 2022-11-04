@@ -1,8 +1,5 @@
 package sune.app.mediadown.util;
 
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Field;
@@ -186,77 +183,100 @@ public final class FXUtils {
 		});
 	}
 	
-	private static final class ErrorAlert {
+	/** @since 00.02.08 */
+	private static final class ExceptionWindow {
 		
 		// TODO: Add a button to report the shown error(s) automatically
 		
+		private static ExceptionWindow instance;
+		
 		private Alert alert;
 		private TabPane tabs;
+		private boolean allowClear;
 		
-		private static final String throwableToString(Throwable throwable) {
-			String string = "";
-			try(StringWriter swriter = new StringWriter();
-				PrintWriter  pwriter = new PrintWriter(swriter)) {
-				throwable.printStackTrace(pwriter);
-				string = swriter.toString();
-			} catch(IOException ex) {
-				// Ignore
-			}
-			return string;
+		private ExceptionWindow() {
+			allowClear = true;
 		}
 		
-		private void initialize(Stage stage) {
-			if(alert != null) return;
+		public static final ExceptionWindow instance() {
+			synchronized(ExceptionWindow.class) {
+				if(instance == null) {
+					instance = new ExceptionWindow();
+				}
+				
+				return instance;
+			}
+		}
+		
+		private void initialize() {
+			if(alert != null) {
+				return;
+			}
+			
 			alert = new Alert(AlertType.ERROR);
 			alert.initModality(Modality.APPLICATION_MODAL);
-			alert.initOwner(stage);
 			alert.setHeaderText(null);
 			alert.setOnCloseRequest((e) -> clear());
+			setDialogIcon(alert, MediaDownloader.ICON);
+			alert.getButtonTypes().setAll(ButtonType.OK);
+			
 			tabs = new TabPane();
 			alert.getDialogPane().setContent(tabs);
-			setDialogIcon(alert, MediaDownloader.ICON);
-			alert.getButtonTypes().clear();
-			alert.getButtonTypes().add(ButtonType.OK);
 		}
 		
 		private void clear() {
-			if(tabs == null) return; // Nothing to clear
+			if(tabs == null || !allowClear) {
+				return;
+			}
+			
 			tabs.getTabs().clear();
 		}
 		
 		private void show() {
-			if(!alert.isShowing()) {
-				alert.showAndWait();
+			if(alert.isShowing()) {
+				return;
 			}
+			
+			alert.showAndWait();
 		}
 		
 		private void add(Throwable throwable) {
-			String errorTitle = throwable.getClass().getSimpleName();
-			String errorText = throwableToString(throwable);
-			TextArea area = new TextArea(errorText);
+			String title = throwable.getClass().getSimpleName();
+			String text = Utils.throwableToString(throwable);
+			TextArea area = new TextArea(text);
 			area.setEditable(false);
-			Tab tab = new Tab(errorTitle, area);
+			Tab tab = new Tab(title, area);
 			tab.setClosable(false);
 			tabs.getTabs().add(tab);
 		}
 		
-		public void error(Stage stage, Throwable throwable) {
-			thread(() -> {
-				initialize(stage);
+		public void error(Throwable throwable) {
+			enqueue(() -> {
+				initialize();
 				add(throwable);
 				show();
 			});
 		}
+		
+		public void refresh() {
+			if(alert == null || !alert.isShowing()) {
+				return;
+			}
+			
+			allowClear = false;
+			alert.close();
+			allowClear = true;
+			enqueue(this::show);
+		}
 	}
-	
-	private static ErrorAlert errorAlert;
 	
 	public static final void showExceptionWindow(Throwable throwable) {
-		showExceptionWindow(null, throwable);
+		ExceptionWindow.instance().error(throwable);
 	}
 	
-	public static final void showExceptionWindow(Stage stage, Throwable throwable) {
-		(errorAlert = errorAlert == null ? new ErrorAlert() : errorAlert).error(stage, throwable);
+	/** @since 00.02.08 */
+	public static final void refreshExceptionWindow() {
+		ExceptionWindow.instance().refresh();
 	}
 	
 	public static final void onWindowShow(Stage stage, Runnable action) {
