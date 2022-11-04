@@ -22,7 +22,7 @@ public final class PluginLoaderEvent implements EventType {
 	
 	public static final Event<PluginLoaderEvent, ?>[] values() {
 		if(values == null) {
-			values = Utils.array(LOADING, LOADED, NOT_LOADED);
+			values = Utils.array(LOADING, LOADED, NOT_LOADED, ERROR_LOAD, ERROR_DISPOSE);
 		}
 		
 		return values;
