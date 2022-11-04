@@ -428,7 +428,7 @@ public final class MediaDownloader {
 			public InitializationState run(Arguments args) {
 				if(DO_UPDATE) {
 					final Path rootDir = Path.of(PathSystem.getCurrentDirectory());
-					final Property<Double> progressValue = new Property<>();
+					final Property<Double> progressValue = new Property<>(0.0);
 					FileDownloader downloader = new FileDownloader(new TrackerManager());
 					
 					downloader.addEventListener(DownloadEvent.BEGIN, (d) -> {

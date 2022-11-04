@@ -111,12 +111,9 @@ public final class Resources {
 	/** @since 00.02.07 */
 	public static final void ensureResources(StringReceiver receiver, Predicate<Path> predicateComputeHash,
 			Collection<Path> updatedPaths) throws Exception {
-		if(!NIO.exists(PATH_RESOURCES)) {
-			NIO.createDir(PATH_RESOURCES);
-		}
+		NIO.createDir(PATH_RESOURCES);
 		
 		FileChecker checker = localFileChecker(predicateComputeHash);
-		
 		Updater updater = Updater.ofResources(URL_BASE, PATH_RESOURCES, TIMEOUT, checker,
 			(url, file) -> download(Utils.uri(url), file, receiver),
 			(file, webDir) -> Utils.urlConcat(webDir, NIO.localPath().relativize(file).toString().replace('\\', '/')),
@@ -178,10 +175,12 @@ public final class Resources {
 			}
 		});
 		
-		// Make sure all the binaries are executable (Unix systems)
-		if(!OSUtils.isWindows()) {
-			for(InternalResource resource : localResources()) {
-				NIO.chmod(PATH_RESOURCES.resolve(OSUtils.getExecutableName(resource.name())), 7, 7, 7);
+		if(updater.check()) {
+			// Make sure all the binaries are executable (Unix systems)
+			if(!OSUtils.isWindows()) {
+				for(InternalResource resource : localResources()) {
+					NIO.chmod(PATH_RESOURCES.resolve(OSUtils.getExecutableName(resource.name())), 7, 7, 7);
+				}
 			}
 		}
 	}

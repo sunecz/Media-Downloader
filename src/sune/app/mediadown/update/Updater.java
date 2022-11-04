@@ -81,12 +81,10 @@ public abstract class Updater implements EventBindable<CheckEvent> {
 			int timeout, FileChecker checker, FileDownloader downloader, Collection<Path> updatedPaths) {
 		return new OfRemoteFiles(cfgRemote, remoteDirURL, NIO.localPath(), timeout, checker,
 			(String webPath, Path entryPath) -> {
-				Path path = localDir.resolve(webPath.toString().replace('\\', '/'));
-				
+				Path path = localDir.resolve(entryPath);
 				GetRequest request = new GetRequest(Utils.url(webPath));
 				NIO.createDir(path.getParent()); // Ensure parent directory
 				downloader.start(request, path, DownloadConfiguration.ofDefault());
-				
 				return path;
 			},
 			(Path entryPath, String webDir) -> urlConcat(webDir, localDir.relativize(entryPath).toString().replace('\\', '/')),
