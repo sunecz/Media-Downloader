@@ -6,16 +6,144 @@ import java.io.StringReader;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
+import sune.app.mediadown.event.Event;
+import sune.app.mediadown.event.EventBindable;
+import sune.app.mediadown.event.EventRegistry;
+import sune.app.mediadown.event.FileCheckEvent;
+import sune.app.mediadown.event.Listener;
 import sune.app.mediadown.util.NIO;
+import sune.app.mediadown.util.Pair;
 
-public class FileChecker {
+public class FileChecker implements EventBindable<FileCheckEvent> {
+	
+	private static final String STRING_NEWLINE = "\n";
+	
+	private final Path dir;
+	private final Map<Path, FileCheckerEntry> entries = new LinkedHashMap<>();
+	private final EventRegistry<FileCheckEvent> eventRegistry = new EventRegistry<>();
+	
+	/** @since 00.02.08 */
+	public FileChecker(Path dir) {
+		this.dir = Objects.requireNonNull(dir).toAbsolutePath();
+	}
+	
+	public static final FileChecker parse(Path dir, String string) {
+		FileChecker checker = new FileChecker(dir);
+		
+		try(BufferedReader reader = new BufferedReader(new StringReader(string))) {
+			for(String line; (line = reader.readLine()) != null;) {
+				FileCheckerEntry entry;
+				
+				if((entry = FileCheckerEntry.parse(line)) == null)
+					continue;
+				
+				checker.add(entry);
+			}
+		} catch(IOException ex) {
+			// Ignore
+		}
+		
+		return checker;
+	}
+	
+	private final void add(FileCheckerEntry entry) {
+		entries.put(entry.getPath(), entry);
+	}
+	
+	protected Path relativePath(Path path) {
+		return dir.relativize(path);
+	}
+	
+	/** @since 00.02.08 */
+	protected final <V> void call(Event<FileCheckEvent, V> event, V value) {
+		eventRegistry.call(event, value);
+	}
+	
+	public final void addEntry(Path path, Requirements requirements, String version) {
+		add(new FileCheckerEntry(path.toAbsolutePath(), requirements, version, null));
+	}
+	
+	/** @since 00.02.07 */
+	public final boolean generate(Predicate<Path> filter, boolean checkRequirements, Predicate<Path> predicateComputeHash) {
+		try {
+			for(Entry<Path, FileCheckerEntry> mapEntry : entries.entrySet()) {
+				Path path = mapEntry.getKey();
+				FileCheckerEntry entry = mapEntry.getValue();
+				
+				call(FileCheckEvent.BEGIN, path);
+				
+				try {
+					if(!filter.test(path)) {
+						continue;
+					}
+					
+					Requirements requirements = entry.getRequirements();
+					if(checkRequirements && requirements != Requirements.ANY
+							&& !requirements.equals(Requirements.CURRENT)) {
+						continue;
+					}
+					
+					String hash = predicateComputeHash.test(path) ? Hash.sha1(path).toLowerCase() : null;
+					Path relPath = relativePath(path);
+					String version = entry.getVersion();
+					FileCheckerEntry newEntry = new FileCheckerEntry(relPath, requirements, version, hash);
+					mapEntry.setValue(newEntry);
+					
+					call(FileCheckEvent.UPDATE, new Pair<>(path, hash));
+				} finally {
+					call(FileCheckEvent.END, path);
+				}
+			}
+			
+			return true;
+		} catch(Exception ex) {
+			// TODO: Propagate exception
+			call(FileCheckEvent.ERROR, ex);
+		}
+		
+		return false;
+	}
+	
+	@Override
+	public <V> void addEventListener(Event<? extends FileCheckEvent, V> event, Listener<V> listener) {
+		eventRegistry.add(event, listener);
+	}
+	
+	@Override
+	public <V> void removeEventListener(Event<? extends FileCheckEvent, V> event, Listener<V> listener) {
+		eventRegistry.remove(event, listener);
+	}
+	
+	public FileCheckerEntry getEntry(Path path) {
+		return entries.get(path.toAbsolutePath());
+	}
+	
+	public Collection<FileCheckerEntry> entries() {
+		return Collections.unmodifiableCollection(entries.values());
+	}
+	
+	@Override
+	public String toString() {
+		StringBuilder builder = new StringBuilder();
+		
+		for(FileCheckerEntry entry : entries.values()) {
+			if(entry.getHash() == null) {
+				continue;
+			}
+			
+			builder.append(entry.toString());
+			builder.append(STRING_NEWLINE);
+		}
+		
+		return builder.toString();
+	}
 	
 	public static final class FileCheckerEntry {
 		
@@ -27,22 +155,27 @@ public class FileChecker {
 		private final String hash;
 		
 		protected FileCheckerEntry(Path path, Requirements requirements, String version, String hash) {
-			if((path == null || requirements == null))
-				throw new IllegalArgumentException();
-			this.path = path;
-			this.requirements = requirements;
+			this.path = Objects.requireNonNull(path);
+			this.requirements = Objects.requireNonNull(requirements);
 			this.version = version;
 			this.hash = hash;
 		}
 		
 		public static final FileCheckerEntry parse(String line) {
-			if((line == null || line.isEmpty())) return null;
+			if(line == null || line.isEmpty()) {
+				return null;
+			}
+			
 			String[] parts = line.split(Pattern.quote(STRING_DELIMITER));
-			if((parts.length < 4)) return null;
+			if(parts.length < 4) {
+				return null;
+			}
+			
 			String hash = parts[0];
 			Requirements requirements = Requirements.parse(parts[1]);
 			String version = parts[2];
 			Path path = NIO.localPath(parts[3]).toAbsolutePath();
+			
 			return new FileCheckerEntry(path, requirements, version, hash);
 		}
 		
@@ -64,13 +197,7 @@ public class FileChecker {
 		
 		@Override
 		public int hashCode() {
-			final int prime = 31;
-			int result = 1;
-			result = prime * result + ((hash == null) ? 0 : hash.hashCode());
-			result = prime * result + ((path == null) ? 0 : path.hashCode());
-			result = prime * result + ((requirements == null) ? 0 : requirements.hashCode());
-			result = prime * result + ((version == null) ? 0 : version.hashCode());
-			return result;
+			return Objects.hash(hash, path, requirements, version);
 		}
 		
 		@Override
@@ -82,27 +209,10 @@ public class FileChecker {
 			if(getClass() != obj.getClass())
 				return false;
 			FileCheckerEntry other = (FileCheckerEntry) obj;
-			if(hash == null) {
-				if(other.hash != null)
-					return false;
-			} else if(!hash.equals(other.hash))
-				return false;
-			if(path == null) {
-				if(other.path != null)
-					return false;
-			} else if(!path.equals(other.path))
-				return false;
-			if(requirements == null) {
-				if(other.requirements != null)
-					return false;
-			} else if(!requirements.equals(other.requirements))
-				return false;
-			if(version == null) {
-				if(other.version != null)
-					return false;
-			} else if(!version.equals(other.version))
-				return false;
-			return true;
+			return Objects.equals(hash, other.hash)
+			        && Objects.equals(path, other.path)
+			        && Objects.equals(requirements, other.requirements)
+			        && Objects.equals(version, other.version);
 		}
 		
 		@Override
@@ -111,7 +221,8 @@ public class FileChecker {
 			    hash, STRING_DELIMITER,
 				requirements.toString(), STRING_DELIMITER,
 				version, STRING_DELIMITER,
-				path.toString().replace('\\', '/'));
+				path.toString().replace('\\', '/')
+			);
 		}
 	}
 	
@@ -119,8 +230,8 @@ public class FileChecker {
 		
 		private final Path dirPrefix;
 		
-		public PrefixedFileChecker(Path dir, FileCheckListener listener, Path dirPrefix) {
-			super(dir, listener);
+		public PrefixedFileChecker(Path dir, Path dirPrefix) {
+			super(dir);
 			this.dirPrefix = dirPrefix;
 		}
 		
@@ -128,108 +239,5 @@ public class FileChecker {
 		protected Path relativePath(Path path) {
 			return dirPrefix.relativize(path);
 		}
-	}
-	
-	private static final String STRING_NEWLINE = "\n";
-	
-	private final Path dir;
-	private final FileCheckListener listener;
-	private final Map<Path, FileCheckerEntry> entries = new LinkedHashMap<>();
-	
-	public FileChecker(Path dir, FileCheckListener listener) {
-		if((dir == null))
-			throw new IllegalArgumentException();
-		this.dir = dir.toAbsolutePath();
-		this.listener = listener;
-	}
-	
-	protected Path relativePath(Path path) {
-		return dir.relativize(path);
-	}
-	
-	public static final FileChecker parse(Path dir, String string) {
-		FileChecker checker = new FileChecker(dir, null);
-		try(BufferedReader reader = new BufferedReader(new StringReader(string))) {
-			for(String line; (line = reader.readLine()) != null;) {
-				FileCheckerEntry entry;
-				if((entry = FileCheckerEntry.parse(line)) == null)
-					continue;
-				checker.add(entry);
-			}
-		} catch(IOException ex) {
-			// Ignore
-		}
-		return checker;
-	}
-	
-	private final void add(FileCheckerEntry entry) {
-		entries.put(entry.getPath(), entry);
-	}
-	
-	public final void addEntry(Path path, Requirements requirements, String version) {
-		add(new FileCheckerEntry(path.toAbsolutePath(), requirements, version, null));
-	}
-	
-	/** @since 00.02.07 */
-	public final boolean generate(Predicate<Path> filter, boolean checkRequirements, Predicate<Path> predicateComputeHash) {
-		try {
-			// Notify the listener, if needed
-			if((listener != null))
-				listener.begin(dir);
-			// Loop through all the added entries
-			for(Iterator<Entry<Path, FileCheckerEntry>> it = entries.entrySet().iterator();
-					it.hasNext();) {
-				Entry<Path, FileCheckerEntry> mapEntry = it.next();
-				Path path = mapEntry.getKey();
-				FileCheckerEntry entry = mapEntry.getValue();
-				if(!filter.test(path)) continue;
-				// Notify the listener, if needed
-				if((listener != null))
-					listener.update(path, null);
-				Requirements requirements = entry.getRequirements();
-				if((checkRequirements && requirements != Requirements.ANY
-						&& !requirements.equals(Requirements.CURRENT)))
-					continue;
-				String hash = predicateComputeHash.test(path) ? Hash.sha1(path).toLowerCase() : null;
-				Path relPath = relativePath(path);
-				String version = entry.getVersion();
-				FileCheckerEntry newEntry = new FileCheckerEntry(relPath, requirements, version, hash);
-				mapEntry.setValue(newEntry);
-				// Notify the listener, if needed
-				if((listener != null))
-					listener.update(path, hash);
-			}
-			// Notify the listener, if needed
-			if((listener != null))
-				listener.end(dir);
-			// Successfully walked
-			return true;
-		} catch(Exception ex) {
-			// Notify the listener, if needed
-			if((listener != null))
-				listener.error(ex);
-		}
-		// An error has occured
-		return false;
-	}
-	
-	public FileCheckerEntry getEntry(Path path) {
-		return entries.get(path.toAbsolutePath());
-	}
-	
-	public Collection<FileCheckerEntry> entries() {
-		return Collections.unmodifiableCollection(entries.values());
-	}
-	
-	@Override
-	public String toString() {
-		StringBuilder builder = new StringBuilder();
-		for(FileCheckerEntry entry : entries.values()) {
-			if((entry.getHash() == null))
-				continue;
-			builder.append(entry.toString());
-			builder.append(STRING_NEWLINE);
-		}
-		return builder.toString();
 	}
 }

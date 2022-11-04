@@ -14,11 +14,11 @@ import sune.app.mediadown.Shared;
 import sune.app.mediadown.download.DownloadConfiguration;
 import sune.app.mediadown.download.FileDownloader;
 import sune.app.mediadown.download.InputStreamChannelFactory;
+import sune.app.mediadown.event.CheckEvent;
 import sune.app.mediadown.event.DownloadEvent;
+import sune.app.mediadown.event.FileCheckEvent;
 import sune.app.mediadown.event.tracker.DownloadTracker;
 import sune.app.mediadown.event.tracker.TrackerManager;
-import sune.app.mediadown.update.CheckListener;
-import sune.app.mediadown.update.FileCheckListener;
 import sune.app.mediadown.update.FileChecker;
 import sune.app.mediadown.update.Requirements;
 import sune.app.mediadown.update.Updater;
@@ -43,61 +43,8 @@ public final class Resources {
 	private Resources() {
 	}
 	
-	private static final CheckListener checkListener(StringReceiver receiver) {
-		return new CheckListener() {
-			
-			@Override
-			public void begin() {
-				if((receiver != null))
-					receiver.receive("Checking resources...");
-			}
-			
-			@Override
-			public void compare(String name) {
-				if((receiver != null))
-					receiver.receive(String.format("Checking resource %s...", name));
-			}
-			
-			@Override
-			public void end() {
-				if((receiver != null))
-					receiver.receive("Checking resources... done");
-			}
-			
-			@Override
-			public FileCheckListener fileCheckListener() {
-				return new FileCheckListener() {
-					
-					@Override
-					public void begin(Path dir) {
-						if((receiver != null))
-							receiver.receive(String.format("Checking %s...", dir.getFileName().toString()));
-					}
-					
-					@Override
-					public void update(Path file, String hash) {
-						if((receiver != null))
-							receiver.receive(String.format("Checking %s...%s", file.getFileName().toString(), hash != null ? " done" : ""));
-					}
-					
-					@Override
-					public void end(Path dir) {
-						if((receiver != null))
-							receiver.receive(String.format("Checking %s... done", dir.getFileName().toString()));
-					}
-					
-					@Override
-					public void error(Exception ex) {
-						if((receiver != null))
-							receiver.receive(String.format("Error: %s", ex.getMessage()));
-					}
-				};
-			}
-		};
-	}
-	
 	/** @since 00.02.08 */
-	private static final void download(URI uri, Path destination, StringReceiver receiver) throws Exception {
+	private static final Path download(URI uri, Path destination, StringReceiver receiver) throws Exception {
 		Objects.requireNonNull(uri);
 		Objects.requireNonNull(destination);
 		
@@ -138,6 +85,8 @@ public final class Resources {
 		
 		GetRequest request = new GetRequest(Utils.url(uri), Shared.USER_AGENT);
 		downloader.start(request, destination, DownloadConfiguration.ofDefault());
+		
+		return destination;
 	}
 	
 	private static final Requirements requirements(String os) {
@@ -166,8 +115,9 @@ public final class Resources {
 			NIO.createDir(PATH_RESOURCES);
 		}
 		
-		Updater.checkResources(URL_BASE, PATH_RESOURCES, TIMEOUT,
-			checkListener(receiver), localFileChecker(predicateComputeHash),
+		FileChecker checker = localFileChecker(predicateComputeHash);
+		
+		Updater updater = Updater.ofResources(URL_BASE, PATH_RESOURCES, TIMEOUT, checker,
 			(url, file) -> download(Utils.uri(url), file, receiver),
 			(file, webDir) -> Utils.urlConcat(webDir, NIO.localPath().relativize(file).toString().replace('\\', '/')),
 			(file) -> PATH_RESOURCES.resolve(file.getFileName()),
@@ -182,6 +132,52 @@ public final class Resources {
 							|| !resourceExists(entryLoc.getPath()));
 			}, updatedPaths);
 		
+		updater.addEventListener(CheckEvent.BEGIN, (v) -> {
+			if(receiver != null) {
+				receiver.receive("Checking resources...");
+			}
+		});
+		
+		updater.addEventListener(CheckEvent.END, (v) -> {
+			if(receiver != null) {
+				receiver.receive("Checking resources... done");
+			}
+		});
+		
+		updater.addEventListener(CheckEvent.COMPARE, (name) -> {
+			if(receiver != null) {
+				receiver.receive(String.format("Checking resource %s...", name));
+			}
+		});
+		
+		checker.addEventListener(FileCheckEvent.BEGIN, (path) -> {
+			if(receiver != null) {
+				receiver.receive(String.format("Checking %s...", path.getFileName().toString()));
+			}
+		});
+		
+		checker.addEventListener(FileCheckEvent.END, (path) -> {
+			if(receiver != null) {
+				receiver.receive(String.format("Checking %s... done", path.getFileName().toString()));
+			}
+		});
+		
+		checker.addEventListener(FileCheckEvent.UPDATE, (pair) -> {
+			if(receiver != null) {
+				receiver.receive(String.format(
+					"Checking %s...%s",
+					pair.a.getFileName().toString(),
+					pair.b != null ? " done" : ""
+				));
+			}
+		});
+		
+		checker.addEventListener(FileCheckEvent.ERROR, (ex) -> {
+			if(receiver != null) {
+				receiver.receive(String.format("Error: %s", ex.getMessage()));
+			}
+		});
+		
 		// Make sure all the binaries are executable (Unix systems)
 		if(!OSUtils.isWindows()) {
 			for(InternalResource resource : localResources()) {
@@ -193,7 +189,7 @@ public final class Resources {
 	/** @since 00.02.07 */
 	public static final FileChecker etcFileChecker(String dirName, Predicate<Path> predicateComputeHash) {
 		Path dir = PATH_ETC.resolve(dirName);
-		FileChecker checker = new FileChecker.PrefixedFileChecker(dir.getParent(), null, dir);
+		FileChecker checker = new FileChecker.PrefixedFileChecker(dir.getParent(), dir);
 		
 		for(InternalResource resource : RESOURCES) {
 			checker.addEntry(dir.resolve(resource.os())
@@ -209,7 +205,7 @@ public final class Resources {
 	
 	/** @since 00.02.07 */
 	public static final FileChecker localFileChecker(Predicate<Path> predicateComputeHash) {
-		FileChecker checker = new FileChecker.PrefixedFileChecker(PATH_RESOURCES, null, PATH_RESOURCES);
+		FileChecker checker = new FileChecker.PrefixedFileChecker(PATH_RESOURCES, PATH_RESOURCES);
 		
 		for(InternalResource resource : localResources()) {
 			checker.addEntry(PATH_RESOURCES.resolve(OSUtils.getExecutableName(resource.name())),

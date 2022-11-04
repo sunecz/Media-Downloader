@@ -39,8 +39,12 @@ import sune.app.mediadown.configuration.ApplicationConfigurationAccessor.UsePreR
 import sune.app.mediadown.configuration.Configuration;
 import sune.app.mediadown.download.DownloadConfiguration;
 import sune.app.mediadown.download.FileDownloader;
+import sune.app.mediadown.event.CheckEvent;
 import sune.app.mediadown.event.DownloadEvent;
-import sune.app.mediadown.event.EventRegistry;
+import sune.app.mediadown.event.EventBindableAction;
+import sune.app.mediadown.event.EventBinder;
+import sune.app.mediadown.event.EventType;
+import sune.app.mediadown.event.FileCheckEvent;
 import sune.app.mediadown.event.NativeLibraryLoaderEvent;
 import sune.app.mediadown.event.PluginLoaderEvent;
 import sune.app.mediadown.event.tracker.DownloadTracker;
@@ -85,8 +89,6 @@ import sune.app.mediadown.resource.Resources;
 import sune.app.mediadown.resource.Resources.InternalResource;
 import sune.app.mediadown.resource.Resources.StringReceiver;
 import sune.app.mediadown.theme.Theme;
-import sune.app.mediadown.update.CheckListener;
-import sune.app.mediadown.update.FileCheckListener;
 import sune.app.mediadown.update.FileChecker;
 import sune.app.mediadown.update.RemoteConfiguration;
 import sune.app.mediadown.update.Requirements;
@@ -420,10 +422,10 @@ public final class MediaDownloader {
 				if(DO_UPDATE) {
 					final Path rootDir = Path.of(PathSystem.getCurrentDirectory());
 					final Property<Double> progressValue = new Property<>();
-					EventRegistry<DownloadEvent> eventRegistry = new EventRegistry<>();
+					FileDownloader downloader = new FileDownloader(new TrackerManager());
 					
-					eventRegistry.add(DownloadEvent.BEGIN, (downloader) -> {
-						Path file = downloader.output();
+					downloader.addEventListener(DownloadEvent.BEGIN, (d) -> {
+						Path file = d.output();
 						String path = file.subpath(rootDir.getNameCount(), file.getNameCount()).toString();
 						
 						progressValue.setValue(getProgress());
@@ -431,7 +433,7 @@ public final class MediaDownloader {
 						setProgress(0.0);
 					});
 					
-					eventRegistry.add(DownloadEvent.UPDATE, (pair) -> {
+					downloader.addEventListener(DownloadEvent.UPDATE, (pair) -> {
 						Path file = pair.a.output();
 						DownloadTracker tracker = (DownloadTracker) pair.b.tracker();
 						double current = tracker.current();
@@ -444,61 +446,39 @@ public final class MediaDownloader {
 						setProgress(percent0);
 					});
 					
-					eventRegistry.add(DownloadEvent.END, (downloader) -> {
-						Path file = downloader.output();
+					downloader.addEventListener(DownloadEvent.END, (d) -> {
+						Path file = d.output();
 						String path = file.subpath(rootDir.getNameCount(), file.getNameCount()).toString();
 						
 						setText(String.format("Downloading library %s... Done", path));
 						setProgress(progressValue.getValue());
 					});
 					
-					eventRegistry.add(DownloadEvent.ERROR, (pair) -> {
+					downloader.addEventListener(DownloadEvent.ERROR, (pair) -> {
 						setText(String.format("Downloading library... Error"));
 						setProgress(progressValue.getValue());
 					});
 					
-					Update.checkLibraries(new CheckListener() {
+					try {
+						EventBindableAction<EventType, Void> action = Update.checkLibraries(downloader);
 						
-						@Override
-						public void begin() {
-						}
-						
-						@Override
-						public void compare(String name) {
+						action.addEventListener(CheckEvent.COMPARE, (name) -> {
 							setText(String.format("Checking library %s...", name));
-						}
+						});
 						
-						@Override
-						public void end() {
-						}
+						action.addEventListener(FileCheckEvent.UPDATE, (pair) -> {
+							String path = pair.a.subpath(rootDir.getNameCount(), pair.a.getNameCount()).toString();
+							setText(String.format("Checking %s...%s", path, pair.b != null ? " done" : ""));
+						});
 						
-						@Override
-						public FileCheckListener fileCheckListener() {
-							return new FileCheckListener() {
-								
-								private final Path rootDir = Path.of(PathSystem.getCurrentDirectory());
-								
-								@Override
-								public void begin(Path dir) {
-								}
-								
-								@Override
-								public void update(Path file, String hash) {
-									String path = file.subpath(rootDir.getNameCount(), file.getNameCount()).toString();
-									setText(String.format("Checking %s...%s", path, hash != null ? " done" : ""));
-								}
-								
-								@Override
-								public void end(Path dir) {
-								}
-								
-								@Override
-								public void error(Exception ex) {
-									setText(String.format("Checking... Error"));
-								}
-							};
-						}
-					}, eventRegistry);
+						action.addEventListener(FileCheckEvent.ERROR, (ex) -> {
+							setText(String.format("Checking... Error"));
+						});
+						
+						action.execute();
+					} catch(Exception ex) {
+						// Config cannot be accessed, just skip it
+					}
 				}
 				
 				return new LoadNativeLibraries();
@@ -886,29 +866,44 @@ public final class MediaDownloader {
 			}
 		}
 		
-		public static final void checkLibraries(CheckListener listener, EventRegistry<DownloadEvent> eventRegistry) {
-			try {
-				boolean checkIntegrity = configuration.isCheckResourcesIntegrity();
-				boolean checkLibraries = true;
-				String versionLib = remoteConfiguration().value("lib");
-				VersionEntryAccessor version = Versions.Common.lib();
-				
-				// If there is no integrity checking, we have to manually check the versions
-				if(!checkIntegrity) {
-					Version verLocal = version.get();
-					Version verRemote = Version.of(versionLib);
-					checkLibraries = verLocal.compareTo(verRemote) != 0 || verLocal == Version.UNKNOWN;
-				}
-				
-				if(checkLibraries) {
-					FileChecker checker = localFileChecker(true, (path) -> true);
-					String baseURL = Utils.urlConcat(URL_BASE_LIB, versionLib);
-					Updater.checkLibraries(baseURL, NIO.localPath(), TIMEOUT, listener, eventRegistry, checker, null);
-					version.set(Version.of(versionLib));
-				}
-			} catch(Exception ex) {
-				// Config cannot be accessed, just skip it
+		public static final EventBindableAction<EventType, Void> checkLibraries(FileDownloader downloader)
+				throws Exception {
+			boolean checkIntegrity = configuration.isCheckResourcesIntegrity();
+			boolean checkLibraries = true;
+			String versionLib = remoteConfiguration().value("lib");
+			VersionEntryAccessor version = Versions.Common.lib();
+			
+			// If there is no integrity checking, we have to manually check the versions
+			if(!checkIntegrity) {
+				Version verLocal = version.get();
+				Version verRemote = Version.of(versionLib);
+				checkLibraries = verLocal.compareTo(verRemote) != 0 || verLocal == Version.UNKNOWN;
 			}
+			
+			if(checkLibraries) {
+				EventBinder binder = new EventBinder();
+				
+				FileChecker checker = localFileChecker(true, (path) -> true);
+				String baseURL = Utils.urlConcat(URL_BASE_LIB, versionLib);
+				Updater updater = Updater.ofLibraries(baseURL, NIO.localPath(), TIMEOUT, checker, downloader, null);
+				
+				binder.register(CheckEvent.class, updater);
+				binder.register(FileCheckEvent.class, checker);
+				
+				return new EventBindableAction.OfBinder<>(binder) {
+					
+					@Override
+					public Void execute() throws Exception {
+						if(updater.check()) {
+							version.set(Version.of(versionLib));
+						}
+						
+						return null;
+					}
+				};
+			}
+			
+			return new EventBindableAction.OfNone<>(null);
 		}
 		
 		public static final boolean checkVersion() {
@@ -1076,7 +1071,7 @@ public final class MediaDownloader {
 	public static final FileChecker localFileChecker(boolean checkRequirements, Predicate<Path> predicateComputeHash) {
 		Path currentDir = NIO.localPath();
 		Path dir = NIO.localPath("lib/");
-		FileChecker checker = new FileChecker.PrefixedFileChecker(dir, null, currentDir);
+		FileChecker checker = new FileChecker.PrefixedFileChecker(dir, currentDir);
 		
 		// Generate list of all native libraries to check
 		for(NativeLibrary library : NativeLibraries.all()) {
@@ -1580,7 +1575,7 @@ public final class MediaDownloader {
 		if(message == null) return; // Do nothing
 		String text = message + "\n" + content;
 		Log.error(text);
-		if(FXUtils.isInitialized()) Dialog.showContentError("Error", text, content);
+		if(FXUtils.isInitialized()) Dialog.showContentError("Error", message, content);
 		else System.err.println(text); // FX not available, print to stderr
 	}
 	

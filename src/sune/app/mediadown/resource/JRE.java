@@ -15,6 +15,7 @@ import sune.app.mediadown.Shared;
 import sune.app.mediadown.download.DownloadConfiguration;
 import sune.app.mediadown.download.FileDownloader;
 import sune.app.mediadown.download.InputStreamChannelFactory;
+import sune.app.mediadown.event.CheckEvent;
 import sune.app.mediadown.event.DownloadEvent;
 import sune.app.mediadown.event.Event;
 import sune.app.mediadown.event.EventBindable;
@@ -24,8 +25,6 @@ import sune.app.mediadown.event.Listener;
 import sune.app.mediadown.event.tracker.DownloadTracker;
 import sune.app.mediadown.event.tracker.TrackerManager;
 import sune.app.mediadown.resource.JRE.JREEvent;
-import sune.app.mediadown.update.CheckListener;
-import sune.app.mediadown.update.FileCheckListener;
 import sune.app.mediadown.update.FileChecker;
 import sune.app.mediadown.update.Requirements;
 import sune.app.mediadown.update.Updater;
@@ -66,7 +65,7 @@ public final class JRE implements EventBindable<JREEvent> {
 	}
 	
 	private final FileChecker fileChecker(Path dir, String version, Requirements requirements) throws IOException {
-		FileChecker checker = new FileChecker.PrefixedFileChecker(dir, null, dir);
+		FileChecker checker = new FileChecker.PrefixedFileChecker(dir, dir);
 		if(NIO.exists(dir)) {
 			Files.walk(dir).forEach((file) -> {
 				Path path = file.toAbsolutePath();
@@ -220,7 +219,7 @@ public final class JRE implements EventBindable<JREEvent> {
 		}
 		
 		/** @since 00.02.08 */
-		private final void download(URI uri, Path destination) throws Exception {
+		private final Path download(URI uri, Path destination) throws Exception {
 			Objects.requireNonNull(uri);
 			Objects.requireNonNull(destination);
 			
@@ -251,6 +250,8 @@ public final class JRE implements EventBindable<JREEvent> {
 			
 			GetRequest request = new GetRequest(Utils.url(uri), Shared.USER_AGENT);
 			downloader.start(request, destination, DownloadConfiguration.ofDefault());
+			
+			return destination;
 		}
 		
 		private final Path ensurePathInDirectory(Path file, Path dir, boolean resolve) {
@@ -279,7 +280,7 @@ public final class JRE implements EventBindable<JREEvent> {
 				boolean allowNullLocalEntry, Set<Path> visitedFiles, Collection<Path> updatedPaths) throws Exception {
 			if(!NIO.exists(baseDirNew)) NIO.createDir(baseDirNew);
 			Path localPath = PathSystem.getPath(CLAZZ, "");
-			return Updater.checkResources(baseURL, baseDirOld, TIMEOUT, checkListener(), checker,
+			Updater updater = Updater.ofResources(baseURL, baseDirOld, TIMEOUT, checker,
 				(url, file) -> download(Utils.uri(url), ensurePathInDirectory(baseDirOld.relativize(file), baseDirNew, true)),
 				(file, webDir) -> Utils.urlConcat(webDir, ensurePathInDirectory(localPath.relativize(file), baseDirOld, false).toString().replace('\\', '/')),
 				(file) -> ensurePathInDirectory(localPath.relativize(file), baseDirOld, true),
@@ -294,20 +295,12 @@ public final class JRE implements EventBindable<JREEvent> {
 									&& !entryLoc.getHash().equals(entryWeb.getHash()))
 								|| !NIO.exists(ensurePathInDirectory(entryLoc.getPath(), baseDirOld, true)));
 				}, updatedPaths);
-		}
-		
-		private final CheckListener checkListener() {
-			return new CheckListener() {
-				
-				@Override
-				public void compare(String name) {
-					eventRegistry.call(JREEvent.CHECK, new CheckEventContext<>(JRE.this, name));
-				}
-				
-				@Override public void begin() {}
-				@Override public void end() {}
-				@Override public FileCheckListener fileCheckListener() { return null; /* Not used */ }
-			};
+			
+			updater.addEventListener(CheckEvent.COMPARE, (name) -> {
+				eventRegistry.call(JREEvent.CHECK, new CheckEventContext<>(JRE.this, name));
+			});
+			
+			return updater.check();
 		}
 	}
 }
