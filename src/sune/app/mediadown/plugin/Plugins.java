@@ -5,10 +5,18 @@ import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
+import sune.app.mediadown.event.Event;
+import sune.app.mediadown.event.Listener;
+import sune.app.mediadown.event.PluginLoaderEvent;
+
 public final class Plugins {
 	
 	private static final PluginLoader LOADER = new DefaultPluginLoader();
 	private static final Set<PluginFile> PLUGINS = new LinkedHashSet<>();
+	
+	// Forbid anyone to create an instance of this class
+	private Plugins() {
+	}
 	
 	public static final void add(PluginFile plugin) {
 		PLUGINS.add(plugin);
@@ -48,15 +56,19 @@ public final class Plugins {
 		return null;
 	}
 	
-	public static final void loadAll(PluginLoadListener listener) throws Exception {
-		LOADER.load(PLUGINS, listener);
+	public static final void loadAll() throws Exception {
+		LOADER.load(PLUGINS);
 	}
 	
 	public static final void dispose() throws Exception {
 		LOADER.dispose();
 	}
 	
-	// Forbid anyone to create an instance of this class
-	private Plugins() {
+	public static final <V> void addEventListener(Event<? extends PluginLoaderEvent, V> event, Listener<V> listener) {
+		LOADER.addEventListener(event, listener);
+	}
+	
+	public static final <V> void removeEventListener(Event<? extends PluginLoaderEvent, V> event, Listener<V> listener) {
+		LOADER.removeEventListener(event, listener);
 	}
 }

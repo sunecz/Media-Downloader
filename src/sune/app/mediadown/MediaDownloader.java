@@ -41,6 +41,7 @@ import sune.app.mediadown.download.DownloadConfiguration;
 import sune.app.mediadown.download.FileDownloader;
 import sune.app.mediadown.event.DownloadEvent;
 import sune.app.mediadown.event.EventRegistry;
+import sune.app.mediadown.event.PluginLoaderEvent;
 import sune.app.mediadown.event.tracker.DownloadTracker;
 import sune.app.mediadown.event.tracker.TrackerManager;
 import sune.app.mediadown.gui.Dialog;
@@ -68,7 +69,6 @@ import sune.app.mediadown.media.MediaFormat;
 import sune.app.mediadown.media.MediaTitleFormat;
 import sune.app.mediadown.plugin.PluginConfiguration;
 import sune.app.mediadown.plugin.PluginFile;
-import sune.app.mediadown.plugin.PluginLoadListener;
 import sune.app.mediadown.plugin.PluginUpdater;
 import sune.app.mediadown.plugin.Plugins;
 import sune.app.mediadown.registry.NamedRegistry;
@@ -712,32 +712,41 @@ public final class MediaDownloader {
 				setProgress(PROGRESS_INDETERMINATE);
 				registerPlugins();
 				updateTotal(true);
-				loadPlugins(new PluginLoadListener() {
-					
-					@Override
-					public void onLoading(PluginFile plugin) {
-						setText("Loading plugin " + plugin.getPlugin().instance().name() + "...");
-					}
-					
-					@Override
-					public void onLoaded(PluginFile plugin, boolean success) {
-						update("Loading plugin " + plugin.getPlugin().instance().name() + "... " + (success ? "done" : "error"));
-					}
-					
-					@Override
-					public void onNotLoaded(PluginFile[] pluginFiles) {
-						String text = "Cannot load plugins (" + pluginFiles.length + ")";
-						StringBuilder content = new StringBuilder();
-						for(PluginFile plugin : pluginFiles) {
-							content.append(plugin.getPlugin().instance().name());
-							content.append(" (");
-							content.append(plugin.getPath());
-							content.append(")\n");
-						}
-						if(FXUtils.isInitialized()) Dialog.showContentError("Error", text, content.toString());
-						else System.err.println(text + "\n" + content.toString()); // FX not available, print to stderr
-					}
+				
+				Plugins.addEventListener(PluginLoaderEvent.LOADING, (plugin) -> {
+					setText("Loading plugin " + plugin.getPlugin().instance().name() + "...");
 				});
+				
+				Plugins.addEventListener(PluginLoaderEvent.LOADED, (pair) -> {
+					update("Loading plugin " + pair.a.getPlugin().instance().name() + "... " + (pair.b ? "done" : "error"));
+				});
+				
+				Plugins.addEventListener(PluginLoaderEvent.NOT_LOADED, (plugins) -> {
+					String text = "Cannot load plugins (" + plugins.size() + ")";
+					StringBuilder content = new StringBuilder();
+					
+					for(PluginFile plugin : plugins) {
+						content.append(plugin.getPlugin().instance().name());
+						content.append(" (");
+						content.append(plugin.getPath());
+						content.append(")\n");
+					}
+					
+					errorWithContent(text, content.toString());
+				});
+				
+				Plugins.addEventListener(PluginLoaderEvent.ERROR_LOAD, (pair) -> {
+					String message = String.format("Cannot load plugin: %s", pair.a.getPlugin().instance().name());
+					error(new IllegalStateException(message, pair.b));
+				});
+				
+				Plugins.addEventListener(PluginLoaderEvent.ERROR_DISPOSE, (pair) -> {
+					String message = String.format("Cannot dispose plugin: %s", pair.a.getPlugin().instance().name());
+					MediaDownloader.error(new IllegalStateException(message, pair.b));
+				});
+				
+				Utils.ignore(Plugins::loadAll, MediaDownloader::error);
+				
 				return new Finalization();
 			}
 			
@@ -1562,6 +1571,14 @@ public final class MediaDownloader {
 		else throwable.printStackTrace(); // FX not available, print to stderr
 	}
 	
+	public static final void errorWithContent(String message, String content) {
+		if(message == null) return; // Do nothing
+		String text = message + "\n" + content;
+		Log.error(text);
+		if(FXUtils.isInitialized()) Dialog.showContentError("Error", text, content);
+		else System.err.println(text); // FX not available, print to stderr
+	}
+	
 	private static final class InternalResources {
 		
 		public static final void addLanguage(String name, boolean isExtractable) {
@@ -2059,14 +2076,6 @@ public final class MediaDownloader {
 				// Add the plugin to the list, so it will be loaded
 				.forEach(Plugins::add);
 		} catch(IOException ex) {
-			error(ex);
-		}
-	}
-	
-	private static final void loadPlugins(PluginLoadListener listener) {
-		try {
-			Plugins.loadAll(listener);
-		} catch(Exception ex) {
 			error(ex);
 		}
 	}
