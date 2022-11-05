@@ -13,8 +13,8 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
-import javax.swing.Timer;
-
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
 import javafx.collections.ListChangeListener.Change;
 import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
@@ -43,7 +43,6 @@ import sune.app.mediadown.Disposables;
 import sune.app.mediadown.Download;
 import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.download.DownloadConfiguration;
-import sune.app.mediadown.download.MediaDownloadConfiguration;
 import sune.app.mediadown.engine.MediaEngine;
 import sune.app.mediadown.engine.MediaEngines;
 import sune.app.mediadown.event.ConversionEvent;
@@ -72,7 +71,6 @@ import sune.app.mediadown.gui.table.TablePipelineResult;
 import sune.app.mediadown.gui.window.InformationWindow.InformationTab;
 import sune.app.mediadown.gui.window.InformationWindow.TabContent;
 import sune.app.mediadown.language.Translation;
-import sune.app.mediadown.media.Media;
 import sune.app.mediadown.message.Message;
 import sune.app.mediadown.message.MessageList;
 import sune.app.mediadown.message.MessageManager;
@@ -94,9 +92,6 @@ public final class MainWindow extends Window<BorderPane> {
 	
 	private static MainWindow INSTANCE;
 	
-	private final AtomicBoolean refresh = new AtomicBoolean();
-	private final AtomicBoolean updated = new AtomicBoolean();
-	
 	private TableView<PipelineInfo> table;
 	private Button btnDownload;
 	private Button btnDownloadSelected;
@@ -117,17 +112,6 @@ public final class MainWindow extends Window<BorderPane> {
 	private Menu menuTools;
 	private MenuItem menuItemClipboardWatcher;
 	private MenuItem menuItemUpdateResources;
-	
-	private final Timer timer = new Timer(200, (e) -> {
-		if(!refresh.get() && updated.get()) {
-			refresh.set(true);
-			FXUtils.thread(() -> {
-				table.refresh();
-				refresh.set(false);
-				updated.set(false);
-			});
-		}
-	});
 	
 	private final Actions actions = new Actions();
 	
@@ -155,9 +139,9 @@ public final class MainWindow extends Window<BorderPane> {
 		TableColumn<PipelineInfo, String> columnVSRC = new TableColumn<>(titleVSRC);
 		TableColumn<PipelineInfo, String> columnPath = new TableColumn<>(titlePath);
 		TableColumn<PipelineInfo, String> columnDPrg = new TableColumn<>(titleDPrg);
-		columnVSRC.setCellValueFactory(new PropertyValueFactory<PipelineInfo, String>("Source"));
-		columnPath.setCellValueFactory(new PropertyValueFactory<PipelineInfo, String>("Destination"));
-		columnDPrg.setCellValueFactory(new PropertyValueFactory<PipelineInfo, String>("Progress"));
+		columnVSRC.setCellValueFactory(new PropertyValueFactory<PipelineInfo, String>("source"));
+		columnPath.setCellValueFactory(new PropertyValueFactory<PipelineInfo, String>("destination"));
+		columnDPrg.setCellValueFactory(new PropertyValueFactory<PipelineInfo, String>("progress"));
 		columnVSRC.setPrefWidth(150);
 		columnPath.setPrefWidth(170);
 		columnDPrg.setPrefWidth(260);
@@ -174,7 +158,7 @@ public final class MainWindow extends Window<BorderPane> {
 			if((change.wasRemoved())) {
 				boolean disable = true;
 				for(PipelineInfo info : table.getItems()) {
-					if(!info.getPipeline().isStarted()) {
+					if(!info.pipeline().isStarted()) {
 						disable = false;
 						break;
 					}
@@ -189,7 +173,7 @@ public final class MainWindow extends Window<BorderPane> {
 			List<PipelineInfo> list = (List<PipelineInfo>) change.getList();
 			if(!list.isEmpty()) {
 				for(PipelineInfo info : list) {
-					if(!info.getPipeline().isStarted()) {
+					if(!info.pipeline().isStarted()) {
 						disable = false;
 						break;
 					}
@@ -209,16 +193,16 @@ public final class MainWindow extends Window<BorderPane> {
 				MouseButton button = e.getButton();
 				if((button == MouseButton.PRIMARY && e.getClickCount() > 1)) {
 					PipelineInfo info = infos.get(0);
-					Pipeline pipeline = info.getPipeline();
+					Pipeline pipeline = info.pipeline();
 					if((pipeline.isStarted() || pipeline.isDone())) {
 						showFile(info);
 					}
 				} else if((button == MouseButton.SECONDARY)) {
-					boolean resume = infos.get(0).getPipeline().isPaused();
+					boolean resume = infos.get(0).pipeline().isPaused();
 					int started = 0, done = 0, running = 0;
 					int count = infos.size();
 					for(PipelineInfo info : infos) {
-						Pipeline pipeline = info.getPipeline();
+						Pipeline pipeline = info.pipeline();
 						if((pipeline.isDone())) {
 							++done;
 						} else {
@@ -248,9 +232,9 @@ public final class MainWindow extends Window<BorderPane> {
 		menuItemPause.setOnAction((e) -> {
 			List<PipelineInfo> infos;
 			if(!(infos = table.getSelectionModel().getSelectedItems()).isEmpty()) {
-				boolean resume = infos.get(0).getPipeline().isPaused();
+				boolean resume = infos.get(0).pipeline().isPaused();
 				for(PipelineInfo info : infos) {
-					Pipeline pipeline = info.getPipeline();
+					Pipeline pipeline = info.pipeline();
 					if((resume)) Utils.ignore(pipeline::resume, this::showError);
 					else         Utils.ignore(pipeline::pause,  this::showError);
 				}
@@ -262,7 +246,7 @@ public final class MainWindow extends Window<BorderPane> {
 				// Fix: not all selected items are removed
 				List<PipelineInfo> toRemove = new ArrayList<>();
 				for(PipelineInfo info : infos) {
-					Pipeline pipeline = info.getPipeline();
+					Pipeline pipeline = info.pipeline();
 					if(pipeline.isStarted() && (pipeline.isRunning() || pipeline.isPaused())) {
 						Utils.ignore(pipeline::stop, this::showError);
 					} else {
@@ -380,10 +364,7 @@ public final class MainWindow extends Window<BorderPane> {
 	}
 	
 	private final void init() {
-		timer.setRepeats(true);
-		timer.start();
 		Disposables.add(() -> {
-			timer.stop();
 			getPipelines().forEach(Utils.suppressException(Pipeline::stop, this::showError));
 		});
 		prepareAddMenu();
@@ -645,7 +626,7 @@ public final class MainWindow extends Window<BorderPane> {
 	}
 	
 	private final void showFile(PipelineInfo info) {
-		Utils.ignore(() -> OS.current().highlight(info.getPath()), MediaDownloader::error);
+		Utils.ignore(() -> OS.current().highlight(info.media().path()), MediaDownloader::error);
 	}
 	
 	public final void showSelectionWindow(MediaEngine engine) {
@@ -706,20 +687,21 @@ public final class MainWindow extends Window<BorderPane> {
 	}
 	
 	private final List<Pipeline> getPipelines() {
-		return table.getItems().stream().map(PipelineInfo::getPipeline).filter((d) -> d != null).collect(Collectors.toList());
+		return table.getItems().stream().map(PipelineInfo::pipeline).filter((d) -> d != null).collect(Collectors.toList());
 	}
 	
 	private final void startPipeline(PipelineInfo info) {
-		Pipeline pipeline = info.getPipeline();
+		Pipeline pipeline = info.pipeline();
 		if((pipeline.isStarted()))
 			return;
-		pipeline.setInput(MediaPipelineResult.of(info.getMedia(), info.getPath(), info.getMediaConfiguration(),
+		ResolvedMedia media = info.media();
+		pipeline.setInput(MediaPipelineResult.of(media.media(), media.path(), media.configuration(),
 		                                         DownloadConfiguration.ofDefault()));
 		Utils.ignore(pipeline::start, this::showError);
 	}
 	
 	private final void removePipelines(List<PipelineInfo> infos) {
-		infos.stream().map(PipelineInfo::getPipeline)
+		infos.stream().map(PipelineInfo::pipeline)
 			.filter((p) -> p != null)
 			.forEach(Utils.suppressException(Pipeline::stop, this::showError));
 		FXUtils.thread(() -> table.getItems().removeAll(infos));
@@ -735,56 +717,87 @@ public final class MainWindow extends Window<BorderPane> {
 		return translation;
 	}
 	
-	public final class PipelineInfo {
+	public static final class PipelineInfo {
+		
+		/** @since 00.02.08 */
+		private static final long MIN_UPDATE_DIFF_TIME = 250L * 1000000L; // 250 ms
 		
 		private final Pipeline pipeline;
 		/** @since 00.02.05 */
 		private final ResolvedMedia media;
-		private String progress;
+		
+		/** @since 00.02.08 */
+		private StringProperty sourceProperty;
+		/** @since 00.02.08 */
+		private StringProperty destinationProperty;
+		/** @since 00.02.08 */
+		private StringProperty progressProperty;
+		
+		/** @since 00.02.08 */
+		private long lastUpdateTime = Long.MIN_VALUE;
+		private volatile boolean stateUpdated = false;
 		
 		public PipelineInfo(Pipeline pipeline, ResolvedMedia media) {
 			this.pipeline = Objects.requireNonNull(pipeline);
-			this.media    = Objects.requireNonNull(media);
-			this.progress = "";
+			this.media = Objects.requireNonNull(media);
+			this.pipeline.getEventRegistry().addMany((o) -> stateUpdated = true, PipelineEvent.values());
 		}
 		
 		public void update(String progress) {
-			this.progress = progress;
-			updated.set(true);
+			long now = System.nanoTime();
+			
+			if(lastUpdateTime == Long.MIN_VALUE
+					|| stateUpdated
+					|| now - lastUpdateTime >= MIN_UPDATE_DIFF_TIME) {
+				FXUtils.thread(() -> progressProperty().set(progress));
+				stateUpdated = false;
+				lastUpdateTime = now;
+			}
 		}
 		
-		// Setters
-		public void setSource     (String source)   {}
-		public void setDestination(String path)     {}
-		public void setProgress   (String progress) {}
+		/** @since 00.02.08 */
+		public StringProperty sourceProperty() {
+			return sourceProperty == null
+						? sourceProperty = new SimpleStringProperty(source())
+						: sourceProperty;
+		}
 		
-		// Getters
-		public String getSource() {
+		/** @since 00.02.08 */
+		public StringProperty destinationProperty() {
+			return destinationProperty == null
+						? destinationProperty = new SimpleStringProperty(destination())
+						: destinationProperty;
+		}
+		
+		/** @since 00.02.08 */
+		public StringProperty progressProperty() {
+			return progressProperty == null
+						? progressProperty = new SimpleStringProperty("")
+						: progressProperty;
+		}
+		
+		/** @since 00.02.08 */
+		public String source() {
 			return media.media().source().toString();
 		}
 		
-		public String getDestination() {
+		/** @since 00.02.08 */
+		public String destination() {
 			return media.path().toString();
 		}
 		
-		public String getProgress() {
-			return progress;
+		/** @since 00.02.08 */
+		public String progress() {
+			return progressProperty().get();
 		}
 		
-		public Media getMedia() {
-			return media.media();
+		/** @since 00.02.08 */
+		public ResolvedMedia media() {
+			return media;
 		}
 		
-		public Path getPath() {
-			return media.path();
-		}
-		
-		/** @since 00.02.05 */
-		public MediaDownloadConfiguration getMediaConfiguration() {
-			return media.configuration();
-		}
-		
-		public Pipeline getPipeline() {
+		/** @since 00.02.08 */
+		public Pipeline pipeline() {
 			return pipeline;
 		}
 	}
