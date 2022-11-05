@@ -32,7 +32,6 @@ module sune.app.mediadown {
 	exports sune.app.mediadown.gui.form.field;
 	exports sune.app.mediadown.gui.table;
 	exports sune.app.mediadown.gui.window;
-	exports sune.app.mediadown.initialization;
 	exports sune.app.mediadown.language;
 	exports sune.app.mediadown.library;
 	exports sune.app.mediadown.logging;

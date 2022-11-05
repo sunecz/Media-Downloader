@@ -63,7 +63,6 @@ import sune.app.mediadown.gui.window.MediaInfoWindow;
 import sune.app.mediadown.gui.window.MessageWindow;
 import sune.app.mediadown.gui.window.PreviewWindow;
 import sune.app.mediadown.gui.window.TableWindow;
-import sune.app.mediadown.initialization.InitializationState;
 import sune.app.mediadown.language.Language;
 import sune.app.mediadown.language.Translation;
 import sune.app.mediadown.library.NativeLibraries;
@@ -163,6 +162,15 @@ public final class MediaDownloader {
 		return new Image(MediaDownloader.class.getResourceAsStream("/resources/icon/" + path));
 	}
 	
+	/** @since 00.02.08 */
+	private static interface InitializationState {
+		
+		public static final double PROGRESS_INDETERMINATE = -1.0;
+		
+		InitializationState run(Arguments args);
+		default String getTitle() { return null; }
+	}
+	
 	/** @since 00.02.00 */
 	private static final class InitializationStates {
 		
@@ -229,7 +237,7 @@ public final class MediaDownloader {
 			return classesCount;
 		}
 		
-		public static final class InternalInitialization implements InitializationState {
+		private static final class InternalInitialization implements InitializationState {
 			
 			@Override
 			public InitializationState run(Arguments args) {
@@ -240,7 +248,7 @@ public final class MediaDownloader {
 			}
 		}
 		
-		public static final class ShowStartupWindow implements InitializationState {
+		private static final class ShowStartupWindow implements InitializationState {
 			
 			@Override
 			public InitializationState run(Arguments args) {
@@ -252,7 +260,7 @@ public final class MediaDownloader {
 			}
 		}
 		
-		public static final class InitializeConfiguration implements InitializationState {
+		private static final class InitializeConfiguration implements InitializationState {
 			
 			@Override
 			public InitializationState run(Arguments args) {
@@ -267,7 +275,7 @@ public final class MediaDownloader {
 		// Update the JRE, if needed, as soon as possible, since some libraries and/or plugins
 		// may rely on it.
 		/** @since 00.02.02 */
-		public static final class CheckJRE implements InitializationState {
+		private static final class CheckJRE implements InitializationState {
 			
 			private static final Path oldJREPath()  { return PathSystem.getPath("jre"); }
 			private static final Path newJREPath()  { return PathSystem.getPath("jre-new"); }
@@ -391,7 +399,7 @@ public final class MediaDownloader {
 			}
 		}
 		
-		public static final class RegistrationOfLibrariesAndResources implements InitializationState {
+		private static final class RegistrationOfLibrariesAndResources implements InitializationState {
 			
 			@Override
 			public InitializationState run(Arguments args) {
@@ -403,7 +411,7 @@ public final class MediaDownloader {
 			}
 		}
 		
-		public static final class MaybeListGeneration implements InitializationState {
+		private static final class MaybeListGeneration implements InitializationState {
 			
 			@Override
 			public InitializationState run(Arguments args) {
@@ -426,7 +434,7 @@ public final class MediaDownloader {
 			}
 		}
 		
-		public static final class CheckLibraries implements InitializationState {
+		private static final class CheckLibraries implements InitializationState {
 			
 			@Override
 			public InitializationState run(Arguments args) {
@@ -498,7 +506,7 @@ public final class MediaDownloader {
 			@Override public String getTitle() { return "Checking libraries..."; }
 		}
 		
-		public static final class LoadNativeLibraries implements InitializationState {
+		private static final class LoadNativeLibraries implements InitializationState {
 			
 			@Override
 			public InitializationState run(Arguments args) {
@@ -539,7 +547,7 @@ public final class MediaDownloader {
 			@Override public String getTitle() { return "Loading native libraries..."; }
 		}
 		
-		public static final class LoadLibraries implements InitializationState {
+		private static final class LoadLibraries implements InitializationState {
 			
 			@Override
 			public InitializationState run(Arguments args) {
@@ -572,7 +580,7 @@ public final class MediaDownloader {
 			@Override public String getTitle() { return "Loading libraries..."; }
 		}
 		
-		public static final class MaybeDisposeOfExternalResources implements InitializationState {
+		private static final class MaybeDisposeOfExternalResources implements InitializationState {
 			
 			@Override
 			public InitializationState run(Arguments args) {
@@ -583,7 +591,7 @@ public final class MediaDownloader {
 			}
 		}
 		
-		public static final class InitializeInternalResources implements InitializationState {
+		private static final class InitializeInternalResources implements InitializationState {
 			
 			@Override
 			public InitializationState run(Arguments args) {
@@ -595,7 +603,7 @@ public final class MediaDownloader {
 			@Override public String getTitle() { return "Initializing internal resources..."; }
 		}
 		
-		public static final class LoadExternalResources implements InitializationState {
+		private static final class LoadExternalResources implements InitializationState {
 			
 			@Override
 			public InitializationState run(Arguments args) {
@@ -606,7 +614,7 @@ public final class MediaDownloader {
 			@Override public String getTitle() { return "Initializing external resources..."; }
 		}
 		
-		public static final class CheckExternalResources implements InitializationState {
+		private static final class CheckExternalResources implements InitializationState {
 			
 			@Override
 			public InitializationState run(Arguments args) {
@@ -618,7 +626,7 @@ public final class MediaDownloader {
 			@Override public String getTitle() { return "Checking external resources..."; }
 		}
 		
-		public static final class InitializeMiscellaneousResources implements InitializationState {
+		private static final class InitializeMiscellaneousResources implements InitializationState {
 			
 			@Override
 			public InitializationState run(Arguments args) {
@@ -629,7 +637,7 @@ public final class MediaDownloader {
 			@Override public String getTitle() { return "Initializating miscellaneous resources..."; }
 		}
 		
-		public static final class FinalizeConfiguration implements InitializationState {
+		private static final class FinalizeConfiguration implements InitializationState {
 			
 			@Override
 			public InitializationState run(Arguments args) {
@@ -638,7 +646,7 @@ public final class MediaDownloader {
 			}
 		}
 		
-		public static final class CheckVersion implements InitializationState {
+		private static final class CheckVersion implements InitializationState {
 			
 			@Override
 			public InitializationState run(Arguments args) {
@@ -654,7 +662,7 @@ public final class MediaDownloader {
 			@Override public String getTitle() { return "Checking new versions..."; }
 		}
 		
-		public static final class RegisterWindows implements InitializationState {
+		private static final class RegisterWindows implements InitializationState {
 			
 			@Override
 			public InitializationState run(Arguments args) {
@@ -666,7 +674,7 @@ public final class MediaDownloader {
 			@Override public String getTitle() { return "Registering windows..."; }
 		}
 		
-		public static final class RegisterDialogs implements InitializationState {
+		private static final class RegisterDialogs implements InitializationState {
 			
 			@Override
 			public InitializationState run(Arguments args) {
@@ -678,7 +686,7 @@ public final class MediaDownloader {
 			@Override public String getTitle() { return "Registering dialogs..."; }
 		}
 		
-		public static final class RegisterMenus implements InitializationState {
+		private static final class RegisterMenus implements InitializationState {
 			
 			@Override
 			public InitializationState run(Arguments args) {
@@ -690,7 +698,7 @@ public final class MediaDownloader {
 			@Override public String getTitle() { return "Registering menus..."; }
 		}
 		
-		public static final class InitializeDefaultPlugins implements InitializationState {
+		private static final class InitializeDefaultPlugins implements InitializationState {
 			
 			@Override
 			public InitializationState run(Arguments args) {
@@ -701,7 +709,7 @@ public final class MediaDownloader {
 			@Override public String getTitle() { return "Initializing default plugins..."; }
 		}
 		
-		public static final class InitializePlugins implements InitializationState {
+		private static final class InitializePlugins implements InitializationState {
 			
 			@Override
 			public InitializationState run(Arguments args) {
@@ -750,7 +758,7 @@ public final class MediaDownloader {
 		}
 		
 		/** @since 00.02.07 */
-		public static final class Finalization implements InitializationState {
+		private static final class Finalization implements InitializationState {
 			
 			@Override
 			public InitializationState run(Arguments args) {
@@ -765,7 +773,7 @@ public final class MediaDownloader {
 		}
 		
 		/** @since 00.02.02 */
-		public static final class MaybeRunStandalonePlugin implements InitializationState {
+		private static final class MaybeRunStandalonePlugin implements InitializationState {
 			
 			@Override
 			public InitializationState run(Arguments args) {
@@ -795,7 +803,7 @@ public final class MediaDownloader {
 			}
 		}
 		
-		public static final class InitializationDone implements InitializationState {
+		private static final class InitializationDone implements InitializationState {
 			
 			@Override
 			public InitializationState run(Arguments args) {
