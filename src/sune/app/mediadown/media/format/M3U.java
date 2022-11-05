@@ -20,8 +20,8 @@ import sune.app.mediadown.download.segment.RemoteFileSegment;
 import sune.app.mediadown.download.segment.RemoteFileSegmentable;
 import sune.app.mediadown.download.segment.RemoteFileSegmentsHolder;
 import sune.app.mediadown.media.MediaResolution;
+import sune.app.mediadown.util.CheckedFunction;
 import sune.app.mediadown.util.Pair;
-import sune.app.mediadown.util.ThrowableFunction;
 import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Web;
 import sune.app.mediadown.util.Web.GetRequest;
@@ -35,11 +35,11 @@ public final class M3U {
 	private M3U() {
 	}
 	
-	private static final ThrowableFunction<URI, StreamResponse> streamResolver(Request request) {
+	private static final CheckedFunction<URI, StreamResponse> streamResolver(Request request) {
 		return ((uri) -> Web.requestStream(request.setURL(Utils.url(uri))));
 	}
 	
-	private static final ThrowableFunction<URI, StreamResponse> streamResolver() {
+	private static final CheckedFunction<URI, StreamResponse> streamResolver() {
 		return ((uri) -> Web.requestStream(new GetRequest(Utils.url(uri))));
 	}
 	
@@ -279,7 +279,7 @@ public final class M3U {
 		
 		private final URI baseURI;
 		private final URI uri;
-		private final ThrowableFunction<URI, StreamResponse> streamResolver;
+		private final CheckedFunction<URI, StreamResponse> streamResolver;
 		private final StreamResponse response;
 		private final BufferedReader reader;
 		
@@ -292,13 +292,13 @@ public final class M3U {
 		private MediaResolution resolution;
 		private M3UKey key;
 		
-		public M3UReader(URI baseURI, URI uri, ThrowableFunction<URI, StreamResponse> streamResolver,
+		public M3UReader(URI baseURI, URI uri, CheckedFunction<URI, StreamResponse> streamResolver,
 				String content) throws Exception {
 			this(Objects.requireNonNull(baseURI), Objects.requireNonNull(uri),
 			     streamResolver, content, MediaResolution.UNKNOWN);
 		}
 		
-		private M3UReader(URI baseURI, URI uri, ThrowableFunction<URI, StreamResponse> streamResolver,
+		private M3UReader(URI baseURI, URI uri, CheckedFunction<URI, StreamResponse> streamResolver,
 				String content, MediaResolution resolution) throws Exception {
 			this.baseURI = Objects.requireNonNull(baseURI);
 			this.uri = Objects.requireNonNull(uri);

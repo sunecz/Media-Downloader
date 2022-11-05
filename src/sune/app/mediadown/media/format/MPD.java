@@ -29,8 +29,8 @@ import sune.app.mediadown.download.segment.RemoteFileSegmentsHolder;
 import sune.app.mediadown.media.MediaFormat;
 import sune.app.mediadown.media.MediaResolution;
 import sune.app.mediadown.media.MediaType;
+import sune.app.mediadown.util.CheckedFunction;
 import sune.app.mediadown.util.Singleton;
-import sune.app.mediadown.util.ThrowableFunction;
 import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Web;
 import sune.app.mediadown.util.Web.Request;
@@ -73,7 +73,7 @@ public final class MPD {
 		return Utils.stream(attributes.iterator()).collect(Collectors.toMap(Attribute::getKey, Attribute::getValue));
 	}
 	
-	private static final ThrowableFunction<URI, StreamResponse> streamResolver(Request request) {
+	private static final CheckedFunction<URI, StreamResponse> streamResolver(Request request) {
 		return ((uri) -> Web.requestStream(request.setURL(Utils.url(uri))));
 	}
 	
@@ -426,10 +426,10 @@ public final class MPD {
 	private static final class MPDReader {
 		
 		private final URI uri;
-		private final ThrowableFunction<URI, StreamResponse> streamResolver;
+		private final CheckedFunction<URI, StreamResponse> streamResolver;
 		private final String content;
 		
-		private MPDReader(URI uri, ThrowableFunction<URI, StreamResponse> streamResolver) throws Exception {
+		private MPDReader(URI uri, CheckedFunction<URI, StreamResponse> streamResolver) throws Exception {
 			this.uri = Objects.requireNonNull(uri);
 			this.streamResolver = Objects.requireNonNull(streamResolver);
 			this.content = null;

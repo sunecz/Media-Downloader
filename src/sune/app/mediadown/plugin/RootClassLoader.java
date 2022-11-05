@@ -12,7 +12,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import sune.app.mediadown.util.ThrowableFunction;
+import sune.app.mediadown.util.CheckedFunction;
 import sune.app.mediadown.util.UnsafeLegacy;
 
 /**
@@ -23,11 +23,11 @@ import sune.app.mediadown.util.UnsafeLegacy;
 public final class RootClassLoader {
 	
 	private final ClassLoader loader;
-	private final ThrowableFunction<String, byte[]> resolver;
-	private final ThrowableFunction<String, List<String>> resolverInnerClasses;
+	private final CheckedFunction<String, byte[]> resolver;
+	private final CheckedFunction<String, List<String>> resolverInnerClasses;
 	
-	public RootClassLoader(ClassLoader loader, ThrowableFunction<String, byte[]> resolver,
-			ThrowableFunction<String, List<String>> resolverInnerClasses) {
+	public RootClassLoader(ClassLoader loader, CheckedFunction<String, byte[]> resolver,
+			CheckedFunction<String, List<String>> resolverInnerClasses) {
 		this.loader = Objects.requireNonNull(loader);
 		this.resolver = Objects.requireNonNull(resolver);
 		this.resolverInnerClasses = resolverInnerClasses; // Can be null

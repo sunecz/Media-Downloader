@@ -27,9 +27,9 @@ import sune.app.mediadown.event.PluginLoaderEvent;
 import sune.app.mediadown.language.Language;
 import sune.app.mediadown.language.Translation;
 import sune.app.mediadown.plugin.PluginMemory.MemoryFile;
+import sune.app.mediadown.util.CheckedFunction;
 import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.Pair;
-import sune.app.mediadown.util.ThrowableFunction;
 import sune.app.mediadown.util.Utils;
 import sune.util.load.ZIPLoader;
 import sune.util.memory.GrowableMemory;
@@ -178,7 +178,7 @@ final class DefaultPluginLoader implements PluginLoader {
 	
 	private static final void loadClassFromZIP(ClassLoader classLoader, Path path, String className) throws Exception {
 		try(ZipFile file = new ZipFile(path.toFile(), Shared.CHARSET)) {
-			ThrowableFunction<String, byte[]> resolver = ((classPath) -> {
+			CheckedFunction<String, byte[]> resolver = ((classPath) -> {
 				ZipEntry entry = file.getEntry(classPath);
 				
 				if(entry == null) {
@@ -194,7 +194,7 @@ final class DefaultPluginLoader implements PluginLoader {
 			}).map(ZipEntry::getName).collect(Collectors.toList());
 			
 			// Create a resolver that for a class path gets all its inner classes' paths
-			ThrowableFunction<String, List<String>> resolverInnerClasses = ((classPath) -> {
+			CheckedFunction<String, List<String>> resolverInnerClasses = ((classPath) -> {
 				String classPathNoType = classPath.replaceAll(".class$", "");
 				return innerClasses.stream()
 							.filter((name) -> name.startsWith(classPathNoType))

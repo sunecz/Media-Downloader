@@ -119,7 +119,7 @@ public final class Web {
 	
 	private static final String stream2string(InputStream stream)
 			throws IOException {
-		return new String(StreamUtils.readAllBytes(stream), CHARSET);
+		return new String(stream.readAllBytes(), CHARSET);
 	}
 	
 	private static final URL urlEnsureEncoded(URL url) {

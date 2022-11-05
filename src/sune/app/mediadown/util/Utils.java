@@ -1207,7 +1207,7 @@ public final class Utils {
 	
 	public static final String streamToString(InputStream stream) {
 		try {
-			return new String(StreamUtils.readAllBytes(stream), Shared.CHARSET);
+			return new String(stream.readAllBytes(), Shared.CHARSET);
 		} catch(IOException ex) {
 			// Ignore
 		}

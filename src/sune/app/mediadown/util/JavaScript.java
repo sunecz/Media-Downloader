@@ -54,7 +54,7 @@ public final class JavaScript {
 	}
 	
 	private static final String fileContent(String path) throws IOException {
-		return new String(StreamUtils.readAllBytes(JavaScript.class.getResourceAsStream("/resources/util/" + path)));
+		return new String(JavaScript.class.getResourceAsStream("/resources/util/" + path).readAllBytes());
 	}
 	
 	public static final Object execute(String js) throws ScriptException {
@@ -147,56 +147,6 @@ public final class JavaScript {
 			b.append(Long.toString(c, 16).toUpperCase());
 		}
 		return b.toString();
-	}
-	
-	public static final String deobfuscate(String js) {
-		return deobfuscate(js, false);
-	}
-	
-	public static final String deobfuscate(String js, boolean varcontent) {
-		try {
-			String deobfuscated = (String) JavaScript.execute(
-				"deobfuscate.js",
-				"var c='" + js.replace('\'', '"') + "';c=deobfuscate(c);");
-			String unescaped = (String) JavaScript.execute(
-				"function f(s){" + deobfuscated.replace("eval", "return ") + "}" +
-				"unescape(f(c));");
-			String value = unescaped;
-			// Get content of first variable in
-			// the unescaped and deobfuscated content
-			if(varcontent) {
-				StringBuilder sb = new StringBuilder();
-				char[] chars 	 = value.toCharArray();
-				boolean quotes   = false;
-				for(int i = 0, l = chars.length; i < l; ++i) {
-					char c = chars[i];
-					if(c == '\'') {
-						quotes = !quotes;
-						if(!quotes && i+1 < l && chars[i+1] == ';')
-							break;
-					} else if(quotes) sb.append(c);
-				}
-				value = sb.toString();
-			}
-			return value;
-		} catch(Exception ex) {
-		}
-		return null;
-	}
-	
-	public static final String jjdecode(String string) {
-		try {
-			return (String) execute(
-				"jjdecode.js",
-				"jjdecode('" + escape(string) + "');");
-		} catch(IOException | ScriptException ex) {
-			// Ignore
-		}
-		return null;
-	}
-	
-	public static final String aadecode(String string) {
-		return AADecoder.decode(string);
 	}
 	
 	// Same as StringEscapeUtils for ECMAScript

@@ -9,7 +9,7 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-import sune.app.mediadown.util.ThrowableFunction;
+import sune.app.mediadown.util.CheckedFunction;
 
 /** @since 00.02.02 */
 // Source: https://stackoverflow.com/a/19928470
@@ -168,7 +168,7 @@ public final class ClassDependencyAnalyzer {
 		return names;
 	}
 	
-	public static final Set<Class<?>> getDependencies(Class<?> clazz, ThrowableFunction<String, InputStream> resolver) throws Exception {
+	public static final Set<Class<?>> getDependencies(Class<?> clazz, CheckedFunction<String, InputStream> resolver) throws Exception {
 		while(clazz.isArray()) clazz = clazz.getComponentType();
 		if(clazz.isPrimitive()) return Collections.emptySet();
 		byte[] bytes = null;

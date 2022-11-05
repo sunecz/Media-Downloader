@@ -8,7 +8,6 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 import eu.infomas.annotation.AnnotationDetector.TypeReporter;
-import sune.app.mediadown.util.StreamUtils;
 import sune.app.mediadown.util.UnsafeLegacy;
 
 // Package-private class
@@ -60,7 +59,7 @@ final class PluginTypeReporter implements TypeReporter {
 			String   entryName = toEntryName(className);
 			ZipEntry entry     = zip.getEntry(entryName);
 			try(InputStream stream = zip.getInputStream(entry)) {
-				byte[]     array = StreamUtils.readAllBytes(stream);
+				byte[]     array = stream.readAllBytes();
 				Class<?>   clazz = defineClass(loader, className, array);
 				Annotation ann   = clazz.getAnnotation(annotation);
 				if(annotation == Plugin.class) {
