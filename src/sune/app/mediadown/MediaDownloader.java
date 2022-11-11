@@ -2069,6 +2069,7 @@ public final class MediaDownloader {
 									GetRequest request = new GetRequest(Utils.url(pluginURL), Shared.USER_AGENT);
 									
 									NIO.createDir(file.getParent()); // Ensure parent directory
+									NIO.deleteFile(file); // Ensure the file does not exist
 									downloader.start(request, file, downloadConfiguration);
 									
 									// Must reload the plugin, otherwise it will have incorrect information

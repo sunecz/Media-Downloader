@@ -26,6 +26,14 @@ public final class PluginUpdater {
 	
 	/** @since 00.02.08 */
 	private static final Pattern REGEX_ONLY_DIGITS = Pattern.compile("^\\d+$");
+	/** @since 00.02.08 */
+	private static final Pattern REGEX_VERSION_VALUE = Pattern.compile("-(\\d+)$");
+	
+	/** @since 00.02.08 */
+	private static final String fixPluginVersionString(Version version) {
+		return REGEX_VERSION_VALUE.matcher(version.string())
+					.replaceFirst((r) -> String.format("-%04d", Integer.valueOf(r.group(1))));
+	}
 	
 	/** @since 00.02.08 */
 	public static final Version pluginVersion(String string) {
@@ -114,7 +122,7 @@ public final class PluginUpdater {
 			return String.format("%04d", version.value());
 		}
 		
-		return version.string();
+		return fixPluginVersionString(version);
 	}
 	
 	public static final String versionURL(String baseURL, Version version) {
