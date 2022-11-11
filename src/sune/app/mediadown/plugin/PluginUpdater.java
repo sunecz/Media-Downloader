@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.StringReader;
 import java.nio.file.Path;
+import java.util.regex.Pattern;
 
 import sune.app.mediadown.Download;
 import sune.app.mediadown.MediaDownloader;
@@ -15,12 +16,31 @@ import sune.app.mediadown.event.Event;
 import sune.app.mediadown.event.Listener;
 import sune.app.mediadown.event.tracker.TrackerManager;
 import sune.app.mediadown.update.Version;
+import sune.app.mediadown.update.VersionType;
 import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Web;
 import sune.app.mediadown.util.Web.GetRequest;
 import sune.app.mediadown.util.Web.StringResponse;
 
 public final class PluginUpdater {
+	
+	/** @since 00.02.08 */
+	private static final Pattern REGEX_ONLY_DIGITS = Pattern.compile("^\\d+$");
+	
+	/** @since 00.02.08 */
+	public static final Version pluginVersion(String string) {
+		// Prefix the given version string with zero release version and treat
+		// the whole version string as a value, rather than a major version.
+		// This is done due to the transition to the new format of plugin versions
+		// that are now prefixed with the minimum application version with which
+		// they are compatible with. This solves compatibility issues with
+		// comparison between the old format versions and the new ones.
+		if(REGEX_ONLY_DIGITS.matcher(string).matches()) {
+			string = "00.00.00-" + string;
+		}
+		
+		return Version.of(string);
+	}
 	
 	public static final Version newestVersion(String baseURL, Version versionPlugin) {
 		if((versionPlugin == null)) return Version.UNKNOWN;
@@ -42,7 +62,7 @@ public final class PluginUpdater {
 				if((index >= 0)) {
 					Version remoteAppVersion = Version.of(line.substring(0, index)).release();
 					if((localAppVersion.compareTo(remoteAppVersion) >= 0)) {
-						versionPlugin = Version.of(line.substring(index + 1));
+						versionPlugin = pluginVersion(line.substring(index + 1));
 					} else break;
 				}
 			}
@@ -55,15 +75,21 @@ public final class PluginUpdater {
 	public static final Version newestVersion(PluginFile file) {
 		Plugin plugin = file.getPlugin().instance();
 		return plugin.updatable()
-					? newestVersion(plugin.updateBaseURL(),
-					                Version.of(plugin.version()))
+					? newestVersion(plugin.updateBaseURL(), pluginVersion(plugin.version()))
 					: Version.UNKNOWN; // Do not return null
 	}
 	
 	public static final boolean isNewestVersion(PluginFile file) {
 		Version newest;
 		return (newest = newestVersion(file)) == Version.UNKNOWN
-					|| newest.compareTo(Version.of(file.getPlugin().instance().version())) == 0;
+					|| newest.compareTo(pluginVersion(file.getPlugin().instance().version())) == 0;
+	}
+	
+	/** @since 00.02.08 */
+	public static final boolean isNewerVersionAvailable(PluginFile file) {
+		Version newest;
+		return (newest = newestVersion(file)) == Version.UNKNOWN
+					|| newest.compareTo(pluginVersion(file.getPlugin().instance().version())) > 0;
 	}
 	
 	public static final String newestVersionURL(String baseURL) {
@@ -76,7 +102,19 @@ public final class PluginUpdater {
 	
 	/** @since 00.02.07 */
 	public static final String pluginVersionString(Version version) {
-		return version == Version.UNKNOWN ? version.string() : String.format("%04d", version.major());
+		if(version == Version.UNKNOWN) {
+			return version.string();
+		}
+		
+		// Treat the old format versions the same way as before
+		if(version.type() == VersionType.RELEASE
+				&& version.major() == 0
+				&& version.minor() == 0
+				&& version.patch() == 0) {
+			return String.format("%04d", version.value());
+		}
+		
+		return version.string();
 	}
 	
 	public static final String versionURL(String baseURL, Version version) {
@@ -88,7 +126,7 @@ public final class PluginUpdater {
 	}
 	
 	public static final String versionURL(PluginFile file) {
-		return versionURL(file, Version.of(file.getPlugin().instance().version()));
+		return versionURL(file, pluginVersion(file.getPlugin().instance().version()));
 	}
 	
 	public static final Download update(String pluginURL, Path file) {
@@ -161,12 +199,12 @@ public final class PluginUpdater {
 	}
 	
 	public static final String check(PluginFile file) {
-		return !isNewestVersion(file) ? Utils.urlConcat(newestVersionURL(file), "plugin.jar") : null;
+		return isNewerVersionAvailable(file) ? Utils.urlConcat(newestVersionURL(file), "plugin.jar") : null;
 	}
 	
 	/** @since 00.01.27 */
 	public static final Version checkVersion(PluginFile file) {
-		return !isNewestVersion(file) ? newestVersion(file) : null;
+		return isNewerVersionAvailable(file) ? newestVersion(file) : null;
 	}
 	
 	// Forbid anyone to create an instance of this class
