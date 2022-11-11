@@ -113,12 +113,12 @@ public class FileDownloader implements InternalDownloader {
 		} else {
 			long min = Math.min(from, to);
 			long max = Math.max(from, to);
-			return newRange(min, Math.min(max, min + Math.max(0L, limit)));
+			return newRange(min, limit < 0L ? max : Math.min(max, min + limit));
 		}
 	}
 	
-	private static final Range<Long> startRange(Range<Long> range, long start) {
-		return isValidRange(range) ? range.setFrom(range.from() + start) : range;
+	private static final Range<Long> offsetRange(Range<Long> range, long start, long end) {
+		return range.setFrom(range.from() + start).setTo(end);
 	}
 	
 	private static final long rangeLength(Range<Long> range) {
@@ -172,6 +172,7 @@ public class FileDownloader implements InternalDownloader {
 	
 	private final ReadableByteChannel doRequest(Range<Long> range) throws Exception {
 		Request req = request;
+		long size = totalBytes;
 		
 		// Make sure the request range is correct, if required
 		if(isValidRange(range)) {
@@ -181,8 +182,12 @@ public class FileDownloader implements InternalDownloader {
 		// Prepare the response
 		response = Web.requestStream(req);
 		
+		// Try to obtain the total size, if not set
+		if(size <= 0L) {
+			size = totalBytes = Web.size(response.headers);
+		}
+		
 		// Update the total size of the file, if acquired
-		long size = totalBytes <= 0L ? Web.size(response.headers) : totalBytes;
 		if(size > 0L) {
 			rangeOutput = checkRange(rangeOutput, size);
 			tracker.updateTotal(size);
@@ -230,7 +235,9 @@ public class FileDownloader implements InternalDownloader {
 	
 	private final boolean doDownload() throws Exception {
 		boolean reachedEOF = false;
-		rangeOutput  = checkRange(rangeOutput, -1L);
+		long prevBytes = bytes.get();
+		
+		rangeOutput = checkRange(rangeOutput, -1L);
 		rangeRequest = checkRange(rangeRequest, rangeLength(rangeOutput));
 		
 		if(rangeRequest.to() == 0L) {
@@ -275,9 +282,9 @@ public class FileDownloader implements InternalDownloader {
 			}
 			
 			// Update the ranges, used when the download is resumed
-			long downloadedBytes = bytes.get();
-			rangeRequest = startRange(rangeRequest, downloadedBytes);
-			rangeOutput  = startRange(rangeRequest, downloadedBytes);
+			long downloadedBytes = bytes.get() - prevBytes;
+			rangeRequest = offsetRange(rangeRequest, downloadedBytes, totalBytes);
+			rangeOutput = offsetRange(rangeOutput, downloadedBytes, -1L);
 			
 			closeFile();
 		}
@@ -286,6 +293,8 @@ public class FileDownloader implements InternalDownloader {
 	}
 	
 	private final void checkIfDone(boolean reachedEOF) {
+		Range<Long> rangeRequest = configuration.rangeRequest();
+		
 		if((isValidRange(rangeRequest) && bytes.get() >= rangeLength(rangeRequest))
 				|| reachedEOF) {
 			state.set(TaskStates.DONE);
