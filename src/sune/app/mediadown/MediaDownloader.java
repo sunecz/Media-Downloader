@@ -131,8 +131,8 @@ public final class MediaDownloader {
 	private static final boolean DO_UPDATE = true;
 	
 	public static final String  TITLE   = "Media Downloader";
-	public static final Version VERSION = Version.of("00.02.07");
-	public static final String  DATE    = "2022-08-27";
+	public static final Version VERSION = Version.of("00.02.08-dev.0");
+	public static final String  DATE    = "2022-11-11";
 	public static final String  AUTHOR  = "Sune";
 	public static final Image   ICON    = icon("app.png");
 	
