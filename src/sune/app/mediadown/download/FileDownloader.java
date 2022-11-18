@@ -314,9 +314,17 @@ public class FileDownloader implements InternalDownloader {
 	}
 	
 	private final void doStop() {
-		identifier = null;
-		state.set(TaskStates.STOPPED);
+		if(isStopped() || isDone()) {
+			return;
+		}
+		
 		state.unset(TaskStates.RUNNING);
+		state.unset(TaskStates.PAUSED);
+		identifier = null;
+		
+		if(!isDone()) {
+			state.set(TaskStates.STOPPED);
+		}
 	}
 	
 	@Override
@@ -358,6 +366,8 @@ public class FileDownloader implements InternalDownloader {
 		
 		state.set(TaskStates.PAUSED);
 		state.unset(TaskStates.RUNNING);
+		
+		eventRegistry.call(DownloadEvent.PAUSE, this);
 	}
 	
 	@Override
@@ -369,11 +379,13 @@ public class FileDownloader implements InternalDownloader {
 		state.unset(TaskStates.PAUSED);
 		state.set(TaskStates.RUNNING);
 		lockPause.unlock();
+		
+		eventRegistry.call(DownloadEvent.RESUME, this);
 	}
 	
 	@Override
 	public void stop() {
-		if(!isStarted()) {
+		if(!isStarted() || !isStopped() || isDone()) {
 			return;
 		}
 		
