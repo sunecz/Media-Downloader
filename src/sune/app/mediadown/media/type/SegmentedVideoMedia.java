@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Objects;
 
 import sune.app.mediadown.download.segment.FileSegmentsHolder;
+import sune.app.mediadown.media.Media;
 import sune.app.mediadown.media.MediaConstants;
 import sune.app.mediadown.media.MediaFormat;
 import sune.app.mediadown.media.MediaMetadata;
@@ -27,9 +28,9 @@ public class SegmentedVideoMedia extends SegmentedMedia implements VideoMedia {
 	protected final double frameRate;
 	
 	protected SegmentedVideoMedia(MediaSource source, URI uri, MediaType type, MediaFormat format, MediaQuality quality,
-			long size, MediaMetadata metadata, List<FileSegmentsHolder<?>> segments, MediaResolution resolution,
-			double duration, List<String> codecs, int bandwidth, double frameRate) {
-		super(source, uri, MEDIA_TYPE, checkFormat(format), checkQuality(quality), size, metadata,
+			long size, MediaMetadata metadata, Media parent, List<FileSegmentsHolder<?>> segments,
+			MediaResolution resolution, double duration, List<String> codecs, int bandwidth, double frameRate) {
+		super(source, uri, MEDIA_TYPE, checkFormat(format), checkQuality(quality), size, metadata, parent,
 		      Objects.requireNonNull(segments));
 		this.resolution = Objects.requireNonNull(resolution);
 		this.duration = duration;
@@ -105,11 +106,13 @@ public class SegmentedVideoMedia extends SegmentedMedia implements VideoMedia {
 		
 		@Override
 		public SegmentedVideoMedia build() {
-			return new SegmentedVideoMedia(Objects.requireNonNull(source), uri, MEDIA_TYPE,
-			                               Objects.requireNonNull(format), Objects.requireNonNull(quality),
-			                               size, Objects.requireNonNull(metadata), Objects.requireNonNull(segments),
-			                               Objects.requireNonNull(resolution), duration, codecs,
-			                               bandwidth, frameRate);
+			return new SegmentedVideoMedia(
+				Objects.requireNonNull(source), uri, MEDIA_TYPE,
+				Objects.requireNonNull(format), Objects.requireNonNull(quality),
+				size, Objects.requireNonNull(metadata), parent,
+				Objects.requireNonNull(segments), Objects.requireNonNull(resolution),
+				duration, codecs, bandwidth, frameRate
+			);
 		}
 		
 		@Override

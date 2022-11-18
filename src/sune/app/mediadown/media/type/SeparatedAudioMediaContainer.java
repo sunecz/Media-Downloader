@@ -28,9 +28,11 @@ public class SeparatedAudioMediaContainer extends SeparatedMediaContainer implem
 	protected final int sampleRate;
 	
 	protected SeparatedAudioMediaContainer(MediaSource source, URI uri, MediaType type, MediaFormat format,
-			MediaQuality quality, long size, MediaMetadata metadata, List<Media> media, MediaLanguage language,
-			double duration, List<String> codecs, int bandwidth, int sampleRate) {
-		super(source, uri, MEDIA_TYPE, checkFormat(format), checkQuality(quality), size, metadata, media);
+			MediaQuality quality, long size, MediaMetadata metadata, Media parent,
+			SeparatedChildMediaBuilderContext builderContext, MediaLanguage language, double duration,
+			List<String> codecs, int bandwidth, int sampleRate) {
+		super(source, uri, MEDIA_TYPE, checkFormat(format), checkQuality(quality), size, metadata, parent,
+		      builderContext);
 		this.language = Objects.requireNonNull(language);
 		this.duration = duration;
 		this.codecs = Objects.requireNonNull(codecs);
@@ -117,11 +119,14 @@ public class SeparatedAudioMediaContainer extends SeparatedMediaContainer implem
 		@Override
 		public SeparatedAudioMediaContainer build() {
 			imprintSelf(media.stream().filter((m) -> m.type().is(type)).findFirst().orElse(null));
-			return new SeparatedAudioMediaContainer(Objects.requireNonNull(source), uri, Objects.requireNonNull(type),
-													Objects.requireNonNull(format), Objects.requireNonNull(quality),
-													size, Objects.requireNonNull(metadata), buildMedia(media),
-													Objects.requireNonNull(language), duration,
-													Objects.requireNonNull(codecs), bandwidth, sampleRate);
+			return new SeparatedAudioMediaContainer(
+				Objects.requireNonNull(source), uri, Objects.requireNonNull(type),
+				Objects.requireNonNull(format), Objects.requireNonNull(quality),
+				size, Objects.requireNonNull(metadata), parent,
+				new SeparatedChildMediaBuilderContext(media),
+				Objects.requireNonNull(language), duration, Objects.requireNonNull(codecs),
+				bandwidth, sampleRate
+			);
 		}
 		
 		@Override

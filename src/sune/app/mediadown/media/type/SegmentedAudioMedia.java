@@ -6,6 +6,7 @@ import java.util.Objects;
 
 import sune.app.mediadown.download.segment.FileSegmentsHolder;
 import sune.app.mediadown.media.AudioMedia;
+import sune.app.mediadown.media.Media;
 import sune.app.mediadown.media.MediaConstants;
 import sune.app.mediadown.media.MediaFormat;
 import sune.app.mediadown.media.MediaLanguage;
@@ -27,9 +28,9 @@ public class SegmentedAudioMedia extends SegmentedMedia implements AudioMedia {
 	protected final int sampleRate;
 	
 	protected SegmentedAudioMedia(MediaSource source, URI uri, MediaType type, MediaFormat format, MediaQuality quality,
-			long size, MediaMetadata metadata, List<FileSegmentsHolder<?>> segments, MediaLanguage language,
-			double duration, List<String> codecs, int bandwidth, int sampleRate) {
-		super(source, uri, MEDIA_TYPE, checkFormat(format), checkQuality(quality), size, metadata,
+			long size, MediaMetadata metadata, Media parent, List<FileSegmentsHolder<?>> segments,
+			MediaLanguage language, double duration, List<String> codecs, int bandwidth, int sampleRate) {
+		super(source, uri, MEDIA_TYPE, checkFormat(format), checkQuality(quality), size, metadata, parent,
 		      Objects.requireNonNull(segments));
 		this.language = Objects.requireNonNull(language);
 		this.duration = duration;
@@ -105,11 +106,13 @@ public class SegmentedAudioMedia extends SegmentedMedia implements AudioMedia {
 		
 		@Override
 		public SegmentedAudioMedia build() {
-			return new SegmentedAudioMedia(Objects.requireNonNull(source), uri, MEDIA_TYPE,
-			                               Objects.requireNonNull(format), Objects.requireNonNull(quality),
-			                               size, Objects.requireNonNull(metadata), Objects.requireNonNull(segments),
-			                               Objects.requireNonNull(language), duration, codecs,
-			                               bandwidth, sampleRate);
+			return new SegmentedAudioMedia(
+				Objects.requireNonNull(source), uri, MEDIA_TYPE,
+				Objects.requireNonNull(format), Objects.requireNonNull(quality),
+				size, Objects.requireNonNull(metadata), parent,
+				Objects.requireNonNull(segments), Objects.requireNonNull(language),
+				duration, codecs, bandwidth, sampleRate
+			);
 		}
 		
 		@Override

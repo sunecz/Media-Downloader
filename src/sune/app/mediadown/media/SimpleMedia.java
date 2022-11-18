@@ -13,9 +13,11 @@ public class SimpleMedia implements Media {
 	protected final MediaQuality quality;
 	protected final long size;
 	protected final MediaMetadata metadata;
+	/** @since 00.02.08 */
+	protected final Media parent;
 	
 	protected SimpleMedia(MediaSource source, URI uri, MediaType type, MediaFormat format, MediaQuality quality,
-			long size, MediaMetadata metadata) {
+			long size, MediaMetadata metadata, Media parent) {
 		this.source = Objects.requireNonNull(source);
 		this.uri = uri;
 		this.type = Objects.requireNonNull(type);
@@ -23,6 +25,7 @@ public class SimpleMedia implements Media {
 		this.quality = Objects.requireNonNull(quality);
 		this.size = size;
 		this.metadata = Objects.requireNonNull(metadata);
+		this.parent = parent;
 	}
 	
 	@Override
@@ -61,6 +64,11 @@ public class SimpleMedia implements Media {
 	}
 	
 	@Override
+	public Media parent() {
+		return parent;
+	}
+	
+	@Override
 	public boolean isContainer() {
 		return false;
 	}
@@ -85,7 +93,8 @@ public class SimpleMedia implements Media {
 					+ "quality=" + quality + ", "
 					+ "uri=" + uri + ", "
 					+ "size=" + size + ", "
-					+ "metadata=" + metadata
+					+ "metadata=" + metadata + ", "
+					+ "parent=" + parent
 		        + "]";
 	}
 	
@@ -98,6 +107,8 @@ public class SimpleMedia implements Media {
 		protected MediaQuality quality;
 		protected long size;
 		protected MediaMetadata metadata;
+		/** @since 00.02.08 */
+		protected Media parent;
 		
 		public Builder() {
 			source = MediaSource.none();
@@ -106,6 +117,7 @@ public class SimpleMedia implements Media {
 			quality = MediaQuality.UNKNOWN;
 			size = MediaConstants.UNKNOWN_SIZE;
 			metadata = MediaMetadata.empty();
+			parent = null;
 		}
 		
 		@SuppressWarnings("unchecked")
@@ -115,9 +127,11 @@ public class SimpleMedia implements Media {
 		
 		@Override
 		public T build() {
-			return t(new SimpleMedia(Objects.requireNonNull(source), uri, Objects.requireNonNull(type),
-			                         Objects.requireNonNull(format), Objects.requireNonNull(quality),
-			                         size, Objects.requireNonNull(metadata)));
+			return t(new SimpleMedia(
+				Objects.requireNonNull(source), uri, Objects.requireNonNull(type),
+				Objects.requireNonNull(format), Objects.requireNonNull(quality), size,
+				Objects.requireNonNull(metadata), parent
+			));
 		}
 		
 		@Override
@@ -163,6 +177,16 @@ public class SimpleMedia implements Media {
 		}
 		
 		@Override
+		public B parent(Media parent) {
+			if(parent == this) {
+				throw new IllegalArgumentException("Invalid parent.");
+			}
+			
+			this.parent = parent;
+			return b(this);
+		}
+		
+		@Override
 		public MediaSource source() {
 			return source;
 		}
@@ -195,6 +219,11 @@ public class SimpleMedia implements Media {
 		@Override
 		public MediaMetadata metadata() {
 			return metadata;
+		}
+		
+		@Override
+		public Media parent() {
+			return parent;
 		}
 	}
 }

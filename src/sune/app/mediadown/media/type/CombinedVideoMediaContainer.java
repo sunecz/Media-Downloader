@@ -28,9 +28,11 @@ public class CombinedVideoMediaContainer extends CombinedMediaContainer implemen
 	protected final double frameRate;
 	
 	protected CombinedVideoMediaContainer(MediaSource source, URI uri, MediaType type, MediaFormat format,
-			MediaQuality quality, long size, MediaMetadata metadata, List<Media> media, MediaResolution resolution,
-			double duration, List<String> codecs, int bandwidth, double frameRate) {
-		super(source, uri, MEDIA_TYPE, checkFormat(format), checkQuality(quality), size, metadata, media);
+			MediaQuality quality, long size, MediaMetadata metadata, Media parent,
+			CombinedChildMediaBuilderContext builderContext, MediaResolution resolution, double duration,
+			List<String> codecs, int bandwidth, double frameRate) {
+		super(source, uri, MEDIA_TYPE, checkFormat(format), checkQuality(quality), size, metadata, parent,
+		      builderContext);
 		this.resolution = Objects.requireNonNull(resolution);
 		this.duration = duration;
 		this.codecs = Objects.requireNonNull(codecs);
@@ -117,11 +119,14 @@ public class CombinedVideoMediaContainer extends CombinedMediaContainer implemen
 		@Override
 		public CombinedVideoMediaContainer build() {
 			imprintSelf(media.stream().filter((m) -> m.type().is(type)).findFirst().orElse(null));
-			return new CombinedVideoMediaContainer(Objects.requireNonNull(source), uri, Objects.requireNonNull(type),
-			                                  Objects.requireNonNull(format), Objects.requireNonNull(quality),
-			                                  size, Objects.requireNonNull(metadata), buildMedia(media),
-			                                  Objects.requireNonNull(resolution), duration,
-			                                  Objects.requireNonNull(codecs), bandwidth, frameRate);
+			return new CombinedVideoMediaContainer(
+				Objects.requireNonNull(source), uri, Objects.requireNonNull(type),
+				Objects.requireNonNull(format), Objects.requireNonNull(quality),
+				size, Objects.requireNonNull(metadata), parent,
+				new CombinedChildMediaBuilderContext(this, media),
+				Objects.requireNonNull(resolution), duration,
+				Objects.requireNonNull(codecs), bandwidth, frameRate
+			);
 		}
 		
 		@Override

@@ -28,9 +28,11 @@ public class SeparatedVideoMediaContainer extends SeparatedMediaContainer implem
 	protected final double frameRate;
 	
 	protected SeparatedVideoMediaContainer(MediaSource source, URI uri, MediaType type, MediaFormat format,
-			MediaQuality quality, long size, MediaMetadata metadata, List<Media> media, MediaResolution resolution,
-			double duration, List<String> codecs, int bandwidth, double frameRate) {
-		super(source, uri, MEDIA_TYPE, checkFormat(format), checkQuality(quality), size, metadata, media);
+			MediaQuality quality, long size, MediaMetadata metadata, Media parent,
+			SeparatedChildMediaBuilderContext builderContext, MediaResolution resolution, double duration,
+			List<String> codecs, int bandwidth, double frameRate) {
+		super(source, uri, MEDIA_TYPE, checkFormat(format), checkQuality(quality), size, metadata, parent,
+		      builderContext);
 		this.resolution = Objects.requireNonNull(resolution);
 		this.duration = duration;
 		this.codecs = Objects.requireNonNull(codecs);
@@ -117,11 +119,13 @@ public class SeparatedVideoMediaContainer extends SeparatedMediaContainer implem
 		@Override
 		public SeparatedVideoMediaContainer build() {
 			imprintSelf(media.stream().filter((m) -> m.type().is(type)).findFirst().orElse(null));
-			return new SeparatedVideoMediaContainer(Objects.requireNonNull(source), uri, Objects.requireNonNull(type),
-													Objects.requireNonNull(format), Objects.requireNonNull(quality),
-													size, Objects.requireNonNull(metadata), buildMedia(media),
-													Objects.requireNonNull(resolution), duration,
-													Objects.requireNonNull(codecs), bandwidth, frameRate);
+			return new SeparatedVideoMediaContainer(
+				Objects.requireNonNull(source), uri, Objects.requireNonNull(type),
+				Objects.requireNonNull(format), Objects.requireNonNull(quality),
+				size, Objects.requireNonNull(metadata), parent,
+				new SeparatedChildMediaBuilderContext(media), Objects.requireNonNull(resolution),
+				duration, Objects.requireNonNull(codecs), bandwidth, frameRate
+			);
 		}
 		
 		@Override

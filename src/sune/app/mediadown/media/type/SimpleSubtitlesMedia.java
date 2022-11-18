@@ -3,6 +3,7 @@ package sune.app.mediadown.media.type;
 import java.net.URI;
 import java.util.Objects;
 
+import sune.app.mediadown.media.Media;
 import sune.app.mediadown.media.MediaFormat;
 import sune.app.mediadown.media.MediaLanguage;
 import sune.app.mediadown.media.MediaMetadata;
@@ -20,8 +21,8 @@ public class SimpleSubtitlesMedia extends SimpleMedia implements SubtitlesMedia 
 	protected final MediaLanguage language;
 	
 	protected SimpleSubtitlesMedia(MediaSource source, URI uri, MediaType type, MediaFormat format, MediaQuality quality,
-			long size, MediaMetadata metadata, MediaLanguage language) {
-		super(source, uri, MEDIA_TYPE, checkFormat(format), checkQuality(quality), size, metadata);
+			long size, MediaMetadata metadata, Media parent, MediaLanguage language) {
+		super(source, uri, MEDIA_TYPE, checkFormat(format), checkQuality(quality), size, metadata, parent);
 		this.language = Objects.requireNonNull(language);
 	}
 	
@@ -66,10 +67,12 @@ public class SimpleSubtitlesMedia extends SimpleMedia implements SubtitlesMedia 
 		
 		@Override
 		public SimpleSubtitlesMedia build() {
-			return new SimpleSubtitlesMedia(Objects.requireNonNull(source), uri, MEDIA_TYPE,
-			                                Objects.requireNonNull(format), Objects.requireNonNull(quality),
-			                                size, Objects.requireNonNull(metadata),
-			                                Objects.requireNonNull(language));
+			return new SimpleSubtitlesMedia(
+				Objects.requireNonNull(source), uri, MEDIA_TYPE,
+				Objects.requireNonNull(format), Objects.requireNonNull(quality),
+				size, Objects.requireNonNull(metadata), parent,
+				Objects.requireNonNull(language)
+			);
 		}
 		
 		@Override

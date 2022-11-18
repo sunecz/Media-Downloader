@@ -17,6 +17,8 @@ public interface Media {
 	MediaQuality quality();
 	long size();
 	MediaMetadata metadata();
+	/** @since 00.02.08 */
+	Media parent();
 	boolean isContainer();
 	default boolean isSingle() {
 		return !isContainer();
@@ -28,6 +30,18 @@ public interface Media {
 	
 	public static MediaContainer mapToContainer(Media media) {
 		return media.isContainer() ? (MediaContainer) media : null;
+	}
+	
+	/** @since 00.02.08 */
+	public static Media root(Media media) {
+		if(media == null) {
+			return null;
+		}
+		
+		Media root = media;
+		for(Media parent; (parent = root.parent()) != null && parent != media; root = parent);
+		
+		return root;
 	}
 	
 	public static <T extends Media> List<T> findAllOfType(Media media, MediaType mediaType) {
@@ -83,6 +97,8 @@ public interface Media {
 		B quality(MediaQuality quality);
 		B size(long size);
 		B metadata(MediaMetadata metadata);
+		/** @since 00.02.08 */
+		B parent(Media parent);
 		
 		MediaSource source();
 		URI uri();
@@ -91,5 +107,7 @@ public interface Media {
 		MediaQuality quality();
 		long size();
 		MediaMetadata metadata();
+		/** @since 00.02.08 */
+		Media parent();
 	}
 }

@@ -9,8 +9,8 @@ import java.util.stream.Collectors;
 public class CombinedMediaContainer extends SimpleMediaContainer {
 	
 	protected CombinedMediaContainer(MediaSource source, URI uri, MediaType type, MediaFormat format, MediaQuality quality,
-	        long size, MediaMetadata metadata, List<Media> media) {
-		super(source, uri, type, format, quality, size, metadata, media);
+	        long size, MediaMetadata metadata, Media parent, ChildMediaBuilderContext builderContext) {
+		super(source, uri, type, format, quality, size, metadata, parent, builderContext);
 	}
 	
 	@Override
@@ -18,15 +18,35 @@ public class CombinedMediaContainer extends SimpleMediaContainer {
 		return true;
 	}
 	
-	public static class Builder<T extends CombinedMediaContainer, B extends Builder<T, B>>
-			extends SimpleMediaContainer.Builder<T, B> {
+	/** @since 00.02.08 */
+	protected static class CombinedChildMediaBuilderContext extends ChildMediaBuilderContext {
+		
+		private Builder<?, ?> builder;
+		
+		public CombinedChildMediaBuilderContext(Builder<?, ?> builder, List<? extends Media.Builder<?, ?>> media) {
+			super(media);
+			this.builder = Objects.requireNonNull(builder);
+		}
 		
 		// Children of combined media have the same source and URI.
 		protected Media.Builder<?, ?> imprintChild(Media.Builder<?, ?> media) {
-			media.source(source);
-			media.uri(uri);
+			media.source(builder.source());
+			media.uri(builder.uri());
 			return media;
 		}
+		
+		@Override
+		public List<Media> build(Media parent) {
+			return media.stream()
+					    .map((m) -> m.parent(parent))
+					    .map(this::imprintChild)
+					    .map(Media.Builder::build)
+					    .collect(Collectors.toList());
+		}
+	}
+	
+	public static class Builder<T extends CombinedMediaContainer, B extends Builder<T, B>>
+			extends SimpleMediaContainer.Builder<T, B> {
 		
 		protected void imprintSelf(Media.Builder<?, ?> media) {
 			if(media == null) return; // Nothing to imprint from
@@ -38,16 +58,14 @@ public class CombinedMediaContainer extends SimpleMediaContainer {
 		}
 		
 		@Override
-		protected List<Media> buildMedia(List<sune.app.mediadown.media.Media.Builder<?, ?>> media) {
-			return media.stream().map(this::imprintChild).map(Media.Builder::build).collect(Collectors.toList());
-		}
-		
-		@Override
 		public T build() {
 			imprintSelf(media.stream().filter((m) -> m.type().is(type)).findFirst().orElse(null));
-			return t(new CombinedMediaContainer(Objects.requireNonNull(source), uri, Objects.requireNonNull(type),
-			                                    Objects.requireNonNull(format), Objects.requireNonNull(quality),
-			                                    size, Objects.requireNonNull(metadata), buildMedia(media)));
+			return t(new CombinedMediaContainer(
+				Objects.requireNonNull(source), uri, Objects.requireNonNull(type),
+				Objects.requireNonNull(format), Objects.requireNonNull(quality),
+				size, Objects.requireNonNull(metadata), parent,
+				new CombinedChildMediaBuilderContext(this, media)
+			));
 		}
 	}
 }

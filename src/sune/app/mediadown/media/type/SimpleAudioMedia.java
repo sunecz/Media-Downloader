@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Objects;
 
 import sune.app.mediadown.media.AudioMedia;
+import sune.app.mediadown.media.Media;
 import sune.app.mediadown.media.MediaConstants;
 import sune.app.mediadown.media.MediaFormat;
 import sune.app.mediadown.media.MediaLanguage;
@@ -26,9 +27,9 @@ public class SimpleAudioMedia extends SimpleMedia implements AudioMedia {
 	protected final int sampleRate;
 	
 	protected SimpleAudioMedia(MediaSource source, URI uri, MediaType type, MediaFormat format, MediaQuality quality,
-			long size, MediaMetadata metadata, MediaLanguage language, double duration, List<String> codecs,
-			int bandwidth, int sampleRate) {
-		super(source, uri, MEDIA_TYPE, checkFormat(format), checkQuality(quality), size, metadata);
+			long size, MediaMetadata metadata, Media parent, MediaLanguage language, double duration,
+			List<String> codecs, int bandwidth, int sampleRate) {
+		super(source, uri, MEDIA_TYPE, checkFormat(format), checkQuality(quality), size, metadata, parent);
 		this.language = Objects.requireNonNull(language);
 		this.duration = duration;
 		this.codecs = Objects.requireNonNull(codecs);
@@ -103,11 +104,13 @@ public class SimpleAudioMedia extends SimpleMedia implements AudioMedia {
 		
 		@Override
 		public SimpleAudioMedia build() {
-			return new SimpleAudioMedia(Objects.requireNonNull(source), uri, MEDIA_TYPE,
-			                            Objects.requireNonNull(format), Objects.requireNonNull(quality),
-			                            size, Objects.requireNonNull(metadata),
-			                            Objects.requireNonNull(language), duration, Objects.requireNonNull(codecs),
-			                            bandwidth, sampleRate);
+			return new SimpleAudioMedia(
+				Objects.requireNonNull(source), uri, MEDIA_TYPE,
+				Objects.requireNonNull(format), Objects.requireNonNull(quality),
+				size, Objects.requireNonNull(metadata), parent,
+				Objects.requireNonNull(language), duration,
+				Objects.requireNonNull(codecs), bandwidth, sampleRate
+			);
 		}
 		
 		@Override

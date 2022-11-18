@@ -18,10 +18,12 @@ public class SimpleMediaContainer implements MediaContainer {
 	protected final MediaQuality quality;
 	protected final long size;
 	protected final MediaMetadata metadata;
+	/** @since 00.02.08 */
+	protected final Media parent;
 	protected final MediaAccessor accessor;
 	
 	protected SimpleMediaContainer(MediaSource source, URI uri, MediaType type, MediaFormat format, MediaQuality quality,
-			long size, MediaMetadata metadata, List<Media> media) {
+			long size, MediaMetadata metadata, Media parent, ChildMediaBuilderContext builderContext) {
 		this.source = Objects.requireNonNull(source);
 		this.uri = uri;
 		this.type = Objects.requireNonNull(type);
@@ -29,7 +31,8 @@ public class SimpleMediaContainer implements MediaContainer {
 		this.quality = Objects.requireNonNull(quality);
 		this.size = size;
 		this.metadata = Objects.requireNonNull(metadata);
-		this.accessor = new RecursiveMediaAccessor(media); // Implicit null check for media
+		this.parent = parent;
+		this.accessor = new RecursiveMediaAccessor(builderContext.build(this));
 	}
 	
 	@Override
@@ -65,6 +68,11 @@ public class SimpleMediaContainer implements MediaContainer {
 	@Override
 	public MediaMetadata metadata() {
 		return metadata;
+	}
+	
+	@Override
+	public Media parent() {
+		return parent;
 	}
 	
 	@Override
@@ -141,6 +149,19 @@ public class SimpleMediaContainer implements MediaContainer {
 		        + "]";
 	}
 	
+	/** @since 00.02.08 */
+	protected static class SimpleChildMediaBuilderContext extends ChildMediaBuilderContext {
+		
+		public SimpleChildMediaBuilderContext(List<? extends Media.Builder<?, ?>> media) {
+			super(media);
+		}
+		
+		@Override
+		public List<Media> build(Media parent) {
+			return media.stream().map((m) -> m.parent(parent)).map(Media.Builder::build).collect(Collectors.toList());
+		}
+	}
+	
 	public static class Builder<T extends SimpleMediaContainer, B extends Builder<T, B>>
 			implements MediaContainer.Builder<T, B> {
 		
@@ -151,6 +172,8 @@ public class SimpleMediaContainer implements MediaContainer {
 		protected MediaQuality quality;
 		protected long size;
 		protected MediaMetadata metadata;
+		/** @since 00.02.08 */
+		protected Media parent;
 		protected List<Media.Builder<?, ?>> media;
 		
 		public Builder() {
@@ -160,6 +183,7 @@ public class SimpleMediaContainer implements MediaContainer {
 			quality = MediaQuality.UNKNOWN;
 			size = MediaConstants.UNKNOWN_SIZE;
 			metadata = MediaMetadata.empty();
+			parent = null;
 			media = List.of();
 		}
 		
@@ -168,15 +192,14 @@ public class SimpleMediaContainer implements MediaContainer {
 		@SuppressWarnings("unchecked")
 		protected final B b(Builder<T, B> b) { return (B) b; }
 		
-		protected List<Media> buildMedia(List<Media.Builder<?, ?>> media) {
-			return media.stream().map(Media.Builder::build).collect(Collectors.toList());
-		}
-		
 		@Override
 		public T build() {
-			return t(new SimpleMediaContainer(Objects.requireNonNull(source), uri, Objects.requireNonNull(type),
-			                                  Objects.requireNonNull(format), Objects.requireNonNull(quality),
-			                                  size, Objects.requireNonNull(metadata), buildMedia(media)));
+			return t(new SimpleMediaContainer(
+				Objects.requireNonNull(source), uri, Objects.requireNonNull(type),
+				Objects.requireNonNull(format), Objects.requireNonNull(quality), size,
+				Objects.requireNonNull(metadata), parent,
+				new SimpleChildMediaBuilderContext(media)
+			));
 		}
 		
 		@Override
@@ -218,6 +241,16 @@ public class SimpleMediaContainer implements MediaContainer {
 		@Override
 		public B metadata(MediaMetadata metadata) {
 			this.metadata = Objects.requireNonNull(metadata);
+			return b(this);
+		}
+		
+		@Override
+		public B parent(Media parent) {
+			if(parent == this) {
+				throw new IllegalArgumentException("Invalid parent.");
+			}
+			
+			this.parent = parent;
 			return b(this);
 		}
 		
@@ -265,6 +298,11 @@ public class SimpleMediaContainer implements MediaContainer {
 		@Override
 		public MediaMetadata metadata() {
 			return metadata;
+		}
+		
+		@Override
+		public Media parent() {
+			return parent;
 		}
 		
 		@Override

@@ -10,13 +10,21 @@ import sune.app.mediadown.util.Utils;
 public class SeparatedMediaContainer extends SimpleMediaContainer {
 	
 	protected SeparatedMediaContainer(MediaSource source, URI uri, MediaType type, MediaFormat format, MediaQuality quality,
-	        long size, MediaMetadata metadata, List<Media> media) {
-		super(source, uri, type, format, quality, size, metadata, media);
+	        long size, MediaMetadata metadata, Media parent, ChildMediaBuilderContext builderContext) {
+		super(source, uri, type, format, quality, size, metadata, parent, builderContext);
 	}
 	
 	@Override
 	public boolean isSeparated() {
 		return true;
+	}
+	
+	/** @since 00.02.08 */
+	protected static class SeparatedChildMediaBuilderContext extends SimpleChildMediaBuilderContext {
+		
+		public SeparatedChildMediaBuilderContext(List<? extends Media.Builder<?, ?>> media) {
+			super(media);
+		}
 	}
 	
 	public static class Builder<T extends SeparatedMediaContainer, B extends Builder<T, B>>
@@ -34,9 +42,12 @@ public class SeparatedMediaContainer extends SimpleMediaContainer {
 		@Override
 		public T build() {
 			imprintSelf(media.stream().filter((m) -> m.type().is(type)).findFirst().orElse(null));
-			return t(new SeparatedMediaContainer(Objects.requireNonNull(source), uri, Objects.requireNonNull(type),
-			                                     Objects.requireNonNull(format), Objects.requireNonNull(quality),
-			                                     size, Objects.requireNonNull(metadata), buildMedia(media)));
+			return t(new SeparatedMediaContainer(
+				Objects.requireNonNull(source), uri, Objects.requireNonNull(type),
+				Objects.requireNonNull(format), Objects.requireNonNull(quality), size,
+				Objects.requireNonNull(metadata), parent,
+				new SeparatedChildMediaBuilderContext(media)
+			));
 		}
 		
 		@Override

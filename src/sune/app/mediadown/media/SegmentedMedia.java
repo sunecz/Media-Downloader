@@ -14,8 +14,8 @@ public class SegmentedMedia extends SimpleMedia {
 	protected final List<FileSegmentsHolder<?>> segments;
 	
 	public SegmentedMedia(MediaSource source, URI uri, MediaType type, MediaFormat format, MediaQuality quality,
-			long size, MediaMetadata metadata, List<FileSegmentsHolder<?>> segments) {
-		super(source, uri, type, format, quality, size, metadata);
+			long size, MediaMetadata metadata, Media parent, List<FileSegmentsHolder<?>> segments) {
+		super(source, uri, type, format, quality, size, metadata, parent);
 		this.segments = Collections.unmodifiableList(Objects.requireNonNull(segments));
 	}
 	
@@ -39,9 +39,11 @@ public class SegmentedMedia extends SimpleMedia {
 		
 		@Override
 		public T build() {
-			return t(new SegmentedMedia(Objects.requireNonNull(source), uri, Objects.requireNonNull(type),
-			                            Objects.requireNonNull(format), Objects.requireNonNull(quality),
-			                            size, Objects.requireNonNull(metadata), Objects.requireNonNull(segments)));
+			return t(new SegmentedMedia(
+				Objects.requireNonNull(source), uri, Objects.requireNonNull(type),
+				Objects.requireNonNull(format), Objects.requireNonNull(quality),
+				size, Objects.requireNonNull(metadata), parent, Objects.requireNonNull(segments)
+			));
 		}
 		
 		public B segments(List<FileSegmentsHolder<?>> segments) {
