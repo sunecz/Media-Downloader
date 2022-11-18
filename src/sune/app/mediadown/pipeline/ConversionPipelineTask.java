@@ -1,9 +1,10 @@
 package sune.app.mediadown.pipeline;
 
 import java.nio.file.Path;
+import java.util.List;
 
 import sune.app.mediadown.MediaDownloader;
-import sune.app.mediadown.convert.ConversionConfiguration;
+import sune.app.mediadown.convert.ConversionMedia;
 import sune.app.mediadown.convert.Converter;
 import sune.app.mediadown.event.ConversionEvent;
 import sune.app.mediadown.event.EventRegistry;
@@ -11,40 +12,45 @@ import sune.app.mediadown.event.EventType;
 import sune.app.mediadown.language.Translation;
 import sune.app.mediadown.manager.ConversionManager;
 import sune.app.mediadown.manager.ManagerSubmitResult;
-import sune.app.mediadown.media.MediaFormat;
+import sune.app.mediadown.util.Metadata;
 import sune.app.mediadown.util.Utils;
 
 /** @since 00.01.26 */
 public final class ConversionPipelineTask implements PipelineTask<ConversionPipelineResult> {
 	
-	private final ConversionConfiguration configuration;
-	private final MediaFormat formatInput;
-	private final MediaFormat formatOutput;
-	private final Path fileOutput;
-	private final Path[] filesInput;
+	/** @since 00.02.08 */
+	private final ConversionMedia output;
+	/** @since 00.02.08 */
+	private final List<ConversionMedia> inputs;
+	/** @since 00.02.08 */
+	private final Metadata metadata;
 	
 	private ManagerSubmitResult<Converter, Void> result;
 	
-	private ConversionPipelineTask(ConversionConfiguration configuration,
-			MediaFormat formatInput, MediaFormat formatOutput, Path fileOutput, Path[] filesInput) {
-		if((configuration == null || formatInput == null || formatOutput == null || fileOutput == null
-				|| filesInput == null || filesInput.length <= 0))
+	/** @since 00.02.08 */
+	private ConversionPipelineTask(ConversionMedia output, List<ConversionMedia> inputs, Metadata metadata) {
+		if(output == null || inputs == null || inputs.isEmpty() || metadata == null) {
 			throw new IllegalArgumentException();
-		this.configuration = configuration;
-		this.formatInput = formatInput;
-		this.formatOutput = formatOutput;
-		this.fileOutput = fileOutput;
-		this.filesInput = filesInput;
+		}
+		
+		this.output = output;
+		this.inputs = inputs;
+		this.metadata = metadata;
 	}
 	
-	public static final ConversionPipelineTask of(ConversionConfiguration configuration, MediaFormat formatInput,
-			MediaFormat formatOutput, Path fileOutput, Path... filesInput) {
-		return new ConversionPipelineTask(configuration, formatInput, formatOutput, fileOutput, filesInput);
+	/** @since 00.02.08 */
+	public static final ConversionPipelineTask of(ConversionMedia output, List<ConversionMedia> inputs,
+			Metadata metadata) {
+		return new ConversionPipelineTask(output, inputs, metadata);
 	}
 	
 	@Override
 	public final ConversionPipelineResult run(Pipeline pipeline) throws Exception {
-		result = ConversionManager.submit(configuration, formatInput, formatOutput, fileOutput, filesInput);
+		// Ensure that the input formats are not explicitly stated in the command
+		Metadata altered = metadata.copy();
+		altered.set("noExplicitInputFormat", true);
+		
+		result = ConversionManager.submit(output, inputs, altered);
 		
 		// Bind all events from the pipeline
 		EventRegistry<EventType> eventRegistry = pipeline.getEventRegistry();
@@ -56,12 +62,13 @@ public final class ConversionPipelineTask implements PipelineTask<ConversionPipe
 		} catch(Exception ex) {
 			String paths = Utils.join(
 				", ",
-				Utils.toList(filesInput).stream()
-				     .map(Path::toAbsolutePath)
-				     .map(Path::toString)
-				     .toArray(String[]::new)
+				inputs.stream()
+				      .map(ConversionMedia::path)
+				      .map(Path::toString)
+				      .toArray(String[]::new)
 			);
 			
+			// TODO: Do not translate the exception here
 			Translation tr = MediaDownloader.translation();
 			String text = tr.getSingle("errors.conversion.cannot_convert", "path", paths);
 			throw new IllegalStateException(text, ex); // Forward the exception

@@ -38,7 +38,7 @@ public class CombinedMediaContainer extends SimpleMediaContainer {
 		@Override
 		public List<Media> build(Media parent) {
 			return media.stream()
-					    .map((m) -> m.parent(parent))
+					    .map((m) -> (Media.Builder<?, ?>) m.parent(parent))
 					    .map(this::imprintChild)
 					    .map(Media.Builder::build)
 					    .collect(Collectors.toList());

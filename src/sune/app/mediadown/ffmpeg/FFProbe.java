@@ -8,31 +8,36 @@ import sune.api.process.ReadOnlyProcess;
 import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.OSUtils;
 
-public final class FFProbe {
+/** @since 00.02.08 */
+public final class FFprobe {
 	
-	private static Path file_ffprobe;
-	private static final Path ensureFFProbe() {
-		if((file_ffprobe == null)) {
-			file_ffprobe = NIO.localPath("resources/binary", OSUtils.getExecutableName("ffprobe"));
-			if(!NIO.isRegularFile(file_ffprobe))
-				throw new IllegalStateException("ffprobe was not found at: " + file_ffprobe.toAbsolutePath().toString());
-		}
-		return file_ffprobe;
+	private static Path path;
+	
+	// Forbid anyone to create an instance of this class
+	private FFprobe() {
 	}
 	
-	public static final Path ffprobe() {
-		return ensureFFProbe();
+	private static final Path ensureBinary() {
+		if(path == null) {
+			path = NIO.localPath("resources/binary", OSUtils.getExecutableName("ffprobe"));
+			
+			if(!NIO.isRegularFile(path)) {
+				throw new IllegalStateException("FFprobe was not found at " + path.toAbsolutePath().toString());
+			}
+		}
+		
+		return path;
+	}
+	
+	public static final Path path() {
+		return ensureBinary();
 	}
 	
 	public static final ReadOnlyProcess createSynchronousProcess() {
-		return Processes.createSynchronous(ffprobe());
+		return Processes.createSynchronous(path());
 	}
 	
 	public static final ReadOnlyProcess createAsynchronousProcess(Consumer<String> listener) {
-		return Processes.createAsynchronous(ffprobe(), listener);
-	}
-	
-	// Forbid anyone to create an instance of this class
-	private FFProbe() {
+		return Processes.createAsynchronous(path(), listener);
 	}
 }

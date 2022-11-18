@@ -1,44 +1,56 @@
 package sune.app.mediadown.pipeline;
 
-import java.nio.file.Path;
+import java.util.List;
+import java.util.Objects;
 
-import sune.app.mediadown.convert.ConversionConfiguration;
-import sune.app.mediadown.media.MediaFormat;
+import sune.app.mediadown.convert.ConversionMedia;
+import sune.app.mediadown.util.Metadata;
 
 /** @since 00.01.26 */
 public final class DownloadPipelineResult implements PipelineResult<ConversionPipelineResult> {
 	
 	private final boolean needConversion;
-	private final ConversionConfiguration configuration;
-	private final MediaFormat formatInput;
-	private final MediaFormat formatOutput;
-	private final Path fileOutput;
-	private final Path[] filesInput;
+	/** @since 00.02.08 */
+	private final ConversionMedia output;
+	/** @since 00.02.08 */
+	private final List<ConversionMedia> inputs;
+	/** @since 00.02.08 */
+	private final Metadata metadata;
 	
-	private DownloadPipelineResult(boolean needConversion, ConversionConfiguration configuration,
-			MediaFormat formatInput, MediaFormat formatOutput, Path fileOutput, Path[] filesInput) {
+	/** @since 00.02.08 */
+	private DownloadPipelineResult(boolean needConversion, ConversionMedia output, List<ConversionMedia> inputs,
+			Metadata metadata) {
 		this.needConversion = needConversion;
-		this.configuration = configuration;
-		this.formatInput = formatInput;
-		this.formatOutput = formatOutput;
-		this.fileOutput = fileOutput;
-		this.filesInput = filesInput;
+		this.output = output;
+		this.inputs = inputs;
+		this.metadata = metadata;
+	}
+	
+	/** @since 00.02.08 */
+	private static final List<ConversionMedia> checkInputs(List<ConversionMedia> inputs) {
+		if(inputs == null || inputs.isEmpty()) {
+			throw new IllegalArgumentException();
+		}
+		
+		return inputs;
 	}
 	
 	public static final DownloadPipelineResult noConversion() {
-		return new DownloadPipelineResult(false, null, null, null, null, null);
+		return new DownloadPipelineResult(false, null, null, null);
 	}
 	
-	public static final DownloadPipelineResult doConversion(ConversionConfiguration configuration,
-			MediaFormat formatInput, MediaFormat formatOutput, Path fileOutput, Path... filesInput) {
-		return new DownloadPipelineResult(true, configuration, formatInput, formatOutput, fileOutput, filesInput);
+	/** @since 00.02.08 */
+	public static final DownloadPipelineResult doConversion(ConversionMedia output, List<ConversionMedia> inputs,
+			Metadata metadata) {
+		return new DownloadPipelineResult(true, Objects.requireNonNull(output), checkInputs(inputs), metadata);
 	}
 	
 	@Override
 	public final PipelineTask<ConversionPipelineResult> process(Pipeline pipeline) throws Exception {
-		if((needConversion)) {
-			return ConversionPipelineTask.of(configuration, formatInput, formatOutput, fileOutput, filesInput);
+		if(needConversion) {
+			return ConversionPipelineTask.of(output, inputs, metadata);
 		}
+		
 		return TerminatingPipelineTask.getTypedInstance();
 	}
 	

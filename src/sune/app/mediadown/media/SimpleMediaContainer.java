@@ -158,7 +158,10 @@ public class SimpleMediaContainer implements MediaContainer {
 		
 		@Override
 		public List<Media> build(Media parent) {
-			return media.stream().map((m) -> m.parent(parent)).map(Media.Builder::build).collect(Collectors.toList());
+			return media.stream()
+					    .map((m) -> (Media.Builder<?, ?>) m.parent(parent))
+					    .map(Media.Builder::build)
+					    .collect(Collectors.toList());
 		}
 	}
 	

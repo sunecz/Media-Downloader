@@ -1,18 +1,21 @@
 package sune.app.mediadown.manager;
 
-import java.nio.file.Path;
+import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
 import sune.app.mediadown.Disposables;
 import sune.app.mediadown.MediaDownloader;
-import sune.app.mediadown.convert.ConversionConfiguration;
+import sune.app.mediadown.convert.ConversionMedia;
 import sune.app.mediadown.convert.Converter;
-import sune.app.mediadown.convert.FFMpegConverter;
-import sune.app.mediadown.media.MediaFormat;
+import sune.app.mediadown.event.tracker.TrackerManager;
+import sune.app.mediadown.event.tracker.WaitTracker;
+import sune.app.mediadown.ffmpeg.FFmpeg;
+import sune.app.mediadown.ffmpeg.FFmpegConverter;
+import sune.app.mediadown.util.Metadata;
 import sune.app.mediadown.util.Threads;
-import sune.app.mediadown.util.Utils;
 
 /** @since 00.01.26 */
 public class ConversionManager {
@@ -25,22 +28,26 @@ public class ConversionManager {
 		Disposables.add(ConversionManager::dispose);
 	}
 	
-	private static final Converter createConverter(ConversionConfiguration configuration, MediaFormat formatInput,
-			MediaFormat formatOutput, Path fileOutput, Path... filesInput) {
-		return new FFMpegConverter(configuration, formatInput, formatOutput, fileOutput, filesInput);
+	/** @since 00.02.08 */
+	private static final Converter createConverter() {
+		return new FFmpegConverter(new TrackerManager(new WaitTracker()));
 	}
 	
-	private static final Callable<Void> createCallable(Converter converter) {
-		return Utils.callable(converter::start);
+	/** @since 00.02.08 */
+	private static final Callable<Void> createTask(Converter converter, ConversionMedia output,
+			List<ConversionMedia> inputs, Metadata metadata) {
+		return new Task(converter, output, inputs, metadata);
 	}
 	
-	public static final ManagerSubmitResult<Converter, Void> submit(ConversionConfiguration configuration,
-			MediaFormat formatInput, MediaFormat formatOutput, Path fileOutput, Path... filesInput) {
-		if((configuration == null || formatInput == null || formatOutput == null || fileOutput == null
-				|| filesInput == null || filesInput.length <= 0))
+	/** @since 00.02.08 */
+	public static final ManagerSubmitResult<Converter, Void> submit(ConversionMedia output,
+			List<ConversionMedia> inputs, Metadata metadata) {
+		if(output == null || inputs == null || inputs.isEmpty() || metadata == null) {
 			throw new IllegalArgumentException();
-		Converter converter = createConverter(configuration, formatInput, formatOutput, fileOutput, filesInput);
-		Future<Void> future = EXECUTOR.submit(createCallable(converter));
+		}
+		
+		Converter converter = createConverter();
+		Future<Void> future = EXECUTOR.submit(createTask(converter, output, inputs, metadata));
 		return new ManagerSubmitResult<>(converter, future);
 	}
 	
@@ -50,5 +57,27 @@ public class ConversionManager {
 	
 	public static final boolean isRunning() {
 		return !EXECUTOR.isShutdown();
+	}
+	
+	/** @since 00.02.08 */
+	private static final class Task implements Callable<Void> {
+		
+		private final Converter converter;
+		private final ConversionMedia output;
+		private final List<ConversionMedia> inputs;
+		private final Metadata metadata;
+		
+		public Task(Converter converter, ConversionMedia output, List<ConversionMedia> inputs, Metadata metadata) {
+			this.converter = Objects.requireNonNull(converter);
+			this.output = Objects.requireNonNull(output);
+			this.inputs = Objects.requireNonNull(inputs);
+			this.metadata = Objects.requireNonNull(metadata);
+		}
+		
+		@Override
+		public Void call() throws Exception {
+			converter.start(FFmpeg.Command.of(output, inputs, metadata));
+			return null;
+		}
 	}
 }

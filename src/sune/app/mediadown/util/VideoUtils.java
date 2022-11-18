@@ -3,7 +3,7 @@ package sune.app.mediadown.util;
 import java.nio.file.Path;
 
 import sune.api.process.ReadOnlyProcess;
-import sune.app.mediadown.ffmpeg.FFProbe;
+import sune.app.mediadown.ffmpeg.FFprobe;
 
 public final class VideoUtils {
 	
@@ -14,7 +14,7 @@ public final class VideoUtils {
 	}
 	
 	public static final double duration(Path file) {
-		try(ReadOnlyProcess process = FFProbe.createSynchronousProcess()) {
+		try(ReadOnlyProcess process = FFprobe.createSynchronousProcess()) {
 			String command = String.format(COMMAND_DURATION, file.getFileName().toString());
 			return Double.parseDouble(process.execute(command));
 		} catch(Exception ex) {

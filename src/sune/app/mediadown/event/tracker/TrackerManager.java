@@ -11,6 +11,14 @@ public class TrackerManager implements EventBindable<TrackerEvent> {
 	private final EventRegistry<TrackerEvent> eventRegistry = new EventRegistry<>();
 	private Tracker tracker;
 	
+	public TrackerManager() {
+	}
+	
+	/** @since 00.02.08 */
+	public TrackerManager(Tracker tracker) {
+		tracker(tracker);
+	}
+	
 	private final void update(Tracker tracker) {
 		eventRegistry.call(TrackerEvent.UPDATE, tracker);
 	}
