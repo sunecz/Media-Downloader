@@ -1611,6 +1611,10 @@ public final class Utils {
 	
 	/** @since 00.02.04 */
 	public static final String throwableToString(Throwable throwable) {
+		if(throwable == null) {
+			return null;
+		}
+		
 		try(StringWriter swriter = new StringWriter();
 			PrintWriter  pwriter = new PrintWriter(swriter)) {
 			throwable.printStackTrace(pwriter);
@@ -1618,6 +1622,7 @@ public final class Utils {
 		} catch(IOException ex) {
 			// Should not happen
 		}
+		
 		return null;
 	}
 	
