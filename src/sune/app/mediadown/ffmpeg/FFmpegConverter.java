@@ -21,6 +21,7 @@ import sune.app.mediadown.event.Listener;
 import sune.app.mediadown.event.tracker.ConversionTracker;
 import sune.app.mediadown.event.tracker.TrackerEvent;
 import sune.app.mediadown.event.tracker.TrackerManager;
+import sune.app.mediadown.logging.Log;
 import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.ProcessUtils;
@@ -34,6 +35,7 @@ public final class FFmpegConverter implements Converter {
 	private final InternalState state = new InternalState(TaskStates.INITIAL);
 	private final EventRegistry<ConversionEvent> eventRegistry = new EventRegistry<>();
 	private final TrackerManager trackerManager;
+	private final StringBuilder processOutput = new StringBuilder();
 	
 	private ReadOnlyProcess process;
 	private ConversionTracker tracker;
@@ -62,6 +64,7 @@ public final class FFmpegConverter implements Converter {
 	}
 	
 	private final void outputHandler(String line) {
+		processOutput.append(line).append("\n");
 		Matcher matcher = REGEX_LINE_PROGRESS.matcher(line);
 		if(!matcher.matches()) return; // Not a progress info
 		String time = matcher.group(1);
@@ -98,7 +101,13 @@ public final class FFmpegConverter implements Converter {
 		
 		int exitCode;
 		if((exitCode = doConversion(altered)) != 0) {
-			throw new IllegalStateException("FFmpeg exited with non-zero code: " + exitCode);
+			// Log the whole output of the process to a unique log file so that more information
+			// can be obtained, not just the exit code.
+			Path logPath = Log.toUniquePath("ffmpeg-converter-", processOutput.toString());
+			throw new IllegalStateException(String.format(
+				"FFmpeg exited with non-zero code: %d. See %s for details.",
+				exitCode, logPath.toAbsolutePath().toString()
+			));
 		}
 		
 		for(Pair<Output, Output> pair : Utils.zipIterable(
@@ -132,6 +141,7 @@ public final class FFmpegConverter implements Converter {
 	@Override
 	public void start(ConversionCommand command) throws Exception {
 		this.command = (FFmpeg.Command) command;
+		processOutput.setLength(0);
 		state.clear(TaskStates.STARTED);
 		
 		try {

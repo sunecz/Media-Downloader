@@ -124,15 +124,17 @@ public final class Log {
 	}
 	
 	/** @since 00.02.08 */
-	public static final void toUniquePath(String prefix, String message, Object... args)
+	public static final Path toUniquePath(String prefix, String message, Object... args)
 			throws IOException {
-		toUniquePath(LOG_DIRECTORY, prefix, message, args);
+		return toUniquePath(LOG_DIRECTORY, prefix, message, args);
 	}
 	
 	/** @since 00.02.08 */
-	public static final void toUniquePath(Path directory, String prefix, String message, Object... args)
+	public static final Path toUniquePath(Path directory, String prefix, String message, Object... args)
 			throws IOException {
-		toPath(NIO.tempFile(directory, prefix, ".log"), message, args);
+		Path path = NIO.tempFile(directory, prefix, ".log");
+		toPath(path, message, args);
+		return path;
 	}
 	
 	private static final class LogRecordFormatter extends Formatter {
