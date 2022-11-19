@@ -1,19 +1,15 @@
 package sune.app.mediadown.pipeline;
 
-import java.nio.file.Path;
 import java.util.List;
 
-import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.convert.ConversionMedia;
 import sune.app.mediadown.convert.Converter;
 import sune.app.mediadown.event.ConversionEvent;
 import sune.app.mediadown.event.EventRegistry;
 import sune.app.mediadown.event.EventType;
-import sune.app.mediadown.language.Translation;
 import sune.app.mediadown.manager.ConversionManager;
 import sune.app.mediadown.manager.ManagerSubmitResult;
 import sune.app.mediadown.util.Metadata;
-import sune.app.mediadown.util.Utils;
 
 /** @since 00.01.26 */
 public final class ConversionPipelineTask implements PipelineTask<ConversionPipelineResult> {
@@ -57,23 +53,7 @@ public final class ConversionPipelineTask implements PipelineTask<ConversionPipe
 		Converter converter = result.getValue();
 		eventRegistry.bindAll(converter, ConversionEvent.values());
 		
-		try {
-			result.get(); // Wait for the conversion to finish
-		} catch(Exception ex) {
-			String paths = Utils.join(
-				", ",
-				inputs.stream()
-				      .map(ConversionMedia::path)
-				      .map(Path::toString)
-				      .toArray(String[]::new)
-			);
-			
-			// TODO: Do not translate the exception here
-			Translation tr = MediaDownloader.translation();
-			String text = tr.getSingle("errors.conversion.cannot_convert", "path", paths);
-			throw new IllegalStateException(text, ex); // Forward the exception
-		}
-		
+		result.get(); // Wait for the conversion to finish
 		return ConversionPipelineResult.noConversion();
 	}
 	
