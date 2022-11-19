@@ -132,7 +132,7 @@ public final class Log {
 	/** @since 00.02.08 */
 	public static final Path toUniquePath(Path directory, String prefix, String message, Object... args)
 			throws IOException {
-		Path path = NIO.tempFile(directory, prefix, ".log");
+		Path path = NIO.uniqueFile(directory, prefix, ".log");
 		toPath(path, message, args);
 		return path;
 	}

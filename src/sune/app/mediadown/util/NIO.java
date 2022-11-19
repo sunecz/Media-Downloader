@@ -291,11 +291,14 @@ public final class NIO {
 	}
 	
 	private static List<Path> deleteOnExit;
-	private static final void ensureDeleteOnExit() {
-		if((deleteOnExit == null)) {
+	/** @since 00.02.08 */
+	private static final List<Path> deleteOnExit() {
+		if(deleteOnExit == null) {
 			deleteOnExit = new ArrayList<>();
 			Runtime.getRuntime().addShutdownHook(Threads.newThreadUnmanaged(NIO::runDeleteOnExit));
 		}
+		
+		return deleteOnExit;
 	}
 	
 	private static final void runDeleteOnExit() {
@@ -315,8 +318,28 @@ public final class NIO {
 	}
 	
 	private static final Path deleteOnExit(Path path) {
-		deleteOnExit.add(path);
+		deleteOnExit().add(path);
 		return path;
+	}
+	
+	/** @since 00.02.08 */
+	public static final Path uniqueFile(String prefix, String suffix) throws IOException {
+		return uniqueFile(null, prefix, suffix);
+	}
+	
+	/** @since 00.02.08 */
+	public static final Path uniqueFile(Path dir, String prefix, String suffix) throws IOException {
+		return dir == null ? Files.createTempFile(prefix, suffix) : Files.createTempFile(dir, prefix, suffix);
+	}
+	
+	/** @since 00.02.08 */
+	public static final Path uniqueDir(String prefix) throws IOException {
+		return uniqueDir(null, prefix);
+	}
+	
+	/** @since 00.02.08 */
+	public static final Path uniqueDir(Path dir, String prefix) throws IOException {
+		return dir == null ? Files.createTempDirectory(prefix) : Files.createTempDirectory(dir, prefix);
 	}
 	
 	public static final Path tempFile(String prefix, String suffix) throws IOException {
@@ -324,10 +347,7 @@ public final class NIO {
 	}
 	
 	public static final Path tempFile(Path dir, String prefix, String suffix) throws IOException {
-		ensureDeleteOnExit();
-		return deleteOnExit(dir == null
-				? Files.createTempFile(/**/ prefix, suffix)
-				: Files.createTempFile(dir, prefix, suffix));
+		return deleteOnExit(uniqueFile(dir, prefix, suffix));
 	}
 	
 	public static final Path tempDir(String prefix) throws IOException {
@@ -335,10 +355,7 @@ public final class NIO {
 	}
 	
 	public static final Path tempDir(Path dir, String prefix) throws IOException {
-		ensureDeleteOnExit();
-		return deleteOnExit(dir == null
-				? Files.createTempDirectory(/**/ prefix)
-				: Files.createTempDirectory(dir, prefix));
+		return deleteOnExit(uniqueDir(dir, prefix));
 	}
 	
 	/** @since 00.02.00 */
