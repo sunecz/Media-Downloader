@@ -64,7 +64,7 @@ public final class FFmpegConverter implements Converter {
 	}
 	
 	private final void outputHandler(String line) {
-		processOutput.append(line).append("\n");
+		processOutput.append(line).append('\n');
 		Matcher matcher = REGEX_LINE_PROGRESS.matcher(line);
 		if(!matcher.matches()) return; // Not a progress info
 		String time = matcher.group(1);
@@ -79,7 +79,9 @@ public final class FFmpegConverter implements Converter {
 		}
 		
 		Path dir = command.outputs().get(0).path().getParent();
-		process.execute(command.string(), dir);
+		String cmd = command.string();
+		processOutput.append("ffmpeg ").append(cmd).append('\n');
+		process.execute(cmd, dir);
 		
 		return process.waitFor();
 	}
