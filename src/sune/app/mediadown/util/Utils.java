@@ -1913,6 +1913,97 @@ public final class Utils {
 		}
 	}
 	
+	/** @since 00.02.08 */
+	public static final class OfPath {
+		
+		// Forbid anyone to create an instance of this class
+		private OfPath() {
+		}
+		
+		public static final Info info(String path) {
+			return Info.of(path);
+		}
+		
+		public static final Info info(Path path) {
+			return Info.of(path);
+		}
+		
+		public static final class Info {
+			
+			private final Path path;
+			private final String baseName;
+			private final String fileName;
+			private final String extension;
+			
+			private Info(Path path, String baseName, String fileName, String extension) {
+				this.path = path;
+				this.baseName = Objects.requireNonNull(baseName);
+				this.fileName = Objects.requireNonNull(fileName);
+				this.extension = extension;
+			}
+			
+			private static final String extractBaseName(String path) {
+				String normalized = path.replace('\\', '/');
+				
+				int index;
+				if((index = normalized.lastIndexOf('/')) != -1) {
+					return normalized.substring(index + 1);
+				}
+				
+				return path;
+			}
+			
+			private static final Info of(Path path, String baseName) {
+				String fileName = baseName;
+				String extension = null;
+				
+				int index;
+				if((index = baseName.lastIndexOf('.')) != -1) {
+					fileName = baseName.substring(0, index);
+					extension = baseName.substring(index + 1);
+				}
+				
+				return new Info(path, baseName, fileName, extension);
+			}
+			
+			private static final Info of(String path) {
+				return of(null, extractBaseName(path));
+			}
+			
+			private static final Info of(Path path) {
+				return of(path.toAbsolutePath(), path.getFileName().toString());
+			}
+			
+			public Path path() {
+				return path;
+			}
+			
+			public Path directory() {
+				return path.getParent();
+			}
+			
+			public Path root() {
+				return path.getRoot();
+			}
+			
+			public String baseName() {
+				return baseName;
+			}
+			
+			public String fileName() {
+				return fileName;
+			}
+			
+			public String extension() {
+				return extension;
+			}
+			
+			public boolean hasExtension() {
+				return extension != null;
+			}
+		}
+	}
+	
 	public static final class JS {
 		
 		// Forbid anyone to create an instance of this class

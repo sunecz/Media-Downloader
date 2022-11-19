@@ -170,7 +170,7 @@ public final class FFmpeg {
 				
 				Command.Builder command = Command.builder();
 				MediaFormat formatInput = Media.root(inputs.get(0).media()).format();
-				MediaFormat formatOutput = MediaFormat.fromPath(output.path());
+				MediaFormat formatOutput = output.format();
 				Output.Builder out = Output.ofMutable(output.path());
 				
 				command.addOptions(

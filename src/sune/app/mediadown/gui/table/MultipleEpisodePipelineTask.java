@@ -66,7 +66,7 @@ public final class MultipleEpisodePipelineTask extends MediaEnginePipelineTaskBa
 				MediaFilter filter = config.mediaFilter();
 				MediaFormat outputFormat = config.outputFormat();
 				MediaLanguage[] subtitlesLanguages = config.subtitlesLanguages().toArray(MediaLanguage[]::new);
-				Path dir;
+				Choosers.SelectedItem dir;
 				if((dir = chooser.show()) != null) {
 					Map<String, Integer> usedTitles = new HashMap<>();
 					int counter;
@@ -78,8 +78,8 @@ public final class MultipleEpisodePipelineTask extends MediaEnginePipelineTaskBa
 						if((counter = usedTitles.getOrDefault(title, 0)) > 0)
 							checkedTitle += String.format(" (%d)", counter);
 						usedTitles.put(title, counter + 1);
-						Path path = dir.resolve(Utils.addFormatExtension(checkedTitle, outputFormat));
-						resultMedia.add(TablePipelineUtils.resolveSingleMedia(media, path, subtitlesLanguages));
+						Path path = dir.path().resolve(Utils.addFormatExtension(checkedTitle, outputFormat));
+						resultMedia.add(TablePipelineUtils.resolveSingleMedia(media, path, outputFormat, subtitlesLanguages));
 					}
 				}
 			}

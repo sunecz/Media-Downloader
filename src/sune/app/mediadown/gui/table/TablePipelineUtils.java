@@ -51,6 +51,7 @@ import sune.app.mediadown.media.MediaQuality;
 import sune.app.mediadown.media.MediaType;
 import sune.app.mediadown.media.SubtitlesMediaBase;
 import sune.app.mediadown.util.Choosers;
+import sune.app.mediadown.util.Choosers.SelectedItem;
 import sune.app.mediadown.util.ClipboardUtils;
 import sune.app.mediadown.util.ExtensionFilters;
 import sune.app.mediadown.util.FXUtils;
@@ -222,17 +223,28 @@ public final class TablePipelineUtils {
 		return table;
 	}
 	
-	public static final ResolvedMedia resolveSingleMedia(Media media, Path dest, MediaLanguage[] subtitlesLanguages) {
+	/** @since 00.02.08 */
+	private static final MediaFormat selectedMediaFormat(SelectedItem item) {
+		return item.extension().getExtensions().stream()
+					.map(MediaFormat::fromName)
+					.filter((f) -> !f.is(MediaFormat.UNKNOWN))
+					.findFirst().orElse(MediaFormat.UNKNOWN);
+	}
+	
+	public static final ResolvedMedia resolveSingleMedia(Media media, Path dest, MediaFormat outputFormat,
+			MediaLanguage[] subtitlesLanguages) {
 		MediaDownloadConfiguration mediaConfig;
+		
 		if(subtitlesLanguages.length > 0) {
 			List<Media> subtitles = Media.findAllOfType(media, MediaType.SUBTITLES).stream()
 					.filter((m) -> ((SubtitlesMediaBase) m).language().isAnyOf(subtitlesLanguages))
 					.collect(Collectors.toList());
 			Map<MediaType, List<Media>> selectedMedia = Map.of(MediaType.SUBTITLES, subtitles);
-			mediaConfig = MediaDownloadConfiguration.of(selectedMedia);
+			mediaConfig = MediaDownloadConfiguration.of(outputFormat, selectedMedia);
 		} else {
 			mediaConfig = MediaDownloadConfiguration.ofDefault();
 		}
+		
 		return new ResolvedMedia(media, dest, mediaConfig);
 	}
 	
@@ -273,9 +285,9 @@ public final class TablePipelineUtils {
 					.build();
 				Pair<T, Media> pair = result.get(0);
 				String title = Utils.validateFileName(Utils.getOrDefault(pair.b.metadata().title(), fTitle.apply(pair)));
-				Path path;
+				Choosers.SelectedItem path;
 				if((path = chooser.fileName(title).showSave()) != null) {
-					resolved.add(resolveSingleMedia(pair.b, path, subtitlesLanguages));
+					resolved.add(resolveSingleMedia(pair.b, path.path(), selectedMediaFormat(path), subtitlesLanguages));
 				}
 			} else {
 				Choosers.OfDirectory.Chooser chooser = Choosers.OfDirectory.configuredBuilder()
@@ -283,7 +295,7 @@ public final class TablePipelineUtils {
 					.title(translation.getSingle("dialogs.save_dir"))
 					.build();
 				MediaFormat outputFormat = config.outputFormat();
-				Path dir;
+				Choosers.SelectedItem dir;
 				if((dir = chooser.show()) != null) {
 					Map<String, Integer> usedTitles = new HashMap<>();
 					int counter;
@@ -293,8 +305,8 @@ public final class TablePipelineUtils {
 						if((counter = usedTitles.getOrDefault(title, 0)) > 0)
 							checkedTitle += String.format(" (%d)", counter);
 						usedTitles.put(title, counter + 1);
-						Path path = dir.resolve(Utils.addFormatExtension(checkedTitle, outputFormat));
-						resolved.add(resolveSingleMedia(pair.b, path, subtitlesLanguages));
+						Path path = dir.path().resolve(Utils.addFormatExtension(checkedTitle, outputFormat));
+						resolved.add(resolveSingleMedia(pair.b, path, outputFormat, subtitlesLanguages));
 					}
 				}
 			}
@@ -326,9 +338,9 @@ public final class TablePipelineUtils {
 				Media media = config.mediaFilter().filter(pair.b);
 				if(media == null) return;
 				String title = Utils.validateFileName(media.metadata().title());
-				Path path;
+				Choosers.SelectedItem path;
 				if((path = chooser.fileName(title).showSave()) != null) {
-					resolved.add(resolveSingleMedia(media, path, subtitlesLanguages));
+					resolved.add(resolveSingleMedia(media, path.path(), selectedMediaFormat(path), subtitlesLanguages));
 				}
 			} else {
 				Choosers.OfDirectory.Chooser chooser = Choosers.OfDirectory.configuredBuilder()
@@ -337,7 +349,7 @@ public final class TablePipelineUtils {
 					.build();
 				MediaFilter mediaFilter = config.mediaFilter();
 				MediaFormat outputFormat = config.outputFormat();
-				Path dir;
+				Choosers.SelectedItem dir;
 				if((dir = chooser.show()) != null) {
 					Map<String, Integer> usedTitles = new HashMap<>();
 					int counter;
@@ -349,8 +361,8 @@ public final class TablePipelineUtils {
 						if((counter = usedTitles.getOrDefault(title, 0)) > 0)
 							checkedTitle += String.format(" (%d)", counter);
 						usedTitles.put(title, counter + 1);
-						Path path = dir.resolve(Utils.addFormatExtension(checkedTitle, outputFormat));
-						resolved.add(resolveSingleMedia(media, path, subtitlesLanguages));
+						Path path = dir.path().resolve(Utils.addFormatExtension(checkedTitle, outputFormat));
+						resolved.add(resolveSingleMedia(media, path, outputFormat, subtitlesLanguages));
 					}
 				}
 			}

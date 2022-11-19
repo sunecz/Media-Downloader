@@ -48,10 +48,8 @@ public final class FFmpegConverter implements Converter {
 		
 		List<Output> newOutputs = command.outputs().stream()
 			.map((output) -> {
-				String fileName = output.path().getFileName().toString();
-				String fileNameNoType = Utils.fileNameNoType(fileName);
-				String fileType = Utils.fileType(fileName);
-				String newName = fileNameNoType + ".convert." + fileType;
+				Utils.OfPath.Info info = Utils.OfPath.info(output.path());
+				String newName = info.fileName() + ".convert." + info.extension();
 				Path newPath = output.path().resolveSibling(newName);
 				return Output.of(newPath, output.format(), output.options());
 			})

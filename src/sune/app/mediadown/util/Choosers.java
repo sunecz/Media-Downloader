@@ -23,6 +23,14 @@ public final class Choosers {
 	private Choosers() {
 	}
 	
+	/** @since 00.02.08 */
+	private static final MediaFormat selectedMediaFormat(SelectedItem item) {
+		return item.extension().getExtensions().stream()
+					.map(MediaFormat::fromName)
+					.filter((f) -> !f.is(MediaFormat.UNKNOWN))
+					.findFirst().orElse(MediaFormat.UNKNOWN);
+	}
+	
 	private static final void updateConfigurationProperty(String name, Object value) {
 		ApplicationConfiguration configuration = MediaDownloader.configuration();
 		Utils.ignore(() -> configuration.writer().set(name, value).save(configuration.path()),
@@ -36,42 +44,53 @@ public final class Choosers {
 		);
 	}
 	
-	private static final void updateLastOpenFormat(Path path) {
+	private static final void updateLastOpenFormat(SelectedItem item) {
 		updateConfigurationProperty(
 			ApplicationConfiguration.PROPERTY_HISTORY_LAST_OPEN_FORMAT,
-			MediaFormat.fromPath(path).name()
+			selectedMediaFormat(item).name()
 		);
 	}
 	
-	private static final void updateLastSaveFormat(Path path) {
+	private static final void updateLastSaveFormat(SelectedItem item) {
 		updateConfigurationProperty(
 			ApplicationConfiguration.PROPERTY_HISTORY_LAST_SAVE_FORMAT,
-			MediaFormat.fromPath(path).name()
+			selectedMediaFormat(item).name()
 		);
 	}
 	
-	private static final Path maybeUpdateHistory(OfFile.ChooserAccessor<?> accessor, Path path, boolean saveMode) {
-		if(path != null) {
-			updateLastDirectory(path);
-			if(saveMode) updateLastSaveFormat(path);
-			else         updateLastOpenFormat(path);
+	private static final SelectedItem maybeUpdateHistory(OfFile.ChooserAccessor<?> accessor, SelectedItem item,
+			boolean saveMode) {
+		if(item != null) {
+			updateLastDirectory(item.path());
+			if(saveMode) updateLastSaveFormat(item);
+			else         updateLastOpenFormat(item);
 		}
-		return path;
+		
+		return item;
 	}
 	
-	private static final List<Path> maybeUpdateHistory(OfFile.ChooserAccessor<?> accessor, List<Path> paths) {
-		if(paths != null) {
-			updateLastDirectory(paths.stream().map(Path::getParent).distinct().findFirst().get());
-			updateLastOpenFormat(paths.get(0)); // Only open (multiple) mode
+	private static final List<SelectedItem> maybeUpdateHistory(OfFile.ChooserAccessor<?> accessor,
+			List<SelectedItem> items) {
+		if(items != null) {
+			updateLastDirectory(
+				items.stream()
+				     .map(SelectedItem::path)
+				     .map(Path::getParent)
+				     .distinct()
+				     .findFirst().get()
+			);
+			updateLastOpenFormat(items.get(0)); // Only open (multiple) mode
 		}
-		return paths;
+		
+		return items;
 	}
 	
-	private static final Path maybeUpdateHistory(OfDirectory.ChooserAccessor<?> accessor, Path path) {
-		if(path != null) {
-			updateLastDirectory(path);
+	private static final SelectedItem maybeUpdateHistory(OfDirectory.ChooserAccessor<?> accessor, SelectedItem item) {
+		if(item != null) {
+			updateLastDirectory(item.path());
 		}
-		return path;
+		
+		return item;
 	}
 	
 	private static final Path lastDirectory() {
@@ -125,7 +144,12 @@ public final class Choosers {
 				}
 			}
 			
-			public Path showOpen() {
+			/** @since 00.02.08 */
+			private final SelectedItem createItem(Path path) {
+				return SelectedItem.ofFile(path, chooser.getSelectedExtensionFilter());
+			}
+			
+			public SelectedItem showOpen() {
 				if(isConfigured) {
 					selectConfiguredFormat(false);
 				}
@@ -134,12 +158,13 @@ public final class Choosers {
 					this,
 					Optional.ofNullable(chooser.showOpenDialog(parent))
 						.map(File::toPath)
+						.map(this::createItem)
 						.orElse(null),
 					false
 				);
 			}
 			
-			public List<Path> showOpenMultiple() {
+			public List<SelectedItem> showOpenMultiple() {
 				if(isConfigured) {
 					selectConfiguredFormat(false);
 				}
@@ -150,11 +175,12 @@ public final class Choosers {
 						.map(List::stream)
 						.orElseGet(Stream::of)
 						.map(File::toPath)
+						.map(this::createItem)
 						.collect(Collectors.toUnmodifiableList())
 				);
 			}
 			
-			public Path showSave() {
+			public SelectedItem showSave() {
 				if(isConfigured) {
 					selectConfiguredFormat(true);
 				}
@@ -163,6 +189,7 @@ public final class Choosers {
 					this,
 					Optional.ofNullable(chooser.showSaveDialog(parent))
 						.map(File::toPath)
+						.map(this::createItem)
 						.orElse(null),
 					true
 				);
@@ -242,7 +269,7 @@ public final class Choosers {
 					// Select extension filter based on the given file name or just use the first one
 					filter = filters.get(0);
 					if(fileName != null && !fileName.isEmpty()) {
-						String ext = Utils.fileType(fileName);
+						String ext = Utils.OfPath.info(fileName).extension();
 						if(ext != null) {
 							filter = filters.stream()
 								.filter((f) -> f.getExtensions().stream()
@@ -359,11 +386,12 @@ public final class Choosers {
 				this.parent = parent;
 			}
 			
-			public Path show() {
+			public SelectedItem show() {
 				return maybeUpdateHistory(
 					this,
 					Optional.ofNullable(chooser.showDialog(parent))
 						.map(File::toPath)
+						.map(SelectedItem::ofDirectory)
 						.orElse(null)
 				);
 			}
@@ -437,6 +465,54 @@ public final class Choosers {
 			public DirectoryChooser chooser() {
 				return chooser;
 			}
+		}
+	}
+	
+	/** @since 00.02.08 */
+	public static final class SelectedItem {
+		
+		private final Path path;
+		private final ExtensionFilter extension;
+		
+		private SelectedItem(Path path, ExtensionFilter extension) {
+			this.path = Objects.requireNonNull(path);
+			this.extension = extension;
+		}
+		
+		public static final SelectedItem ofFile(Path path, ExtensionFilter extension) {
+			return new SelectedItem(path, Objects.requireNonNull(extension));
+		}
+		
+		public static final SelectedItem ofDirectory(Path path) {
+			return new SelectedItem(path, null);
+		}
+		
+		public Path path() {
+			return path;
+		}
+		
+		public ExtensionFilter extension() {
+			return extension;
+		}
+		
+		@Override
+		public int hashCode() {
+			return Objects.hash(extension != null ? extension.getExtensions() : extension, path);
+		}
+		
+		@Override
+		public boolean equals(Object obj) {
+			if(this == obj)
+				return true;
+			if(obj == null)
+				return false;
+			if(getClass() != obj.getClass())
+				return false;
+			SelectedItem other = (SelectedItem) obj;
+			return Objects.equals(
+				      extension != null ?       extension.getExtensions() :       extension,
+				other.extension != null ? other.extension.getExtensions() : other.extension
+			) && Objects.equals(path, other.path);
 		}
 	}
 }

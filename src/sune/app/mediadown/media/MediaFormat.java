@@ -144,7 +144,7 @@ public final class MediaFormat {
 	}
 	
 	public static final MediaFormat fromPath(String path) {
-		return filter(PREDICATE_EXTENSIONS, Utils.fileType(path).toLowerCase());
+		return filter(PREDICATE_EXTENSIONS, Utils.OfPath.info(path).extension().toLowerCase());
 	}
 	
 	public static final MediaFormat fromName(String string) {
