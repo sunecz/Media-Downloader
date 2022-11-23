@@ -76,7 +76,7 @@ public class WorkerTask<T> {
 	}
 	
 	public void cancel() {
-		worker.interrupt();
+		worker.stop();
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -100,6 +100,6 @@ public class WorkerTask<T> {
 	}
 	
 	public boolean isCanceled() {
-		return worker.isInterrupted();
+		return worker.isStopped();
 	}
 }

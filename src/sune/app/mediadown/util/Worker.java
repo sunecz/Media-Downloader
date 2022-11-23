@@ -5,101 +5,38 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
-import sune.app.mediadown.Disposables;
+import sune.app.mediadown.HasTaskState;
+import sune.app.mediadown.InternalState;
 import sune.app.mediadown.MediaDownloader;
+import sune.app.mediadown.TaskStates;
 
-public final class Worker {
+public final class Worker implements HasTaskState {
+	
+	private static final int STATE_SUBMITTED = 1 << 6;
 	
 	private final int numThreads;
 	private final ExecutorService executor;
-	private final CounterLock lock;
 	private final Thread thread;
 	
 	private final Queue<Callable<?>> callables = new ConcurrentLinkedQueue<>();
 	private final Queue<WorkerResult<?>> results = new ConcurrentLinkedQueue<>();
 	
-	private final SyncObject lockSubmit  = new SyncObject();
-	private final SyncObject lockCount   = new SyncObject();
-	private final SyncObject lockPause   = new SyncObject();
+	private final InternalState state = new InternalState(TaskStates.INITIAL);
+	private final CounterLock lock = new CounterLock();
+	private final StateMutex lockSubmit = new StateMutex();
 	private final StateMutex lockExecute = new StateMutex();
-	
-	private final AtomicBoolean running     = new AtomicBoolean();
-	private final AtomicBoolean paused      = new AtomicBoolean();
-	private final AtomicBoolean interrupted = new AtomicBoolean();
-	private final AtomicBoolean submitted   = new AtomicBoolean();
+	private final StateMutex lockCount = new StateMutex();
+	private final StateMutex lockPause = new StateMutex();
 	
 	private Worker(int numThreads) {
-		if(numThreads <= 0)
-			throw new IllegalArgumentException("Number of threads has to be > 0");
-		this.numThreads = numThreads;
-		executor  = createExecutorService(numThreads);
-		lock      = new CounterLock();
-		thread    = Threads.newThread(this::loop);
-		Disposables.add(this::interrupt);
-	}
-	
-	private final void start() {
-		running.set(true);
-		thread.start();
-	}
-	
-	private final void loop() {
-		// Loop till this worker is not interrupted
-		for(Callable<?> r; running.get() || paused.get();) {
-			// Wait if this worker is paused
-			if(!interrupted.get() && paused.get()) {
-				synchronized(lockPause) {
-					if(!interrupted.get() && paused.get()) {
-						lockPause.await();
-					}
-				}
-			}
-			// Wait if there is no more threads
-			if(!interrupted.get() && lock.count() >= numThreads) {
-				synchronized(lockCount) {
-					if(!interrupted.get() && lock.count() >= numThreads) {
-						lockCount.await();
-					}
-				}
-			}
-			if(!interrupted.get()) {
-				synchronized(lockSubmit) {
-					// Wait if nothing submitted
-					if(callables.isEmpty()) {
-						lockSubmit.await();
-					}
-					// Execute the next callable
-					if((r = callables.peek()) != null) {
-						callables.poll();
-					}
-				}
-				if(r != null) {
-					execute(r);
-				}
-			}
+		if(numThreads <= 0) {
+			throw new IllegalArgumentException("Number of threads must be > 0");
 		}
-	}
-	
-	private final void execute(Callable<?> callable) {
-		lock.increment();
-		executor.submit(() -> {
-			Object    result    = null;
-			Exception exception = null;
-			try {
-				// Set the result of the call
-				result = callable.call();
-			} catch(Exception ex) {
-				// Otherwise set the exception
-				exception = ex;
-			} finally {
-				results.add(new WorkerResult<>(result, exception));
-				lock.decrement();
-				lockCount.unlock();
-			}
-		});
-		lockExecute.unlock();
+		
+		this.numThreads = numThreads;
+		executor = createExecutorService(numThreads);
+		thread = Threads.newThread(this::loop);
 	}
 	
 	private static final ExecutorService createExecutorService(int numThreads) {
@@ -120,98 +57,192 @@ public final class Worker {
 		return createWorker(MediaDownloader.configuration().acceleratedDownload());
 	}
 	
-	public final void submit(Runnable runnable) {
-		submit(Utils.callable(Utils.checked(runnable)));
-	}
-	
-	public final void submit(Runnable runnable, Object result) {
-		submit(Utils.callable(Utils.checked(runnable), result));
-	}
-	
-	public final void submit(Callable<?> callable) {
-		synchronized(lockSubmit) {
-			callables.add(callable);
-			submitted.set(true);
-			lockSubmit.unlock();
+	private final void loop() {
+		// Loop till this worker is not interrupted
+		for(Callable<?> r; isRunning() || isPaused();) {
+			// Wait if this worker is paused
+			if(isPaused()) {
+				lockPause.awaitAndReset();
+			}
+			
+			// Wait if there is no more threads
+			if(lock.count() >= numThreads) {
+				lockCount.awaitAndReset();
+			}
+			
+			// Wait if nothing submitted
+			if(callables.isEmpty()) {
+				lockSubmit.await();
+			}
+			
+			// Execute the next callable
+			if((r = callables.poll()) != null) {
+				execute(r);
+			}
 		}
 	}
 	
-	public final void pause() {
-		running.set(false);
-		paused.set(true);
+	private final void start() {
+		state.clear(TaskStates.STARTED);
+		state.set(TaskStates.RUNNING);
+		thread.start();
 	}
 	
-	public final void resume() {
-		paused.set(false);
-		running.set(true);
+	private final void execute(Callable<?> callable) {
+		if(isStopped() || isDone()) {
+			return;
+		}
+		
+		lock.increment();
+		lockCount.reset();
+		
+		executor.submit(() -> {
+			Object result = null;
+			Exception exception = null;
+			
+			try {
+				// Set the result of the call
+				result = callable.call();
+			} catch(Exception ex) {
+				// Otherwise set the exception
+				exception = ex;
+			} finally {
+				results.add(new WorkerResult<>(result, exception));
+				lock.decrement();
+				lockCount.unlock();
+			}
+		});
+		
+		lockExecute.unlock();
+	}
+	
+	private final boolean isSubmitted() {
+		return state.is(STATE_SUBMITTED);
+	}
+	
+	private final void doStop(int stopState) {
+		if(isStopped() || isDone()) {
+			return;
+		}
+		
+		state.unset(TaskStates.RUNNING);
+		state.unset(TaskStates.PAUSED);
+		
+		state.set(stopState);
+		
+		lockSubmit.unlock();
+		lockExecute.unlock();
+		lockCount.unlock();
 		lockPause.unlock();
-	}
-	
-	public final void waitTillDone() {
-		// Check whether anything has been submitted, if not, we're already done.
-		if(!submitted.get()) return;
+		lock.free();
 		
-		lockExecute.await();
-		do {
-			// Wait till resumed, if paused
-			if(!interrupted.get() && paused.get()) {
-				synchronized(lockPause) {
-					if(!interrupted.get() && paused.get()) {
-						lockPause.await();
-					}
-				}
-			}
-			
-			// Wait for all the running tasks to be done
-			lock.await();
-			
-			// Check whether there are any pending tasks, if not, we're done
-			synchronized(lockSubmit) {
-				if(callables.isEmpty())
-					break;
-			}
-		} while(!interrupted.get());
-		
-		// Wait for the executor to shutdown
+		// Force the executor to be shutdown
 		Utils.ignore(() -> {
-			executor.shutdown();
+			executor.shutdownNow();
 			executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
 		});
 	}
 	
-	public final void interrupt() {
-		if(!running.get())
-			return;
-		running.set(false);
-		paused.set(false);
-		interrupted.set(true);
-		// Notify all the locks
-		lockPause.unlock();
-		lockCount.unlock();
-		lockSubmit.unlock();
-		lockExecute.unlock();
-		lock.free();
-		// Force the executor to be shutdown
-		executor.shutdownNow();
+	public void submit(Runnable runnable) {
+		submit(Utils.callable(Utils.checked(runnable)));
 	}
 	
-	public final WorkerResult<?> nextResult() {
+	public void submit(Runnable runnable, Object result) {
+		submit(Utils.callable(Utils.checked(runnable), result));
+	}
+	
+	public void submit(Callable<?> callable) {
+		callables.add(callable);
+		state.set(STATE_SUBMITTED);
+		lockSubmit.unlock();
+	}
+	
+	/** @since 00.02.08 */
+	public void stop() {
+		if(!isStarted() || isStopped() || isDone()) {
+			return;
+		}
+		
+		doStop(TaskStates.STOPPED);
+	}
+	
+	public void pause() {
+		if(!isStarted() || isPaused() || isStopped() || isDone()) {
+			return;
+		}
+		
+		state.unset(TaskStates.RUNNING);
+		state.set(TaskStates.PAUSED);
+	}
+	
+	public void resume() {
+		if(!isStarted() || !isPaused() || isStopped() || isDone()) {
+			return;
+		}
+		
+		state.set(TaskStates.RUNNING);
+		state.unset(TaskStates.PAUSED);
+		lockPause.unlock();
+	}
+	
+	public void waitTillDone() {
+		// Check whether anything has been submitted, if not, we're already done.
+		if(!isSubmitted() || isStopped() || isDone()) {
+			return;
+		}
+		
+		try {
+			lockExecute.await();
+			
+			do {
+				// Wait till resumed, if paused
+				if(isPaused()) {
+					lockPause.awaitAndReset();
+				}
+				
+				// Wait for all the running tasks to be done
+				lock.await();
+			} while(!(isStopped() || isDone()) && !callables.isEmpty());
+		} finally {
+			doStop(TaskStates.DONE);
+		}
+	}
+	
+	public WorkerResult<?> nextResult() {
 		return results.poll();
 	}
 	
-	public final boolean hasNextResult() {
+	public boolean hasNextResult() {
 		return !results.isEmpty();
 	}
 	
-	public final boolean isRunning() {
-		return running.get();
+	@Override
+	public boolean isRunning() {
+		return state.is(TaskStates.RUNNING);
 	}
 	
-	public final boolean isPaused() {
-		return paused.get();
+	@Override
+	public boolean isDone() {
+		return state.is(TaskStates.DONE);
 	}
 	
-	public final boolean isInterrupted() {
-		return interrupted.get();
+	@Override
+	public boolean isStarted() {
+		return state.is(TaskStates.STARTED);
+	}
+	
+	@Override
+	public boolean isPaused() {
+		return state.is(TaskStates.PAUSED);
+	}
+	
+	@Override
+	public boolean isStopped() {
+		return state.is(TaskStates.STOPPED);
+	}
+	
+	@Override
+	public boolean isError() {
+		return state.is(TaskStates.ERROR);
 	}
 }

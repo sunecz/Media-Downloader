@@ -357,7 +357,7 @@ public class FileDownloader implements InternalDownloader {
 	
 	@Override
 	public void pause() {
-		if(!isStarted() || isPaused()) {
+		if(!isStarted() || isPaused() || isStopped() || isDone()) {
 			return;
 		}
 		
@@ -369,7 +369,7 @@ public class FileDownloader implements InternalDownloader {
 	
 	@Override
 	public void resume() {
-		if(!isStarted() || !isPaused()) {
+		if(!isStarted() || !isPaused() || isStopped() || isDone()) {
 			return;
 		}
 		

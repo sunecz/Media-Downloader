@@ -221,7 +221,7 @@ public final class Pipeline implements EventBindable<EventType>, HasTaskState {
 	}
 	
 	public final void pause() throws Exception {
-		if(!isStarted() || isPaused()) {
+		if(!isStarted() || isPaused() || isStopped() || isDone()) {
 			return;
 		}
 		
@@ -234,7 +234,7 @@ public final class Pipeline implements EventBindable<EventType>, HasTaskState {
 	}
 	
 	public final void resume() throws Exception {
-		if(!isStarted() || !isPaused()) {
+		if(!isStarted() || !isPaused() || isStopped() || isDone()) {
 			return;
 		}
 		

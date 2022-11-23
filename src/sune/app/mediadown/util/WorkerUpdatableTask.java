@@ -321,7 +321,7 @@ public class WorkerUpdatableTask<P, R> {
 	}
 	
 	public void cancel() {
-		worker.interrupt();
+		worker.stop();
 	}
 	
 	public WorkerResult<R> getResult() {
@@ -342,6 +342,6 @@ public class WorkerUpdatableTask<P, R> {
 	}
 	
 	public boolean isCanceled() {
-		return worker.isInterrupted();
+		return worker.isStopped();
 	}
 }

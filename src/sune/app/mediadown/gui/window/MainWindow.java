@@ -11,7 +11,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import javafx.beans.property.SimpleStringProperty;
@@ -211,6 +210,7 @@ public final class MainWindow extends Window<BorderPane> {
 					int count = infos.size();
 					int started = (int) infos.stream().map(PipelineInfo::pipeline).filter(Pipeline::isStarted).count();
 					int done = (int) infos.stream().map(PipelineInfo::pipeline).filter(Pipeline::isDone).count();
+					int stopped = (int) infos.stream().map(PipelineInfo::pipeline).filter(Pipeline::isStopped).count();
 					
 					menuItemTerminate.setText(
 						anyTerminable(infos)
@@ -218,14 +218,14 @@ public final class MainWindow extends Window<BorderPane> {
 							: translation.getSingle("context_menus.table.items.terminate_remove")
 					);
 					
-					menuItemPause.setDisable(done == count || started == 0);
+					menuItemPause.setDisable(started == 0 || (done == count || stopped == count));
 					menuItemPause.setText(
 						anyNonPaused(infos)
 							? translation.getSingle("context_menus.table.items.pause")
 							: translation.getSingle("context_menus.table.items.resume")
 					);
 					
-					menuItemShowFile.setDisable(!(started > 0 || done > 0));
+					menuItemShowFile.setDisable(!(started > 0 || done > 0 || stopped > 0));
 					menuTable.show(table, e.getScreenX(), e.getScreenY());
 					break;
 				default:
@@ -705,7 +705,7 @@ public final class MainWindow extends Window<BorderPane> {
 	/** @since 00.02.08 */
 	private final boolean anyNonPaused(List<PipelineInfo> infos) {
 		return infos.stream().map(PipelineInfo::pipeline)
-					.anyMatch(Predicate.not(Pipeline::isPaused));
+					.anyMatch((p) -> p.isStarted() && p.isRunning());
 	}
 	
 	/** @since 00.02.08 */

@@ -1,7 +1,7 @@
 package sune.app.mediadown.util;
 
-import java.util.LinkedList;
-import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -9,15 +9,15 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class Threads {
 	
-	private static final ThreadFactory threadFactory = Executors.defaultThreadFactory();
-	
-	private static final List<Thread> threads = new LinkedList<>();
-	private static final List<ExecutorService> pools = new LinkedList<>();
-	private static final ExecutorService executor = Pools.newFixed();
-	private static final ExecutorService executorEnsured = Pools.newCached();
-	
 	private static final AtomicBoolean shuttingDown = new AtomicBoolean();
 	private static final AtomicBoolean running = new AtomicBoolean(true);
+	
+	private static final ThreadFactory threadFactory = Executors.defaultThreadFactory();
+	
+	private static final Queue<Thread> threads = new ConcurrentLinkedQueue<>();
+	private static final Queue<ExecutorService> pools = new ConcurrentLinkedQueue<>();
+	private static final ExecutorService executor = Pools.newFixed();
+	private static final ExecutorService executorEnsured = Pools.newCached();
 	
 	// Forbid anyone to create an instance of this class
 	private Threads() {
@@ -25,6 +25,10 @@ public final class Threads {
 	
 	/** @since 00.02.07 */
 	private static final Thread addThread(Thread thread) {
+		if(!isRunning()) {
+			return null;
+		}
+		
 		threads.add(thread);
 		return thread;
 	}
@@ -84,6 +88,10 @@ public final class Threads {
 		}
 		
 		private static final ExecutorService addPool(ExecutorService executor) {
+			if(!isRunning()) {
+				return null;
+			}
+			
 			pools.add(executor);
 			return executor;
 		}

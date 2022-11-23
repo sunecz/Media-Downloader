@@ -165,7 +165,7 @@ public final class FFmpegConverter implements Converter {
 	
 	@Override
 	public void pause() {
-		if(!isStarted() || isPaused()) {
+		if(!isStarted() || isPaused() || isStopped() || isDone()) {
 			return;
 		}
 		
@@ -181,7 +181,7 @@ public final class FFmpegConverter implements Converter {
 	
 	@Override
 	public void resume() {
-		if(!isStarted() || !isPaused()) {
+		if(!isStarted() || !isPaused() || isStopped() || isDone()) {
 			return;
 		}
 		
