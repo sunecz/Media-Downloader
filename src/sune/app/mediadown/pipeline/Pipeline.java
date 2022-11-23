@@ -249,7 +249,7 @@ public final class Pipeline implements EventBindable<EventType>, HasTaskState {
 	
 	/** @since 00.01.27 */
 	public final Pipeline waitFor() {
-		if(!isDone()) {
+		if(!isStopped() && !isDone()) {
 			lockDone.await();
 		}
 		

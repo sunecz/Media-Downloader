@@ -6,6 +6,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import sune.app.mediadown.Disposables;
 import sune.app.mediadown.HasTaskState;
 import sune.app.mediadown.InternalState;
 import sune.app.mediadown.MediaDownloader;
@@ -37,6 +38,8 @@ public final class Worker implements HasTaskState {
 		this.numThreads = numThreads;
 		executor = createExecutorService(numThreads);
 		thread = Threads.newThread(this::loop);
+		
+		Disposables.add(this::stop);
 	}
 	
 	private static final ExecutorService createExecutorService(int numThreads) {
