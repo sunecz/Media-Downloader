@@ -1,10 +1,13 @@
 package sune.app.mediadown.pipeline;
 
 import java.util.LinkedList;
+import java.util.Objects;
 import java.util.Queue;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+import sune.app.mediadown.HasTaskState;
+import sune.app.mediadown.InternalState;
+import sune.app.mediadown.TaskStates;
 import sune.app.mediadown.event.Event;
 import sune.app.mediadown.event.EventBindable;
 import sune.app.mediadown.event.EventRegistry;
@@ -18,17 +21,13 @@ import sune.app.mediadown.util.SyncObject;
 import sune.app.mediadown.util.Threads;
 
 /** @since 00.01.26 */
-public final class Pipeline implements EventBindable<EventType> {
+public final class Pipeline implements EventBindable<EventType>, HasTaskState {
 	
+	/** @since 00.02.08 */
+	private final InternalState state = new InternalState(TaskStates.INITIAL);
 	private final EventRegistry<EventType> eventRegistry = new EventRegistry<>();
-	
 	private final SyncObject lockPause = new SyncObject();
 	private final SyncObject lockDone = new SyncObject();
-	private final AtomicBoolean running = new AtomicBoolean();
-	private final AtomicBoolean started = new AtomicBoolean();
-	private final AtomicBoolean done = new AtomicBoolean();
-	private final AtomicBoolean paused = new AtomicBoolean();
-	private final AtomicBoolean stopped = new AtomicBoolean();
 	
 	private final Queue<PipelineTask<?>> tasks = new LinkedList<>();
 	private final AtomicReference<PipelineTask<?>> task = new AtomicReference<>();
@@ -55,7 +54,7 @@ public final class Pipeline implements EventBindable<EventType> {
 	}
 	
 	private final void waitIfPaused() {
-		if((paused.get())) {
+		if(isPaused()) {
 			lockPause.await();
 		}
 	}
@@ -70,58 +69,61 @@ public final class Pipeline implements EventBindable<EventType> {
 	}
 	
 	private final void error(Exception ex) {
+		state.set(TaskStates.ERROR);
 		exception.set(ex);
 		eventRegistry.call(PipelineEvent.ERROR, new Pair<>(this, ex));
 	}
 	
-	private final void markAsDone() {
-		done.set(true);
-		lockDone.unlock();
-	}
-	
-	private final void invoke() {
+	private final void invoke() throws Exception {
 		try {
-			while(running.get()) {
+			while(isRunning()) {
 				waitIfPaused();
-				try {
-					if((tasks.isEmpty())) {
-						// If the input is null, we have nothing to do
-						if((input == null || input.isTerminating()))
-							break;
-					} else {
-						// Otherwise process the next task
-						PipelineTask<?> localTask = tasks.poll();
-						// Allow pipeline to end, if the next task is null
-						if((localTask == null))
-							break;
-						setTask(localTask);
-						setInput(localTask.run(this));
-						// Terminate the pipeline if necessary
-						if((input == null || input.isTerminating()))
-							break;
+				
+				if(tasks.isEmpty()) {
+					// If the input is null, we have nothing to do
+					if(input == null || input.isTerminating()) {
+						break;
 					}
-					addNextTask(); // Handle possible null tasks
-					loopEnd(); // Allow resets
-				} catch(Exception ex) {
-					error(ex);
-					break;
+				} else {
+					// Otherwise process the next task
+					PipelineTask<?> localTask = tasks.poll();
+					// Allow pipeline to end, if the next task is null
+					if(localTask == null) {
+						break;
+					}
+					
+					setTask(localTask);
+					setInput(localTask.run(this));
+					
+					// Terminate the pipeline if necessary
+					if(input == null || input.isTerminating()) {
+						break;
+					}
 				}
+				
+				addNextTask(); // Handle possible null tasks
+				loopEnd(); // Allow resets
 			}
 		} finally {
-			markAsDone();
-			try {
-				stop();
-			} catch(Exception ex) {
-				error(ex);
-			}
+			doStop(TaskStates.DONE);
 		}
 	}
 	
-	private final void doWithTask(CheckedConsumer<PipelineTask<?>> consumer)
-			throws Exception {
+	/** @since 00.02.08 */
+	private final void runnable() {
+		try {
+			invoke();
+		} catch(Exception ex) {
+			error(ex);
+		}
+	}
+	
+	private final void doWithTask(CheckedConsumer<PipelineTask<?>> consumer) throws Exception {
 		PipelineTask<?> localTask;
-		if((localTask = task.get()) == null)
+		if((localTask = task.get()) == null) {
 			return;
+		}
+		
 		consumer.accept(localTask);
 	}
 	
@@ -140,12 +142,15 @@ public final class Pipeline implements EventBindable<EventType> {
 	/** @since 00.01.27 */
 	private final void loopEnd() {
 		PipelineResult<?> input;
-		PipelineTask<?> task;
 		if((input = resetInput.getAndSet(null)) != null) {
 			this.tasks.clear();
 			this.task.set(null);
 			setInput(input);
-		} else if((task = resetTask.getAndSet(null)) != null) {
+			return; // Do not continue
+		}
+		
+		PipelineTask<?> task;
+		if((task = resetTask.getAndSet(null)) != null) {
 			this.tasks.clear();
 			this.task.set(null);
 			addTask(task);
@@ -159,6 +164,23 @@ public final class Pipeline implements EventBindable<EventType> {
 		eventRegistry.call(PipelineEvent.UPDATE, new Pair<>(this, task));
 	}
 	
+	/** @since 00.02.08 */
+	private final void doStop(int stopState) throws Exception {
+		if(isStopped() || isDone()) {
+			return;
+		}
+		
+		state.unset(TaskStates.RUNNING);
+		state.unset(TaskStates.PAUSED);
+		lockPause.unlock();
+		
+		stopTask();
+		state.set(stopState);
+		lockDone.unlock();
+		
+		eventRegistry.call(PipelineEvent.END, this);
+	}
+	
 	public final void setInput(PipelineResult<?> input) {
 		this.input = input;
 		historyInputs.add(input);
@@ -167,9 +189,7 @@ public final class Pipeline implements EventBindable<EventType> {
 	
 	/** @since 00.01.27 */
 	public final void addTask(PipelineTask<?> task) {
-		if((task == null))
-			throw new IllegalArgumentException();
-		tasks.add(task);
+		tasks.add(Objects.requireNonNull(task));
 	}
 	
 	/** @since 00.01.27 */
@@ -179,69 +199,91 @@ public final class Pipeline implements EventBindable<EventType> {
 	
 	/** @since 00.01.27 */
 	public final void reset(PipelineTask<?> task) {
-		if((task == null))
-			throw new IllegalArgumentException();
-		resetTask.set(task);
+		resetTask.set(Objects.requireNonNull(task));
 	}
 	
 	public final void start() throws Exception {
-		running.set(true);
-		started.set(true);
-		paused.set(false);
-		stopped.set(false);
-		done.set(false);
-		eventRegistry.call(PipelineEvent.BEGIN, this);
-		thread = Threads.newThread(this::invoke);
+		state.clear(TaskStates.STARTED);
+		state.set(TaskStates.RUNNING);
+		
+		thread = Threads.newThread(this::runnable);
 		thread.start();
+		
+		eventRegistry.call(PipelineEvent.BEGIN, this);
 	}
 	
 	public final void stop() throws Exception {
-		running.set(false);
-		stopTask();
-		paused.set(false);
-		lockPause.unlock();
-		if(!done.get()) stopped.set(true);
-		eventRegistry.call(PipelineEvent.END, this);
+		if(!isStarted() || isStopped() || isDone()) {
+			return;
+		}
+		
+		doStop(TaskStates.STOPPED);
 	}
 	
 	public final void pause() throws Exception {
-		running.set(false);
+		if(!isStarted() || isPaused()) {
+			return;
+		}
+		
+		state.set(TaskStates.PAUSED);
+		state.unset(TaskStates.RUNNING);
+		
 		pauseTask();
-		paused.set(true);
+		
+		eventRegistry.call(PipelineEvent.PAUSE, this);
 	}
 	
 	public final void resume() throws Exception {
-		paused.set(false);
-		running.set(true);
-		resumeTask();
+		if(!isStarted() || !isPaused()) {
+			return;
+		}
+		
+		state.unset(TaskStates.PAUSED);
+		state.set(TaskStates.RUNNING);
 		lockPause.unlock();
+		
+		resumeTask();
+		
+		eventRegistry.call(PipelineEvent.RESUME, this);
 	}
 	
 	/** @since 00.01.27 */
 	public final Pipeline waitFor() {
-		if(!isDone())
+		if(!isDone()) {
 			lockDone.await();
+		}
+		
 		return this;
 	}
 	
+	@Override
 	public final boolean isRunning() {
-		return running.get();
+		return state.is(TaskStates.RUNNING);
 	}
 	
-	public final boolean isStarted() {
-		return started.get();
-	}
-	
+	@Override
 	public final boolean isDone() {
-		return done.get();
+		return state.is(TaskStates.DONE);
 	}
 	
+	@Override
+	public final boolean isStarted() {
+		return state.is(TaskStates.STARTED);
+	}
+	
+	@Override
 	public final boolean isPaused() {
-		return paused.get();
+		return state.is(TaskStates.PAUSED);
 	}
 	
+	@Override
 	public final boolean isStopped() {
-		return stopped.get();
+		return state.is(TaskStates.STOPPED);
+	}
+	
+	@Override
+	public boolean isError() {
+		return state.is(TaskStates.ERROR);
 	}
 	
 	@Override
@@ -259,7 +301,7 @@ public final class Pipeline implements EventBindable<EventType> {
 	}
 	
 	/** @since 00.01.27 */
-	public PipelineResult<?> getResult() {
+	public final PipelineResult<?> getResult() {
 		return input;
 	}
 	
