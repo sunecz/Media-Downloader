@@ -313,7 +313,7 @@ public class FileDownloader implements InternalDownloader {
 		}
 	}
 	
-	private final void doStop() {
+	private final void doStop(int stopState) {
 		if(isStopped() || isDone()) {
 			return;
 		}
@@ -322,9 +322,7 @@ public class FileDownloader implements InternalDownloader {
 		state.unset(TaskStates.PAUSED);
 		identifier = null;
 		
-		if(!isDone()) {
-			state.set(TaskStates.STOPPED);
-		}
+		state.set(stopState);
 	}
 	
 	@Override
@@ -348,11 +346,8 @@ public class FileDownloader implements InternalDownloader {
 			eventRegistry.call(DownloadEvent.ERROR, new Pair<>(this, ex));
 			throw ex; // Propagate the error
 		} finally {
-			doStop();
-			
-			if(isDone()) {
-				eventRegistry.call(DownloadEvent.END, this);
-			}
+			doStop(TaskStates.DONE);
+			eventRegistry.call(DownloadEvent.END, this);
 		}
 		
 		return bytes.get();
@@ -389,7 +384,7 @@ public class FileDownloader implements InternalDownloader {
 			return;
 		}
 		
-		doStop();
+		doStop(TaskStates.STOPPED);
 	}
 	
 	@Override

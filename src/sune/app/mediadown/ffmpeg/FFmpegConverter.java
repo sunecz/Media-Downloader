@@ -123,7 +123,7 @@ public final class FFmpegConverter implements Converter {
 		state.set(TaskStates.DONE);
 	}
 	
-	private final void doStop() throws Exception {
+	private final void doStop(int stopState) throws Exception {
 		if(isStopped() || isDone()) {
 			return;
 		}
@@ -135,9 +135,7 @@ public final class FFmpegConverter implements Converter {
 			process.close();
 		}
 		
-		if(!isDone()) {
-			state.set(TaskStates.STOPPED);
-		}
+		state.set(stopState);
 	}
 	
 	@Override
@@ -154,16 +152,16 @@ public final class FFmpegConverter implements Converter {
 			eventRegistry.call(ConversionEvent.ERROR, new Pair<>(this, ex));
 			throw ex; // Propagate the error
 		} finally {
-			doStop();
+			doStop(TaskStates.DONE);
 			
 			if(isDone()) {
 				// Delete input files if and only if the conversion is successfully done
 				for(Input input : command.inputs()) {
 					Utils.ignore(() -> NIO.deleteFile(input.path()));
 				}
-				
-				eventRegistry.call(ConversionEvent.END, this);
 			}
+			
+			eventRegistry.call(ConversionEvent.END, this);
 		}
 	}
 	
@@ -205,7 +203,7 @@ public final class FFmpegConverter implements Converter {
 			return;
 		}
 		
-		doStop();
+		doStop(TaskStates.STOPPED);
 	}
 	
 	@Override
