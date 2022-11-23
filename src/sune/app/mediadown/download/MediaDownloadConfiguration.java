@@ -30,6 +30,11 @@ public class MediaDownloadConfiguration {
 	}
 	
 	/** @since 00.02.08 */
+	public static final MediaDownloadConfiguration of(MediaFormat outputFormat) {
+		return of(outputFormat, Map.of());
+	}
+	
+	/** @since 00.02.08 */
 	public static final MediaDownloadConfiguration of(MediaFormat outputFormat,
 			Map<MediaType, List<Media>> selectedMedia) {
 		return new MediaDownloadConfiguration(outputFormat, selectedMedia);

@@ -102,7 +102,7 @@ public final class FFmpegConverter implements Converter {
 		}
 		
 		int exitCode;
-		if((exitCode = doConversion(altered)) != 0) {
+		if((exitCode = doConversion(altered)) != 0 && !isStopped()) {
 			// Log the whole output of the process to a unique log file so that more information
 			// can be obtained, not just the exit code.
 			Path logPath = Log.toUniquePath("ffmpeg-converter-", processOutput.toString());
@@ -201,7 +201,7 @@ public final class FFmpegConverter implements Converter {
 	
 	@Override
 	public void stop() throws Exception {
-		if(!isStarted() || !isStopped() || isDone()) {
+		if(!isStarted() || isStopped() || isDone()) {
 			return;
 		}
 		

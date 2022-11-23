@@ -14,6 +14,7 @@ import sune.app.mediadown.event.tracker.TrackerManager;
 import sune.app.mediadown.event.tracker.WaitTracker;
 import sune.app.mediadown.ffmpeg.FFmpeg;
 import sune.app.mediadown.ffmpeg.FFmpegConverter;
+import sune.app.mediadown.gui.table.ResolvedMedia;
 import sune.app.mediadown.util.Metadata;
 import sune.app.mediadown.util.Threads;
 
@@ -34,13 +35,13 @@ public class ConversionManager {
 	}
 	
 	/** @since 00.02.08 */
-	private static final Callable<Void> createTask(Converter converter, ConversionMedia output,
+	private static final Callable<Void> createTask(Converter converter, ResolvedMedia output,
 			List<ConversionMedia> inputs, Metadata metadata) {
-		return new Task(converter, output, inputs, metadata);
+		return new FFmpegTask(converter, output, inputs, metadata);
 	}
 	
 	/** @since 00.02.08 */
-	public static final ManagerSubmitResult<Converter, Void> submit(ConversionMedia output,
+	public static final ManagerSubmitResult<Converter, Void> submit(ResolvedMedia output,
 			List<ConversionMedia> inputs, Metadata metadata) {
 		if(output == null || inputs == null || inputs.isEmpty() || metadata == null) {
 			throw new IllegalArgumentException();
@@ -60,14 +61,14 @@ public class ConversionManager {
 	}
 	
 	/** @since 00.02.08 */
-	private static final class Task implements Callable<Void> {
+	private static final class FFmpegTask implements Callable<Void> {
 		
 		private final Converter converter;
-		private final ConversionMedia output;
+		private final ResolvedMedia output;
 		private final List<ConversionMedia> inputs;
 		private final Metadata metadata;
 		
-		public Task(Converter converter, ConversionMedia output, List<ConversionMedia> inputs, Metadata metadata) {
+		public FFmpegTask(Converter converter, ResolvedMedia output, List<ConversionMedia> inputs, Metadata metadata) {
 			this.converter = Objects.requireNonNull(converter);
 			this.output = Objects.requireNonNull(output);
 			this.inputs = Objects.requireNonNull(inputs);

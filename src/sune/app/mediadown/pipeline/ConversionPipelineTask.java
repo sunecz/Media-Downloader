@@ -7,6 +7,7 @@ import sune.app.mediadown.convert.Converter;
 import sune.app.mediadown.event.ConversionEvent;
 import sune.app.mediadown.event.EventRegistry;
 import sune.app.mediadown.event.EventType;
+import sune.app.mediadown.gui.table.ResolvedMedia;
 import sune.app.mediadown.manager.ConversionManager;
 import sune.app.mediadown.manager.ManagerSubmitResult;
 import sune.app.mediadown.util.Metadata;
@@ -15,7 +16,7 @@ import sune.app.mediadown.util.Metadata;
 public final class ConversionPipelineTask implements PipelineTask<ConversionPipelineResult> {
 	
 	/** @since 00.02.08 */
-	private final ConversionMedia output;
+	private final ResolvedMedia output;
 	/** @since 00.02.08 */
 	private final List<ConversionMedia> inputs;
 	/** @since 00.02.08 */
@@ -24,7 +25,7 @@ public final class ConversionPipelineTask implements PipelineTask<ConversionPipe
 	private ManagerSubmitResult<Converter, Void> result;
 	
 	/** @since 00.02.08 */
-	private ConversionPipelineTask(ConversionMedia output, List<ConversionMedia> inputs, Metadata metadata) {
+	private ConversionPipelineTask(ResolvedMedia output, List<ConversionMedia> inputs, Metadata metadata) {
 		if(output == null || inputs == null || inputs.isEmpty() || metadata == null) {
 			throw new IllegalArgumentException();
 		}
@@ -35,7 +36,7 @@ public final class ConversionPipelineTask implements PipelineTask<ConversionPipe
 	}
 	
 	/** @since 00.02.08 */
-	public static final ConversionPipelineTask of(ConversionMedia output, List<ConversionMedia> inputs,
+	public static final ConversionPipelineTask of(ResolvedMedia output, List<ConversionMedia> inputs,
 			Metadata metadata) {
 		return new ConversionPipelineTask(output, inputs, metadata);
 	}

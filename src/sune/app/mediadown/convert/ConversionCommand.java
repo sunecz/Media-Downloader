@@ -168,6 +168,10 @@ public abstract class ConversionCommand {
 				return List.of(Objects.requireNonNull(Utils.nonNullContent(items)));
 			}
 			
+			protected static final <T> List<T> checkItems(List<T> items) {
+				return Objects.requireNonNull(Utils.nonNullContent(items));
+			}
+			
 			public abstract IOPoint asFormat(MediaFormat format);
 			
 			public Builder addOptions(Option... options) {
@@ -175,7 +179,17 @@ public abstract class ConversionCommand {
 				return this;
 			}
 			
+			public Builder addOptions(List<Option> options) {
+				this.options.addAll(checkItems(options));
+				return this;
+			}
+			
 			public Builder removeOptions(Option... options) {
+				this.options.removeAll(checkItems(options));
+				return this;
+			}
+			
+			public Builder removeOptions(List<Option> options) {
 				this.options.removeAll(checkItems(options));
 				return this;
 			}
@@ -234,8 +248,24 @@ public abstract class ConversionCommand {
 			return new Input(path, format, options, metadata);
 		}
 		
+		public static final Builder ofMutable(Input input) {
+			return ofMutable(input.path(), input.options(), input.metadata());
+		}
+		
 		public static final Builder ofMutable(Path path) {
 			return new Builder(path);
+		}
+		
+		public static final Builder ofMutable(Path path, List<Option> options) {
+			return (Builder) (new Builder(path)).addOptions(options);
+		}
+		
+		public static final Builder ofMutable(Path path, Metadata metadata) {
+			return (Builder) (new Builder(path)).addMetadata(metadata);
+		}
+		
+		public static final Builder ofMutable(Path path, List<Option> options, Metadata metadata) {
+			return (Builder) (new Builder(path)).addOptions(options).addMetadata(metadata);
 		}
 		
 		@Override
@@ -297,8 +327,24 @@ public abstract class ConversionCommand {
 			return new Output(path, format, options, metadata);
 		}
 		
+		public static final Builder ofMutable(Output output) {
+			return ofMutable(output.path(), output.options(), output.metadata());
+		}
+		
 		public static final Builder ofMutable(Path path) {
 			return new Builder(path);
+		}
+		
+		public static final Builder ofMutable(Path path, List<Option> options) {
+			return (Builder) (new Builder(path)).addOptions(options);
+		}
+		
+		public static final Builder ofMutable(Path path, Metadata metadata) {
+			return (Builder) (new Builder(path)).addMetadata(metadata);
+		}
+		
+		public static final Builder ofMutable(Path path, List<Option> options, Metadata metadata) {
+			return (Builder) (new Builder(path)).addOptions(options).addMetadata(metadata);
 		}
 		
 		@Override

@@ -1,21 +1,36 @@
 package sune.app.mediadown.ffmpeg;
 
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Consumer;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import sune.api.process.Processes;
 import sune.api.process.ReadOnlyProcess;
 import sune.app.mediadown.convert.ConversionCommand;
+import sune.app.mediadown.convert.ConversionCommand.Input;
 import sune.app.mediadown.convert.ConversionCommand.Option;
+import sune.app.mediadown.convert.ConversionCommand.Output;
+import sune.app.mediadown.convert.ConversionFormat;
 import sune.app.mediadown.convert.ConversionMedia;
+import sune.app.mediadown.gui.table.ResolvedMedia;
+import sune.app.mediadown.media.AudioMedia;
 import sune.app.mediadown.media.Media;
 import sune.app.mediadown.media.MediaFormat;
 import sune.app.mediadown.media.MediaType;
+import sune.app.mediadown.media.VideoMedia;
 import sune.app.mediadown.util.Metadata;
 import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.OSUtils;
+import sune.app.mediadown.util.Pair;
+import sune.app.mediadown.util.Utils;
 
 /** @since 00.02.08 */
 public final class FFmpeg {
@@ -50,6 +65,497 @@ public final class FFmpeg {
 		return Processes.createAsynchronous(path(), listener);
 	}
 	
+	public static final class Formats {
+		
+		private static final String DEFAULT_AUDIO_BIT_RATE = "320k";
+		private static final String DEFAULT_AUDIO_CHANNELS = "2";
+		private static final String DEFAULT_AUDIO_SAMPLE_RATE = "48000";
+		
+		private static final int RESULT_NONE = 0;
+		private static final int RESULT_COPY = 1;
+		private static final int RESULT_REENCODE = 2;
+		
+		private static final Map<String, ConversionFormat> formats = new HashMap<>();
+		
+		// Video formats
+		public static final ConversionFormat MP4  = new VideoConversionFormat.MP4();
+		public static final ConversionFormat FLV  = new VideoConversionFormat.FLV();
+		public static final ConversionFormat AVI  = new VideoConversionFormat.AVI();
+		public static final ConversionFormat MKV  = new VideoConversionFormat.MKV();
+		public static final ConversionFormat WMV  = new VideoConversionFormat.WMV();
+		public static final ConversionFormat WEBM = new VideoConversionFormat.WEBMV();
+		public static final ConversionFormat OGG  = new VideoConversionFormat.OGGV();
+		
+		// Audio formats
+		public static final ConversionFormat MP3 = new AudioConversionFormat(MediaFormat.MP3, "mp3");
+		public static final ConversionFormat WAV = new AudioConversionFormat(MediaFormat.WAV, "pcm_s16le");
+		public static final ConversionFormat WMA = new AudioConversionFormat(MediaFormat.WMA, "wmav2");
+		
+		static {
+			Stream.of(Formats.class.getFields())
+				.filter((f) -> ConversionFormat.class.isAssignableFrom(f.getType()))
+				.map((f) -> Utils.ignore(() -> (ConversionFormat) f.get(null)))
+				.filter(Objects::nonNull)
+				.forEach((v) -> formats.put(v.format().name(), v));
+		}
+		
+		// Forbid anyone to create an instance of this class
+		private Formats() {
+		}
+		
+		private static final <T> T value(Metadata metadata, String name, T defaultValue) {
+			return Optional.ofNullable(metadata.<T>get(name)).orElse(defaultValue);
+		}
+		
+		private static final String audioBitRate(Metadata metadata) {
+			return value(metadata, "audio.bitRate", DEFAULT_AUDIO_BIT_RATE);
+		}
+		
+		private static final String audioSampleRate(Metadata metadata) {
+			return value(metadata, "audio.sampleRate", DEFAULT_AUDIO_SAMPLE_RATE);
+		}
+		
+		private static final String audioChannels(Metadata metadata) {
+			return value(metadata, "audio.channels", DEFAULT_AUDIO_CHANNELS);
+		}
+		
+		private static final boolean isAudioSeparated(Media root) {
+			return !root.format().is(MediaFormat.M3U8) && Media.findOfType(root, MediaType.AUDIO) != null;
+		}
+		
+		public static final ConversionFormat of(MediaFormat format) {
+			if(format == null || format.is(MediaFormat.UNKNOWN)) {
+				throw new IllegalArgumentException("Unknown format");
+			}
+			
+			return formats.get(format.name());
+		}
+		
+		private static abstract class VideoConversionFormat extends ConversionFormat {
+			
+			public VideoConversionFormat(MediaFormat format) {
+				super(format);
+			}
+			
+			protected abstract int ensureVideo(Media media, int index, Input.Builder input, Output.Builder output,
+					Metadata metadata, boolean force);
+			protected abstract int ensureAudio(Media media, int index, Input.Builder input, Output.Builder output,
+					Metadata metadata, boolean force);
+			
+			@Override
+			public void from(Media media, int index, Input.Builder input, Output.Builder output, Metadata metadata) {
+				if(media.parent() == null && media.format().is(format)) {
+					output.addOptions(Options.streamCodecCopy(index));
+					return;
+				}
+				
+				MediaType type = media.type();
+				
+				if(type.is(MediaType.VIDEO)) {
+					ensureVideo(media, index, input, output, metadata, false);
+					
+					Media root = Media.root(media);
+					int result = ensureAudio(root, index, input, output, metadata, false);
+					
+					if(result == RESULT_NONE
+							// Check whether the root media also has an audio media (e.g. inputFormat=DASH)
+							&& !isAudioSeparated(root)) {
+						// If an audio media is not present separately, force the audio from the video
+						ensureAudio(root, index, input, output, metadata, true);
+					}
+				} else if(type.is(MediaType.AUDIO)) {
+					int result = ensureAudio(media, index, input, output, metadata, false);
+					
+					if(result == RESULT_COPY) {
+						output.removeOptions(Options.streamAudioCodecCopy(index));
+						output.addOptions(Options.streamCodecCopy(index));
+					}
+				} else {
+					throw new IllegalStateException("Type not supported: " + type);
+				}
+			}
+			
+			public static final class MP4 extends VideoConversionFormat {
+				
+				private static final String DEFAULT_VIDEO_PRESET = "fast";
+				private static final String DEFAULT_VIDEO_CRF = "20";
+				
+				public MP4() {
+					super(MediaFormat.MP4);
+				}
+				
+				@Override
+				protected final int ensureVideo(Media media, int index, Input.Builder input, Output.Builder output,
+						Metadata metadata, boolean force) {
+					VideoMedia video = Media.findOfType(media, MediaType.VIDEO);
+					
+					if(video == null && !force) {
+						return RESULT_NONE;
+					}
+					
+					if(video != null && video.format().is(MediaFormat.MP4)) {
+						output.addOptions(Options.streamVideoCodecCopy(index));
+						return RESULT_COPY;
+					}
+					
+					Metadata inputMetadata = input.metadata();
+					
+					output.addOptions(
+						Options.videoCodec().ofValue("libx264"),
+						Option.ofShort("preset", value(inputMetadata, "video.preset", DEFAULT_VIDEO_PRESET)),
+						Option.ofShort("crf", value(inputMetadata, "video.crf", DEFAULT_VIDEO_CRF))
+					);
+					
+					return RESULT_REENCODE;
+				}
+				
+				@Override
+				protected final int ensureAudio(Media media, int index, Input.Builder input, Output.Builder output,
+						Metadata metadata, boolean force) {
+					if(!force) {
+						AudioMedia audio = Media.findOfType(media, MediaType.AUDIO);
+						
+						if(audio == null) {
+							return RESULT_NONE;
+						}
+						
+						if(audio.format().isAnyOf(MediaFormat.M4A, MediaFormat.AAC)) {
+							output.addOptions(Options.streamAudioCodecCopy(index));
+							return RESULT_COPY;
+						}
+					} else {
+						Media root = Media.root(media);
+						
+						if(root.format().isAnyOf(MediaFormat.M3U8)) {
+							output.addOptions(
+								Options.streamAudioCodecCopy(index),
+								Option.ofShort("bsf:a", "aac_adtstoasc")
+							);
+							
+							return RESULT_COPY;
+						}
+						
+						if(root.format().isAnyOf(MediaFormat.MP4, MediaFormat.M4A, MediaFormat.AAC)) {
+							output.addOptions(Options.streamAudioCodecCopy(index));
+							return RESULT_COPY;
+						}
+					}
+					
+					Metadata inputMetadata = input.metadata();
+					
+					output.addOptions(
+						Options.audioCodec().ofValue("aac"),
+						Options.audioChannels().ofValue(audioChannels(inputMetadata)),
+						Options.audioSampleRate().ofValue(audioSampleRate(inputMetadata)),
+						Options.audioBitRate().ofValue(audioBitRate(inputMetadata))
+					);
+					
+					return RESULT_REENCODE;
+				}
+			}
+			
+			public static final class FLV extends VideoConversionFormat {
+				
+				public FLV() {
+					super(MediaFormat.FLV);
+				}
+				
+				@Override
+				protected final int ensureVideo(Media media, int index, Input.Builder input, Output.Builder output,
+						Metadata metadata, boolean force) {
+					return ((VideoConversionFormat) MP4).ensureVideo(media, index, input, output, metadata, force);
+				}
+				
+				@Override
+				protected final int ensureAudio(Media media, int index, Input.Builder input, Output.Builder output,
+						Metadata metadata, boolean force) {
+					return ((VideoConversionFormat) MP4).ensureAudio(media, index, input, output, metadata, force);
+				}
+			}
+			
+			public static final class AVI extends VideoConversionFormat {
+				
+				public AVI() {
+					super(MediaFormat.AVI);
+				}
+				
+				@Override
+				protected final int ensureVideo(Media media, int index, Input.Builder input, Output.Builder output,
+						Metadata metadata, boolean force) {
+					return ((VideoConversionFormat) MP4).ensureVideo(media, index, input, output, metadata, force);
+				}
+				
+				@Override
+				protected final int ensureAudio(Media media, int index, Input.Builder input, Output.Builder output,
+						Metadata metadata, boolean force) {
+					return ((VideoConversionFormat) MP4).ensureAudio(media, index, input, output, metadata, force);
+				}
+			}
+			
+			public static final class MKV extends VideoConversionFormat {
+				
+				public MKV() {
+					super(MediaFormat.MKV);
+				}
+				
+				@Override
+				protected final int ensureVideo(Media media, int index, Input.Builder input, Output.Builder output,
+						Metadata metadata, boolean force) {
+					output.addOptions(Options.streamVideoCodecCopy(index));
+					return RESULT_COPY;
+				}
+				
+				@Override
+				protected final int ensureAudio(Media media, int index, Input.Builder input, Output.Builder output,
+						Metadata metadata, boolean force) {
+					output.addOptions(Options.streamAudioCodecCopy(index));
+					return RESULT_COPY;
+				}
+			}
+			
+			public static final class WMV extends VideoConversionFormat {
+				
+				public WMV() {
+					super(MediaFormat.WMV);
+				}
+				
+				@Override
+				protected final int ensureVideo(Media media, int index, Input.Builder input, Output.Builder output,
+						Metadata metadata, boolean force) {
+					return ((VideoConversionFormat) MP4).ensureVideo(media, index, input, output, metadata, force);
+				}
+				
+				@Override
+				protected final int ensureAudio(Media media, int index, Input.Builder input, Output.Builder output,
+						Metadata metadata, boolean force) {
+					return ((VideoConversionFormat) MP4).ensureAudio(media, index, input, output, metadata, force);
+				}
+			}
+			
+			public static final class WEBMV extends VideoConversionFormat {
+				
+				private static final String DEFAULT_VIDEO_CRF = "31";
+				private static final String DEFAULT_VIDEO_CPU_USED = "5";
+				
+				public WEBMV() {
+					super(MediaFormat.WEBMV);
+				}
+				
+				@Override
+				protected final int ensureVideo(Media media, int index, Input.Builder input, Output.Builder output,
+						Metadata metadata, boolean force) {
+					VideoMedia video = Media.findOfType(media, MediaType.VIDEO);
+					
+					if(video == null && !force) {
+						return RESULT_NONE;
+					}
+					
+					if(video != null && video.format().is(MediaFormat.WEBMV)) {
+						output.addOptions(Options.streamVideoCodecCopy(index));
+						return RESULT_COPY;
+					}
+					
+					Metadata inputMetadata = input.metadata();
+					
+					output.addOptions(
+						Options.videoCodec().ofValue("libvpx-vp9"),
+						Option.ofShort("b:v", "0"), // Must be equal to 0 to allow setting of CRF
+						Option.ofShort("crf", value(inputMetadata, "video.crf", DEFAULT_VIDEO_CRF)),
+						Option.ofShort("row-mt", "1"), // Enable Row based multithreading
+						Option.ofShort("deadline", "realtime"),
+						Option.ofShort("cpu-used", value(inputMetadata, "video.cpu_used", DEFAULT_VIDEO_CPU_USED))
+					);
+					
+					return RESULT_REENCODE;
+				}
+				
+				@Override
+				protected final int ensureAudio(Media media, int index, Input.Builder input, Output.Builder output,
+						Metadata metadata, boolean force) {
+					if(!force) {
+						AudioMedia audio = Media.findOfType(media, MediaType.AUDIO);
+						
+						if(audio == null) {
+							return RESULT_NONE;
+						}
+						
+						if(audio.format().isAnyOf(MediaFormat.WEBMA, MediaFormat.OGGA)) {
+							output.addOptions(Options.streamAudioCodecCopy(index));
+							return RESULT_COPY;
+						}
+					} else {
+						Media root = Media.root(media);
+						
+						if(root.format().isAnyOf(MediaFormat.WEBM, MediaFormat.WEBMA, MediaFormat.OGG,
+								MediaFormat.OGGA)) {
+							output.addOptions(Options.streamAudioCodecCopy(index));
+							return RESULT_COPY;
+						}
+					}
+					
+					Metadata inputMetadata = input.metadata();
+					
+					output.addOptions(
+						Options.audioCodec().ofValue("libopus"),
+						Options.audioChannels().ofValue(audioChannels(inputMetadata)),
+						Options.audioSampleRate().ofValue(audioSampleRate(inputMetadata)),
+						Options.audioBitRate().ofValue(audioBitRate(inputMetadata))
+					);
+					
+					return RESULT_REENCODE;
+				}
+			}
+			
+			public static final class OGGV extends VideoConversionFormat {
+				
+				private static final String DEFAULT_VIDEO_QUALITY = "7";
+				
+				public OGGV() {
+					super(MediaFormat.OGGV);
+				}
+				
+				@Override
+				protected final int ensureVideo(Media media, int index, Input.Builder input, Output.Builder output,
+						Metadata metadata, boolean force) {
+					VideoMedia video = Media.findOfType(media, MediaType.VIDEO);
+					
+					if(video == null && !force) {
+						return RESULT_NONE;
+					}
+					
+					if(video != null && video.format().is(MediaFormat.OGGV)) {
+						output.addOptions(Options.streamVideoCodecCopy(index));
+						return RESULT_COPY;
+					}
+					
+					Metadata inputMetadata = input.metadata();
+					
+					output.addOptions(
+						Options.videoCodec().ofValue("libtheora"),
+						Options.videoQuality().ofValue(value(inputMetadata, "video.quality", DEFAULT_VIDEO_QUALITY))
+					);
+					
+					return RESULT_REENCODE;
+				}
+				
+				@Override
+				protected final int ensureAudio(Media media, int index, Input.Builder input, Output.Builder output,
+						Metadata metadata, boolean force) {
+					if(!force) {
+						AudioMedia audio = Media.findOfType(media, MediaType.AUDIO);
+						
+						if(audio == null) {
+							return RESULT_NONE;
+						}
+						
+						if(audio.format().is(MediaFormat.OGGA)) {
+							output.addOptions(Options.streamAudioCodecCopy(index));
+							return RESULT_COPY;
+						}
+					} else {
+						Media root = Media.root(media);
+						
+						if(root.format().isAnyOf(MediaFormat.WEBM, MediaFormat.WEBMA, MediaFormat.OGG,
+								MediaFormat.OGGA)) {
+							output.addOptions(Options.streamAudioCodecCopy(index));
+							return RESULT_COPY;
+						}
+					}
+					
+					Metadata inputMetadata = input.metadata();
+					
+					output.addOptions(
+						Options.audioCodec().ofValue("libopus"),
+						Options.audioChannels().ofValue(audioChannels(inputMetadata)),
+						Options.audioSampleRate().ofValue(audioSampleRate(inputMetadata)),
+						Options.audioBitRate().ofValue(audioBitRate(inputMetadata))
+					);
+					
+					return RESULT_REENCODE;
+				}
+			}
+		}
+		
+		private static final class AudioConversionFormat extends ConversionFormat {
+			
+			private final String codec;
+			
+			public AudioConversionFormat(MediaFormat format, String codec) {
+				super(format);
+				this.codec = Objects.requireNonNull(codec);
+			}
+			
+			protected int ensureAudio(Media media, int index, Input.Builder input, Output.Builder output,
+					Metadata metadata, boolean force) {
+				if(!force) {
+					AudioMedia audio = Media.findOfType(media, MediaType.AUDIO);
+					
+					if(audio == null) {
+						return RESULT_NONE;
+					}
+					
+					if(audio.format().is(format)) {
+						output.addOptions(Options.streamAudioCodecCopy(index));
+						return RESULT_COPY;
+					}
+				} else {
+					Media root = Media.root(media);
+					
+					if(root.format().is(format)) {
+						output.addOptions(Options.streamAudioCodecCopy(index));
+						return RESULT_COPY;
+					}
+				}
+				
+				Metadata inputMetadata = input.metadata();
+				
+				output.addOptions(
+					Options.audioCodec().ofValue(codec),
+					Options.audioBitRate().ofValue(audioBitRate(inputMetadata))
+				);
+				
+				return RESULT_REENCODE;
+			}
+			
+			@Override
+			public void from(Media media, int index, Input.Builder input, Output.Builder output, Metadata metadata) {
+				if(media.parent() == null && media.format().is(format)) {
+					output.addOptions(
+						Options.streamCodecCopy(index),
+						Options.noVideo()
+					);
+					
+					return;
+				}
+				
+				MediaType type = media.type();
+				
+				if(type.is(MediaType.VIDEO)) {
+					Media root = Media.root(media);
+					int result = ensureAudio(root, index, input, output, metadata, false);
+					
+					if(result == RESULT_NONE
+							// Check whether the root media also has an audio media (e.g. inputFormat=DASH)
+							&& !isAudioSeparated(root)) {
+						// If an audio media is not present separately, force the audio from the video
+						ensureAudio(root, index, input, output, metadata, true);
+					}
+				} else if(type.is(MediaType.AUDIO)) {
+					int result = ensureAudio(media, index, input, output, metadata, false);
+					
+					if(result == RESULT_COPY) {
+						output.removeOptions(Options.streamAudioCodecCopy(index));
+						output.addOptions(Options.streamCodecCopy(index));
+					}
+				} else {
+					throw new IllegalStateException("Type not supported: " + type);
+				}
+				
+				output.addOptions(Options.noVideo());
+			}
+		}
+	}
+	
 	public static final class Command extends ConversionCommand {
 		
 		private String string;
@@ -66,11 +572,11 @@ public final class FFmpeg {
 			return new Builder(command);
 		}
 		
-		public static final Command of(ConversionMedia output, List<ConversionMedia> inputs) {
+		public static final Command of(ResolvedMedia output, List<ConversionMedia> inputs) {
 			return of(output, inputs, Metadata.empty());
 		}
 		
-		public static final Command of(ConversionMedia output, List<ConversionMedia> inputs, Metadata metadata) {
+		public static final Command of(ResolvedMedia output, List<ConversionMedia> inputs, Metadata metadata) {
 			return Creator.create(output, inputs, metadata);
 		}
 		
@@ -85,76 +591,80 @@ public final class FFmpeg {
 		
 		private static final class Creator {
 			
+			private static final Pattern REGEX_CODEC_COPY = Pattern.compile("^c:(?:([va]):)?(\\d+)$");
+			private static final int VALUE_TYPE_VIDEO = 0b1 << 0;
+			private static final int VALUE_TYPE_AUDIO = 0b1 << 1;
+			private static final int VALUE_TYPE_ALL = VALUE_TYPE_VIDEO | VALUE_TYPE_AUDIO;
+			
+			// Forbid anyone to create an instance of this class
 			private Creator() {
 			}
 			
-			private static final String audioCodec(MediaFormat format) {
-				if(format.is(MediaFormat.MP3)) return "mp3";
-				if(format.is(MediaFormat.WAV)) return "pcm_s16le";
-				if(format.is(MediaFormat.WMA)) return "wmav2";
-				if(format.is(MediaFormat.M4A)) return "libfaac";
+			// Optimizes the output options in such a way that when the codec of both video and
+			// audio should be copied it replaces these two options by a single one. This will
+			// actually speed up the whole conversion process, since no stream selection will take
+			// place.
+			private static final void optimizeOutput(Output.Builder output, int numOfInputs) {
+				int[] codecCopy = new int[numOfInputs];
 				
-				return null;
-			}
-			
-			private static final void handleAudioOutput(MediaFormat formatInput, MediaFormat formatOutput,
-					Output.Builder output) {
-				String acodec = audioCodec(formatOutput);
-				
-				if(acodec == null) {
-					throw new IllegalStateException("Audio codec is null for output format: " + formatOutput);
+				for(Option option : output.options()) {
+					Matcher matcher = REGEX_CODEC_COPY.matcher(option.name());
+					
+					if(!matcher.matches()) {
+						continue;
+					}
+					
+					int index = Integer.valueOf(matcher.group(2));
+					int value = 0;
+					
+					if(matcher.group(1) == null) {
+						value = VALUE_TYPE_ALL;
+					} else {
+						switch(matcher.group(1)) {
+							case "v": value = VALUE_TYPE_VIDEO; break;
+							case "a": value = VALUE_TYPE_AUDIO; break;
+						}
+					}
+					
+					codecCopy[index] |= value;
 				}
 				
-				output.addOptions(
-					Options.audioCodec().ofValue(acodec),
-					Options.audioBitRate().ofValue("248k")
-				);
-			}
-			
-			private static final void handleVideoInput(MediaFormat formatInput, MediaFormat formatOutput,
-					Output.Builder output) {
-				// Special case for OGG format, since it causes some trouble
-				if(formatOutput.is(MediaFormat.OGG)) {
-					output.addOptions(
-						Options.videoCodec().ofValue("libtheora"),
-						Options.videoQuality().ofValue("7")
-					);
-					
-					output.addOptions(
-						Options.audioCodec().ofValue("libvorbis"),
-						Options.audioQuality().ofValue("6")
-					);
-				} else {
-					if(formatInput.is(MediaFormat.M3U8)) {
-						output.addOptions(
-							Options.codecCopy(),
-							Option.ofShort("bsf:a", "aac_adtstoasc")
-						);
-					} else if(formatInput.is(MediaFormat.DASH)) {
-						output.addOptions(
-							Options.videoCodecCopy(),
-							Options.audioCodec().ofValue("aac")
-						);
-					} else if(formatInput.is(MediaFormat.OGG)) {
-						output.addOptions(
-							Options.videoCodec().ofValue("libx264"),
-							Option.ofShort("preset", "fast"),
-							Option.ofShort("crf", "22")
-						);
-						
-						output.addOptions(
-							Options.audioCodec().ofValue("libmp3lame"),
-							Options.audioQuality().ofValue("2"),
-							Options.audioChannels().ofValue("2"),
-							Options.audioSampleRate().ofValue("44100")
-						);
-					} else {
-						output.addOptions(Options.codecCopy());
+				boolean allCopy = true;
+				for(int i = 0; i < numOfInputs; ++i) {
+					if(codecCopy[i] != VALUE_TYPE_ALL) {
+						allCopy = false;
+						break;
 					}
 				}
+				
+				if(allCopy) {
+					for(int i = 0; i < numOfInputs; ++i) {
+						output.removeOptions(
+							Options.streamVideoCodecCopy(i),
+							Options.streamAudioCodecCopy(i),
+							Options.streamCodecCopy(i)
+						);
+					}
+					
+					output.addOptions(Options.codecCopy());
+					return;
+				}
+				
+				for(int i = 0; i < numOfInputs; ++i) {
+					if(codecCopy[i] != VALUE_TYPE_ALL) {
+						continue;
+					}
+					
+					output.removeOptions(
+						Options.streamVideoCodecCopy(i),
+						Options.streamAudioCodecCopy(i)
+					);
+					
+					output.addOptions(Options.streamCodecCopy(i));
+				}
 			}
 			
-			public static final Command create(ConversionMedia output, List<ConversionMedia> inputs,
+			public static final Command create(ResolvedMedia output, List<ConversionMedia> inputs,
 					Metadata metadata) {
 				if(output == null) {
 					throw new IllegalArgumentException("Output cannot be null.");
@@ -170,7 +680,7 @@ public final class FFmpeg {
 				
 				Command.Builder command = Command.builder();
 				MediaFormat formatInput = Media.root(inputs.get(0).media()).format();
-				MediaFormat formatOutput = output.format();
+				MediaFormat formatOutput = output.configuration().outputFormat();
 				Output.Builder out = Output.ofMutable(output.path());
 				
 				command.addOptions(
@@ -185,23 +695,29 @@ public final class FFmpeg {
 						? Metadata.of("noExplicitFormat", true).seal()
 						: Metadata.empty();
 				
-				for(ConversionMedia input : inputs) {
-					command.addInputs(Input.of(input.path(), input.media().format(), metadataInput));
-				}
+				List<Pair<Media, Input.Builder>> mutableInputs = inputs.stream()
+					.map((i) -> new Pair<>(i.media(), Input.ofMutable(i.path(), List.of(), metadataInput)))
+					.collect(Collectors.toList());
 				
-				if(inputs.size() == 1 && inputs.get(0).media().format().is(formatOutput)) {
-					command.addOptions(Options.codecCopy());
-				} else if(formatOutput.mediaType().is(MediaType.AUDIO)) {
-					handleAudioOutput(formatInput, formatOutput, out);
-				} else if(formatInput.mediaType().is(MediaType.VIDEO)) {
-					handleVideoInput(formatInput, formatOutput, out);
-				} else {
+				ConversionFormat format = Formats.of(formatOutput);
+				
+				if(format == null) {
 					throw new IllegalStateException(String.format(
-						"Unable to create FFmpeg command: input=%s, output=%s",
-						formatInput, formatOutput
-					));
+  						"Unable to create FFmpeg command: input=%s, output=%s",
+  						formatInput, formatOutput
+  					));
 				}
 				
+				for(int i = 0, l = mutableInputs.size(); i < l; ++i) {
+					Pair<Media, Input.Builder> pair = mutableInputs.get(i);
+					format.from(pair.a, i, pair.b, out, metadata);
+				}
+				
+				for(Pair<Media, Input.Builder> pair : mutableInputs) {
+					command.addInputs(pair.b.asFormat(pair.a.format()));
+				}
+				
+				optimizeOutput(out, mutableInputs.size());
 				command.addOutputs(out.asFormat(formatOutput));
 				command.addMetadata(metadata);
 				
@@ -324,6 +840,8 @@ public final class FFmpeg {
 		private static Option CODEC_COPY;
 		private static Option VIDEO_CODEC_COPY;
 		private static Option AUDIO_CODEC_COPY;
+		private static Option NO_VIDEO;
+		private static Option NO_AUDIO;
 		// -----
 		
 		// ----- Mutable options
@@ -382,6 +900,30 @@ public final class FFmpeg {
 						: AUDIO_CODEC_COPY;
 		}
 		
+		public static final Option noVideo() {
+			return NO_VIDEO == null
+						? NO_VIDEO = Option.ofShort("vn")
+						: NO_VIDEO;
+		}
+		
+		public static final Option noAudio() {
+			return NO_AUDIO == null
+						? NO_AUDIO = Option.ofShort("an")
+						: NO_AUDIO;
+		}
+		
+		public static final Option streamCodecCopy(int index) {
+			return Option.ofMutableShort("c:" + index).ofValue("copy");
+		}
+		
+		public static final Option streamVideoCodecCopy(int index) {
+			return Option.ofMutableShort("c:v:" + index).ofValue("copy");
+		}
+		
+		public static final Option streamAudioCodecCopy(int index) {
+			return Option.ofMutableShort("c:a:" + index).ofValue("copy");
+		}
+		
 		public static final Option.Builder videoCodec() {
 			return (VIDEO_CODEC == null
 						? VIDEO_CODEC = Option.ofMutableShort("c:v")
@@ -405,7 +947,7 @@ public final class FFmpeg {
 		
 		public static final Option.Builder audioBitRate() {
 			return (AUDIO_BIT_RATE == null
-						? AUDIO_BIT_RATE = Option.ofMutableShort("ab")
+						? AUDIO_BIT_RATE = Option.ofMutableShort("b:a")
 						: AUDIO_BIT_RATE)
 					.copy();
 		}

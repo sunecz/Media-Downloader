@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Objects;
 
 import sune.app.mediadown.convert.ConversionMedia;
+import sune.app.mediadown.gui.table.ResolvedMedia;
 import sune.app.mediadown.util.Metadata;
 
 /** @since 00.01.26 */
@@ -11,14 +12,14 @@ public final class DownloadPipelineResult implements PipelineResult<ConversionPi
 	
 	private final boolean needConversion;
 	/** @since 00.02.08 */
-	private final ConversionMedia output;
+	private final ResolvedMedia output;
 	/** @since 00.02.08 */
 	private final List<ConversionMedia> inputs;
 	/** @since 00.02.08 */
 	private final Metadata metadata;
 	
 	/** @since 00.02.08 */
-	private DownloadPipelineResult(boolean needConversion, ConversionMedia output, List<ConversionMedia> inputs,
+	private DownloadPipelineResult(boolean needConversion, ResolvedMedia output, List<ConversionMedia> inputs,
 			Metadata metadata) {
 		this.needConversion = needConversion;
 		this.output = output;
@@ -40,7 +41,7 @@ public final class DownloadPipelineResult implements PipelineResult<ConversionPi
 	}
 	
 	/** @since 00.02.08 */
-	public static final DownloadPipelineResult doConversion(ConversionMedia output, List<ConversionMedia> inputs,
+	public static final DownloadPipelineResult doConversion(ResolvedMedia output, List<ConversionMedia> inputs,
 			Metadata metadata) {
 		return new DownloadPipelineResult(true, Objects.requireNonNull(output), checkInputs(inputs), metadata);
 	}

@@ -35,13 +35,18 @@ public final class MediaFormat {
 	public static final MediaFormat AVI;
 	public static final MediaFormat MKV;
 	public static final MediaFormat WMV;
+	public static final MediaFormat WEBMV;
 	public static final MediaFormat WEBM;
+	public static final MediaFormat OGGV;
 	public static final MediaFormat OGG;
 	// Audio formats
 	public static final MediaFormat MP3;
 	public static final MediaFormat WAV;
 	public static final MediaFormat WMA;
 	public static final MediaFormat M4A;
+	public static final MediaFormat AAC;
+	public static final MediaFormat WEBMA;
+	public static final MediaFormat OGGA;
 	// Stream formats
 	public static final MediaFormat M3U8;
 	public static final MediaFormat DASH;
@@ -61,10 +66,10 @@ public final class MediaFormat {
 			        .fileExtensions("mkv").mimeTypes("video/x-matroska").string("MKV").build();
 		WMV = new Builder().name("WMV").formatType(MediaFormatType.BOTH).mediaType(MediaType.VIDEO)
 			        .fileExtensions("wmv").mimeTypes("video/x-ms-wmv").string("WMV").build();
-		WEBM = new Builder().name("WEBM").formatType(MediaFormatType.BOTH).mediaType(MediaType.VIDEO)
-			        .fileExtensions("webm").mimeTypes("video/webm").string("WEBM").build();
-		OGG = new Builder().name("OGG").formatType(MediaFormatType.BOTH).mediaType(MediaType.VIDEO)
-			        .fileExtensions("ogg").mimeTypes("video/ogg").string("OGG").build();
+		WEBMV = new Builder().name("WEBMV").formatType(MediaFormatType.BOTH).mediaType(MediaType.VIDEO)
+			        .fileExtensions("webm").mimeTypes("video/webm").string("WEBM-Video").build();
+		OGGV = new Builder().name("OGGV").formatType(MediaFormatType.BOTH).mediaType(MediaType.VIDEO)
+			        .fileExtensions("ogg").mimeTypes("video/ogg").string("OGG-Video").build();
 		MP3 = new Builder().name("MP3").formatType(MediaFormatType.BOTH).mediaType(MediaType.AUDIO)
 			        .fileExtensions("mp3").mimeTypes("audio/mpeg").string("MP3").build();
 		WAV = new Builder().name("WAV").formatType(MediaFormatType.BOTH).mediaType(MediaType.AUDIO)
@@ -73,6 +78,12 @@ public final class MediaFormat {
 			        .fileExtensions("wma").mimeTypes("audio/x-ms-wma").string("WMA").build();
 		M4A = new Builder().name("M4A").formatType(MediaFormatType.INPUT).mediaType(MediaType.AUDIO)
 			        .fileExtensions("m4a").mimeTypes("audio/mp4").string("M4A").build();
+		AAC = new Builder().name("AAC").formatType(MediaFormatType.INPUT).mediaType(MediaType.AUDIO)
+				    .fileExtensions("aac").mimeTypes("audio/aac").string("AAC").build();
+		WEBMA = new Builder().name("WEBMA").formatType(MediaFormatType.INPUT).mediaType(MediaType.AUDIO)
+		            .fileExtensions("webm").mimeTypes("audio/webm").string("WEBM-Audio").build();
+		OGGA = new Builder().name("OGGA").formatType(MediaFormatType.INPUT).mediaType(MediaType.AUDIO)
+	                .fileExtensions("ogg").mimeTypes("audio/ogg").string("OGG-Audio").build();
 		M3U8 = new Builder().name("M3U8").formatType(MediaFormatType.INPUT).mediaType(MediaType.VIDEO)
 			        .fileExtensions("m3u8", "ts").mimeTypes("application/x-mpegurl", "application/vnd.apple.mpegurl")
 			        .string("M3U8").build();
@@ -82,6 +93,10 @@ public final class MediaFormat {
 					.fileExtensions("srt").mimeTypes("text/srt").string("SRT").build(); // Don't use text/plain as mime type
 		VTT = new Builder().name("VTT").formatType(MediaFormatType.INPUT).mediaType(MediaType.SUBTITLES)
 					.fileExtensions("vtt").mimeTypes("text/vtt").string("VTT").build(); // Don't use text/plain as mime type
+		
+		// Aliases
+		WEBM = WEBMV;
+		OGG = OGGV;
 	}
 	
 	private final String name;
@@ -144,7 +159,7 @@ public final class MediaFormat {
 	}
 	
 	public static final MediaFormat fromPath(String path) {
-		return filter(PREDICATE_EXTENSIONS, Utils.OfPath.info(path).extension().toLowerCase());
+		return fromExtension(Utils.OfPath.info(path).extension());
 	}
 	
 	public static final MediaFormat fromName(String string) {
@@ -153,6 +168,11 @@ public final class MediaFormat {
 	
 	public static final MediaFormat fromMimeType(String mimeType) {
 		return filter(PREDICATE_MIME_TYPE, mimeType.toLowerCase());
+	}
+	
+	/** @since 00.02.08 */
+	public static final MediaFormat fromExtension(String extension) {
+		return filter(PREDICATE_EXTENSIONS, extension.toLowerCase());
 	}
 	
 	public static final MediaFormat[] outputFormats() {

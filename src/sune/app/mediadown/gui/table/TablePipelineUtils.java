@@ -157,6 +157,15 @@ public final class TablePipelineUtils {
 		                AudioMedia::language, MediaContainer::audio, MediaLanguage.UNKNOWN);
 	}
 	
+	/** @since 00.02.08 */
+	private static final MediaFormat selectedMediaFormat(SelectedItem item) {
+		return item.extension().getExtensions().stream()
+					.map((s) -> s.replaceFirst("^\\*\\.", ""))
+					.map(MediaFormat::fromExtension)
+					.filter((f) -> !f.is(MediaFormat.UNKNOWN))
+					.findFirst().orElse(MediaFormat.UNKNOWN);
+	}
+	
 	public static final TableView<Media> newMediaTable(TableWindow window) {
 		Translation translation = window.getTranslation();
 		Translation translationLanguage = MediaDownloader.translation().getTranslation("media.language");
@@ -223,14 +232,6 @@ public final class TablePipelineUtils {
 		return table;
 	}
 	
-	/** @since 00.02.08 */
-	private static final MediaFormat selectedMediaFormat(SelectedItem item) {
-		return item.extension().getExtensions().stream()
-					.map(MediaFormat::fromName)
-					.filter((f) -> !f.is(MediaFormat.UNKNOWN))
-					.findFirst().orElse(MediaFormat.UNKNOWN);
-	}
-	
 	public static final ResolvedMedia resolveSingleMedia(Media media, Path dest, MediaFormat outputFormat,
 			MediaLanguage[] subtitlesLanguages) {
 		MediaDownloadConfiguration mediaConfig;
@@ -242,7 +243,7 @@ public final class TablePipelineUtils {
 			Map<MediaType, List<Media>> selectedMedia = Map.of(MediaType.SUBTITLES, subtitles);
 			mediaConfig = MediaDownloadConfiguration.of(outputFormat, selectedMedia);
 		} else {
-			mediaConfig = MediaDownloadConfiguration.ofDefault();
+			mediaConfig = MediaDownloadConfiguration.of(outputFormat);
 		}
 		
 		return new ResolvedMedia(media, dest, mediaConfig);
@@ -287,7 +288,13 @@ public final class TablePipelineUtils {
 				String title = Utils.validateFileName(Utils.getOrDefault(pair.b.metadata().title(), fTitle.apply(pair)));
 				Choosers.SelectedItem path;
 				if((path = chooser.fileName(title).showSave()) != null) {
-					resolved.add(resolveSingleMedia(pair.b, path.path(), selectedMediaFormat(path), subtitlesLanguages));
+					MediaFormat outputFormat = selectedMediaFormat(path);
+					
+					if(outputFormat.is(MediaFormat.UNKNOWN)) {
+						throw new IllegalStateException("Unknown format");
+					}
+					
+					resolved.add(resolveSingleMedia(pair.b, path.path(), outputFormat, subtitlesLanguages));
 				}
 			} else {
 				Choosers.OfDirectory.Chooser chooser = Choosers.OfDirectory.configuredBuilder()
@@ -340,7 +347,13 @@ public final class TablePipelineUtils {
 				String title = Utils.validateFileName(media.metadata().title());
 				Choosers.SelectedItem path;
 				if((path = chooser.fileName(title).showSave()) != null) {
-					resolved.add(resolveSingleMedia(media, path.path(), selectedMediaFormat(path), subtitlesLanguages));
+					MediaFormat outputFormat = selectedMediaFormat(path);
+					
+					if(outputFormat.is(MediaFormat.UNKNOWN)) {
+						throw new IllegalStateException("Unknown format");
+					}
+					
+					resolved.add(resolveSingleMedia(media, path.path(), outputFormat, subtitlesLanguages));
 				}
 			} else {
 				Choosers.OfDirectory.Chooser chooser = Choosers.OfDirectory.configuredBuilder()
