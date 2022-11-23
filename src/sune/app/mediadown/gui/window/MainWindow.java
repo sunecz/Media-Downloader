@@ -652,8 +652,11 @@ public final class MainWindow extends Window<BorderPane> {
 		});
 		
 		pipeline.addEventListener(PipelineEvent.END, (o) -> {
-			Pipeline p = (Pipeline) o;
-            info.update(translation.getSingle("progress." + (p.isStopped() ? "stopped" : "completed")));
+			if(pipeline.isError()) {
+				return;
+			}
+			
+            info.update(translation.getSingle("progress." + (pipeline.isStopped() ? "stopped" : "completed")));
 		});
 		
 		pipeline.addEventListener(PipelineEvent.ERROR, (o) -> {
