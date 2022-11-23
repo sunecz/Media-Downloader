@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import javafx.beans.property.SimpleStringProperty;
@@ -31,7 +32,6 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.image.ImageView;
-import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
@@ -188,55 +188,65 @@ public final class MainWindow extends Window<BorderPane> {
 		menuTable.getItems().addAll(menuItemPause, menuItemTerminate, menuItemShowFile);
 		table.addEventHandler(MouseEvent.MOUSE_PRESSED, (e) -> {
 			menuTable.hide(); // Fix: graphical glitch when the menu is already showing
+			
 			List<PipelineInfo> infos = table.getSelectionModel().getSelectedItems();
-			if(!infos.isEmpty()) {
-				MouseButton button = e.getButton();
-				if((button == MouseButton.PRIMARY && e.getClickCount() > 1)) {
-					PipelineInfo info = infos.get(0);
-					Pipeline pipeline = info.pipeline();
-					if((pipeline.isStarted() || pipeline.isDone())) {
-						showFile(info);
-					}
-				} else if((button == MouseButton.SECONDARY)) {
-					boolean resume = infos.get(0).pipeline().isPaused();
-					int started = 0, done = 0, running = 0;
-					int count = infos.size();
-					for(PipelineInfo info : infos) {
+			
+			if(infos.isEmpty()) {
+				return; // Nothing to do
+			}
+			
+			switch(e.getButton()) {
+				case PRIMARY:
+					if(e.getClickCount() > 1) {
+						PipelineInfo info = infos.get(0);
 						Pipeline pipeline = info.pipeline();
-						if((pipeline.isDone())) {
-							++done;
-						} else {
-							if((pipeline.isRunning())) ++running;
-							if((pipeline.isStarted())) ++started;
+						
+						if(pipeline.isStarted() || pipeline.isDone()) {
+							showFile(info);
 						}
 					}
-					boolean isAnyRunning = running > 0;
-					boolean isAnyDone    = done    > 0;
-					boolean isAnyStarted = started > 0;
-					String termText = isAnyDone && isAnyRunning
-							? translation.getSingle("context_menus.table.items.terminate_combined")
-							: isAnyRunning
-								? translation.getSingle("context_menus.table.items.terminate_cancel")
-								: translation.getSingle("context_menus.table.items.terminate_remove");
-					String pauseText = resume
-							? translation.getSingle("context_menus.table.items.resume")
-							: translation.getSingle("context_menus.table.items.pause");
-					menuItemTerminate.setText(termText);
-					menuItemShowFile.setDisable(!(isAnyStarted || isAnyDone));
+					
+					break;
+				case SECONDARY:
+					int count = infos.size();
+					int started = (int) infos.stream().map(PipelineInfo::pipeline).filter(Pipeline::isStarted).count();
+					int done = (int) infos.stream().map(PipelineInfo::pipeline).filter(Pipeline::isDone).count();
+					
+					menuItemTerminate.setText(
+						anyTerminable(infos)
+							? translation.getSingle("context_menus.table.items.terminate_cancel")
+							: translation.getSingle("context_menus.table.items.terminate_remove")
+					);
+					
 					menuItemPause.setDisable(done == count || started == 0);
-					menuItemPause.setText(pauseText);
+					menuItemPause.setText(
+						anyNonPaused(infos)
+							? translation.getSingle("context_menus.table.items.pause")
+							: translation.getSingle("context_menus.table.items.resume")
+					);
+					
+					menuItemShowFile.setDisable(!(started > 0 || done > 0));
 					menuTable.show(table, e.getScreenX(), e.getScreenY());
-				}
+					break;
+				default:
+					// Do nothing
+					break;
 			}
 		});
 		menuItemPause.setOnAction((e) -> {
-			List<PipelineInfo> infos;
-			if(!(infos = table.getSelectionModel().getSelectedItems()).isEmpty()) {
-				boolean resume = infos.get(0).pipeline().isPaused();
+			List<PipelineInfo> infos = table.getSelectionModel().getSelectedItems();
+			
+			if(infos.isEmpty()) {
+				return; // Nothing to pause/resume
+			}
+			
+			if(anyNonPaused(infos)) {
 				for(PipelineInfo info : infos) {
-					Pipeline pipeline = info.pipeline();
-					if((resume)) Utils.ignore(pipeline::resume, this::showError);
-					else         Utils.ignore(pipeline::pause,  this::showError);
+					Utils.ignore(info.pipeline()::pause, this::showError);
+				}
+			} else {
+				for(PipelineInfo info : infos) {
+					Utils.ignore(info.pipeline()::resume, this::showError);
 				}
 			}
 		});
@@ -247,11 +257,7 @@ public final class MainWindow extends Window<BorderPane> {
 				return; // Nothing to terminate/remove
 			}
 			
-			boolean shouldTerminate = infos.stream()
-				.map(PipelineInfo::pipeline)
-				.anyMatch((p) -> p.isStarted() && (p.isRunning() || p.isPaused()));
-			
-			if(shouldTerminate) {
+			if(anyTerminable(infos)) {
 				for(PipelineInfo info : infos) {
 					Pipeline pipeline = info.pipeline();
 					
@@ -264,11 +270,14 @@ public final class MainWindow extends Window<BorderPane> {
 			}
 		});
 		menuItemShowFile.setOnAction((e) -> {
-			List<PipelineInfo> infos;
-			if(!(infos = table.getSelectionModel().getSelectedItems()).isEmpty()) {
-				for(PipelineInfo info : infos) {
-					showFile(info);
-				}
+			List<PipelineInfo> infos = table.getSelectionModel().getSelectedItems();
+			
+			if(infos.isEmpty()) {
+				return; // Nothing to show file for
+			}
+			
+			for(PipelineInfo info : infos) {
+				showFile(info);
 			}
 		});
 		menuItemInformation.setOnAction((e) -> {
@@ -691,6 +700,18 @@ public final class MainWindow extends Window<BorderPane> {
 	
 	private final void showError(Exception ex) {
 		MediaDownloader.error(ex);
+	}
+	
+	/** @since 00.02.08 */
+	private final boolean anyNonPaused(List<PipelineInfo> infos) {
+		return infos.stream().map(PipelineInfo::pipeline)
+					.anyMatch(Predicate.not(Pipeline::isPaused));
+	}
+	
+	/** @since 00.02.08 */
+	private final boolean anyTerminable(List<PipelineInfo> infos) {
+		return infos.stream().map(PipelineInfo::pipeline)
+					.anyMatch((p) -> p.isStarted() && (p.isRunning() || p.isPaused()));
 	}
 	
 	private final List<Pipeline> getPipelines() {
