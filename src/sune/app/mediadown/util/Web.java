@@ -27,10 +27,11 @@ import sune.app.mediadown.Shared;
 
 public final class Web {
 	
-	private static final String  USER_AGENT = Shared.USER_AGENT;
-	private static final Charset CHARSET    = Shared.CHARSET;
-	private static final String  ENCODING   = CHARSET.name();
-	private static final int     TIMEOUT    = 5000;
+	private static final String  USER_AGENT   = Shared.USER_AGENT;
+	private static final Charset CHARSET      = Shared.CHARSET;
+	private static final String  ENCODING     = CHARSET.name();
+	private static final int     TIMEOUT      = 5000;
+	private static final int     READ_TIMEOUT = 5000;
 	
 	private static final char   CHAR_COOKIES_DELIMITER    = ';';
 	private static final char   CHAR_COOKIES_NV_DELIMITER = '=';
@@ -164,12 +165,13 @@ public final class Web {
 		public final long                rangeStart;
 		public final long                rangeEnd;
 		public final int                 timeout;
+		public final int                 readTimeout;
 		
 		public Request(URL url, RequestMethod method, String userAgent,
 		               Map<String, String> params, HttpCookie[] cookies,
 		               Map<String, String> headers, boolean followRedirects,
 		               String identifier, long rangeStart, long rangeEnd,
-		               int timeout, String body) {
+		               int timeout, String body, int readTimeout) {
 			this.url        	 = url;
 			this.method     	 = method;
 			this.userAgent  	 = userAgent;
@@ -182,6 +184,7 @@ public final class Web {
 			this.rangeStart      = rangeStart;
 			this.rangeEnd        = rangeEnd;
 			this.timeout         = timeout;
+			this.readTimeout     = readTimeout;
 		}
 		
 		public abstract Request setURL(URL url);
@@ -222,8 +225,15 @@ public final class Web {
 		public GetRequest(URL url, String userAgent, HttpCookie[] cookies, Map<String, String> headers,
 		                  boolean followRedirects, String identifier, long rangeStart, long rangeEnd,
 		                  int timeout) {
+			this(url, userAgent, cookies, headers, followRedirects, identifier, rangeStart, rangeEnd, timeout,
+			     READ_TIMEOUT);
+		}
+		
+		public GetRequest(URL url, String userAgent, HttpCookie[] cookies, Map<String, String> headers,
+                          boolean followRedirects, String identifier, long rangeStart, long rangeEnd,
+                          int timeout, int readTimeout) {
 			super(url, RequestMethod.GET, userAgent, null, cookies, headers, followRedirects, identifier,
-			      rangeStart, rangeEnd, timeout, null);
+			      rangeStart, rangeEnd, timeout, null, readTimeout);
 		}
 		
 		public final HeadRequest toHeadRequest() {
@@ -282,16 +292,30 @@ public final class Web {
 		public PostRequest(URL url, String userAgent, Map<String, String> params, HttpCookie[] cookies,
 		                   Map<String, String> headers, boolean followRedirects, String identifier,
 		                   long rangeStart, long rangeEnd, int timeout) {
-			super(url, RequestMethod.POST, userAgent, params, cookies, headers, followRedirects, identifier, rangeStart, rangeEnd,
-			      timeout, null);
+			this(url, userAgent, params, cookies, headers, followRedirects, identifier, rangeStart, rangeEnd, timeout,
+			     READ_TIMEOUT);
 		}
 		
 		public PostRequest(URL url, String userAgent, Map<String, String> params, HttpCookie[] cookies,
 				           Map<String, String> headers, boolean followRedirects, String identifier,
 				           long rangeStart, long rangeEnd, int timeout, String body) {
-			super(url, RequestMethod.POST, userAgent, params, cookies, headers, followRedirects, identifier, rangeStart, rangeEnd,
-			      timeout, body);
+			this(url, userAgent, params, cookies, headers, followRedirects, identifier, rangeStart, rangeEnd,
+			     timeout, body, READ_TIMEOUT);
 	    }
+		
+		public PostRequest(URL url, String userAgent, Map<String, String> params, HttpCookie[] cookies,
+		                   Map<String, String> headers, boolean followRedirects, String identifier,
+		                   long rangeStart, long rangeEnd, int timeout, int readTimeout) {
+			super(url, RequestMethod.POST, userAgent, params, cookies, headers, followRedirects, identifier, rangeStart, rangeEnd,
+			      timeout, null, readTimeout);
+		}
+		
+		public PostRequest(URL url, String userAgent, Map<String, String> params, HttpCookie[] cookies,
+				           Map<String, String> headers, boolean followRedirects, String identifier,
+				           long rangeStart, long rangeEnd, int timeout, String body, int readTimeout) {
+			super(url, RequestMethod.POST, userAgent, params, cookies, headers, followRedirects, identifier, rangeStart, rangeEnd,
+			      timeout, body, readTimeout);
+		}
 		
 		public final HeadRequest toHeadRequest() {
 			return new HeadRequest(url, userAgent, cookies, headers, followRedirects);
@@ -346,8 +370,13 @@ public final class Web {
 		
 		public HeadRequest(URL url, String userAgent, HttpCookie[] cookies, Map<String, String> headers,
 		                   boolean followRedirects, int timeout) {
+			this(url, userAgent, cookies, headers, followRedirects, timeout, READ_TIMEOUT);
+		}
+		
+		public HeadRequest(URL url, String userAgent, HttpCookie[] cookies, Map<String, String> headers,
+		                   boolean followRedirects, int timeout, int readTimeout) {
 			super(url, RequestMethod.HEAD, userAgent, null, cookies, headers, followRedirects, null, -1L, -1L,
-			      timeout, null);
+			      timeout, null, readTimeout);
 		}
 		
 		@Override
@@ -458,6 +487,7 @@ public final class Web {
 		con.setDoOutput(true);
 		con.setUseCaches(false);
 		con.setConnectTimeout(request.timeout);
+		con.setReadTimeout(request.readTimeout);
 		con.connect();
 		if((request.method == RequestMethod.POST
 				&& strParams != null && !strParams.isEmpty())) {
@@ -494,6 +524,7 @@ public final class Web {
 		con.setDoOutput(true);
 		con.setUseCaches(false);
 		con.setConnectTimeout(request.timeout);
+		con.setReadTimeout(request.readTimeout);
 		con.connect();
 		long size = con.getContentLengthLong();
 		closeConnection(con);
