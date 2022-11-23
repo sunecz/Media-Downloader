@@ -385,7 +385,7 @@ public class FileDownloader implements InternalDownloader {
 	
 	@Override
 	public void stop() {
-		if(!isStarted() || !isStopped() || isDone()) {
+		if(!isStarted() || isStopped() || isDone()) {
 			return;
 		}
 		
