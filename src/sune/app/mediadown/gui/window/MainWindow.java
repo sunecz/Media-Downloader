@@ -241,22 +241,26 @@ public final class MainWindow extends Window<BorderPane> {
 			}
 		});
 		menuItemTerminate.setOnAction((e) -> {
-			List<PipelineInfo> infos;
-			if(!(infos = table.getSelectionModel().getSelectedItems()).isEmpty()) {
-				// Fix: not all selected items are removed
-				List<PipelineInfo> toRemove = new ArrayList<>();
+			List<PipelineInfo> infos = table.getSelectionModel().getSelectedItems();
+			
+			if(infos.isEmpty()) {
+				return; // Nothing to terminate/remove
+			}
+			
+			boolean shouldTerminate = infos.stream()
+				.map(PipelineInfo::pipeline)
+				.anyMatch((p) -> p.isStarted() && (p.isRunning() || p.isPaused()));
+			
+			if(shouldTerminate) {
 				for(PipelineInfo info : infos) {
 					Pipeline pipeline = info.pipeline();
+					
 					if(pipeline.isStarted() && (pipeline.isRunning() || pipeline.isPaused())) {
 						Utils.ignore(pipeline::stop, this::showError);
-					} else {
-						toRemove.add(info);
 					}
 				}
-				if(!toRemove.isEmpty()) {
-					// Remove all the items at once
-					removePipelines(toRemove);
-				}
+			} else {
+				removePipelines(new ArrayList<>(infos));
 			}
 		});
 		menuItemShowFile.setOnAction((e) -> {
