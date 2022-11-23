@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import javafx.beans.property.SimpleStringProperty;
@@ -76,6 +77,8 @@ import sune.app.mediadown.message.MessageManager;
 import sune.app.mediadown.os.OS;
 import sune.app.mediadown.pipeline.MediaPipelineResult;
 import sune.app.mediadown.pipeline.Pipeline;
+import sune.app.mediadown.pipeline.PipelineMedia;
+import sune.app.mediadown.pipeline.PipelineResult;
 import sune.app.mediadown.plugin.PluginFile;
 import sune.app.mediadown.plugin.PluginUpdater;
 import sune.app.mediadown.plugin.Plugins;
@@ -305,11 +308,11 @@ public final class MainWindow extends Window<BorderPane> {
 		menuTools.getItems().addAll(menuItemClipboardWatcher, menuItemUpdateResources);
 		menuBar.getMenus().addAll(menuApplication, menuTools);
 		btnDownload.setOnAction((e) -> {
-			table.getItems().stream().forEach(this::startPipeline);
+			startPipelines(table.getItems());
 			btnDownload.setDisable(true);
 		});
 		btnDownloadSelected.setOnAction((e) -> {
-			table.getSelectionModel().getSelectedItems().stream().forEach(this::startPipeline);
+			startPipelines(table.getSelectionModel().getSelectedItems());
 			btnDownloadSelected.setDisable(true);
 		});
 		btnAdd.setOnAction((e) -> {
@@ -720,12 +723,38 @@ public final class MainWindow extends Window<BorderPane> {
 	
 	private final void startPipeline(PipelineInfo info) {
 		Pipeline pipeline = info.pipeline();
-		if((pipeline.isStarted()))
+		
+		if(pipeline.isStarted()) {
 			return;
+		}
+		
 		ResolvedMedia media = info.media();
-		pipeline.setInput(MediaPipelineResult.of(media.media(), media.path(), media.configuration(),
-		                                         DownloadConfiguration.ofDefault()));
-		Utils.ignore(pipeline::start, this::showError);
+		PipelineMedia pipelineMedia = PipelineMedia.of(media.media(), media.path(), media.configuration(),
+			DownloadConfiguration.ofDefault());
+		PipelineResult<?> input = MediaPipelineResult.of(pipelineMedia);
+		
+		try {
+			pipeline.setInput(input);
+			pipeline.start();
+			pipelineMedia.awaitSubmitted();
+		} catch(Exception ex) {
+			showError(ex);
+		}
+	}
+	
+	/** @since 00.02.08 */
+	private final void startPipelines(List<PipelineInfo> infos) {
+		List<PipelineInfo> notEnqueued = infos.stream()
+			.filter(Predicate.not(PipelineInfo::isQueued))
+			.collect(Collectors.toList());
+		
+		// Enqueue all the items, so that they can be sequentually added
+		notEnqueued.stream().forEachOrdered((i) -> i.isQueued(true));
+		
+		// Start all items in a thread with sequential ordering
+		Threads.executeEnsured(() -> {
+			notEnqueued.stream().forEachOrdered(this::startPipeline);
+		});
 	}
 	
 	private final void removePipelines(List<PipelineInfo> infos) {
@@ -765,6 +794,9 @@ public final class MainWindow extends Window<BorderPane> {
 		private long lastUpdateTime = Long.MIN_VALUE;
 		private volatile boolean stateUpdated = false;
 		
+		/** @since 00.02.08 */
+		private boolean isQueued;
+		
 		public PipelineInfo(Pipeline pipeline, ResolvedMedia media) {
 			this.pipeline = Objects.requireNonNull(pipeline);
 			this.media = Objects.requireNonNull(media);
@@ -781,6 +813,11 @@ public final class MainWindow extends Window<BorderPane> {
 				stateUpdated = false;
 				lastUpdateTime = now;
 			}
+		}
+		
+		/** @since 00.02.08 */
+		public void isQueued(boolean isQueued) {
+			this.isQueued = isQueued;
 		}
 		
 		/** @since 00.02.08 */
@@ -820,13 +857,18 @@ public final class MainWindow extends Window<BorderPane> {
 		}
 		
 		/** @since 00.02.08 */
+		public Pipeline pipeline() {
+			return pipeline;
+		}
+		
+		/** @since 00.02.08 */
 		public ResolvedMedia media() {
 			return media;
 		}
 		
 		/** @since 00.02.08 */
-		public Pipeline pipeline() {
-			return pipeline;
+		public boolean isQueued() {
+			return isQueued;
 		}
 	}
 	

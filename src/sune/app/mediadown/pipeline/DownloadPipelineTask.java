@@ -1,46 +1,40 @@
 package sune.app.mediadown.pipeline;
 
-import java.nio.file.Path;
 import java.util.Objects;
 
 import sune.app.mediadown.Download;
-import sune.app.mediadown.download.DownloadConfiguration;
 import sune.app.mediadown.download.DownloadResult;
-import sune.app.mediadown.download.MediaDownloadConfiguration;
 import sune.app.mediadown.event.DownloadEvent;
 import sune.app.mediadown.event.EventRegistry;
 import sune.app.mediadown.event.EventType;
 import sune.app.mediadown.manager.DownloadManager;
 import sune.app.mediadown.manager.ManagerSubmitResult;
-import sune.app.mediadown.media.Media;
 
 /** @since 00.01.26 */
 public final class DownloadPipelineTask implements PipelineTask<DownloadPipelineResult> {
 	
-	private final Media media;
-	private final Path destination;
-	private final MediaDownloadConfiguration mediaConfiguration;
-	private final DownloadConfiguration configuration;
+	/** @since 00.02.08 */
+	private final PipelineMedia media;
 	
 	private ManagerSubmitResult<DownloadResult, Long> result;
 	
-	private DownloadPipelineTask(Media media, Path destination, MediaDownloadConfiguration mediaConfiguration,
-			DownloadConfiguration configuration) {
+	private DownloadPipelineTask(PipelineMedia media) {
 		this.media = Objects.requireNonNull(media);
-		this.destination = Objects.requireNonNull(destination);
-		this.mediaConfiguration = Objects.requireNonNull(mediaConfiguration);
-		this.configuration = Objects.requireNonNull(configuration);
 	}
 	
-	public static final DownloadPipelineTask of(Media media, Path destination,
-			MediaDownloadConfiguration mediaConfiguration, DownloadConfiguration configuration) {
-		return new DownloadPipelineTask(media, destination, mediaConfiguration, configuration);
+	/** @since 00.02.08 */
+	public static final DownloadPipelineTask of(PipelineMedia media) {
+		return new DownloadPipelineTask(media);
 	}
 	
 	@Override
 	public final DownloadPipelineResult run(Pipeline pipeline) throws Exception {
-		result = DownloadManager.submit(media, destination, mediaConfiguration, configuration);
+		result = DownloadManager.submit(media.media(), media.destination(), media.mediaConfiguration(),
+			media.configuration());
 		DownloadResult downloadResult = result.getValue();
+		
+		// Notify the media of being submitted
+		media.submitted();
 		
 		// Bind all events from the pipeline
 		EventRegistry<EventType> eventRegistry = pipeline.getEventRegistry();
