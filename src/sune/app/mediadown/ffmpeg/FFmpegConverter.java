@@ -119,8 +119,6 @@ public final class FFmpegConverter implements Converter {
 		                                )) {
 			NIO.move_force(pair.b.path(), pair.a.path());
 		}
-		
-		state.set(TaskStates.DONE);
 	}
 	
 	private final void doStop(int stopState) throws Exception {
@@ -131,11 +129,11 @@ public final class FFmpegConverter implements Converter {
 		state.unset(TaskStates.RUNNING);
 		state.unset(TaskStates.PAUSED);
 		
+		state.set(stopState);
+		
 		if(process != null) {
 			process.close();
 		}
-		
-		state.set(stopState);
 	}
 	
 	@Override

@@ -175,10 +175,10 @@ public final class Pipeline implements EventBindable<EventType>, HasTaskState {
 		state.unset(TaskStates.RUNNING);
 		state.unset(TaskStates.PAUSED);
 		
-		lockPause.unlock();
-		stopTask();
-		
 		state.set(stopState);
+		
+		stopTask();
+		lockPause.unlock();
 	}
 	
 	public final void setInput(PipelineResult<?> input) {

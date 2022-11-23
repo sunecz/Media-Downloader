@@ -320,9 +320,11 @@ public class FileDownloader implements InternalDownloader {
 		
 		state.unset(TaskStates.RUNNING);
 		state.unset(TaskStates.PAUSED);
-		identifier = null;
 		
 		state.set(stopState);
+		
+		identifier = null;
+		lockPause.unlock();
 	}
 	
 	@Override
