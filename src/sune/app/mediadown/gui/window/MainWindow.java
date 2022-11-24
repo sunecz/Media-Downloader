@@ -36,6 +36,7 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
@@ -94,6 +95,9 @@ public final class MainWindow extends Window<BorderPane> {
 	
 	private static MainWindow INSTANCE;
 	
+	private final AtomicBoolean closeRequest = new AtomicBoolean();
+	private final Actions actions = new Actions();
+	
 	private TableView<PipelineInfo> table;
 	private Button btnDownload;
 	private Button btnDownloadSelected;
@@ -115,223 +119,13 @@ public final class MainWindow extends Window<BorderPane> {
 	private MenuItem menuItemClipboardWatcher;
 	private MenuItem menuItemUpdateResources;
 	
-	private final Actions actions = new Actions();
-	
 	public MainWindow() {
 		super(NAME, new BorderPane(), 650.0, 420.0);
-		table 		             = new TableView<>();
-		btnDownload              = new Button(translation.getSingle("buttons.download"));
-		btnDownloadSelected      = new Button(translation.getSingle("buttons.download_selected"));
-		btnAdd	                 = new Button(translation.getSingle("buttons.add"));
-		menuTable	             = new ContextMenu();
-		menuItemPause            = new MenuItem(translation.getSingle("context_menus.table.items.pause"));
-		menuItemTerminate        = new MenuItem(translation.getSingle("context_menus.table.items.terminate_cancel"));
-		menuItemShowFile         = new MenuItem(translation.getSingle("context_menus.table.items.show_file"));
-		menuBar                  = new MenuBar();
-		menuApplication          = new Menu(translation.getSingle("menu_bar.application.title"));
-		menuItemInformation      = new MenuItem(translation.getSingle("menu_bar.application.item.information"));
-		menuItemConfiguration    = new MenuItem(translation.getSingle("menu_bar.application.item.configuration"));
-		menuItemMessages         = new MenuItem(translation.getSingle("menu_bar.application.item.messages"));
-		menuTools                = new Menu(translation.getSingle("menu_bar.tools.title"));
-		menuItemClipboardWatcher = new MenuItem(translation.getSingle("menu_bar.tools.item.clipboard_watcher"));
-		menuItemUpdateResources  = new MenuItem(translation.getSingle("menu_bar.tools.item.update_resources"));
-		String titleVSRC = translation.getSingle("tables.main.columns.source");
-		String titlePath = translation.getSingle("tables.main.columns.output");
-		String titleDPrg = translation.getSingle("tables.main.columns.progress");
-		TableColumn<PipelineInfo, String> columnVSRC = new TableColumn<>(titleVSRC);
-		TableColumn<PipelineInfo, String> columnPath = new TableColumn<>(titlePath);
-		TableColumn<PipelineInfo, String> columnDPrg = new TableColumn<>(titleDPrg);
-		columnVSRC.setCellValueFactory(new PropertyValueFactory<PipelineInfo, String>("source"));
-		columnPath.setCellValueFactory(new PropertyValueFactory<PipelineInfo, String>("destination"));
-		columnDPrg.setCellValueFactory(new PropertyValueFactory<PipelineInfo, String>("progress"));
-		columnVSRC.setPrefWidth(150);
-		columnPath.setPrefWidth(170);
-		columnDPrg.setPrefWidth(260);
-		table.getColumns().add(columnVSRC);
-		table.getColumns().add(columnPath);
-		table.getColumns().add(columnDPrg);
-		table.setPlaceholder(new Label(translation.getSingle("tables.main.placeholder")));
-		table.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-		table.getItems().addListener((Change<? extends PipelineInfo> change) -> {
-			if(!change.next()) return;
-			if((change.wasAdded())) {
-				btnDownload.setDisable(false);
-			}
-			if((change.wasRemoved())) {
-				boolean disable = true;
-				for(PipelineInfo info : table.getItems()) {
-					if(!info.pipeline().isStarted()) {
-						disable = false;
-						break;
-					}
-				}
-				btnDownload.setDisable(disable);
-			}
-		});
-		table.getSelectionModel().getSelectedItems().addListener((Change<? extends PipelineInfo> change) -> {
-			if(!change.next()) return;
-			boolean disable = true;
-			@SuppressWarnings("unchecked")
-			List<PipelineInfo> list = (List<PipelineInfo>) change.getList();
-			if(!list.isEmpty()) {
-				for(PipelineInfo info : list) {
-					if(!info.pipeline().isStarted()) {
-						disable = false;
-						break;
-					}
-				}
-			}
-			btnDownloadSelected.setDisable(disable);
-		});
-		btnDownload.setDisable(true);
-		btnDownloadSelected.setDisable(true);
-		menuTable.setAutoFix(true);
-		menuTable.setAutoHide(true);
-		menuTable.getItems().addAll(menuItemPause, menuItemTerminate, menuItemShowFile);
-		table.addEventHandler(MouseEvent.MOUSE_PRESSED, (e) -> {
-			menuTable.hide(); // Fix: graphical glitch when the menu is already showing
-			
-			List<PipelineInfo> infos = table.getSelectionModel().getSelectedItems();
-			
-			if(infos.isEmpty()) {
-				return; // Nothing to do
-			}
-			
-			switch(e.getButton()) {
-				case PRIMARY:
-					if(e.getClickCount() > 1) {
-						PipelineInfo info = infos.get(0);
-						Pipeline pipeline = info.pipeline();
-						
-						if(pipeline.isStarted() || pipeline.isDone()) {
-							showFile(info);
-						}
-					}
-					
-					break;
-				case SECONDARY:
-					int count = infos.size();
-					int started = (int) infos.stream().map(PipelineInfo::pipeline).filter(Pipeline::isStarted).count();
-					int done = (int) infos.stream().map(PipelineInfo::pipeline).filter(Pipeline::isDone).count();
-					int stopped = (int) infos.stream().map(PipelineInfo::pipeline).filter(Pipeline::isStopped).count();
-					
-					menuItemTerminate.setText(
-						anyTerminable(infos)
-							? translation.getSingle("context_menus.table.items.terminate_cancel")
-							: translation.getSingle("context_menus.table.items.terminate_remove")
-					);
-					
-					menuItemPause.setDisable(started == 0 || (done == count || stopped == count));
-					menuItemPause.setText(
-						anyNonPaused(infos)
-							? translation.getSingle("context_menus.table.items.pause")
-							: translation.getSingle("context_menus.table.items.resume")
-					);
-					
-					menuItemShowFile.setDisable(!(started > 0 || done > 0 || stopped > 0));
-					menuTable.show(table, e.getScreenX(), e.getScreenY());
-					break;
-				default:
-					// Do nothing
-					break;
-			}
-		});
-		menuItemPause.setOnAction((e) -> {
-			List<PipelineInfo> infos = table.getSelectionModel().getSelectedItems();
-			
-			if(infos.isEmpty()) {
-				return; // Nothing to pause/resume
-			}
-			
-			if(anyNonPaused(infos)) {
-				for(PipelineInfo info : infos) {
-					Utils.ignore(info.pipeline()::pause, this::showError);
-				}
-			} else {
-				for(PipelineInfo info : infos) {
-					Utils.ignore(info.pipeline()::resume, this::showError);
-				}
-			}
-		});
-		menuItemTerminate.setOnAction((e) -> {
-			List<PipelineInfo> infos = table.getSelectionModel().getSelectedItems();
-			
-			if(infos.isEmpty()) {
-				return; // Nothing to terminate/remove
-			}
-			
-			if(anyTerminable(infos)) {
-				for(PipelineInfo info : infos) {
-					Pipeline pipeline = info.pipeline();
-					
-					if(pipeline.isStarted() && (pipeline.isRunning() || pipeline.isPaused())) {
-						Utils.ignore(pipeline::stop, this::showError);
-					}
-				}
-			} else {
-				removePipelines(new ArrayList<>(infos));
-			}
-		});
-		menuItemShowFile.setOnAction((e) -> {
-			List<PipelineInfo> infos = table.getSelectionModel().getSelectedItems();
-			
-			if(infos.isEmpty()) {
-				return; // Nothing to show file for
-			}
-			
-			for(PipelineInfo info : infos) {
-				showFile(info);
-			}
-		});
-		menuItemInformation.setOnAction((e) -> {
-			showInformationWindow();
-		});
-		menuItemConfiguration.setOnAction((e) -> {
-			MediaDownloader.window(ConfigurationWindow.NAME).show(this);
-		});
-		menuItemMessages.setOnAction((e) -> resetAndShowMessagesAsync());
-		menuApplication.getItems().addAll(menuItemInformation, menuItemConfiguration, menuItemMessages);
-		menuItemClipboardWatcher.setOnAction((e) -> {
-			MediaDownloader.window(ClipboardWatcherWindow.NAME).show(this);
-		});
-		menuItemUpdateResources.setOnAction((e) -> {
-			Translation tr = translation.getTranslation("dialogs.update_resources");
-			if(Dialog.showPrompt(tr.getSingle("title"), tr.getSingle("text"))) {
-				MediaDownloader.updateResources();
-				
-				// Show dialog with a success message. Currently any thrown error is shown to
-				// the user in a dialog but is not taken into consideration here.
-				Translation trDone = tr.getTranslation("success");
-				Dialog.showInfo(trDone.getSingle("title"), trDone.getSingle("text"));
-			}
-		});
-		menuTools.getItems().addAll(menuItemClipboardWatcher, menuItemUpdateResources);
-		menuBar.getMenus().addAll(menuApplication, menuTools);
-		btnDownload.setOnAction((e) -> {
-			startPipelines(table.getItems());
-			btnDownload.setDisable(true);
-		});
-		btnDownloadSelected.setOnAction((e) -> {
-			startPipelines(table.getSelectionModel().getSelectedItems());
-			btnDownloadSelected.setDisable(true);
-		});
-		btnAdd.setOnAction((e) -> {
-			showContextMenuAtNode(menuAdd, btnAdd);
-		});
-		btnDownload.setMinWidth(80);
-		btnDownloadSelected.setMinWidth(80);
-		btnAdd.setMinWidth(80);
-		pane.setTop(menuBar);
-		pane.setCenter(table);
-		BorderPane.setMargin(table, new Insets(15, 15, 5, 15));
-		HBox box = new HBox(5);
-		box.setAlignment(Pos.CENTER_RIGHT);
-		box.setPadding(new Insets(5, 0, 0, 0));
-		HBox fillBox = new HBox();
-		HBox.setHgrow(fillBox, Priority.ALWAYS);
-		box.getChildren().addAll(btnAdd, fillBox, btnDownloadSelected, btnDownload);
-		box.setPadding(new Insets(0, 15, 15, 15));
-		pane.setBottom(box);
+		
+		pane.setTop(initializeMenuBar());
+		pane.setCenter(initializePipelinesTable());
+		pane.setBottom(initializeButtons());
+		
 		setScene(scene);
 	    setOnCloseRequest(this::internal_close);
 	    setMinWidth(600);
@@ -349,7 +143,6 @@ public final class MainWindow extends Window<BorderPane> {
 		return INSTANCE;
 	}
 	
-	private final AtomicBoolean closeRequest = new AtomicBoolean();
 	private final void internal_close(WindowEvent e) {
 		actions.terminate();
 		maybeAutoDisableClipboardWatcher();
@@ -480,6 +273,263 @@ public final class MainWindow extends Window<BorderPane> {
 		});
 		menuAdd.getItems().addAll(itemMediaGetter);
 		prepareContextMenuForShowing(menuAdd);
+	}
+	
+	/** @since 00.02.08 */
+	private final <T> TableColumn<PipelineInfo, T> pipelinesTableColumn(String propertyName, String translationPath,
+			double preferredWidth) {
+		TableColumn<PipelineInfo, T> column = new TableColumn<>(translation.getSingle(translationPath));
+		column.setCellValueFactory(new PropertyValueFactory<PipelineInfo, T>(propertyName));
+		column.setPrefWidth(preferredWidth);
+		return column;
+	}
+	
+	/** @since 00.02.08 */
+	private final TableView<PipelineInfo> initializePipelinesTable() {
+		table = new TableView<>();
+		table.setPlaceholder(new Label(translation.getSingle("tables.main.placeholder")));
+		table.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+		
+		table.getColumns().addAll(List.of(
+			pipelinesTableColumn("source", "tables.main.columns.source", 120),
+			pipelinesTableColumn("destination", "tables.main.columns.output", 160),
+			pipelinesTableColumn("progress", "tables.main.columns.progress", 300)
+		));
+		
+		table.getItems().addListener((Change<? extends PipelineInfo> change) -> {
+			while(change.next()) {
+				boolean isDisabled = btnDownload.isDisable();
+				boolean shouldDisable = isDisabled;
+				
+				if(change.wasAdded()) {
+					shouldDisable = false;
+				} else if(change.wasRemoved()) {
+					shouldDisable = change.getList().stream()
+						.map(PipelineInfo::pipeline)
+						.allMatch(Pipeline::isStarted);
+				}
+				
+				if(isDisabled != shouldDisable) {
+					btnDownload.setDisable(shouldDisable);
+				}
+			}
+		});
+		
+		table.getSelectionModel().getSelectedItems().addListener((Change<? extends PipelineInfo> change) -> {
+			while(change.next()) {
+				boolean isDisabled = btnDownloadSelected.isDisable();
+				boolean shouldDisable = isDisabled;
+				
+				if(change.wasAdded() || change.wasRemoved()) {
+					shouldDisable = change.getList().stream()
+						.map(PipelineInfo::pipeline)
+						.allMatch(Pipeline::isStarted);
+				}
+				
+				if(isDisabled != shouldDisable) {
+					btnDownloadSelected.setDisable(shouldDisable);
+				}
+			}
+		});
+		
+		table.addEventHandler(MouseEvent.MOUSE_PRESSED, (e) -> {
+			menuTable.hide(); // Fix: graphical glitch when the menu is already showing
+			
+			List<PipelineInfo> infos = table.getSelectionModel().getSelectedItems();
+			
+			if(infos.isEmpty()) {
+				return; // Nothing to do
+			}
+			
+			switch(e.getButton()) {
+				case PRIMARY:
+					if(e.getClickCount() > 1) {
+						PipelineInfo info = infos.get(0);
+						Pipeline pipeline = info.pipeline();
+						
+						if(pipeline.isStarted() || pipeline.isDone()) {
+							showFile(info);
+						}
+					}
+					
+					break;
+				case SECONDARY:
+					int count = infos.size();
+					int started = (int) infos.stream().map(PipelineInfo::pipeline).filter(Pipeline::isStarted).count();
+					int done = (int) infos.stream().map(PipelineInfo::pipeline).filter(Pipeline::isDone).count();
+					int stopped = (int) infos.stream().map(PipelineInfo::pipeline).filter(Pipeline::isStopped).count();
+					
+					menuItemTerminate.setText(
+						anyTerminable(infos)
+							? translation.getSingle("context_menus.table.items.terminate_cancel")
+							: translation.getSingle("context_menus.table.items.terminate_remove")
+					);
+					
+					menuItemPause.setDisable(started == 0 || (done == count || stopped == count));
+					menuItemPause.setText(
+						anyNonPaused(infos)
+							? translation.getSingle("context_menus.table.items.pause")
+							: translation.getSingle("context_menus.table.items.resume")
+					);
+					
+					menuItemShowFile.setDisable(!(started > 0 || done > 0 || stopped > 0));
+					menuTable.show(table, e.getScreenX(), e.getScreenY());
+					break;
+				default:
+					// Do nothing
+					break;
+			}
+		});
+		
+		initializePipelinesTableContextMenu();
+		BorderPane.setMargin(table, new Insets(15, 15, 5, 15));
+		
+		return table;
+	}
+	
+	/** @since 00.02.08 */
+	private final ContextMenu initializePipelinesTableContextMenu() {
+		menuTable = new ContextMenu();
+		
+		menuItemPause = new MenuItem(translation.getSingle("context_menus.table.items.pause"));
+		menuItemPause.setOnAction((e) -> {
+			List<PipelineInfo> infos = table.getSelectionModel().getSelectedItems();
+			
+			if(infos.isEmpty()) {
+				return; // Nothing to pause/resume
+			}
+			
+			if(anyNonPaused(infos)) {
+				for(PipelineInfo info : infos) {
+					Utils.ignore(info.pipeline()::pause, this::showError);
+				}
+			} else {
+				for(PipelineInfo info : infos) {
+					Utils.ignore(info.pipeline()::resume, this::showError);
+				}
+			}
+		});
+		
+		menuItemTerminate = new MenuItem(translation.getSingle("context_menus.table.items.terminate_cancel"));
+		menuItemTerminate.setOnAction((e) -> {
+			List<PipelineInfo> infos = table.getSelectionModel().getSelectedItems();
+			
+			if(infos.isEmpty()) {
+				return; // Nothing to terminate/remove
+			}
+			
+			if(anyTerminable(infos)) {
+				for(PipelineInfo info : infos) {
+					Pipeline pipeline = info.pipeline();
+					
+					if(pipeline.isStarted() && (pipeline.isRunning() || pipeline.isPaused())) {
+						Utils.ignore(pipeline::stop, this::showError);
+					}
+				}
+			} else {
+				removePipelines(new ArrayList<>(infos));
+			}
+		});
+		
+		menuItemShowFile = new MenuItem(translation.getSingle("context_menus.table.items.show_file"));
+		menuItemShowFile.setOnAction((e) -> {
+			List<PipelineInfo> infos = table.getSelectionModel().getSelectedItems();
+			
+			if(infos.isEmpty()) {
+				return; // Nothing to show file for
+			}
+			
+			for(PipelineInfo info : infos) {
+				showFile(info);
+			}
+		});
+		
+		menuTable.setAutoFix(true);
+		menuTable.setAutoHide(true);
+		menuTable.getItems().addAll(menuItemPause, menuItemTerminate, menuItemShowFile);
+		
+		return menuTable;
+	}
+	
+	/** @since 00.02.08 */
+	private final MenuBar initializeMenuBar() {
+		menuBar = new MenuBar();
+		menuApplication = new Menu(translation.getSingle("menu_bar.application.title"));
+		menuTools = new Menu(translation.getSingle("menu_bar.tools.title"));
+		
+		menuItemInformation = new MenuItem(translation.getSingle("menu_bar.application.item.information"));
+		menuItemInformation.setOnAction((e) -> {
+			showInformationWindow();
+		});
+		
+		menuItemConfiguration = new MenuItem(translation.getSingle("menu_bar.application.item.configuration"));
+		menuItemConfiguration.setOnAction((e) -> {
+			MediaDownloader.window(ConfigurationWindow.NAME).show(this);
+		});
+		
+		menuItemMessages = new MenuItem(translation.getSingle("menu_bar.application.item.messages"));
+		menuItemMessages.setOnAction((e) -> resetAndShowMessagesAsync());
+		
+		menuItemClipboardWatcher = new MenuItem(translation.getSingle("menu_bar.tools.item.clipboard_watcher"));
+		menuItemClipboardWatcher.setOnAction((e) -> {
+			MediaDownloader.window(ClipboardWatcherWindow.NAME).show(this);
+		});
+		
+		menuItemUpdateResources = new MenuItem(translation.getSingle("menu_bar.tools.item.update_resources"));
+		menuItemUpdateResources.setOnAction((e) -> {
+			Translation tr = translation.getTranslation("dialogs.update_resources");
+			if(Dialog.showPrompt(tr.getSingle("title"), tr.getSingle("text"))) {
+				MediaDownloader.updateResources();
+				
+				// Show dialog with a success message. Currently any thrown error is shown to
+				// the user in a dialog but is not taken into consideration here.
+				Translation trDone = tr.getTranslation("success");
+				Dialog.showInfo(trDone.getSingle("title"), trDone.getSingle("text"));
+			}
+		});
+		
+		menuApplication.getItems().addAll(menuItemInformation, menuItemConfiguration, menuItemMessages);
+		menuTools.getItems().addAll(menuItemClipboardWatcher, menuItemUpdateResources);
+		menuBar.getMenus().addAll(menuApplication, menuTools);
+		
+		return menuBar;
+	}
+	
+	/** @since 00.02.08 */
+	private final Pane initializeButtons() {
+		btnDownload = new Button(translation.getSingle("buttons.download"));
+		btnDownload.setOnAction((e) -> {
+			startPipelines(table.getItems());
+			btnDownload.setDisable(true);
+			btnDownloadSelected.setDisable(true);
+		});
+		
+		btnDownloadSelected = new Button(translation.getSingle("buttons.download_selected"));
+		btnDownloadSelected.setOnAction((e) -> {
+			startPipelines(table.getSelectionModel().getSelectedItems());
+			btnDownloadSelected.setDisable(true);
+		});
+		
+		btnAdd = new Button(translation.getSingle("buttons.add"));
+		btnAdd.setOnAction((e) -> {
+			showContextMenuAtNode(menuAdd, btnAdd);
+		});
+		
+		btnDownload.setDisable(true);
+		btnDownloadSelected.setDisable(true);
+		btnDownload.setMinWidth(80);
+		btnDownloadSelected.setMinWidth(80);
+		btnAdd.setMinWidth(80);
+		
+		HBox box = new HBox(5);
+		box.setAlignment(Pos.CENTER_RIGHT);
+		box.setPadding(new Insets(5, 0, 0, 0));
+		HBox fillBox = new HBox();
+		HBox.setHgrow(fillBox, Priority.ALWAYS);
+		box.getChildren().addAll(btnAdd, fillBox, btnDownloadSelected, btnDownload);
+		box.setPadding(new Insets(0, 15, 15, 15));
+		
+		return box;
 	}
 	
 	private final ProgressAction action_updatePlugins(Stage window, Collection<PluginFile> plugins) {
@@ -645,18 +695,6 @@ public final class MainWindow extends Window<BorderPane> {
 		Utils.ignore(() -> OS.current().highlight(info.media().path()), MediaDownloader::error);
 	}
 	
-	public final void showSelectionWindow(MediaEngine engine) {
-		TableWindow window = MediaDownloader.window(TableWindow.NAME);
-		Threads.execute(() -> {
-			Utils.ignore(() -> {
-				TablePipelineResult<?, ?> result = window.show(this, engine);
-				if(result.isTerminating()) {
-					((ResolvedMediaPipelineResult) result).getValue().forEach(this::addDownload);
-				}
-			}, MediaDownloader::error);
-	    });
-	}
-	
 	/** @since 00.02.05 */
 	private final PipelineInfo getPipelineInfo(ResolvedMedia media) {
 		Pipeline pipeline = Pipeline.create();
@@ -764,14 +802,102 @@ public final class MainWindow extends Window<BorderPane> {
 		FXUtils.thread(() -> table.getItems().removeAll(infos));
 	}
 	
+	public final void showSelectionWindow(MediaEngine engine) {
+		TableWindow window = MediaDownloader.window(TableWindow.NAME);
+		Threads.execute(() -> {
+			Utils.ignore(() -> {
+				TablePipelineResult<?, ?> result = window.show(this, engine);
+				if(result.isTerminating()) {
+					((ResolvedMediaPipelineResult) result).getValue().forEach(this::addDownload);
+				}
+			}, MediaDownloader::error);
+	    });
+	}
+	
 	/** @since 00.02.05 */
 	public final void addDownload(ResolvedMedia media) {
 		PipelineInfo info = getPipelineInfo(media);
 		FXUtils.thread(() -> table.getItems().add(info));
 	}
 	
-	public final Translation getTranslation() {
-		return translation;
+	/** @since 00.02.04 */
+	private final class Actions {
+		
+		private ProgressWindow progressWindow;
+		
+		public final void submit(ProgressAction action) {
+			progressWindow = ProgressWindow.submitAction(MainWindow.this, action);
+			FXUtils.thread(progressWindow::showAndWait);
+		}
+		
+		public final void terminate() {
+			if(progressWindow != null)
+				FXUtils.thread(progressWindow::hide);
+		}
+	}
+	
+	/** @since 00.02.08 */
+	private final class DefaultTrackerVisitor implements TrackerVisitor {
+		
+		private final PipelineInfo info;
+		
+		public DefaultTrackerVisitor(PipelineInfo info) {
+			this.info = info;
+		}
+		
+		@Override
+		public void visit(ConversionTracker tracker) {
+			double percent     = tracker.progress() * 100.0;
+			double timeCurrent = tracker.currentTime();
+			double timeTotal   = tracker.totalTime();
+			
+			info.update(translation.getSingle(
+				"progress.conversion.update",
+				"percent",      Utils.num2string(percent,     2),
+				"time_current", Utils.num2string(timeCurrent, 2),
+				"time_total",   Utils.num2string(timeTotal,   2)
+			));
+		}
+		
+		@Override
+		public void visit(DownloadTracker tracker) {
+			double percent  = tracker.progress() * 100.0;
+			String speedVal = Utils.formatSize(tracker.speed(), 2);
+			double timeLeft = tracker.secondsLeft();
+			
+			info.update(translation.getSingle(
+				"progress.download.update",
+				"percent",   Utils.num2string(percent,  2),
+				"speed",     speedVal,
+				"time_left", Utils.num2string(timeLeft, 0)
+			));
+		}
+		
+		@Override
+		public void visit(PlainTextTracker tracker) {
+			double percent = tracker.progress() * 100.0;
+			String text    = tracker.text();
+			
+			info.update(translation.getSingle(
+				"progress.plain",
+				"percent", Utils.num2string(percent, 2),
+				"text",    text
+			));
+		}
+		
+		@Override
+		public void visit(WaitTracker tracker) {
+			info.update(translation.getSingle("progress.waiting"));
+		}
+		
+		@Override
+		public void visit(Tracker tracker) {
+			String progress = tracker.textProgress();
+			
+			if(progress != null) {
+				info.update(progress);
+			}
+		}
 	}
 	
 	public static final class PipelineInfo {
@@ -869,86 +995,6 @@ public final class MainWindow extends Window<BorderPane> {
 		/** @since 00.02.08 */
 		public boolean isQueued() {
 			return isQueued;
-		}
-	}
-	
-	/** @since 00.02.04 */
-	private final class Actions {
-		
-		private ProgressWindow progressWindow;
-		
-		public final void submit(ProgressAction action) {
-			progressWindow = ProgressWindow.submitAction(MainWindow.this, action);
-			FXUtils.thread(progressWindow::showAndWait);
-		}
-		
-		public final void terminate() {
-			if(progressWindow != null)
-				FXUtils.thread(progressWindow::hide);
-		}
-	}
-	
-	/** @since 00.02.08 */
-	private final class DefaultTrackerVisitor implements TrackerVisitor {
-		
-		private final PipelineInfo info;
-		
-		public DefaultTrackerVisitor(PipelineInfo info) {
-			this.info = info;
-		}
-		
-		@Override
-		public void visit(ConversionTracker tracker) {
-			double percent     = tracker.progress() * 100.0;
-			double timeCurrent = tracker.currentTime();
-			double timeTotal   = tracker.totalTime();
-			
-			info.update(translation.getSingle(
-				"progress.conversion.update",
-				"percent",      Utils.num2string(percent,     2),
-				"time_current", Utils.num2string(timeCurrent, 2),
-				"time_total",   Utils.num2string(timeTotal,   2)
-			));
-		}
-		
-		@Override
-		public void visit(DownloadTracker tracker) {
-			double percent  = tracker.progress() * 100.0;
-			String speedVal = Utils.formatSize(tracker.speed(), 2);
-			double timeLeft = tracker.secondsLeft();
-			
-			info.update(translation.getSingle(
-				"progress.download.update",
-				"percent",   Utils.num2string(percent,  2),
-				"speed",     speedVal,
-				"time_left", Utils.num2string(timeLeft, 0)
-			));
-		}
-		
-		@Override
-		public void visit(PlainTextTracker tracker) {
-			double percent = tracker.progress() * 100.0;
-			String text    = tracker.text();
-			
-			info.update(translation.getSingle(
-				"progress.plain",
-				"percent", Utils.num2string(percent, 2),
-				"text",    text
-			));
-		}
-		
-		@Override
-		public void visit(WaitTracker tracker) {
-			info.update(translation.getSingle("progress.waiting"));
-		}
-		
-		@Override
-		public void visit(Tracker tracker) {
-			String progress = tracker.textProgress();
-			
-			if(progress != null) {
-				info.update(progress);
-			}
 		}
 	}
 }
