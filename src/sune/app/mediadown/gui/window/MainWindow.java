@@ -1040,7 +1040,7 @@ public final class MainWindow extends Window<BorderPane> {
 		
 		private StackPane wrapper;
 		private ProgressBar progressBar;
-		private Text label;
+		private Text text;
 		
 		public ProgressBarTableCell() {
 			getStyleClass().add("has-progress-bar");
@@ -1053,8 +1053,9 @@ public final class MainWindow extends Window<BorderPane> {
 			
 			wrapper = new StackPane();
 			progressBar = new ProgressBar(0.0);
-			label = new Text("0.0%");
-			wrapper.getChildren().addAll(progressBar, label);
+			text = new Text("0.0%");
+			text.getStyleClass().add("text");
+			wrapper.getChildren().addAll(progressBar, text);
 			
 			setGraphic(wrapper);
 			setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
@@ -1066,7 +1067,7 @@ public final class MainWindow extends Window<BorderPane> {
 			}
 			
 			wrapper.getChildren().clear();
-			label = null;
+			text = null;
 			progressBar = null;
 			wrapper = null;
 		}
@@ -1081,12 +1082,12 @@ public final class MainWindow extends Window<BorderPane> {
 			
 			boolean textVisible = value >= 0.0 && value <= 1.0;
 			
-			if(label.isVisible() != textVisible) {
-				label.setVisible(textVisible);
+			if(text.isVisible() != textVisible) {
+				text.setVisible(textVisible);
 			}
 			
 			if(textVisible) {
-				label.setText(String.format(Locale.US, "%.2f%%", value * 100.0));
+				text.setText(String.format(Locale.US, "%.2f%%", value * 100.0));
 			}
 		}
 		
