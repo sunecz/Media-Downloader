@@ -7,6 +7,11 @@ public class WaitTracker extends SimpleTracker {
 		visitor.visit(this);
 	}
 	
+	@Override
+	public String state() {
+		return PipelineStates.WAIT;
+	}
+	
 	/** @since 00.02.08 */
 	@Override
 	public double progress() {

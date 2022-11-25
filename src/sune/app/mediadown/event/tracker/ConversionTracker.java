@@ -19,6 +19,11 @@ public class ConversionTracker extends SimpleTracker {
 		visitor.visit(this);
 	}
 	
+	@Override
+	public String state() {
+		return PipelineStates.CONVERSION;
+	}
+	
 	/** @since 00.02.08 */
 	@Override
 	public double progress() {

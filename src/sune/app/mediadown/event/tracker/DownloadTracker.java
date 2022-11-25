@@ -73,6 +73,11 @@ public class DownloadTracker extends SimpleTracker {
 		visitor.visit(this);
 	}
 	
+	@Override
+	public String state() {
+		return PipelineStates.DOWNLOAD;
+	}
+	
 	/** @since 00.02.08 */
 	public long current() {
 		return current.get();

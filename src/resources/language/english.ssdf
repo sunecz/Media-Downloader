@@ -1,6 +1,6 @@
 {
 	name:    "english",
-	version: "11",
+	version: "12",
 	title:   "English",
 	code:    "eng",
 	windows: {
@@ -84,6 +84,17 @@
 				conversion: {
 					update: "Conversion... %{percent}%% (%{time_current}/%{time_total}s)",
 				}
+			},
+			states: {
+				wait:           "Wait",
+				initialization: "Initialization",
+				download:       "Download",
+				conversion:     "Conversion",
+				stopped:        "Stopped",
+				done:           "Done",
+				error:          "Error",
+				paused:         "Paused",
+				retry:          "Retry"
 			},
 			dialogs: {
 				messages_empty: {

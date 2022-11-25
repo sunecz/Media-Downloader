@@ -62,6 +62,8 @@ import sune.app.mediadown.event.DownloadEvent;
 import sune.app.mediadown.event.PipelineEvent;
 import sune.app.mediadown.event.tracker.ConversionTracker;
 import sune.app.mediadown.event.tracker.DownloadTracker;
+import sune.app.mediadown.event.tracker.PipelineProgress;
+import sune.app.mediadown.event.tracker.PipelineStates;
 import sune.app.mediadown.event.tracker.PlainTextTracker;
 import sune.app.mediadown.event.tracker.Tracker;
 import sune.app.mediadown.event.tracker.TrackerManager;
@@ -320,6 +322,17 @@ public final class MainWindow extends Window<BorderPane> {
 	}
 	
 	/** @since 00.02.08 */
+	private final TableColumn<PipelineInfo, String> pipelinesTableColumnState(String propertyName,
+			String translationPath, double preferredWidth) {
+		String title = translationPath != null ? tr(translationPath) : null;
+		TableColumn<PipelineInfo, String> column = new TableColumn<>(title);
+		column.setCellValueFactory(new PropertyValueFactory<>(propertyName));
+		column.setCellFactory((col) -> new StateTableCell());
+		column.setPrefWidth(preferredWidth);
+		return column;
+	}
+	
+	/** @since 00.02.08 */
 	private final TableView<PipelineInfo> initializePipelinesTable() {
 		table = new TableView<>();
 		table.setPlaceholder(new Label(tr("tables.main.placeholder")));
@@ -329,7 +342,7 @@ public final class MainWindow extends Window<BorderPane> {
 			pipelinesTableColumnSource("source", null, 24),
 			pipelinesTableColumn("title", "tables.main.columns.title", 150),
 			pipelinesTableColumnProgressBar("progress", "tables.main.columns.progress", 80),
-			pipelinesTableColumn("state", "tables.main.columns.state", 100),
+			pipelinesTableColumnState("state", "tables.main.columns.state", 100),
 			pipelinesTableColumn("current", "tables.main.columns.current", 80),
 			pipelinesTableColumn("total", "tables.main.columns.total", 80),
 			pipelinesTableColumn("speed", "tables.main.columns.speed", 80),
@@ -744,9 +757,7 @@ public final class MainWindow extends Window<BorderPane> {
 		TrackerVisitor visitor = new DefaultTrackerVisitor(info);
 		
 		pipeline.addEventListener(PipelineEvent.BEGIN, (o) -> {
-			info.update(new PipelineInfoData.OfText(
-				tr("progress.initialization")
-			));
+			info.update(new PipelineInfoData.OfText(PipelineStates.INITIALIZATION, PipelineInfo.TEXT_NONE));
 		});
 		
 		pipeline.addEventListener(PipelineEvent.END, (o) -> {
@@ -754,21 +765,22 @@ public final class MainWindow extends Window<BorderPane> {
 				return;
 			}
 			
-			String state = pipeline.isStopped() ? "stopped" : "completed";
+			boolean isStopped = pipeline.isStopped();
+			
 			info.update(new PipelineInfoData.OfEndText(
-				state,
-				tr("progress." + state),
-				pipeline.isStopped() ? 0.0 : 1.0
+				isStopped ? PipelineStates.STOPPED : PipelineStates.DONE,
+				isStopped ? PipelineProgress.NONE : PipelineProgress.MAX,
+				PipelineInfo.TEXT_NONE
 			));
 		});
 		
-		pipeline.addEventListener(PipelineEvent.ERROR, (o) -> {
-			Pair<Pipeline, Exception> pair = (Pair<Pipeline, Exception>) o;
+		pipeline.addEventListener(PipelineEvent.ERROR, (pair) -> {
 			info.update(new PipelineInfoData.OfEndText(
-				"error",
-				tr("progress.error", "text", pair.b.getMessage()),
-				0.0
+				PipelineStates.ERROR,
+				PipelineProgress.NONE,
+				pair.b.getMessage()
 			));
+			
 			showError(pair.b);
 		});
 		
@@ -777,9 +789,11 @@ public final class MainWindow extends Window<BorderPane> {
 				return;
 			}
 			
-			info.update(new PipelineInfoData.OfText(
-				tr("progress.waiting")
-			));
+			info.update(new PipelineInfoData.OfText(PipelineStates.WAIT, PipelineInfo.TEXT_NONE));
+		});
+		
+		pipeline.addEventListener(PipelineEvent.PAUSE, (p) -> {
+			info.update(new PipelineInfoData.OfState(PipelineStates.PAUSED, PipelineInfo.TEXT_NONE));
 		});
 		
 		pipeline.getEventRegistry().addMany((o) -> {
@@ -902,65 +916,27 @@ public final class MainWindow extends Window<BorderPane> {
 		
 		@Override
 		public void visit(ConversionTracker tracker) {
-			double percent     = tracker.progress() * 100.0;
-			double timeCurrent = tracker.currentTime();
-			double timeTotal   = tracker.totalTime();
-			
-			info.update(new PipelineInfoData.OfConversion(
-				tracker,
-				tr(
-					"progress.conversion.update",
-					"percent",      Utils.num2string(percent,     2),
-					"time_current", Utils.num2string(timeCurrent, 2),
-					"time_total",   Utils.num2string(timeTotal,   2)
-				)
-			));
+			info.update(new PipelineInfoData.OfConversion(tracker, PipelineInfo.TEXT_NONE));
 		}
 		
 		@Override
 		public void visit(DownloadTracker tracker) {
-			double percent  = tracker.progress() * 100.0;
-			String speedVal = Utils.formatSize(tracker.speed(), 2);
-			double timeLeft = tracker.secondsLeft();
-			
-			info.update(new PipelineInfoData.OfDownload(
-				tracker,
-				tr(
-					"progress.download.update",
-					"percent",   Utils.num2string(percent,  2),
-					"speed",     speedVal,
-					"time_left", Utils.num2string(timeLeft, 0)
-				)
-			));
+			info.update(new PipelineInfoData.OfDownload(tracker, PipelineInfo.TEXT_NONE));
 		}
 		
 		@Override
 		public void visit(PlainTextTracker tracker) {
-			double percent = tracker.progress() * 100.0;
-			String text    = tracker.text();
-			
-			info.update(new PipelineInfoData.OfProgress(
-				tracker.progress(),
-				tr(
-					"progress.plain",
-					"percent", Utils.num2string(percent, 2),
-					"text",    text
-				)
-			));
+			info.update(new PipelineInfoData.OfTracker(tracker));
 		}
 		
 		@Override
 		public void visit(WaitTracker tracker) {
-			info.update(new PipelineInfoData.OfText(tr("progress.waiting")));
+			info.update(new PipelineInfoData.OfText(tracker.state(), PipelineInfo.TEXT_NONE));
 		}
 		
 		@Override
 		public void visit(Tracker tracker) {
-			String text = tracker.textProgress();
-			
-			if(text != null) {
-				info.update(new PipelineInfoData.OfText(text));
-			}
+			info.update(new PipelineInfoData.OfTracker(tracker));
 		}
 	}
 	
@@ -1026,7 +1002,7 @@ public final class MainWindow extends Window<BorderPane> {
 			super.updateItem(item, empty);
 			
 			if(item == null) {
-				setItem(null);
+				setText(null);
 				setGraphic(null);
 				dispose();
 			} else {
@@ -1034,13 +1010,14 @@ public final class MainWindow extends Window<BorderPane> {
 			}
 		}
 	}
-
+	
 	/** @since 00.02.08 */
 	private static final class ProgressBarTableCell extends TableCell<PipelineInfo, Double> {
 		
 		private StackPane wrapper;
 		private ProgressBar progressBar;
 		private Text text;
+		private double lastRegularProgress = PipelineProgress.NONE;
 		
 		public ProgressBarTableCell() {
 			getStyleClass().add("has-progress-bar");
@@ -1078,16 +1055,30 @@ public final class MainWindow extends Window<BorderPane> {
 		
 		private final void value(double value) {
 			initialize();
-			progressBar.setProgress(value);
 			
+			double progress = value;
 			boolean textVisible = value >= 0.0 && value <= 1.0;
+			
+			if(progress == PipelineProgress.NONE) {
+				progress = 0.0;
+			} else if(progress == PipelineProgress.PROCESSING) {
+				progress = PipelineProgress.INDETERMINATE;
+				textVisible = true;
+			} else if(progress == PipelineProgress.RESET) {
+				progress = lastRegularProgress;
+				textVisible = progress >= 0.0 && progress <= 1.0;
+			} else if(progress != PipelineProgress.INDETERMINATE) {
+				lastRegularProgress = progress;
+			}
+			
+			progressBar.setProgress(progress);
 			
 			if(text.isVisible() != textVisible) {
 				text.setVisible(textVisible);
 			}
 			
 			if(textVisible) {
-				text.setText(String.format(Locale.US, "%.2f%%", value * 100.0));
+				text.setText(String.format(Locale.US, "%.2f%%", lastRegularProgress * 100.0));
 			}
 		}
 		
@@ -1100,7 +1091,7 @@ public final class MainWindow extends Window<BorderPane> {
 			super.updateItem(item, empty);
 			
 			if(item == null) {
-				setItem(null);
+				setText(null);
 				setGraphic(null);
 				dispose();
 			} else {
@@ -1108,14 +1099,38 @@ public final class MainWindow extends Window<BorderPane> {
 			}
 		}
 	}
-
+	
+	/** @since 00.02.08 */
+	private static final class StateTableCell extends TableCell<PipelineInfo, String> {
+		
+		private static final String stateText(String state) {
+			return INSTANCE.tr("states." + state);
+		}
+		
+		@Override
+		protected void updateItem(String item, boolean empty) {
+			if(item == getItem()) {
+				return;
+			}
+			
+			super.updateItem(item, empty);
+			
+			if(item == null) {
+				setText(null);
+				setGraphic(null);
+			} else {
+				setText(stateText(item));
+			}
+		}
+	}
+	
 	public static final class PipelineInfo {
 		
 		/** @since 00.02.08 */
 		private static final long MIN_UPDATE_DIFF_TIME = 250L * 1000000L; // 250 ms
 		
 		/** @since 00.02.08 */
-		public static final double PROGRESS_INDETERMINATE = ProgressBar.INDETERMINATE_PROGRESS;
+		public static final String TEXT_NONE = null;
 		
 		private final Pipeline pipeline;
 		/** @since 00.02.05 */
@@ -1350,19 +1365,40 @@ public final class MainWindow extends Window<BorderPane> {
 		
 		public static final class OfText implements PipelineInfoData {
 			
+			private final String state;
 			private final String text;
 			
-			public OfText(String text) {
+			public OfText(String state, String text) {
+				this.state = state;
 				this.text = text;
 			}
 			
 			@Override
 			public void update(PipelineInfo info) {
+				info.progress(PipelineProgress.INDETERMINATE);
+				info.state(state);
 				info.current(null);
 				info.total(null);
 				info.speed(null);
 				info.timeLeft(null);
-				info.progress(PipelineInfo.PROGRESS_INDETERMINATE);
+				info.information(text);
+			}
+		}
+		
+		public static final class OfState implements PipelineInfoData {
+			
+			private final String state;
+			private final String text;
+			
+			public OfState(String state, String text) {
+				this.state = state;
+				this.text = text;
+			}
+			
+			@Override
+			public void update(PipelineInfo info) {
+				info.progress(PipelineProgress.RESET);
+				info.state(state);
 				info.information(text);
 			}
 		}
@@ -1370,13 +1406,13 @@ public final class MainWindow extends Window<BorderPane> {
 		public static final class OfEndText implements PipelineInfoData {
 			
 			private final String state;
-			private final String text;
 			private final double progress;
+			private final String text;
 			
-			public OfEndText(String state, String text, double progress) {
+			public OfEndText(String state, double progress, String text) {
 				this.state = state;
-				this.text = text;
 				this.progress = progress;
+				this.text = text;
 			}
 			
 			@Override
@@ -1391,25 +1427,23 @@ public final class MainWindow extends Window<BorderPane> {
 			}
 		}
 		
-		public static final class OfProgress implements PipelineInfoData {
+		public static final class OfTracker implements PipelineInfoData {
 			
-			private final double progress;
-			private final String text;
+			private final Tracker tracker;
 			
-			public OfProgress(double progress, String text) {
-				this.progress = progress;
-				this.text = text;
+			public OfTracker(Tracker tracker) {
+				this.tracker = tracker;
 			}
 			
 			@Override
 			public void update(PipelineInfo info) {
-				info.progress(progress);
-				info.state(null);
+				info.progress(tracker.progress());
+				info.state(tracker.state());
 				info.current(null);
 				info.total(null);
 				info.speed(null);
 				info.timeLeft(null);
-				info.information(text);
+				info.information(tracker.textProgress());
 			}
 		}
 		
@@ -1426,7 +1460,7 @@ public final class MainWindow extends Window<BorderPane> {
 			@Override
 			public void update(PipelineInfo info) {
 				info.progress(tracker.progress());
-				info.state("download");
+				info.state(tracker.state());
 				info.current(Utils.OfFormat.size(tracker.current(), SizeUnit.BYTES, 2));
 				info.total(Utils.OfFormat.size(tracker.total(), SizeUnit.BYTES, 2));
 				info.speed(Utils.OfFormat.size(tracker.speed(), SizeUnit.BYTES, 2) + "/s");
@@ -1448,7 +1482,7 @@ public final class MainWindow extends Window<BorderPane> {
 			@Override
 			public void update(PipelineInfo info) {
 				info.progress(tracker.progress());
-				info.state("conversion");
+				info.state(tracker.state());
 				info.current(Utils.OfFormat.time(tracker.currentTime(), TimeUnit.SECONDS, false));
 				info.total(Utils.OfFormat.time(tracker.totalTime(), TimeUnit.SECONDS, false));
 				info.speed(null);

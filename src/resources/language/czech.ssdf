@@ -1,6 +1,6 @@
 {
 	name:    "czech",
-	version: "11",
+	version: "12",
 	title:   "Čeština",
 	code:    "ces",
 	windows: {
@@ -84,6 +84,17 @@
 				conversion: {
 					update: "Konverze... %{percent}%% (%{time_current}/%{time_total}s)",
 				}
+			},
+			states: {
+				wait:           "Čekání",
+				initialization: "Inicializace",
+				download:       "Stahování",
+				conversion:     "Konverze",
+				stopped:        "Zrušeno",
+				done:           "Hotovo",
+				error:          "Chyba",
+				paused:         "Pozastaveno",
+				retry:          "Opakování"
 			},
 			dialogs: {
 				messages_empty: {

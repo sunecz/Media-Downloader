@@ -13,6 +13,11 @@ public interface Tracker extends EventBindable<TrackerEvent> {
 	}
 	
 	/** @since 00.02.08 */
+	default String state() {
+		return null;
+	}
+	
+	/** @since 00.02.08 */
 	default void visit(TrackerVisitor visitor) {
 		visitor.visit(this);
 	}
