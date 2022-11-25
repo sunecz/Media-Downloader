@@ -271,3 +271,23 @@
 	-fx-background-radius: 0;
 	-fx-background-color: rgba(0, 0, 0, 0.5);
 }
+
+.table-cell.has-progress-bar,
+.table-cell.has-icon {
+	-fx-padding: 0;
+	-fx-background-insets: 0, 0, 0;
+	-fx-border-width: 0;
+}
+
+.table-cell .progress-bar {
+	-fx-pref-height: 2.0em;
+	-fx-min-height: 7;
+	-fx-max-height: Infinity;
+	-fx-max-width: Infinity;
+	-fx-border-color: -fx-accent;
+	-fx-border-width: 1;
+}
+
+.table-cell .progress-bar > .track {
+	-fx-background-color: rgba(0, 0, 0, 1.0);
+}

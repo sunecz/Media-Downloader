@@ -16,9 +16,15 @@
 				main: {
 					placeholder: "Žádné stahování neprobíhá",
 					columns: {
-						source:   "Zdroj",
-						output:   "Výstupní soubor",
-						progress: "Průběh"
+						title:       "Název",
+						progress:    "Průběh",
+						state:       "Stav",
+						current:     "Aktuálně",
+						total:       "Celkem",
+						speed:       "Rychlost",
+						time_left:   "Zbývající čas",
+						destination: "Výstupní soubor",
+						information: "Informace"
 					}
 				}
 			},

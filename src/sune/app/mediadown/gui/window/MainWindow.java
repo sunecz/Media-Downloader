@@ -8,12 +8,16 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.collections.ListChangeListener.Change;
@@ -22,15 +26,19 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
+import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.ProgressBar;
 import javafx.scene.control.SelectionMode;
+import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
@@ -38,11 +46,14 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.StackPane;
+import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
 import sune.app.mediadown.Disposables;
 import sune.app.mediadown.Download;
 import sune.app.mediadown.MediaDownloader;
+import sune.app.mediadown.MediaGetter;
 import sune.app.mediadown.download.DownloadConfiguration;
 import sune.app.mediadown.engine.MediaEngine;
 import sune.app.mediadown.engine.MediaEngines;
@@ -88,6 +99,7 @@ import sune.app.mediadown.util.MathUtils;
 import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.Threads;
 import sune.app.mediadown.util.Utils;
+import sune.app.mediadown.util.Utils.SizeUnit;
 
 public final class MainWindow extends Window<BorderPane> {
 	
@@ -120,7 +132,7 @@ public final class MainWindow extends Window<BorderPane> {
 	private MenuItem menuItemUpdateResources;
 	
 	public MainWindow() {
-		super(NAME, new BorderPane(), 650.0, 420.0);
+		super(NAME, new BorderPane(), 750.0, 450.0);
 		
 		pane.setTop(initializeMenuBar());
 		pane.setCenter(initializePipelinesTable());
@@ -130,7 +142,7 @@ public final class MainWindow extends Window<BorderPane> {
 	    setOnCloseRequest(this::internal_close);
 	    setMinWidth(600);
 	    setMinHeight(400);
-	    setTitle(translation.getSingle("title", "version", VERSION, "date", DATE));
+	    setTitle(tr("title", "version", VERSION, "date", DATE));
 	    setResizable(true);
 	    centerOnScreen();
 	    FXUtils.onWindowShowOnce(this, this::init);
@@ -204,7 +216,7 @@ public final class MainWindow extends Window<BorderPane> {
 			@Override
 			public void action(ProgressContext context) {
 				context.setProgress(ProgressContext.PROGRESS_INDETERMINATE);
-				context.setText(translation.getSingle("actions.messages.checking"));
+				context.setText(tr("actions.messages.checking"));
 				Utils.ignore(MainWindow.this::showMessages, MediaDownloader::error);
 			}
 			
@@ -225,11 +237,11 @@ public final class MainWindow extends Window<BorderPane> {
 			@Override
 			public void action(ProgressContext context) {
 				context.setProgress(ProgressContext.PROGRESS_INDETERMINATE);
-				context.setText(translation.getSingle("actions.messages.checking"));
+				context.setText(tr("actions.messages.checking"));
 				if(!resetAndShowMessages()) {
 					// Show the dialog in the next pulse so that the progress window can be closed
 					FXUtils.thread(() -> {
-						Translation dialogTranslation = translation.getTranslation("dialogs.messages_empty");
+						Translation dialogTranslation = trtr("dialogs.messages_empty");
 						Dialog.showInfo(dialogTranslation.getSingle("title"), dialogTranslation.getSingle("text"));
 					});
 				}
@@ -267,7 +279,7 @@ public final class MainWindow extends Window<BorderPane> {
 			item.setOnAction((e) -> showSelectionWindow((MediaEngine) item.getProperties().get("engine")));
 			menuAdd.getItems().add(item);
 		}
-		MenuItem itemMediaGetter = new MenuItem(translation.getSingle("context_menus.add.items.media_getter"));
+		MenuItem itemMediaGetter = new MenuItem(tr("context_menus.add.items.media_getter"));
 		itemMediaGetter.setOnAction((e) -> {
 			MediaDownloader.window(MediaGetterWindow.NAME).show(this);
 		});
@@ -278,8 +290,31 @@ public final class MainWindow extends Window<BorderPane> {
 	/** @since 00.02.08 */
 	private final <T> TableColumn<PipelineInfo, T> pipelinesTableColumn(String propertyName, String translationPath,
 			double preferredWidth) {
-		TableColumn<PipelineInfo, T> column = new TableColumn<>(translation.getSingle(translationPath));
-		column.setCellValueFactory(new PropertyValueFactory<PipelineInfo, T>(propertyName));
+		String title = translationPath != null ? tr(translationPath) : null;
+		TableColumn<PipelineInfo, T> column = new TableColumn<>(title);
+		column.setCellValueFactory(new PropertyValueFactory<>(propertyName));
+		column.setPrefWidth(preferredWidth);
+		return column;
+	}
+	
+	/** @since 00.02.08 */
+	private final TableColumn<PipelineInfo, String> pipelinesTableColumnSource(String propertyName,
+			String translationPath, double preferredWidth) {
+		String title = translationPath != null ? tr(translationPath) : null;
+		TableColumn<PipelineInfo, String> column = new TableColumn<>(title);
+		column.setCellValueFactory(new PropertyValueFactory<>(propertyName));
+		column.setCellFactory((col) -> new IconTableCell());
+		column.setPrefWidth(preferredWidth);
+		return column;
+	}
+	
+	/** @since 00.02.08 */
+	private final TableColumn<PipelineInfo, Double> pipelinesTableColumnProgressBar(String propertyName,
+			String translationPath, double preferredWidth) {
+		String title = translationPath != null ? tr(translationPath) : null;
+		TableColumn<PipelineInfo, Double> column = new TableColumn<>(title);
+		column.setCellValueFactory(new PropertyValueFactory<>(propertyName));
+		column.setCellFactory((col) -> new ProgressBarTableCell());
 		column.setPrefWidth(preferredWidth);
 		return column;
 	}
@@ -287,13 +322,20 @@ public final class MainWindow extends Window<BorderPane> {
 	/** @since 00.02.08 */
 	private final TableView<PipelineInfo> initializePipelinesTable() {
 		table = new TableView<>();
-		table.setPlaceholder(new Label(translation.getSingle("tables.main.placeholder")));
+		table.setPlaceholder(new Label(tr("tables.main.placeholder")));
 		table.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 		
 		table.getColumns().addAll(List.of(
-			pipelinesTableColumn("source", "tables.main.columns.source", 120),
-			pipelinesTableColumn("destination", "tables.main.columns.output", 160),
-			pipelinesTableColumn("progress", "tables.main.columns.progress", 300)
+			pipelinesTableColumnSource("source", null, 24),
+			pipelinesTableColumn("title", "tables.main.columns.title", 150),
+			pipelinesTableColumnProgressBar("progress", "tables.main.columns.progress", 80),
+			pipelinesTableColumn("state", "tables.main.columns.state", 100),
+			pipelinesTableColumn("current", "tables.main.columns.current", 80),
+			pipelinesTableColumn("total", "tables.main.columns.total", 80),
+			pipelinesTableColumn("speed", "tables.main.columns.speed", 80),
+			pipelinesTableColumn("timeLeft", "tables.main.columns.time_left", 90),
+			pipelinesTableColumn("destination", "tables.main.columns.destination", 150),
+			pipelinesTableColumn("information", "tables.main.columns.information", 150)
 		));
 		
 		table.getItems().addListener((Change<? extends PipelineInfo> change) -> {
@@ -361,15 +403,15 @@ public final class MainWindow extends Window<BorderPane> {
 					
 					menuItemTerminate.setText(
 						anyTerminable(infos)
-							? translation.getSingle("context_menus.table.items.terminate_cancel")
-							: translation.getSingle("context_menus.table.items.terminate_remove")
+							? tr("context_menus.table.items.terminate_cancel")
+							: tr("context_menus.table.items.terminate_remove")
 					);
 					
 					menuItemPause.setDisable(started == 0 || (done == count || stopped == count));
 					menuItemPause.setText(
 						anyNonPaused(infos)
-							? translation.getSingle("context_menus.table.items.pause")
-							: translation.getSingle("context_menus.table.items.resume")
+							? tr("context_menus.table.items.pause")
+							: tr("context_menus.table.items.resume")
 					);
 					
 					menuItemShowFile.setDisable(!(started > 0 || done > 0 || stopped > 0));
@@ -391,7 +433,7 @@ public final class MainWindow extends Window<BorderPane> {
 	private final ContextMenu initializePipelinesTableContextMenu() {
 		menuTable = new ContextMenu();
 		
-		menuItemPause = new MenuItem(translation.getSingle("context_menus.table.items.pause"));
+		menuItemPause = new MenuItem(tr("context_menus.table.items.pause"));
 		menuItemPause.setOnAction((e) -> {
 			List<PipelineInfo> infos = table.getSelectionModel().getSelectedItems();
 			
@@ -410,7 +452,7 @@ public final class MainWindow extends Window<BorderPane> {
 			}
 		});
 		
-		menuItemTerminate = new MenuItem(translation.getSingle("context_menus.table.items.terminate_cancel"));
+		menuItemTerminate = new MenuItem(tr("context_menus.table.items.terminate_cancel"));
 		menuItemTerminate.setOnAction((e) -> {
 			List<PipelineInfo> infos = table.getSelectionModel().getSelectedItems();
 			
@@ -431,7 +473,7 @@ public final class MainWindow extends Window<BorderPane> {
 			}
 		});
 		
-		menuItemShowFile = new MenuItem(translation.getSingle("context_menus.table.items.show_file"));
+		menuItemShowFile = new MenuItem(tr("context_menus.table.items.show_file"));
 		menuItemShowFile.setOnAction((e) -> {
 			List<PipelineInfo> infos = table.getSelectionModel().getSelectedItems();
 			
@@ -454,30 +496,30 @@ public final class MainWindow extends Window<BorderPane> {
 	/** @since 00.02.08 */
 	private final MenuBar initializeMenuBar() {
 		menuBar = new MenuBar();
-		menuApplication = new Menu(translation.getSingle("menu_bar.application.title"));
-		menuTools = new Menu(translation.getSingle("menu_bar.tools.title"));
+		menuApplication = new Menu(tr("menu_bar.application.title"));
+		menuTools = new Menu(tr("menu_bar.tools.title"));
 		
-		menuItemInformation = new MenuItem(translation.getSingle("menu_bar.application.item.information"));
+		menuItemInformation = new MenuItem(tr("menu_bar.application.item.information"));
 		menuItemInformation.setOnAction((e) -> {
 			showInformationWindow();
 		});
 		
-		menuItemConfiguration = new MenuItem(translation.getSingle("menu_bar.application.item.configuration"));
+		menuItemConfiguration = new MenuItem(tr("menu_bar.application.item.configuration"));
 		menuItemConfiguration.setOnAction((e) -> {
 			MediaDownloader.window(ConfigurationWindow.NAME).show(this);
 		});
 		
-		menuItemMessages = new MenuItem(translation.getSingle("menu_bar.application.item.messages"));
+		menuItemMessages = new MenuItem(tr("menu_bar.application.item.messages"));
 		menuItemMessages.setOnAction((e) -> resetAndShowMessagesAsync());
 		
-		menuItemClipboardWatcher = new MenuItem(translation.getSingle("menu_bar.tools.item.clipboard_watcher"));
+		menuItemClipboardWatcher = new MenuItem(tr("menu_bar.tools.item.clipboard_watcher"));
 		menuItemClipboardWatcher.setOnAction((e) -> {
 			MediaDownloader.window(ClipboardWatcherWindow.NAME).show(this);
 		});
 		
-		menuItemUpdateResources = new MenuItem(translation.getSingle("menu_bar.tools.item.update_resources"));
+		menuItemUpdateResources = new MenuItem(tr("menu_bar.tools.item.update_resources"));
 		menuItemUpdateResources.setOnAction((e) -> {
-			Translation tr = translation.getTranslation("dialogs.update_resources");
+			Translation tr = trtr("dialogs.update_resources");
 			if(Dialog.showPrompt(tr.getSingle("title"), tr.getSingle("text"))) {
 				MediaDownloader.updateResources();
 				
@@ -497,20 +539,20 @@ public final class MainWindow extends Window<BorderPane> {
 	
 	/** @since 00.02.08 */
 	private final Pane initializeButtons() {
-		btnDownload = new Button(translation.getSingle("buttons.download"));
+		btnDownload = new Button(tr("buttons.download"));
 		btnDownload.setOnAction((e) -> {
 			startPipelines(table.getItems());
 			btnDownload.setDisable(true);
 			btnDownloadSelected.setDisable(true);
 		});
 		
-		btnDownloadSelected = new Button(translation.getSingle("buttons.download_selected"));
+		btnDownloadSelected = new Button(tr("buttons.download_selected"));
 		btnDownloadSelected.setOnAction((e) -> {
 			startPipelines(table.getSelectionModel().getSelectedItems());
 			btnDownloadSelected.setDisable(true);
 		});
 		
-		btnAdd = new Button(translation.getSingle("buttons.add"));
+		btnAdd = new Button(tr("buttons.add"));
 		btnAdd.setOnAction((e) -> {
 			showContextMenuAtNode(menuAdd, btnAdd);
 		});
@@ -702,7 +744,9 @@ public final class MainWindow extends Window<BorderPane> {
 		TrackerVisitor visitor = new DefaultTrackerVisitor(info);
 		
 		pipeline.addEventListener(PipelineEvent.BEGIN, (o) -> {
-			info.update(translation.getSingle("progress.initialization"));
+			info.update(new PipelineInfoData.OfText(
+				tr("progress.initialization")
+			));
 		});
 		
 		pipeline.addEventListener(PipelineEvent.END, (o) -> {
@@ -710,12 +754,21 @@ public final class MainWindow extends Window<BorderPane> {
 				return;
 			}
 			
-            info.update(translation.getSingle("progress." + (pipeline.isStopped() ? "stopped" : "completed")));
+			String state = pipeline.isStopped() ? "stopped" : "completed";
+			info.update(new PipelineInfoData.OfEndText(
+				state,
+				tr("progress." + state),
+				pipeline.isStopped() ? 0.0 : 1.0
+			));
 		});
 		
 		pipeline.addEventListener(PipelineEvent.ERROR, (o) -> {
 			Pair<Pipeline, Exception> pair = (Pair<Pipeline, Exception>) o;
-			info.update(translation.getSingle("progress.error", "text", pair.b.getMessage()));
+			info.update(new PipelineInfoData.OfEndText(
+				"error",
+				tr("progress.error", "text", pair.b.getMessage()),
+				0.0
+			));
 			showError(pair.b);
 		});
 		
@@ -724,7 +777,9 @@ public final class MainWindow extends Window<BorderPane> {
 				return;
 			}
 			
-			info.update(translation.getSingle("progress.waiting"));
+			info.update(new PipelineInfoData.OfText(
+				tr("progress.waiting")
+			));
 		});
 		
 		pipeline.getEventRegistry().addMany((o) -> {
@@ -851,11 +906,14 @@ public final class MainWindow extends Window<BorderPane> {
 			double timeCurrent = tracker.currentTime();
 			double timeTotal   = tracker.totalTime();
 			
-			info.update(translation.getSingle(
-				"progress.conversion.update",
-				"percent",      Utils.num2string(percent,     2),
-				"time_current", Utils.num2string(timeCurrent, 2),
-				"time_total",   Utils.num2string(timeTotal,   2)
+			info.update(new PipelineInfoData.OfConversion(
+				tracker,
+				tr(
+					"progress.conversion.update",
+					"percent",      Utils.num2string(percent,     2),
+					"time_current", Utils.num2string(timeCurrent, 2),
+					"time_total",   Utils.num2string(timeTotal,   2)
+				)
 			));
 		}
 		
@@ -865,11 +923,14 @@ public final class MainWindow extends Window<BorderPane> {
 			String speedVal = Utils.formatSize(tracker.speed(), 2);
 			double timeLeft = tracker.secondsLeft();
 			
-			info.update(translation.getSingle(
-				"progress.download.update",
-				"percent",   Utils.num2string(percent,  2),
-				"speed",     speedVal,
-				"time_left", Utils.num2string(timeLeft, 0)
+			info.update(new PipelineInfoData.OfDownload(
+				tracker,
+				tr(
+					"progress.download.update",
+					"percent",   Utils.num2string(percent,  2),
+					"speed",     speedVal,
+					"time_left", Utils.num2string(timeLeft, 0)
+				)
 			));
 		}
 		
@@ -878,32 +939,182 @@ public final class MainWindow extends Window<BorderPane> {
 			double percent = tracker.progress() * 100.0;
 			String text    = tracker.text();
 			
-			info.update(translation.getSingle(
-				"progress.plain",
-				"percent", Utils.num2string(percent, 2),
-				"text",    text
+			info.update(new PipelineInfoData.OfProgress(
+				tracker.progress(),
+				tr(
+					"progress.plain",
+					"percent", Utils.num2string(percent, 2),
+					"text",    text
+				)
 			));
 		}
 		
 		@Override
 		public void visit(WaitTracker tracker) {
-			info.update(translation.getSingle("progress.waiting"));
+			info.update(new PipelineInfoData.OfText(tr("progress.waiting")));
 		}
 		
 		@Override
 		public void visit(Tracker tracker) {
-			String progress = tracker.textProgress();
+			String text = tracker.textProgress();
 			
-			if(progress != null) {
-				info.update(progress);
+			if(text != null) {
+				info.update(new PipelineInfoData.OfText(text));
 			}
 		}
 	}
 	
+	/** @since 00.02.08 */
+	private static final class IconTableCell extends TableCell<PipelineInfo, String> {
+		
+		private ImageView icon;
+		
+		public IconTableCell() {
+			getStyleClass().add("has-icon");
+		}
+		
+		private final Image image() {
+			MediaGetter getter = (MediaGetter) getTableRow().getItem().media().media().source().instance();
+			return getter != null ? getter.icon() : null;
+		}
+		
+		private final void initialize() {
+			if(isInitialized()) {
+				return;
+			}
+			
+			if(getTableRow().getItem() == null) {
+				return;
+			}
+			
+			Image image = image();
+			
+			if(image == null) {
+				return;
+			}
+			
+			icon = new ImageView(image);
+			icon.setFitWidth(24);
+			icon.setFitHeight(24);
+			
+			setGraphic(icon);
+			setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
+		}
+		
+		private final void dispose() {
+			if(!isInitialized()) {
+				return;
+			}
+			
+			icon = null;
+		}
+		
+		private final boolean isInitialized() {
+			return icon != null;
+		}
+		
+		private final void value(String value) {
+			initialize();
+		}
+		
+		@Override
+		protected void updateItem(String item, boolean empty) {
+			if(item == getItem() && isInitialized()) {
+				return;
+			}
+			
+			super.updateItem(item, empty);
+			
+			if(item == null) {
+				setItem(null);
+				setGraphic(null);
+				dispose();
+			} else {
+				value(item);
+			}
+		}
+	}
+
+	/** @since 00.02.08 */
+	private static final class ProgressBarTableCell extends TableCell<PipelineInfo, Double> {
+		
+		private StackPane wrapper;
+		private ProgressBar progressBar;
+		private Text label;
+		
+		public ProgressBarTableCell() {
+			getStyleClass().add("has-progress-bar");
+		}
+	
+		private final void initialize() {
+			if(isInitialized()) {
+				return;
+			}
+			
+			wrapper = new StackPane();
+			progressBar = new ProgressBar(0.0);
+			label = new Text("0.0%");
+			wrapper.getChildren().addAll(progressBar, label);
+			
+			setGraphic(wrapper);
+			setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
+		}
+		
+		private final void dispose() {
+			if(!isInitialized()) {
+				return;
+			}
+			
+			wrapper.getChildren().clear();
+			label = null;
+			progressBar = null;
+			wrapper = null;
+		}
+		
+		private final boolean isInitialized() {
+			return wrapper != null;
+		}
+		
+		private final void value(double value) {
+			initialize();
+			progressBar.setProgress(value);
+			
+			boolean textVisible = value >= 0.0 && value <= 1.0;
+			
+			if(label.isVisible() != textVisible) {
+				label.setVisible(textVisible);
+			}
+			
+			if(textVisible) {
+				label.setText(String.format(Locale.US, "%.2f%%", value * 100.0));
+			}
+		}
+		
+		@Override
+		protected void updateItem(Double item, boolean empty) {
+			if(item == getItem() && isInitialized()) {
+				return;
+			}
+			
+			super.updateItem(item, empty);
+			
+			if(item == null) {
+				setItem(null);
+				setGraphic(null);
+				dispose();
+			} else {
+				value(item);
+			}
+		}
+	}
+
 	public static final class PipelineInfo {
 		
 		/** @since 00.02.08 */
 		private static final long MIN_UPDATE_DIFF_TIME = 250L * 1000000L; // 250 ms
+		
+		/** @since 00.02.08 */
+		public static final double PROGRESS_INDETERMINATE = ProgressBar.INDETERMINATE_PROGRESS;
 		
 		private final Pipeline pipeline;
 		/** @since 00.02.05 */
@@ -912,9 +1123,23 @@ public final class MainWindow extends Window<BorderPane> {
 		/** @since 00.02.08 */
 		private StringProperty sourceProperty;
 		/** @since 00.02.08 */
+		private StringProperty titleProperty;
+		/** @since 00.02.08 */
 		private StringProperty destinationProperty;
 		/** @since 00.02.08 */
-		private StringProperty progressProperty;
+		private DoubleProperty progressProperty;
+		/** @since 00.02.08 */
+		private StringProperty stateProperty;
+		/** @since 00.02.08 */
+		private StringProperty currentProperty;
+		/** @since 00.02.08 */
+		private StringProperty totalProperty;
+		/** @since 00.02.08 */
+		private StringProperty speedProperty;
+		/** @since 00.02.08 */
+		private StringProperty timeLeftProperty;
+		/** @since 00.02.08 */
+		private StringProperty informationProperty;
 		
 		/** @since 00.02.08 */
 		private long lastUpdateTime = Long.MIN_VALUE;
@@ -929,13 +1154,13 @@ public final class MainWindow extends Window<BorderPane> {
 			this.pipeline.getEventRegistry().addMany((o) -> stateUpdated = true, PipelineEvent.values());
 		}
 		
-		public void update(String progress) {
+		public void update(PipelineInfoData data) {
 			long now = System.nanoTime();
 			
 			if(lastUpdateTime == Long.MIN_VALUE
 					|| stateUpdated
 					|| now - lastUpdateTime >= MIN_UPDATE_DIFF_TIME) {
-				FXUtils.thread(() -> progressProperty().set(progress));
+				FXUtils.thread(() -> data.update(this));
 				stateUpdated = false;
 				lastUpdateTime = now;
 			}
@@ -954,6 +1179,13 @@ public final class MainWindow extends Window<BorderPane> {
 		}
 		
 		/** @since 00.02.08 */
+		public StringProperty titleProperty() {
+			return titleProperty == null
+						? titleProperty = new SimpleStringProperty(title())
+						: titleProperty;
+		}
+		
+		/** @since 00.02.08 */
 		public StringProperty destinationProperty() {
 			return destinationProperty == null
 						? destinationProperty = new SimpleStringProperty(destination())
@@ -961,10 +1193,87 @@ public final class MainWindow extends Window<BorderPane> {
 		}
 		
 		/** @since 00.02.08 */
-		public StringProperty progressProperty() {
+		public DoubleProperty progressProperty() {
 			return progressProperty == null
-						? progressProperty = new SimpleStringProperty("")
+						? progressProperty = new SimpleDoubleProperty()
 						: progressProperty;
+		}
+		
+		/** @since 00.02.08 */
+		public StringProperty stateProperty() {
+			return stateProperty == null
+						? stateProperty = new SimpleStringProperty()
+						: stateProperty;
+		}
+		
+		/** @since 00.02.08 */
+		public StringProperty currentProperty() {
+			return currentProperty == null
+						? currentProperty = new SimpleStringProperty()
+						: currentProperty;
+		}
+		
+		/** @since 00.02.08 */
+		public StringProperty totalProperty() {
+			return totalProperty == null
+						? totalProperty = new SimpleStringProperty()
+						: totalProperty;
+		}
+		
+		/** @since 00.02.08 */
+		public StringProperty speedProperty() {
+			return speedProperty == null
+						? speedProperty = new SimpleStringProperty()
+						: speedProperty;
+		}
+		
+		/** @since 00.02.08 */
+		public StringProperty timeLeftProperty() {
+			return timeLeftProperty == null
+						? timeLeftProperty = new SimpleStringProperty()
+						: timeLeftProperty;
+		}
+		
+		/** @since 00.02.08 */
+		public StringProperty informationProperty() {
+			return informationProperty == null
+						? informationProperty = new SimpleStringProperty()
+						: informationProperty;
+		}
+		
+		/** @since 00.02.08 */
+		public void progress(double progress) {
+			progressProperty().set(progress);
+		}
+		
+		/** @since 00.02.08 */
+		public void state(String state) {
+			stateProperty().set(state);
+		}
+		
+		/** @since 00.02.08 */
+		public void current(String current) {
+			currentProperty().set(current);
+		}
+		
+		/** @since 00.02.08 */
+		public void total(String total) {
+			totalProperty().set(total);
+		}
+		
+		/** @since 00.02.08 */
+		public void speed(String speed) {
+			speedProperty().set(speed);
+		}
+		
+		/** @since 00.02.08 */
+		public void timeLeft(String timeLeft) {
+			timeLeftProperty().set(timeLeft);
+		}
+		
+		/** @since 00.02.08 */
+		public void information(String information) {
+			informationProperty().set(information);
 		}
 		
 		/** @since 00.02.08 */
@@ -973,13 +1282,48 @@ public final class MainWindow extends Window<BorderPane> {
 		}
 		
 		/** @since 00.02.08 */
+		public String title() {
+			return media.media().metadata().title();
+		}
+		
+		/** @since 00.02.08 */
 		public String destination() {
 			return media.path().toString();
 		}
 		
 		/** @since 00.02.08 */
-		public String progress() {
+		public double progress() {
 			return progressProperty().get();
+		}
+		
+		/** @since 00.02.08 */
+		public String state() {
+			return stateProperty().get();
+		}
+		
+		/** @since 00.02.08 */
+		public String current() {
+			return currentProperty().get();
+		}
+		
+		/** @since 00.02.08 */
+		public String total() {
+			return totalProperty().get();
+		}
+		
+		/** @since 00.02.08 */
+		public String speed() {
+			return speedProperty().get();
+		}
+		
+		/** @since 00.02.08 */
+		public String timeLeft() {
+			return timeLeftProperty().get();
+		}
+		
+		/** @since 00.02.08 */
+		public String information() {
+			return informationProperty().get();
 		}
 		
 		/** @since 00.02.08 */
@@ -995,6 +1339,121 @@ public final class MainWindow extends Window<BorderPane> {
 		/** @since 00.02.08 */
 		public boolean isQueued() {
 			return isQueued;
+		}
+	}
+	
+	/** @since 00.02.08 */
+	public static interface PipelineInfoData {
+		
+		void update(PipelineInfo info);
+		
+		public static final class OfText implements PipelineInfoData {
+			
+			private final String text;
+			
+			public OfText(String text) {
+				this.text = text;
+			}
+			
+			@Override
+			public void update(PipelineInfo info) {
+				info.current(null);
+				info.total(null);
+				info.speed(null);
+				info.timeLeft(null);
+				info.progress(PipelineInfo.PROGRESS_INDETERMINATE);
+				info.information(text);
+			}
+		}
+		
+		public static final class OfEndText implements PipelineInfoData {
+			
+			private final String state;
+			private final String text;
+			private final double progress;
+			
+			public OfEndText(String state, String text, double progress) {
+				this.state = state;
+				this.text = text;
+				this.progress = progress;
+			}
+			
+			@Override
+			public void update(PipelineInfo info) {
+				info.progress(progress);
+				info.state(state);
+				info.current(null);
+				info.total(null);
+				info.speed(null);
+				info.timeLeft(null);
+				info.information(text);
+			}
+		}
+		
+		public static final class OfProgress implements PipelineInfoData {
+			
+			private final double progress;
+			private final String text;
+			
+			public OfProgress(double progress, String text) {
+				this.progress = progress;
+				this.text = text;
+			}
+			
+			@Override
+			public void update(PipelineInfo info) {
+				info.progress(progress);
+				info.state(null);
+				info.current(null);
+				info.total(null);
+				info.speed(null);
+				info.timeLeft(null);
+				info.information(text);
+			}
+		}
+		
+		public static final class OfDownload implements PipelineInfoData {
+			
+			private final DownloadTracker tracker;
+			private final String text;
+			
+			public OfDownload(DownloadTracker tracker, String text) {
+				this.tracker = tracker;
+				this.text = text;
+			}
+			
+			@Override
+			public void update(PipelineInfo info) {
+				info.progress(tracker.progress());
+				info.state("download");
+				info.current(Utils.OfFormat.size(tracker.current(), SizeUnit.BYTES, 2));
+				info.total(Utils.OfFormat.size(tracker.total(), SizeUnit.BYTES, 2));
+				info.speed(Utils.OfFormat.size(tracker.speed(), SizeUnit.BYTES, 2) + "/s");
+				info.timeLeft(Utils.OfFormat.time(tracker.secondsLeft(), TimeUnit.SECONDS, false));
+				info.information(text);
+			}
+		}
+		
+		public static final class OfConversion implements PipelineInfoData {
+			
+			private final ConversionTracker tracker;
+			private final String text;
+			
+			public OfConversion(ConversionTracker tracker, String text) {
+				this.tracker = tracker;
+				this.text = text;
+			}
+			
+			@Override
+			public void update(PipelineInfo info) {
+				info.progress(tracker.progress());
+				info.state("conversion");
+				info.current(Utils.OfFormat.time(tracker.currentTime(), TimeUnit.SECONDS, false));
+				info.total(Utils.OfFormat.time(tracker.totalTime(), TimeUnit.SECONDS, false));
+				info.speed(null);
+				info.timeLeft(null);
+				info.information(text);
+			}
 		}
 	}
 }

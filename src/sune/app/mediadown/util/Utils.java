@@ -41,6 +41,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
@@ -49,6 +50,7 @@ import java.util.Set;
 import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.concurrent.Callable;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -2006,6 +2008,154 @@ public final class Utils {
 			public boolean hasExtension() {
 				return extension != null;
 			}
+		}
+	}
+	
+	/** @since 00.02.08 */
+	public static final class OfFormat {
+		
+		// Forbid anyone to create an instance of this class
+		private OfFormat() {
+		}
+		
+		public static final String time(double time, TimeUnit unit, boolean alwaysShowMs) {
+			return time((long) time, unit, alwaysShowMs);
+		}
+		
+		public static final String time(long time, TimeUnit unit, boolean alwaysShowMs) {
+			StringBuilder builder = new StringBuilder();
+			boolean written = false;
+			
+			long hours = unit.toHours(time);
+			if(hours > 0L) {
+				builder.append(hours).append('h');
+				time = time - unit.convert(hours, TimeUnit.HOURS);
+				written = true;
+			}
+			
+			long minutes = unit.toMinutes(time);
+			if(minutes > 0L) {
+				if(written) {
+					builder.append(' ');
+				}
+				
+				builder.append(minutes).append('m');
+				time = time - unit.convert(minutes, TimeUnit.MINUTES);
+				written = true;
+			}
+			
+			if(written) {
+				builder.append(' ');
+			}
+			
+			long seconds = unit.toSeconds(time);
+			builder.append(seconds);
+			time = time - unit.convert(seconds, TimeUnit.SECONDS);
+			
+			long millis = unit.toMillis(time);
+			if(millis > 0L || alwaysShowMs) {
+				builder.append('.').append(String.format("%03d", millis));
+			}
+			
+			builder.append('s');
+			
+			return builder.toString();
+		}
+		
+		public static final String size(double size, SizeUnit unit, int decimals) {
+			long base = unit.base();
+			SizeUnit[] units = SizeUnit.units(base);
+			
+			if(units.length == 0) {
+				throw new IllegalStateException("No units found for base: " + base);
+			}
+			
+			double value = size;
+			SizeUnit resultUnit;
+			
+			if(units.length == 1) {
+				resultUnit = units[0];
+				value = resultUnit.convert(size, unit);
+			} else {
+				int type = indexOf(unit, units);
+				int maxType = units.length - 1;
+				
+				for(double div = Math.pow(base, units[type + 1].power() - units[type].power());
+						value >= div && type < maxType;
+						value /= div,
+							div = Math.pow(base, units[type + 1].power() - units[type].power()),
+							++type);
+				
+				resultUnit = units[type];
+			}
+			
+			return String.format(Locale.US, "%." + decimals + "f %s", value, resultUnit);
+		}
+	}
+	
+	/** @since 00.02.08 */
+	public static enum SizeUnit {
+		
+		// Constants are sorted, do not change the order
+		
+		BYTES("B", 10, 0),
+		KILOBYTES("kB", 10, 3),
+		MEGABYTES("MB", 10, 6),
+		GIGABYTES("GB", 10, 9),
+		TERABYTES("TB", 10, 12);
+		
+		private static SizeUnit[] values;
+		private static SizeUnit[] valuesBase10;
+		
+		private final String abbreviation;
+		private final long base;
+		private final long power;
+		
+		private SizeUnit(String abbreviation, long base, long power) {
+			this.abbreviation = abbreviation;
+			this.base = base;
+			this.power = power;
+		}
+		
+		private static final SizeUnit[] ofBase(long base) {
+			return Stream.of(units()).filter((u) -> u.base == base).toArray(SizeUnit[]::new);
+		}
+		
+		public static final SizeUnit[] units() {
+			return values == null ? values = values() : values;
+		}
+		
+		public static final SizeUnit[] units(long base) {
+			if(base == 10L) {
+				return valuesBase10 == null ? valuesBase10 = ofBase(base) : valuesBase10;
+			}
+			
+			return ofBase(base);
+		}
+		
+		public double convert(double value, SizeUnit unit) {
+			if(base == unit.base) {
+				return value * Math.pow(base, unit.power - power);
+			}
+			
+			return value * Math.pow(10.0, unit.power * Math.log10(unit.base) - power * Math.log10(base));
+		}
+		
+		public String abbreviation() {
+			return abbreviation;
+		}
+		
+		public long base() {
+			return base;
+		}
+		
+		public long power() {
+			return power;
+		}
+		
+		@Override
+		public String toString() {
+			return abbreviation();
 		}
 	}
 	

@@ -16,9 +16,15 @@
 				main: {
 					placeholder: "No downloading in progress",
 					columns: {
-						source:   "Source",
-						output:   "Output file",
-						progress: "Progress"
+						title:       "Title",
+						progress:    "Progress",
+						state:       "State",
+						current:     "Current",
+						total:       "Total",
+						speed:       "Speed",
+						time_left:   "Time left",
+						destination: "Output file",
+						information: "Information"
 					}
 				}
 			},

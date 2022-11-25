@@ -57,6 +57,16 @@ public class Window<T extends Pane> extends Stage {
 		}
 	}
 	
+	/** @since 00.02.08 */
+	protected final String tr(String name, Object... args) {
+		return translation.getSingle(name, args);
+	}
+	
+	/** @since 00.02.08 */
+	protected final Translation trtr(String name) {
+		return translation.getTranslation(name);
+	}
+	
 	public Window<T> setArgs(Map<String, Object> args) {
 		this.args.clear();
 		this.args.putAll(args);
