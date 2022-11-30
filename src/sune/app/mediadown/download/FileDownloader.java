@@ -191,11 +191,8 @@ public class FileDownloader implements InternalDownloader {
 		if(size > 0L) {
 			rangeOutput = checkRange(rangeOutput, size);
 			tracker.updateTotal(size);
-		} else if(isValidRange(rangeOutput)) {
-			rangeOutput = newRange(rangeOutput.from(), -1L);
-			tracker.updateTotal(-1L);
 		} else {
-			rangeOutput = RANGE_UNSET;
+			rangeOutput = newRange(rangeOutput.from(), -1L);
 			tracker.updateTotal(-1L);
 		}
 		
