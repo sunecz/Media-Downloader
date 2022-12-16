@@ -31,7 +31,7 @@ public final class Web {
 	private static final Charset CHARSET      = Shared.CHARSET;
 	private static final String  ENCODING     = CHARSET.name();
 	private static final int     TIMEOUT      = 5000;
-	private static final int     READ_TIMEOUT = 5000;
+	private static final int     READ_TIMEOUT = 20000;
 	
 	private static final char   CHAR_COOKIES_DELIMITER    = ';';
 	private static final char   CHAR_COOKIES_NV_DELIMITER = '=';
