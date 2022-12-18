@@ -126,10 +126,6 @@ import sune.util.ssdf2.SSDObject;
 
 public final class MediaDownloader {
 	
-	private static final boolean DEBUG = false;
-	private static final boolean GENERATE_LISTS = false;
-	private static final boolean DO_UPDATE = true;
-	
 	public static final String  TITLE   = "Media Downloader";
 	public static final Version VERSION = Version.of("00.02.08-dev.1");
 	public static final String  DATE    = "2022-11-25";
@@ -324,7 +320,7 @@ public final class MediaDownloader {
 						NIO.deleteDir(newJREPath());
 						// Update the JRE version so that we know which version is present
 						Versions.Common.jre().set(Version.of(jreVersion));
-					} else if(DO_UPDATE) {
+					} else if(AppArguments.isUpdateEnabled()) {
 						VersionEntryAccessor version = Versions.Common.jre();
 						Version verLocal = version.get();
 						Version verRemote = Version.of(jreVersion);
@@ -415,7 +411,7 @@ public final class MediaDownloader {
 			
 			@Override
 			public InitializationState run(Arguments args) {
-				if(GENERATE_LISTS) {
+				if(AppArguments.isGenerateListsEnabled()) {
 					try {
 						generateList();
 						generateResourcesList("original");
@@ -438,7 +434,7 @@ public final class MediaDownloader {
 			
 			@Override
 			public InitializationState run(Arguments args) {
-				if(DO_UPDATE) {
+				if(AppArguments.isUpdateEnabled()) {
 					final Path rootDir = Path.of(PathSystem.getCurrentDirectory());
 					final Property<Double> progressValue = new Property<>(0.0);
 					FileDownloader downloader = new FileDownloader(new TrackerManager());
@@ -584,7 +580,7 @@ public final class MediaDownloader {
 			
 			@Override
 			public InitializationState run(Arguments args) {
-				if(DEBUG) {
+				if(AppArguments.isDebugEnabled()) {
 					disposeExternalResources();
 				}
 				return new InitializeInternalResources();
@@ -650,7 +646,7 @@ public final class MediaDownloader {
 			
 			@Override
 			public InitializationState run(Arguments args) {
-				if(DO_UPDATE) {
+				if(AppArguments.isUpdateEnabled()) {
 					if(args.has("is-jar-update") || Update.canAutoUpdate()) {
 						Update.update(args);
 					}
@@ -768,6 +764,19 @@ public final class MediaDownloader {
 					saveAllConfigurations();
 				}
 				
+				return new MaybeExitEarly();
+			}
+		}
+		
+		/** @since 00.02.08 */
+		private static final class MaybeExitEarly implements InitializationState {
+			
+			@Override
+			public InitializationState run(Arguments args) {
+				if(AppArguments.isOnlyInitializationEnabled()) {
+					System.exit(0);
+				}
+				
 				return new MaybeRunStandalonePlugin();
 			}
 		}
@@ -833,6 +842,29 @@ public final class MediaDownloader {
 	/** @since 00.02.02 */
 	public static final Arguments arguments() {
 		return arguments;
+	}
+	
+	/** @since 00.02.08 */
+	public static final class AppArguments {
+		
+		private AppArguments() {
+		}
+		
+		public static final boolean isDebugEnabled() {
+			return arguments.booleanValue("debug");
+		}
+		
+		public static final boolean isUpdateEnabled() {
+			return !arguments.booleanValue("no-update");
+		}
+		
+		public static final boolean isGenerateListsEnabled() {
+			return arguments.booleanValue("generate-lists");
+		}
+		
+		public static final boolean isOnlyInitializationEnabled() {
+			return arguments.booleanValue("only-init");
+		}
 	}
 	
 	private static final class Update {
@@ -1969,7 +2001,7 @@ public final class MediaDownloader {
 	}
 	
 	private static final void initDefaultPlugins() {
-		if(!DO_UPDATE) return;
+		if(!AppArguments.isUpdateEnabled()) return;
 		
 		try {
 			FileDownloader downloader = new FileDownloader(new TrackerManager());
@@ -2053,7 +2085,7 @@ public final class MediaDownloader {
 				.filter(Objects::nonNull)
 				.map((plugin) -> {
 					try {
-						if(DO_UPDATE) {
+						if(AppArguments.isUpdateEnabled()) {
 							// Update the plugin, if needed
 							if(configuration.isPluginsAutoUpdateCheck() || forceCheckPlugins) {
 								receiver.receive(String.format(
