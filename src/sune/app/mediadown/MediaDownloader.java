@@ -361,7 +361,7 @@ public final class MediaDownloader {
 								NIO.mergeDirectories(oldJREPath, newJREPath, (p, np) -> visitedFiles.contains(p) && !NIO.exists(np));
 								
 								// Get the current run command, so that the application can be run again
-								String runCommand = SelfProcess.command(List.of(args.args()));
+								String runCommand = SelfProcess.command(args.argsList());
 								runCommand = Base64.getEncoder().encodeToString(runCommand.getBytes(Shared.CHARSET));
 								
 								// Get Java executable in the new directory
@@ -1056,7 +1056,7 @@ public final class MediaDownloader {
 				downloader.start(request, newJar, DownloadConfiguration.ofDefault());
 				
 				// Get the current run command, so that the application can be run again
-				String runCommand = SelfProcess.command(List.of(args.args()));
+				String runCommand = SelfProcess.command(args.argsList());
 				runCommand = Base64.getEncoder().encodeToString(runCommand.getBytes(Shared.CHARSET));
 				Path exePath = SelfProcess.exePath();
 				
