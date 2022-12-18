@@ -31,6 +31,11 @@ public final class Arguments {
 		     null);
 	}
 	
+	/** @since 00.02.08 */
+	private static final boolean valueOfBoolean(String value) {
+		return value == null || Boolean.valueOf(value);
+	}
+	
 	public static final Arguments parse(String[] args) {
 		Map<String, Argument> arguments = new LinkedHashMap<>();
 		Matcher matcher; String lastName = null;
@@ -96,7 +101,7 @@ public final class Arguments {
 	
 	/** @since 00.02.08 */
 	public boolean booleanValue(String name, boolean defaultValue) {
-		return value(name, Boolean::valueOf, defaultValue);
+		return value(name, Arguments::valueOfBoolean, defaultValue);
 	}
 	
 	/** @since 00.02.08 */
