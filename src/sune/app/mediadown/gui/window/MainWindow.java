@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Predicate;
@@ -66,7 +67,9 @@ import sune.app.mediadown.event.tracker.PipelineProgress;
 import sune.app.mediadown.event.tracker.PipelineStates;
 import sune.app.mediadown.event.tracker.PlainTextTracker;
 import sune.app.mediadown.event.tracker.Tracker;
+import sune.app.mediadown.event.tracker.TrackerEvent;
 import sune.app.mediadown.event.tracker.TrackerManager;
+import sune.app.mediadown.event.tracker.TrackerView;
 import sune.app.mediadown.event.tracker.TrackerVisitor;
 import sune.app.mediadown.event.tracker.WaitTracker;
 import sune.app.mediadown.gui.Dialog;
@@ -102,6 +105,7 @@ import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.Threads;
 import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Utils.SizeUnit;
+import sune.util.ssdf2.SSDObject;
 
 public final class MainWindow extends Window<BorderPane> {
 	
@@ -774,15 +778,17 @@ public final class MainWindow extends Window<BorderPane> {
 			));
 		});
 		
-		pipeline.addEventListener(PipelineEvent.ERROR, (pair) -> {
+		pipeline.getEventRegistry().addMany((o) -> {
+			Exception exception = Utils.<Pair<?, Exception>>cast(o).b;
+			
 			info.update(new PipelineInfoData.OfEndText(
 				PipelineStates.ERROR,
 				PipelineProgress.NONE,
-				pair.b.getMessage()
+				exception.getMessage()
 			));
 			
-			showError(pair.b);
-		});
+			showError(exception);
+		}, PipelineEvent.ERROR, TrackerEvent.ERROR);
 		
 		pipeline.addEventListener(PipelineEvent.UPDATE, (p) -> {
 			if(!pipeline.isRunning()) {
@@ -804,6 +810,14 @@ public final class MainWindow extends Window<BorderPane> {
 			Tracker tracker = Utils.<Pair<?, TrackerManager>>cast(o).b.tracker();
 			tracker.visit(visitor);
 		}, DownloadEvent.UPDATE, ConversionEvent.UPDATE);
+		
+		pipeline.addEventListener(TrackerEvent.UPDATE, (tracker) -> {
+			if(!pipeline.isRunning()) {
+				return;
+			}
+			
+			tracker.visit(visitor);
+		});
 		
 		return info;
 	}
@@ -1103,8 +1117,21 @@ public final class MainWindow extends Window<BorderPane> {
 	/** @since 00.02.08 */
 	private static final class StateTableCell extends TableCell<PipelineInfo, String> {
 		
+		private static Set<String> knownStates;
+		
+		private static final boolean isKnownState(String state) {
+			if(knownStates == null) {
+				knownStates = INSTANCE.trtr("states").getData().objects().stream()
+					.map(SSDObject::getName)
+					.map(String::toLowerCase)
+					.collect(Collectors.toUnmodifiableSet());
+			}
+			
+			return knownStates.contains(state.toLowerCase());
+		}
+		
 		private static final String stateText(String state) {
-			return INSTANCE.tr("states." + state);
+			return isKnownState(state) ? INSTANCE.tr("states." + state) : state;
 		}
 		
 		@Override
@@ -1124,7 +1151,7 @@ public final class MainWindow extends Window<BorderPane> {
 		}
 	}
 	
-	public static final class PipelineInfo {
+	public static final class PipelineInfo implements TrackerView {
 		
 		/** @since 00.02.08 */
 		private static final long MIN_UPDATE_DIFF_TIME = 250L * 1000000L; // 250 ms
@@ -1258,36 +1285,43 @@ public final class MainWindow extends Window<BorderPane> {
 		}
 		
 		/** @since 00.02.08 */
+		@Override
 		public void progress(double progress) {
 			progressProperty().set(progress);
 		}
 		
 		/** @since 00.02.08 */
+		@Override
 		public void state(String state) {
 			stateProperty().set(state);
 		}
 		
 		/** @since 00.02.08 */
+		@Override
 		public void current(String current) {
 			currentProperty().set(current);
 		}
 		
 		/** @since 00.02.08 */
+		@Override
 		public void total(String total) {
 			totalProperty().set(total);
 		}
 		
 		/** @since 00.02.08 */
+		@Override
 		public void speed(String speed) {
 			speedProperty().set(speed);
 		}
 		
 		/** @since 00.02.08 */
+		@Override
 		public void timeLeft(String timeLeft) {
 			timeLeftProperty().set(timeLeft);
 		}
 		
 		/** @since 00.02.08 */
+		@Override
 		public void information(String information) {
 			informationProperty().set(information);
 		}
@@ -1308,36 +1342,43 @@ public final class MainWindow extends Window<BorderPane> {
 		}
 		
 		/** @since 00.02.08 */
+		@Override
 		public double progress() {
 			return progressProperty().get();
 		}
 		
 		/** @since 00.02.08 */
+		@Override
 		public String state() {
 			return stateProperty().get();
 		}
 		
 		/** @since 00.02.08 */
+		@Override
 		public String current() {
 			return currentProperty().get();
 		}
 		
 		/** @since 00.02.08 */
+		@Override
 		public String total() {
 			return totalProperty().get();
 		}
 		
 		/** @since 00.02.08 */
+		@Override
 		public String speed() {
 			return speedProperty().get();
 		}
 		
 		/** @since 00.02.08 */
+		@Override
 		public String timeLeft() {
 			return timeLeftProperty().get();
 		}
 		
 		/** @since 00.02.08 */
+		@Override
 		public String information() {
 			return informationProperty().get();
 		}
@@ -1444,6 +1485,7 @@ public final class MainWindow extends Window<BorderPane> {
 				info.speed(null);
 				info.timeLeft(null);
 				info.information(tracker.textProgress());
+				tracker.view(info);
 			}
 		}
 		
@@ -1466,6 +1508,7 @@ public final class MainWindow extends Window<BorderPane> {
 				info.speed(Utils.OfFormat.size(tracker.speed(), SizeUnit.BYTES, 2) + "/s");
 				info.timeLeft(Utils.OfFormat.time(tracker.secondsLeft(), TimeUnit.SECONDS, false));
 				info.information(text);
+				tracker.view(info);
 			}
 		}
 		
@@ -1488,6 +1531,7 @@ public final class MainWindow extends Window<BorderPane> {
 				info.speed(null);
 				info.timeLeft(null);
 				info.information(text);
+				tracker.view(info);
 			}
 		}
 	}
