@@ -66,3 +66,5 @@ Temporary Items
 .project
 *.log
 /littleproxy-*
+/Web Data
+/Web Data-journal
