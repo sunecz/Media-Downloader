@@ -56,12 +56,12 @@ public class EventRegistry<T extends EventType> implements EventCallable<T> {
 	}
 	
 	@SuppressWarnings("unchecked")
-	public final <E extends T, V> void bind(EventBindable<E> bindable, Event<E, V> event) {
+	public final <E extends T, V> void bind(EventBindable<E> bindable, Event<? extends E, V> event) {
 		listenersOfEvent(event).forEach((listener) -> bindable.addEventListener(event, (Listener<V>) listener));
 	}
 	
 	@SafeVarargs
-	public final <E extends T> void bindAll(EventBindable<E> bindable, Event<E, ?>... events) {
-		for(Event<E, ?> event : events) bind(bindable, event);
+	public final <E extends T> void bindAll(EventBindable<E> bindable, Event<? extends E, ?>... events) {
+		for(Event<? extends E, ?> event : events) bind(bindable, event);
 	}
 }
