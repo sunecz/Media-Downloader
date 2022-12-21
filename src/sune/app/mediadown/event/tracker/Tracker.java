@@ -21,4 +21,9 @@ public interface Tracker extends EventBindable<TrackerEvent> {
 	default void visit(TrackerVisitor visitor) {
 		visitor.visit(this);
 	}
+	
+	/** @since 00.02.08 */
+	default void view(TrackerView view) {
+		// Do nothing by default
+	}
 }
