@@ -1197,6 +1197,14 @@ public final class MainWindow extends Window<BorderPane> {
 			this.pipeline.getEventRegistry().addMany((o) -> stateUpdated = true, PipelineEvent.values());
 		}
 		
+		/** @since 00.02.08 */
+		private final StringProperty newStateProperty() {
+			StringProperty property = new SimpleStringProperty();
+			stateUpdated = true;
+			property.addListener((o, ov, nv) -> stateUpdated = true);
+			return property;
+		}
+		
 		public void update(PipelineInfoData data) {
 			long now = System.nanoTime();
 			
@@ -1245,7 +1253,7 @@ public final class MainWindow extends Window<BorderPane> {
 		/** @since 00.02.08 */
 		public StringProperty stateProperty() {
 			return stateProperty == null
-						? stateProperty = new SimpleStringProperty()
+						? stateProperty = newStateProperty()
 						: stateProperty;
 		}
 		
