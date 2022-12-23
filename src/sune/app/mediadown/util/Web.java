@@ -495,6 +495,7 @@ public final class Web {
 		}
 		int rescode = con.getResponseCode();
 		InputStream cstream = isStatusOK(rescode) ? con.getInputStream() : con.getErrorStream();
+		if(cstream == null) cstream = InputStream.nullInputStream();
 		HttpCookie[] arrcook = retrieveCookies(toURI(con.getURL()));
 		String identif = getIdentifier(con);
 		Map<String, List<String>> hfields = con.getHeaderFields();
