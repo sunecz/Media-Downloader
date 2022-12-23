@@ -2021,7 +2021,7 @@ public final class Utils {
 			}
 			
 			long minutes = unit.toMinutes(time);
-			if(minutes > 0L) {
+			if(minutes > 0L || written) {
 				if(written) {
 					builder.append(' ');
 				}
