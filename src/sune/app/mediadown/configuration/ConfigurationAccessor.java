@@ -2,7 +2,6 @@ package sune.app.mediadown.configuration;
 
 import java.util.Map;
 
-import sune.app.mediadown.configuration.Configuration.ConfigurationProperty;
 import sune.util.ssdf2.SSDCollection;
 
 /** @since 00.02.04 */
@@ -18,8 +17,8 @@ public interface ConfigurationAccessor {
 	float floatValue(String name);
 	String stringValue(String name);
 	<T> T typeValue(String name);
-	Map<String, ConfigurationProperty<?>> arrayValue(String name);
-	Map<String, ConfigurationProperty<?>> objectValue(String name);
+	Map<String, Object> arrayValue(String name);
+	Map<String, Object> objectValue(String name);
 	Object nullValue(String name);
 	SSDCollection data();
 }

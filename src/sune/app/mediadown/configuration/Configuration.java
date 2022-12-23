@@ -149,13 +149,13 @@ public class Configuration implements ConfigurationAccessor {
 	
 	/** @since 00.02.04 */
 	@Override
-	public final Map<String, ConfigurationProperty<?>> arrayValue(String name) {
+	public final Map<String, Object> arrayValue(String name) {
 		return getPropertyValue(getPropertyAndCheck(name, ConfigurationPropertyType.ARRAY), null);
 	}
 	
 	/** @since 00.02.04 */
 	@Override
-	public final Map<String, ConfigurationProperty<?>> objectValue(String name) {
+	public final Map<String, Object> objectValue(String name) {
 		return getPropertyValue(getPropertyAndCheck(name, ConfigurationPropertyType.OBJECT), null);
 	}
 	
@@ -1474,12 +1474,12 @@ public class Configuration implements ConfigurationAccessor {
 			}
 
 			@Override
-			public final Map<String, ConfigurationProperty<?>> arrayValue(String name) {
+			public final Map<String, Object> arrayValue(String name) {
 				return getPropertyValue(getPropertyAndCheck(name, ConfigurationPropertyType.ARRAY), null);
 			}
 
 			@Override
-			public final Map<String, ConfigurationProperty<?>> objectValue(String name) {
+			public final Map<String, Object> objectValue(String name) {
 				return getPropertyValue(getPropertyAndCheck(name, ConfigurationPropertyType.OBJECT), null);
 			}
 

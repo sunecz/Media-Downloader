@@ -22,7 +22,7 @@ public class PluginConfiguration extends Configuration {
 		return EMPTY;
 	}
 	
-	public static final class Builder extends Configuration.Builder {
+	public static class Builder extends Configuration.Builder {
 		
 		public Builder(String name) {
 			super(name);
