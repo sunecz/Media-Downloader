@@ -56,6 +56,7 @@ import sune.app.mediadown.gui.form.field.SelectLanguageField;
 import sune.app.mediadown.gui.form.field.SelectMediaTitleFormatField;
 import sune.app.mediadown.gui.form.field.SelectThemeField;
 import sune.app.mediadown.gui.form.field.TextField;
+import sune.app.mediadown.gui.form.field.TextFieldMediaTitleFormat;
 import sune.app.mediadown.gui.form.field.TranslatableSelectField;
 import sune.app.mediadown.gui.form.field.TranslatableSelectField.ValueTransformer;
 import sune.app.mediadown.language.Language;
@@ -108,6 +109,10 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 			))
 		));
 		registerFormField(isOfTypeClass(NamedMediaTitleFormat.class, SelectMediaTitleFormatField::new));
+		registerFormField(isOfName(
+			ApplicationConfigurationAccessor.PROPERTY_NAMING_CUSTOM_MEDIA_TITLE_FORMAT,
+			TextFieldMediaTitleFormat::new
+		));
 	}
 	
 	private final TabPane tabPane;
@@ -228,6 +233,11 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 	public static final <T extends Enum<?>> FormFieldSupplierFactory isOfEnumClass(Class<T> targetEnumClass,
 			Supplier<T[]> valuesSupplier, ValueTransformer<T> transformer) {
 		return isOfTypeClass(targetEnumClass, enumFormFieldSupplier(targetEnumClass, valuesSupplier, transformer));
+	}
+	
+	/** @since 00.02.08 */
+	public static final FormFieldSupplierFactory isOfName(String fieldName, FormFieldSupplier supplier) {
+		return ((name, fieldProperty) -> name.equals(fieldName) ? supplier : null);
 	}
 	
 	/** @since 00.02.07 */
