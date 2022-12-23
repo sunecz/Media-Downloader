@@ -468,19 +468,6 @@ public final class Utils {
 					 .replace(',', '.');
 	}
 	
-	private static final String[] SIZE_TYPE = { "B", "kB", "MB", "GB" };
-	public  static final String formatSize(double bytes, int decimals) {
-		int    type = 0;
-		double size = bytes;
-		while((bytes /= 1024.0) >= 1.0) {
-			size = bytes;
-			if((++type == SIZE_TYPE.length - 1
-					&& size >= 1024.0))
-				break;
-		}
-		return num2string(size, decimals) + SIZE_TYPE[type];
-	}
-	
 	// ---------------- [BEGIN] Base64 Decode
 	
 	private static Decoder DECODER_BASE64;
