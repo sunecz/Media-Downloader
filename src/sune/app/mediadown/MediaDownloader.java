@@ -764,6 +764,10 @@ public final class MediaDownloader {
 					saveAllConfigurations();
 				}
 				
+				ApplicationConfiguration configuration = configuration();
+				Web.setDefaultConnectTimeout(configuration.requestConnectTimeout());
+				Web.setDefaultReadTimeout(configuration.requestReadTimeout());
+				
 				return new MaybeExitEarly();
 			}
 		}
@@ -2424,7 +2428,10 @@ public final class MediaDownloader {
 		@Override public int parallelDownloads() { return accessor().parallelDownloads(); }
 		@Override public int parallelConversions() { return accessor().parallelConversions(); }
 		@Override public boolean computeStreamSize() { return accessor().computeStreamSize(); }
-		@Override public int requestTimeout() { return accessor().requestTimeout(); }
+		/** @since 00.02.08 */
+		@Override public int requestConnectTimeout() { return accessor().requestConnectTimeout(); }
+		/** @since 00.02.08 */
+		@Override public int requestReadTimeout() { return accessor().requestReadTimeout(); }
 		@Override public boolean isCheckResourcesIntegrity() { return accessor().isCheckResourcesIntegrity(); }
 		@Override public boolean isPluginsAutoUpdateCheck() { return accessor().isPluginsAutoUpdateCheck(); }
 		/** @since 00.02.05 */

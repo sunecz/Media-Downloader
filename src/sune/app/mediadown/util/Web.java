@@ -27,11 +27,9 @@ import sune.app.mediadown.Shared;
 
 public final class Web {
 	
-	private static final String  USER_AGENT   = Shared.USER_AGENT;
-	private static final Charset CHARSET      = Shared.CHARSET;
-	private static final String  ENCODING     = CHARSET.name();
-	private static final int     TIMEOUT      = 5000;
-	private static final int     READ_TIMEOUT = 20000;
+	private static final String  USER_AGENT = Shared.USER_AGENT;
+	private static final Charset CHARSET    = Shared.CHARSET;
+	private static final String  ENCODING   = CHARSET.name();
 	
 	private static final char   CHAR_COOKIES_DELIMITER    = ';';
 	private static final char   CHAR_COOKIES_NV_DELIMITER = '=';
@@ -43,6 +41,12 @@ public final class Web {
 	private static final char   CHAR_QUOTES_DOUBLE        = '\"';
 	private static final char   CHAR_HEADER_IT_DELIMITER  = ';';
 	private static final char   CHAR_HEADER_NV_DELIMITER  = '=';
+	
+	public static final int DEFAULT_CONNECT_TIMEOUT = 5000;
+	public static final int DEFAULT_READ_TIMEOUT    = 20000;
+	
+	private static int defaultConnectTimeout = DEFAULT_CONNECT_TIMEOUT;
+	private static int defaultReadTimeout    = DEFAULT_READ_TIMEOUT;
 	
 	// Forbid anyone to create an instance of this class
 	private Web() {
@@ -219,14 +223,15 @@ public final class Web {
 		
 		public GetRequest(URL url, String userAgent, HttpCookie[] cookies, Map<String, String> headers,
 		                  boolean followRedirects, String identifier, long rangeStart, long rangeEnd) {
-			this(url, userAgent, cookies, headers, followRedirects, identifier, rangeStart, rangeEnd, TIMEOUT);
+			this(url, userAgent, cookies, headers, followRedirects, identifier, rangeStart, rangeEnd,
+			     defaultConnectTimeout);
 		}
 		
 		public GetRequest(URL url, String userAgent, HttpCookie[] cookies, Map<String, String> headers,
 		                  boolean followRedirects, String identifier, long rangeStart, long rangeEnd,
 		                  int timeout) {
 			this(url, userAgent, cookies, headers, followRedirects, identifier, rangeStart, rangeEnd, timeout,
-			     READ_TIMEOUT);
+			     defaultReadTimeout);
 		}
 		
 		public GetRequest(URL url, String userAgent, HttpCookie[] cookies, Map<String, String> headers,
@@ -286,21 +291,22 @@ public final class Web {
 		public PostRequest(URL url, String userAgent, Map<String, String> params, HttpCookie[] cookies,
 		                   Map<String, String> headers, boolean followRedirects, String identifier,
 		                   long rangeStart, long rangeEnd) {
-			this(url, userAgent, params, cookies, headers, followRedirects, identifier, rangeStart, rangeEnd, TIMEOUT);
+			this(url, userAgent, params, cookies, headers, followRedirects, identifier, rangeStart, rangeEnd,
+			     defaultConnectTimeout);
 		}
 		
 		public PostRequest(URL url, String userAgent, Map<String, String> params, HttpCookie[] cookies,
 		                   Map<String, String> headers, boolean followRedirects, String identifier,
 		                   long rangeStart, long rangeEnd, int timeout) {
 			this(url, userAgent, params, cookies, headers, followRedirects, identifier, rangeStart, rangeEnd, timeout,
-			     READ_TIMEOUT);
+			     defaultReadTimeout);
 		}
 		
 		public PostRequest(URL url, String userAgent, Map<String, String> params, HttpCookie[] cookies,
 				           Map<String, String> headers, boolean followRedirects, String identifier,
 				           long rangeStart, long rangeEnd, int timeout, String body) {
 			this(url, userAgent, params, cookies, headers, followRedirects, identifier, rangeStart, rangeEnd,
-			     timeout, body, READ_TIMEOUT);
+			     timeout, body, defaultReadTimeout);
 	    }
 		
 		public PostRequest(URL url, String userAgent, Map<String, String> params, HttpCookie[] cookies,
@@ -365,12 +371,12 @@ public final class Web {
 		
 		public HeadRequest(URL url, String userAgent, HttpCookie[] cookies, Map<String, String> headers,
 		                   boolean followRedirects) {
-			this(url, userAgent, cookies, headers, followRedirects, TIMEOUT);
+			this(url, userAgent, cookies, headers, followRedirects, defaultConnectTimeout);
 		}
 		
 		public HeadRequest(URL url, String userAgent, HttpCookie[] cookies, Map<String, String> headers,
 		                   boolean followRedirects, int timeout) {
-			this(url, userAgent, cookies, headers, followRedirects, timeout, READ_TIMEOUT);
+			this(url, userAgent, cookies, headers, followRedirects, timeout, defaultReadTimeout);
 		}
 		
 		public HeadRequest(URL url, String userAgent, HttpCookie[] cookies, Map<String, String> headers,
@@ -437,6 +443,25 @@ public final class Web {
 		public void close() throws Exception {
 			closeConnection(connection);
 		}
+	}
+	
+	/** @since 00.02.08 */
+	private static final int checkTimeout(int timeout) {
+		if(timeout < 0) {
+			throw new IllegalArgumentException("Invalid timeout, must be >= 0");
+		}
+		
+		return timeout;
+	}
+	
+	/** @since 00.02.08 */
+	public static final void setDefaultConnectTimeout(int timeout) {
+		defaultConnectTimeout = checkTimeout(timeout);
+	}
+	
+	/** @since 00.02.08 */
+	public static final void setDefaultReadTimeout(int timeout) {
+		defaultReadTimeout = checkTimeout(timeout);
 	}
 	
 	public static final StringResponse request(Request request) throws Exception {

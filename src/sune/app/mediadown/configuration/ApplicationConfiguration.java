@@ -22,6 +22,7 @@ import sune.app.mediadown.update.Version;
 import sune.app.mediadown.update.VersionType;
 import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.Utils;
+import sune.app.mediadown.util.Web;
 import sune.util.ssdf2.SSDCollection;
 
 /** @since 00.02.04 */
@@ -39,7 +40,10 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 	private int parallelDownloads;
 	private int parallelConversions;
 	private boolean computeStreamSize;
-	private int requestTimeout;
+	/** @since 00.02.08 */
+	private int requestConnectTimeout;
+	/** @since 00.02.08 */
+	private int requestReadTimeout;
 	private boolean checkResourcesIntegrity;
 	private boolean plugins_autoUpdateCheck;
 	/** @since 00.02.05 */
@@ -114,7 +118,12 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 		builder.addProperty(ConfigurationProperty.ofInteger(PROPERTY_ACCELERATED_DOWNLOAD).inGroup(GROUP_DOWNLOAD).withDefaultValue(4));
 		builder.addProperty(ConfigurationProperty.ofInteger(PROPERTY_PARALLEL_DOWNLOADS).inGroup(GROUP_DOWNLOAD).withDefaultValue(3));
 		builder.addProperty(ConfigurationProperty.ofBoolean(PROPERTY_COMPUTE_STREAM_SIZE).inGroup(GROUP_DOWNLOAD).withDefaultValue(true));
-		builder.addProperty(ConfigurationProperty.ofInteger(PROPERTY_REQUEST_TIMEOUT).inGroup(GROUP_DOWNLOAD).withDefaultValue(5000));
+		builder.addProperty(ConfigurationProperty.ofInteger(PROPERTY_REQUEST_CONNECT_TIMEOUT)
+			.inGroup(GROUP_DOWNLOAD)
+			.withDefaultValue(Web.DEFAULT_CONNECT_TIMEOUT));
+		builder.addProperty(ConfigurationProperty.ofInteger(PROPERTY_REQUEST_READ_TIMEOUT)
+			.inGroup(GROUP_DOWNLOAD)
+			.withDefaultValue(Web.DEFAULT_READ_TIMEOUT));
 		
 		// ----- Conversion
 		builder.addProperty(ConfigurationProperty.ofInteger(PROPERTY_PARALLEL_CONVERSIONS).inGroup(GROUP_CONVERSION).withDefaultValue(1));
@@ -165,7 +174,8 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 		parallelDownloads = intValue(PROPERTY_PARALLEL_DOWNLOADS);
 		parallelConversions = intValue(PROPERTY_PARALLEL_CONVERSIONS);
 		computeStreamSize = booleanValue(PROPERTY_COMPUTE_STREAM_SIZE);
-		requestTimeout = intValue(PROPERTY_REQUEST_TIMEOUT);
+		requestConnectTimeout = intValue(PROPERTY_REQUEST_CONNECT_TIMEOUT);
+		requestReadTimeout = intValue(PROPERTY_REQUEST_READ_TIMEOUT);
 		checkResourcesIntegrity = booleanValue(PROPERTY_CHECK_RESOURCES_INTEGRITY);
 		plugins_autoUpdateCheck = booleanValue(PROPERTY_PLUGINS_AUTO_UPDATE_CHECK);
 		language = Optional.ofNullable(ResourceRegistry.language(stringValue(PROPERTY_LANGUAGE)))
@@ -252,9 +262,16 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 		return computeStreamSize;
 	}
 	
+	/** @since 00.02.08 */
 	@Override
-	public int requestTimeout() {
-		return requestTimeout;
+	public int requestConnectTimeout() {
+		return requestConnectTimeout;
+	}
+	
+	/** @since 00.02.08 */
+	@Override
+	public int requestReadTimeout() {
+		return requestReadTimeout;
 	}
 	
 	@Override
@@ -367,9 +384,16 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 			return accessor().booleanValue(PROPERTY_COMPUTE_STREAM_SIZE);
 		}
 		
+		/** @since 00.02.08 */
 		@Override
-		public int requestTimeout() {
-			return accessor().intValue(PROPERTY_REQUEST_TIMEOUT);
+		public int requestConnectTimeout() {
+			return accessor().intValue(PROPERTY_REQUEST_CONNECT_TIMEOUT);
+		}
+		
+		/** @since 00.02.08 */
+		@Override
+		public int requestReadTimeout() {
+			return accessor().intValue(PROPERTY_REQUEST_READ_TIMEOUT);
 		}
 		
 		@Override

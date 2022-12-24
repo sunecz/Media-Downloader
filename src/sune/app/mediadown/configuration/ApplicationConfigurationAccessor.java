@@ -39,7 +39,10 @@ public interface ApplicationConfigurationAccessor {
 	public static final String PROPERTY_PARALLEL_DOWNLOADS = "parallelDownloads";
 	public static final String PROPERTY_PARALLEL_CONVERSIONS = "parallelConversions";
 	public static final String PROPERTY_COMPUTE_STREAM_SIZE = "computeStreamSize";
-	public static final String PROPERTY_REQUEST_TIMEOUT = "requestTimeout";
+	/** @since 00.02.08 */
+	public static final String PROPERTY_REQUEST_CONNECT_TIMEOUT = "requestConnectTimeout";
+	/** @since 00.02.08 */
+	public static final String PROPERTY_REQUEST_READ_TIMEOUT = "requestReadTimeout";
 	public static final String PROPERTY_CHECK_RESOURCES_INTEGRITY = "checkResourcesIntegrity";
 	public static final String PROPERTY_PLUGINS_AUTO_UPDATE_CHECK = "plugins.autoUpdateCheck";
 	/** @since 00.02.05 */
@@ -65,7 +68,10 @@ public interface ApplicationConfigurationAccessor {
 	int parallelDownloads();
 	int parallelConversions();
 	boolean computeStreamSize();
-	int requestTimeout();
+	/** @since 00.02.08 */
+	int requestConnectTimeout();
+	/** @since 00.02.08 */
+	int requestReadTimeout();
 	boolean isCheckResourcesIntegrity();
 	boolean isPluginsAutoUpdateCheck();
 	/** @since 00.02.05 */
