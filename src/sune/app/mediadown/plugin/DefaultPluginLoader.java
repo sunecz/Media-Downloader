@@ -195,7 +195,7 @@ final class DefaultPluginLoader implements PluginLoader {
 			
 			// Create a resolver that for a class path gets all its inner classes' paths
 			CheckedFunction<String, List<String>> resolverInnerClasses = ((classPath) -> {
-				String classPathNoType = classPath.replaceAll(".class$", "");
+				String classPathNoType = classPath.replaceAll("\\.class$", "");
 				return innerClasses.stream()
 							.filter((name) -> name.startsWith(classPathNoType))
 							.collect(Collectors.toList());

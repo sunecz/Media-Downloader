@@ -136,34 +136,39 @@ public final class RootClassLoader {
 	 * @return The class object of a class file located at the given
 	 * {@code path}.*/
 	private final Class<?> loadClass(String path) throws Exception {
-		if(!isClassFile(path)) return null; // Do not load non-class files
 		Class<?> clazz = null;
+		
+		if(!isClassFile(path)) {
+			return clazz; // Do not load non-class files
+		}
+		
 		Set<String> loaded = new HashSet<>();
 		Set<String> queued = new HashSet<>();
 		Deque<Entry<String, String>> stack = new ArrayDeque<>();
 		pushToStack(stack, queued, path);
+		
 		Entry<String, String> entry;
 		String name;
 		byte[] bytes;
 		do {
-			entry = stack.peek();
-			path  = entry.getKey();
-			name  = entry.getValue();
-			bytes = bytes(path);
-			// Push all class dependecies to the stack
-			for(String depName : dependencies(bytes)) {
-				if(loaded.contains(depName)
-						|| (classLoaded(loader, depName) && loaded.add(depName)))
-					continue; // Skip already loaded classes
-				pushToStack(stack, queued, classNameToPath(depName));
-			}
 			// Dependencies will move the original class down the stack
-			if(stack.peek() != entry) {
+			do {
 				entry = stack.peek();
 				path  = entry.getKey();
 				name  = entry.getValue();
 				bytes = bytes(path);
-			}
+				
+				// Push all class dependecies to the stack
+				for(String depName : dependencies(bytes)) {
+					if(loaded.contains(depName)
+							|| (classLoaded(loader, depName) && loaded.add(depName))) {
+						continue; // Skip already loaded classes
+					}
+					
+					pushToStack(stack, queued, classNameToPath(depName));
+				}
+			} while(stack.peek() != entry);
+			
 			try {
 				clazz = defineClass(loader, name, bytes);
 				// Remember that we already loaded this class
@@ -173,7 +178,7 @@ public final class RootClassLoader {
 			} catch(InvocationTargetException
 						| IllegalArgumentException
 						| IllegalAccessException ex) {
-				if((ex.getCause() instanceof NoClassDefFoundError)) {
+				if(ex.getCause() instanceof NoClassDefFoundError) {
 					// The class needs another class to be defined
 					String classPath = classNameToPath(ex.getCause().getMessage());
 					pushToStack(stack, queued, classPath);
@@ -184,6 +189,7 @@ public final class RootClassLoader {
 		}
 		// Repeat till there are some class need defining
 		while(!stack.isEmpty());
+		
 		// Return the requested class
 		return clazz;
 	}
