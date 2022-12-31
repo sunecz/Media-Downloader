@@ -140,7 +140,7 @@
 	
 	<target name="dist-single" depends="build">
 		<echo message="Building distribution archive for '${arg.os}'..." />
-		<exec executable="/bin/sh">
+		<exec executable="/bin/bash">
 			<arg value="${path.scripts}/dist.sh" />
 			<arg value="${arg.os}" />
 		</exec>
