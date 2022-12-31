@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Included files:
 #     - etc/jre/jre/$OS/*
