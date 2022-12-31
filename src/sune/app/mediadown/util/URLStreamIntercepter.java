@@ -23,6 +23,8 @@ import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSocketFactory;
 
+import sune.app.mediadown.util.Utils.Ignore;
+
 public final class URLStreamIntercepter {
 	
 	private static URLStreamHandler defaultHandlerHTTPS;
@@ -197,7 +199,7 @@ public final class URLStreamIntercepter {
 	}
 	
 	private static final URLStreamHandler getURLStreamHandler(String protocol) {
-		return Utils.ignore(() -> (URLStreamHandler) Reflection3.invokeStatic(URL.class, "getURLStreamHandler",
+		return Ignore.call(() -> (URLStreamHandler) Reflection3.invokeStatic(URL.class, "getURLStreamHandler",
 			Utils.<Class<?>>array(String.class), protocol));
 	}
 	

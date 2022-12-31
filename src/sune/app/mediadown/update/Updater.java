@@ -19,6 +19,7 @@ import sune.app.mediadown.util.BiCallback;
 import sune.app.mediadown.util.CheckedBiFunction;
 import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.Utils;
+import sune.app.mediadown.util.Utils.Ignore;
 import sune.app.mediadown.util.Web.GetRequest;
 
 public abstract class Updater implements EventBindable<CheckEvent> {
@@ -38,7 +39,7 @@ public abstract class Updater implements EventBindable<CheckEvent> {
 	}
 	
 	private static final String content(String url, int timeout) {
-		return Utils.ignore(() -> Utils.streamToString(Utils.urlStream(url, timeout)), (String) null); // Forward call
+		return Ignore.defaultValue(() -> Utils.streamToString(Utils.urlStream(url, timeout)), (String) null); // Forward call
 	}
 	
 	private static final String urlConcat(String... strings) {

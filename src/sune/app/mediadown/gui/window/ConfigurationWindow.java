@@ -73,6 +73,7 @@ import sune.app.mediadown.util.HorizontalLeftTabPaneSkin;
 import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.Password;
 import sune.app.mediadown.util.Utils;
+import sune.app.mediadown.util.Utils.Ignore;
 import sune.util.ssdf2.SSDObject;
 import sune.util.ssdf2.SSDType;
 
@@ -125,7 +126,7 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 		tabPane = new TabPane();
 		tabPane.setTabClosingPolicy(TabClosingPolicy.UNAVAILABLE);
 		tabPane.setSide(Side.LEFT);
-		Utils.ignore(() -> tabPane.setSkin(new HorizontalLeftTabPaneSkin(tabPane)));
+		Ignore.callVoid(() -> tabPane.setSkin(new HorizontalLeftTabPaneSkin(tabPane)));
 		content.setCenter(tabPane);
 		btnSave = new Button(translation.getSingle("buttons.save"));
 		btnClose = new Button(translation.getSingle("buttons.close"));
@@ -389,7 +390,7 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 	private final void actionSave() {
 		Path dir = NIO.localPath("resources/config");
 		if(!NIO.exists(dir)
-				&& !Utils.ignoreWithCheck(() -> NIO.createDir(dir), MediaDownloader::error)) {
+				&& !Ignore.callAndCheck(() -> NIO.createDir(dir), MediaDownloader::error)) {
 			return; // Return, if error
 		}
 		
@@ -461,8 +462,8 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 						Version targetVersion = versionPreviousRelease;
 						Arguments args = MediaDownloader.arguments();
 						StringReceiver receiver = ((s) -> { /* Do nothing */ });
-						Utils.ignore(() -> JarUpdater.doUpdateProcess(targetVersion, false, args, receiver),
-						             MediaDownloader::error);
+						Ignore.callVoid(() -> JarUpdater.doUpdateProcess(targetVersion, false, args, receiver),
+						                MediaDownloader::error);
 					}
 				}
 			}

@@ -24,6 +24,7 @@ import sune.app.mediadown.util.MimeType;
 import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.UncheckedException;
 import sune.app.mediadown.util.Utils;
+import sune.app.mediadown.util.Utils.Ignore;
 import sune.util.ssdf2.SSDCollection;
 import sune.util.ssdf2.SSDF;
 
@@ -138,10 +139,9 @@ public final class ExternalResources {
 	private static final class FileFixer {
 		
 		private static final String languageCodeFromName(String name) {
-			return Utils.ignore(() -> Stream.of(Locale.getAvailableLocales())
-			                                .filter((locale) -> locale.getDisplayLanguage(Locale.ENGLISH).equalsIgnoreCase(name))
-			                                .findFirst().get().getISO3Language().toLowerCase(),
-			                    (String) null);
+			return Ignore.defaultValue(() -> Stream.of(Locale.getAvailableLocales())
+			.filter((locale) -> locale.getDisplayLanguage(Locale.ENGLISH).equalsIgnoreCase(name))
+			.findFirst().get().getISO3Language().toLowerCase(), (String) null);
 		}
 		
 		private static final CheckedConsumer<Path> reversableAction(CheckedConsumer<Path> action) {

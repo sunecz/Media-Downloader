@@ -20,7 +20,7 @@ import sune.app.mediadown.util.CheckedFunction;
 import sune.app.mediadown.util.CounterLock;
 import sune.app.mediadown.util.FXUtils;
 import sune.app.mediadown.util.SyncObject;
-import sune.app.mediadown.util.Utils;
+import sune.app.mediadown.util.Utils.Ignore;
 import sune.app.mediadown.util.WorkerProxy;
 import sune.app.mediadown.util.WorkerUpdatableTask;
 
@@ -119,7 +119,7 @@ public abstract class ProgressPipelineTaskBase<T, R extends PipelineResult<?>, W
 			
 			@Override
 			public void cancel() {
-				Utils.ignore(ProgressPipelineTaskBase.this::stop);
+				Ignore.callVoid(ProgressPipelineTaskBase.this::stop);
 			}
 		});
 		lockResult.await();

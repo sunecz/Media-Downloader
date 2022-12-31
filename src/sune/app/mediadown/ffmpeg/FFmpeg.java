@@ -30,7 +30,7 @@ import sune.app.mediadown.util.Metadata;
 import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.OSUtils;
 import sune.app.mediadown.util.Pair;
-import sune.app.mediadown.util.Utils;
+import sune.app.mediadown.util.Utils.Ignore;
 
 /** @since 00.02.08 */
 public final class FFmpeg {
@@ -94,7 +94,7 @@ public final class FFmpeg {
 		static {
 			Stream.of(Formats.class.getFields())
 				.filter((f) -> ConversionFormat.class.isAssignableFrom(f.getType()))
-				.map((f) -> Utils.ignore(() -> (ConversionFormat) f.get(null)))
+				.map((f) -> Ignore.call(() -> (ConversionFormat) f.get(null)))
 				.filter(Objects::nonNull)
 				.forEach((v) -> formats.put(v.format().name(), v));
 		}

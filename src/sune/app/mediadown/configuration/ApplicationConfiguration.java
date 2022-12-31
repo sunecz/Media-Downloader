@@ -21,7 +21,7 @@ import sune.app.mediadown.theme.Theme;
 import sune.app.mediadown.update.Version;
 import sune.app.mediadown.update.VersionType;
 import sune.app.mediadown.util.NIO;
-import sune.app.mediadown.util.Utils;
+import sune.app.mediadown.util.Utils.Ignore;
 import sune.app.mediadown.util.Web;
 import sune.util.ssdf2.SSDCollection;
 
@@ -193,12 +193,12 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 		// Initialize the custom media title format first, so we can register it before getting
 		// the actual media title format that will be used throughout the program.
 		naming_customMediaTitleFormat = Optional.ofNullable(stringValue(PROPERTY_NAMING_CUSTOM_MEDIA_TITLE_FORMAT))
-				                                .map((s) -> Utils.ignore(() -> MediaTitleFormat.of(s)) != null ? s : null)
+				                                .map((s) -> Ignore.call(() -> MediaTitleFormat.of(s)) != null ? s : null)
 				                                .orElse(null);
 		
 		// Register the custom media title format, if present
 		if(naming_customMediaTitleFormat != null && !naming_customMediaTitleFormat.isEmpty()) {
-			Utils.ignore(() -> MediaTitleFormats.register("custom", MediaTitleFormat.of(naming_customMediaTitleFormat)));
+			Ignore.callVoid(() -> MediaTitleFormats.register("custom", MediaTitleFormat.of(naming_customMediaTitleFormat)));
 		}
 		
 		naming_mediaTitleFormat = Optional.<NamedMediaTitleFormat>ofNullable(typeValue(PROPERTY_NAMING_MEDIA_TITLE_FORMAT))

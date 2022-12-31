@@ -7,6 +7,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.stream.Stream;
 
+import sune.app.mediadown.util.Utils.Ignore;
+
 public class ObjectHolder<K, V> implements Iterable<V> {
 	
 	private final Map<K, V> objects = new LinkedHashMap<>();
@@ -14,7 +16,7 @@ public class ObjectHolder<K, V> implements Iterable<V> {
 	
 	public void add(K name, Class<? extends V> clazz) {
 		if((objects.containsKey(name))) return; // Do not replace objects
-		V object = Utils.ignore(() -> instantiator.newInstance(clazz));
+		V object = Ignore.call(() -> instantiator.newInstance(clazz));
 		if((object == null))
 			Utils.throwISE("Unable to create an instance of class '%s'", clazz.getCanonicalName());
 		objects.put(name, object);

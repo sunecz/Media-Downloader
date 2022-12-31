@@ -21,6 +21,7 @@ import sune.app.mediadown.resource.InputStreamResolver;
 import sune.app.mediadown.update.Version;
 import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.Utils;
+import sune.app.mediadown.util.Utils.Ignore;
 import sune.util.ssdf2.SSDCollection;
 import sune.util.ssdf2.SSDF;
 import sune.util.ssdf2.SSDObject;
@@ -217,7 +218,7 @@ public class Theme implements Extractable {
 		}
 		
 		private static final Theme loadInternal(String name) {
-			return Utils.ignore(() -> Reader.readInternal(name, RESOLVER), (Theme) null, MediaDownloader::error);
+			return Ignore.defaultValue(() -> Reader.readInternal(name, RESOLVER), null, MediaDownloader::error);
 		}
 		
 		public static final Theme ofLight() {

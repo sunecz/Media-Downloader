@@ -25,6 +25,7 @@ import java.util.stream.Stream;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.scene.input.DataFormat;
+import sune.app.mediadown.util.Utils.Ignore;
 
 /** @since 00.02.07 */
 public final class ClipboardWatcher {
@@ -64,7 +65,7 @@ public final class ClipboardWatcher {
 	}
 	
 	private static final char[] readerToArray(Reader reader) {
-		return Utils.ignore(() -> {
+		return Ignore.supplier(() -> {
 			try(CharArrayWriter writer = new CharArrayWriter()) {
 				reader.transferTo(writer);
 				return writer.toCharArray();
@@ -79,7 +80,7 @@ public final class ClipboardWatcher {
 	// Convert between AWT's DataFlavor and JavaFX's DataFormat
 	private final DataFormat dataFormat(DataFlavor flavor, Transferable contents) {
 		if(flavor == DataFlavor.stringFlavor) {
-			String maybeURL = Utils.ignore(() -> ensureString(contents.getTransferData(flavor), charset(flavor)), "");
+			String maybeURL = Ignore.defaultValue(() -> ensureString(contents.getTransferData(flavor), charset(flavor)), "");
 			// Also check whether the string is an URL, so a better format is returned
 			return Utils.isValidURL(maybeURL) ? DataFormat.URL : DataFormat.PLAIN_TEXT;
 		}
@@ -107,12 +108,15 @@ public final class ClipboardWatcher {
 		
 		// "Value" types
 		if(clazz == String.class) return (String) data;
-		if(clazz == byte[].class) return Utils.ignore(() -> new String((byte[]) data, charset));
+		if(clazz == byte[].class)
+			return Ignore.call(() -> new String((byte[]) data, charset));
 		if(clazz == char[].class) return new String((char[]) data);
 		
 		// "Class" types
-		if(data instanceof InputStream) return Utils.ignore(() -> new String(((InputStream) data).readAllBytes(), charset));
-		if(data instanceof ByteBuffer)  return Utils.ignore(() -> new String(byteBufferToArray((ByteBuffer) data), charset));
+		if(data instanceof InputStream)
+			return Ignore.call(() -> new String(((InputStream) data).readAllBytes(), charset));
+		if(data instanceof ByteBuffer)
+			return Ignore.call(() -> new String(byteBufferToArray((ByteBuffer) data), charset));
 		if(data instanceof CharBuffer)  return new String(charBufferToArray((CharBuffer) data));
 		if(data instanceof Reader)      return new String(readerToArray((Reader) data));
 		
@@ -209,7 +213,7 @@ public final class ClipboardWatcher {
 		@Override
 		public void lostOwnership(Clipboard c, Transferable t) {
 			if(!running.get()) return;
-			Utils.ignore(() -> Thread.sleep(WAIT_MILLIS));
+			Ignore.callVoid(() -> Thread.sleep(WAIT_MILLIS));
 			Transferable contents = contents();
 			contentsChanged(c, contents);
 			takeOwnership(contents);

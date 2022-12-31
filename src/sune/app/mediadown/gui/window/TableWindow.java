@@ -40,6 +40,7 @@ import sune.app.mediadown.util.History;
 import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.SyncObject;
 import sune.app.mediadown.util.Utils;
+import sune.app.mediadown.util.Utils.Ignore;
 
 /** @since 00.01.27 */
 public final class TableWindow extends DraggableWindow<BorderPane> {
@@ -280,7 +281,7 @@ public final class TableWindow extends DraggableWindow<BorderPane> {
 	}
 	
 	private final void terminateAndClose() {
-		Utils.ignore(pipeline::stop, MediaDownloader::error);
+		Ignore.callVoid(pipeline::stop, MediaDownloader::error);
 		notifySelection();
 		if(progressWindow != null) {
 			FXUtils.thread(progressWindow::close);

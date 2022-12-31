@@ -15,6 +15,7 @@ import javafx.stage.Window;
 import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.configuration.ApplicationConfiguration;
 import sune.app.mediadown.media.MediaFormat;
+import sune.app.mediadown.util.Utils.Ignore;
 
 /** @since 00.02.05 */
 public final class Choosers {
@@ -33,8 +34,8 @@ public final class Choosers {
 	
 	private static final void updateConfigurationProperty(String name, Object value) {
 		ApplicationConfiguration configuration = MediaDownloader.configuration();
-		Utils.ignore(() -> configuration.writer().set(name, value).save(configuration.path()),
-		             MediaDownloader::error);
+		Ignore.callVoid(() -> configuration.writer().set(name, value).save(configuration.path()),
+		                MediaDownloader::error);
 	}
 	
 	private static final void updateLastDirectory(Path path) {

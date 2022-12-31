@@ -42,6 +42,7 @@ import sune.app.mediadown.util.ClipboardUtils;
 import sune.app.mediadown.util.FXUtils;
 import sune.app.mediadown.util.Threads;
 import sune.app.mediadown.util.Utils;
+import sune.app.mediadown.util.Utils.Ignore;
 
 /** @since 00.01.27 */
 public class MediaGetterWindow extends DraggableWindow<VBox> {
@@ -136,7 +137,7 @@ public class MediaGetterWindow extends DraggableWindow<VBox> {
 	
 	/** @since 00.02.07 */
 	private final void doTask(Window<?> parent, MediaGetter getter, URI uri, Consumer<Boolean> onFinish) {
-		boolean shouldClose = Utils.ignore(() -> {
+		boolean shouldClose = Ignore.defaultValue(() -> {
 			TableWindow tableWindow = MediaDownloader.window(TableWindow.NAME);
 			TablePipelineResult<?, ?> result = tableWindow.show(parent, getter, uri);
 			boolean isTerminating = result.isTerminating() && result instanceof ResolvedMediaPipelineResult;
@@ -157,7 +158,7 @@ public class MediaGetterWindow extends DraggableWindow<VBox> {
 	
 	/** @since 00.02.07 */
 	private final void doTask(Window<?> parent, List<URI> uris, Consumer<Boolean> onFinish) {
-		boolean shouldClose = Utils.ignore(() -> {
+		boolean shouldClose = Ignore.defaultValue(() -> {
 			URIListPipelineTask task = new URIListPipelineTask(parent, uris);
 			
 			Pipeline pipeline = Pipeline.create();

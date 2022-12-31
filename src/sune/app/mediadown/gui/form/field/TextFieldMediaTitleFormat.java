@@ -23,6 +23,7 @@ import sune.app.mediadown.media.MediaTitleFormats;
 import sune.app.mediadown.media.MediaTitleFormats.NamedMediaTitleFormat;
 import sune.app.mediadown.os.OS;
 import sune.app.mediadown.util.Utils;
+import sune.app.mediadown.util.Utils.Ignore;
 import sune.util.ssdf2.SSDType;
 import sune.util.ssdf2.SSDValue;
 
@@ -65,7 +66,7 @@ public class TextFieldMediaTitleFormat<T> extends FormField<T> {
 	
 	/** @since 00.02.06 */
 	private final void openHelpURI() {
-		Utils.ignore(() -> OS.current().browse(Utils.uri(URI_HELP)), MediaDownloader::error);
+		Ignore.callVoid(() -> OS.current().browse(Utils.uri(URI_HELP)), MediaDownloader::error);
 	}
 	
 	/** @since 00.02.06 */

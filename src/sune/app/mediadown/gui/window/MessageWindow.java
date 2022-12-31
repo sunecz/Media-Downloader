@@ -25,7 +25,7 @@ import sune.app.mediadown.message.MessageList;
 import sune.app.mediadown.message.MessageManager;
 import sune.app.mediadown.os.OS;
 import sune.app.mediadown.util.FXUtils;
-import sune.app.mediadown.util.Utils;
+import sune.app.mediadown.util.Utils.Ignore;
 
 /** @since 00.02.02 */
 public class MessageWindow extends DraggableWindow<StackPane> {
@@ -127,13 +127,13 @@ public class MessageWindow extends DraggableWindow<StackPane> {
 		}
 		
 		public void showInBrowser() {
-			Utils.ignore(() -> OS.current().browse(message.uri()), MediaDownloader::error);
+			Ignore.callVoid(() -> OS.current().browse(message.uri()), MediaDownloader::error);
 		}
 		
 		public void markAsRead() {
-			MessageList local = Utils.ignore(() -> MessageManager.local(), MessageManager.empty());
+			MessageList local = Ignore.defaultValue(() -> MessageManager.local(), MessageManager.empty());
 			local.add(message);
-			Utils.ignore(() -> MessageManager.updateLocal(), MediaDownloader::error);
+			Ignore.callVoid(() -> MessageManager.updateLocal(), MediaDownloader::error);
 			close();
 		}
 		

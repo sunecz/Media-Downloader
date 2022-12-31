@@ -4,6 +4,7 @@ import java.util.Objects;
 
 import sune.app.mediadown.pipeline.PipelineTaskRegistry.PipelineTaskInputData;
 import sune.app.mediadown.util.Utils;
+import sune.app.mediadown.util.Utils.Ignore;
 
 public final class MediaPipelineResult implements PipelineResult<DownloadPipelineResult> {
 	
@@ -26,8 +27,7 @@ public final class MediaPipelineResult implements PipelineResult<DownloadPipelin
 				"media", media.media(), "destination", media.destination(), "configuration", media.configuration()
 			));
 			PipelineTask<DownloadPipelineResult> task
-				= Utils.ignore(() -> PipelineTaskRegistry.instance("ProtectedMediaPipelineTask", data),
-				               (PipelineTask<DownloadPipelineResult>) null);
+				= Ignore.defaultValue(() -> PipelineTaskRegistry.instance("ProtectedMediaPipelineTask", data), (PipelineTask<DownloadPipelineResult>) null);
 			
 			// Notify, regardless of the task
 			media.submitted();

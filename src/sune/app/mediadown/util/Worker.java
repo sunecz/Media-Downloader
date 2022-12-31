@@ -11,6 +11,7 @@ import sune.app.mediadown.HasTaskState;
 import sune.app.mediadown.InternalState;
 import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.TaskStates;
+import sune.app.mediadown.util.Utils.Ignore;
 
 public final class Worker implements HasTaskState {
 	
@@ -140,7 +141,7 @@ public final class Worker implements HasTaskState {
 		lock.free();
 		
 		// Force the executor to be shutdown
-		Utils.ignore(() -> {
+		Ignore.callVoid(() -> {
 			executor.shutdownNow();
 			executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
 		});

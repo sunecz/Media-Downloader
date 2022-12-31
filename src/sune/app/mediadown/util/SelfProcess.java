@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import sune.app.mediadown.util.Utils.Ignore;
+
 /** @since 00.02.02 */
 public final class SelfProcess {
 	
@@ -64,7 +66,7 @@ public final class SelfProcess {
 	}
 	
 	public static final Path jarPath() {
-		Path path = Utils.ignore(() -> Path.of(SelfProcess.class.getProtectionDomain().getCodeSource().getLocation().toURI()));
+		Path path = Ignore.call(() -> Path.of(SelfProcess.class.getProtectionDomain().getCodeSource().getLocation().toURI()));
 		// Special case for running from a build directory
 		if(path != null && !path.getFileName().toString().endsWith(".jar")) {
 			path = path.getParent().resolve("jar/media-downloader.jar");

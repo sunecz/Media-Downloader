@@ -392,7 +392,7 @@ public final class Utils {
 	
 	/** @since 00.02.00 */
 	public static final boolean isValidURL(String url) {
-		return url != null && !url.isEmpty() && ignore(() -> { return new URL(url).toURI(); }, (URI) null) != null;
+		return url != null && !url.isEmpty() && Ignore.defaultValue(() -> { return new URL(url).toURI(); }, (URI) null) != null;
 	}
 	
 	public static final <T> int indexOf(T needle, T[] haystack) {
@@ -1282,150 +1282,6 @@ public final class Utils {
 		return runnable::run;
 	}
 	
-	public static final <T> Consumer<T> suppressException(CheckedConsumer<T> consumer) {
-		return suppressException(consumer, null);
-	}
-	
-	public static final <T> Consumer<T> suppressException(CheckedConsumer<T> consumer,
-			Consumer<Exception> exceptionHandler) {
-		return ((t) -> {
-			try {
-				consumer.accept(t);
-			} catch(Exception ex) {
-				if((exceptionHandler != null))
-					exceptionHandler.accept(ex);
-			}
-		});
-	}
-	
-	public static final <T> Runnable suppressException(CheckedRunnable runnable) {
-		return suppressException(runnable, (Consumer<Exception>) null);
-	}
-	
-	public static final <T> Runnable suppressException(CheckedRunnable runnable,
-			Consumer<Exception> exceptionHandler) {
-		return suppressException(runnable,
-								 exceptionHandler != null
-									? ((ex) -> { exceptionHandler.accept(ex); return null; })
-									: null);
-	}
-	
-	/** @since 00.02.05 */
-	public static final <T> Runnable suppressException(CheckedRunnable runnable,
-			Function<Exception, RuntimeException> exceptionMapper) {
-		return (() -> {
-			try {
-				runnable.run();
-			} catch(Exception ex) {
-				if(exceptionMapper != null) {
-					RuntimeException rex = exceptionMapper.apply(ex);
-					if(rex != null) throw rex;
-				}
-			}
-		});
-	}
-	
-	public static final <T> void ignore(CheckedRunnable runnable) {
-		ignore(runnable, (Consumer<Exception>) null);
-	}
-	
-	public static final <T> void ignore(CheckedRunnable runnable, Consumer<Exception> exceptionHandler) {
-		ignore(runnable,
-			   exceptionHandler != null
-					? ((ex) -> { exceptionHandler.accept(ex); return null; })
-					: null);
-	}
-	
-	/** @since 00.02.05 */
-	public static final <T> void ignore(CheckedRunnable runnable,
-			Function<Exception, RuntimeException> exceptionMapper) {
-		suppressException(runnable, exceptionMapper).run();
-	}
-	
-	/** @since 00.02.04 */
-	public static final <T> Supplier<Boolean> suppressExceptionWithCheck(CheckedRunnable runnable,
-			Consumer<Exception> exceptionHandler) {
-		return suppressExceptionWithCheck(runnable,
-										  exceptionHandler != null
-												? ((ex) -> { exceptionHandler.accept(ex); return null; })
-												: null);
-	}
-	
-	/** @since 00.02.05 */
-	public static final <T> Supplier<Boolean> suppressExceptionWithCheck(CheckedRunnable runnable,
-			Function<Exception, RuntimeException> exceptionMapper) {
-		return (() -> {
-			try {
-				runnable.run();
-				return true;
-			} catch(Exception ex) {
-				if(exceptionMapper != null) {
-					RuntimeException rex = exceptionMapper.apply(ex);
-					if(rex != null) throw rex;
-				}
-				return false;
-			}
-		});
-	}
-	
-	/** @since 00.02.04 */
-	public static final <T> boolean ignoreWithCheck(CheckedRunnable runnable) {
-		return ignoreWithCheck(runnable, null);
-	}
-	
-	/** @since 00.02.04 */
-	public static final <T> boolean ignoreWithCheck(CheckedRunnable runnable, Consumer<Exception> exceptionHandler) {
-		return suppressExceptionWithCheck(runnable, exceptionHandler).get();
-	}
-	
-	public static final <T> T ignore(Callable<T> callable) {
-		return ignore(callable, (T) null);
-	}
-	
-	public static final <T> T ignore(Callable<T> callable, T defaultValue) {
-		return ignore(callable, defaultValue, (Consumer<Exception>) null);
-	}
-	
-	/** @since 00.02.00 */
-	public static final <T> T ignore(Callable<T> callable, Supplier<T> defaultValueSupplier) {
-		return ignore(callable, defaultValueSupplier, (Consumer<Exception>) null);
-	}
-	
-	public static final <T> T ignore(Callable<T> callable, T defaultValue, Consumer<Exception> exceptionHandler) {
-		return ignore(callable, (Supplier<T>) (() -> defaultValue), exceptionHandler);
-	}
-	
-	/** @since 00.02.05 */
-	public static final <T> T ignore(Callable<T> callable, T defaultValue,
-			Function<Exception, RuntimeException> exceptionMapper) {
-		return ignore(callable, (Supplier<T>) (() -> defaultValue), exceptionMapper);
-	}
-	
-	/** @since 00.02.00 */
-	public static final <T> T ignore(Callable<T> callable, Supplier<T> defaultValueSupplier,
-			Consumer<Exception> exceptionHandler) {
-		return ignore(callable, defaultValueSupplier,
-					  exceptionHandler != null
-							? ((ex) -> { exceptionHandler.accept(ex); return null; })
-							: null);
-	}
-	
-	/** @since 00.02.05 */
-	public static final <T> T ignore(Callable<T> callable, Supplier<T> defaultValueSupplier,
-			Function<Exception, RuntimeException> exceptionMapper) {
-		try {
-			return callable.call();
-		} catch(Exception ex) {
-			if(exceptionMapper != null) {
-				RuntimeException rex = exceptionMapper.apply(ex);
-				if(rex != null) throw rex;
-			}
-		}
-		return defaultValueSupplier != null
-					? defaultValueSupplier.get()
-					: null;
-	}
-	
 	public static final <T> Iterable<T> iterable(Iterator<T> iterator) {
 		return (() -> iterator);
 	}
@@ -1583,8 +1439,7 @@ public final class Utils {
 	/** @since 00.02.00 */
 	public static final Throwable throwable(Class<? extends Throwable> clazz, String message, Object... args) {
 		String formattedMessage = String.format(message, args);
-		return ignore(() -> clazz.getConstructor(String.class).newInstance(formattedMessage),
-					  () -> new Throwable(formattedMessage));
+		return Ignore.supplier(() -> clazz.getConstructor(String.class).newInstance(formattedMessage), () -> new Throwable(formattedMessage));
 	}
 	
 	/** @since 00.02.00 */
@@ -1702,7 +1557,7 @@ public final class Utils {
 	
 	/** @since 00.02.05 */
 	public static final URI uri(URL url) {
-		return ignore(() -> url.toURI(), (URI) null, (Function<Exception, RuntimeException>) IllegalArgumentException::new);
+		return Ignore.defaultValue(() -> url.toURI(), null, (Function<Exception, RuntimeException>) IllegalArgumentException::new);
 	}
 	
 	/** @since 00.02.05 */
@@ -1712,7 +1567,7 @@ public final class Utils {
 	
 	/** @since 00.02.05 */
 	public static final <T> T primitive(T value, Class<? extends T> clazz) {
-		return value != null ? value : cast(ignore(() -> callable(() -> MethodHandles.zero(clazz).invoke(value))));
+		return value != null ? value : cast(Ignore.call(() -> callable(() -> MethodHandles.zero(clazz).invoke(value))));
 	}
 	
 	/** @since 00.02.05 */
@@ -1867,12 +1722,12 @@ public final class Utils {
 	
 	/** @since 00.02.05 */
 	public static final boolean isInteger(String string) {
-		return Utils.ignoreWithCheck(() -> Integer.parseInt(string));
+		return Ignore.callAndCheck(() -> Integer.parseInt(string));
 	}
 	
 	/** @since 00.02.05 */
 	public static final boolean isDouble(String string) {
-		return Utils.ignoreWithCheck(() -> Double.parseDouble(string));
+		return Ignore.callAndCheck(() -> Double.parseDouble(string));
 	}
 	
 	/** @since 00.02.05 */
@@ -1904,6 +1759,184 @@ public final class Utils {
 			@SuppressWarnings("unchecked")
 			EqualityWrapper<T> other = (EqualityWrapper<T>) obj;
 			return equals.apply(value, other.value);
+		}
+	}
+	
+	/** @since 00.02.08 */
+	private static final class Internal {
+		
+		// Forbid anyone to create an instance of this class
+		private Internal() {
+		}
+		
+		public static final Function<Exception, RuntimeException>
+				exceptionMapper(Consumer<Exception> exceptionHandler) {
+			return exceptionHandler != null
+						? ((ex) -> { exceptionHandler.accept(ex); return null; })
+						: null;
+		}
+		
+		public static final void throwRuntimeException(Exception exception,
+				Function<Exception, RuntimeException> exceptionMapper) throws RuntimeException {
+			if(exceptionMapper == null) {
+				return;
+			}
+			
+			RuntimeException runtimeException;
+			if((runtimeException = exceptionMapper.apply(exception)) != null) {
+				throw runtimeException;
+			}
+		}
+	}
+	
+	/** @since 00.02.08 */
+	public static final class Suppress {
+		
+		// Forbid anyone to create an instance of this class
+		private Suppress() {
+		}
+		
+		public static final <T> Consumer<T> consumer(CheckedConsumer<T> consumer) {
+			return consumer(consumer, (Function<Exception, RuntimeException>) null);
+		}
+		
+		public static final <T> Consumer<T> consumer(CheckedConsumer<T> consumer,
+				Consumer<Exception> exceptionHandler) {
+			return consumer(consumer, Internal.exceptionMapper(exceptionHandler));
+		}
+		
+		public static final <T> Consumer<T> consumer(CheckedConsumer<T> consumer,
+				Function<Exception, RuntimeException> exceptionMapper) {
+			return ((t) -> {
+				try {
+					consumer.accept(t);
+				} catch(Exception ex) {
+					Internal.throwRuntimeException(ex, exceptionMapper);
+				}
+			});
+		}
+		
+		public static final <T> Runnable runnable(CheckedRunnable runnable) {
+			return runnable(runnable, (Function<Exception, RuntimeException>) null);
+		}
+		
+		public static final <T> Runnable runnable(CheckedRunnable runnable,
+				Consumer<Exception> exceptionHandler) {
+			return runnable(runnable, Internal.exceptionMapper(exceptionHandler));
+		}
+		
+		public static final <T> Runnable runnable(CheckedRunnable runnable,
+				Function<Exception, RuntimeException> exceptionMapper) {
+			return (() -> supplier(runnable, exceptionMapper).get());
+		}
+		
+		public static final <T> Supplier<Boolean> supplier(CheckedRunnable runnable) {
+			return supplier(runnable, (Function<Exception, RuntimeException>) null);
+		}
+		
+		public static final <T> Supplier<Boolean> supplier(CheckedRunnable runnable,
+				Consumer<Exception> exceptionHandler) {
+			return supplier(runnable, Internal.exceptionMapper(exceptionHandler));
+		}
+		
+		public static final <T> Supplier<Boolean> supplier(CheckedRunnable runnable,
+				Function<Exception, RuntimeException> exceptionMapper) {
+			return (() -> {
+				try {
+					runnable.run();
+					return true;
+				} catch(Exception ex) {
+					Internal.throwRuntimeException(ex, exceptionMapper);
+					return false;
+				}
+			});
+		}
+	}
+	
+	/** @since 00.02.08 */
+	public static final class Ignore {
+		
+		// Forbid anyone to create an instance of this class
+		private Ignore() {
+		}
+		
+		private static final <T> T ignore(Callable<T> callable, Supplier<T> defaultValueSupplier,
+				Function<Exception, RuntimeException> exceptionMapper) {
+			try {
+				return callable.call();
+			} catch(Exception ex) {
+				Internal.throwRuntimeException(ex, exceptionMapper);
+			}
+			
+			return defaultValueSupplier != null
+						? defaultValueSupplier.get()
+						: null;
+		}
+		
+		public static final <T> T call(Callable<T> callable) {
+			return call(callable, (Function<Exception, RuntimeException>) null);
+		}
+		
+		public static final <T> T call(Callable<T> callable, Consumer<Exception> exceptionHandler) {
+			return call(callable, Internal.exceptionMapper(exceptionHandler));
+		}
+		
+		public static final <T> T call(Callable<T> callable, Function<Exception, RuntimeException> exceptionMapper) {
+			return defaultValue(callable, null, exceptionMapper);
+		}
+		
+		public static final <T> void callVoid(CheckedRunnable runnable) {
+			callVoid(runnable, (Function<Exception, RuntimeException>) null);
+		}
+		
+		public static final <T> void callVoid(CheckedRunnable runnable, Consumer<Exception> exceptionHandler) {
+			callVoid(runnable, Internal.exceptionMapper(exceptionHandler));
+		}
+		
+		public static final <T> void callVoid(CheckedRunnable runnable,
+				Function<Exception, RuntimeException> exceptionMapper) {
+			Suppress.runnable(runnable, exceptionMapper).run();
+		}
+		
+		public static final <T> boolean callAndCheck(CheckedRunnable runnable) {
+			return callAndCheck(runnable, (Function<Exception, RuntimeException>) null);
+		}
+		
+		public static final <T> boolean callAndCheck(CheckedRunnable runnable, Consumer<Exception> exceptionHandler) {
+			return callAndCheck(runnable, Internal.exceptionMapper(exceptionHandler));
+		}
+		
+		public static final <T> boolean callAndCheck(CheckedRunnable runnable,
+				Function<Exception, RuntimeException> exceptionMapper) {
+			return Suppress.supplier(runnable, exceptionMapper).get();
+		}
+		
+		public static final <T> T defaultValue(Callable<T> callable, T defaultValue) {
+			return defaultValue(callable, defaultValue, (Function<Exception, RuntimeException>) null);
+		}
+		
+		public static final <T> T defaultValue(Callable<T> callable, T defaultValue,
+				Consumer<Exception> exceptionHandler) {
+			return supplier(callable, () -> defaultValue, exceptionHandler);
+		}
+		
+		public static final <T> T defaultValue(Callable<T> callable, T defaultValue,
+				Function<Exception, RuntimeException> exceptionMapper) {
+			return supplier(callable, () -> defaultValue, exceptionMapper);
+		}
+		
+		public static final <T> T supplier(Callable<T> callable, Supplier<T> defaultValueSupplier) {
+			return supplier(callable, defaultValueSupplier, (Function<Exception, RuntimeException>) null);
+		}
+		
+		public static final <T> T supplier(Callable<T> callable, Supplier<T> defaultValueSupplier,
+				Consumer<Exception> exceptionHandler) {
+			return supplier(callable, defaultValueSupplier, Internal.exceptionMapper(exceptionHandler));
+		}
+		
+		public static final <T> T supplier(Callable<T> callable, Supplier<T> defaultValueSupplier,
+				Function<Exception, RuntimeException> exceptionMapper) {
+			return ignore(callable, defaultValueSupplier, exceptionMapper);
 		}
 	}
 	

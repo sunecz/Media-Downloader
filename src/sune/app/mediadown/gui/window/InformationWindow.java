@@ -21,7 +21,7 @@ import sune.app.mediadown.gui.DraggableWindow;
 import sune.app.mediadown.language.Translation;
 import sune.app.mediadown.util.FXUtils;
 import sune.app.mediadown.util.HorizontalLeftTabPaneSkin;
-import sune.app.mediadown.util.Utils;
+import sune.app.mediadown.util.Utils.Ignore;
 
 public class InformationWindow extends DraggableWindow<StackPane> {
 	
@@ -153,7 +153,7 @@ public class InformationWindow extends DraggableWindow<StackPane> {
 			((InformationTab<?>) tab).getTabContent().doInit(this);
 		});
 		tabPane.setSide(Side.LEFT);
-		Utils.ignore(() -> tabPane.setSkin(new HorizontalLeftTabPaneSkin(tabPane)));
+		Ignore.callVoid(() -> tabPane.setSkin(new HorizontalLeftTabPaneSkin(tabPane)));
 		content.getChildren().add(tabPane);
 		FXUtils.onWindowShow(this, () -> {
 			// Add the tab panes before centering the window

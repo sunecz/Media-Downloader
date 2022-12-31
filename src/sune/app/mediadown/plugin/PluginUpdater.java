@@ -18,6 +18,7 @@ import sune.app.mediadown.event.tracker.TrackerManager;
 import sune.app.mediadown.update.Version;
 import sune.app.mediadown.update.VersionType;
 import sune.app.mediadown.util.Utils;
+import sune.app.mediadown.util.Utils.Ignore;
 import sune.app.mediadown.util.Web;
 import sune.app.mediadown.util.Web.GetRequest;
 import sune.app.mediadown.util.Web.StringResponse;
@@ -145,7 +146,7 @@ public final class PluginUpdater {
 			@Override
 			public void start() throws Exception {
 				GetRequest request = new GetRequest(Utils.url(pluginURL), Shared.USER_AGENT);
-				long size = Utils.ignore(() -> Web.size(request.toHeadRequest()), -1L);
+				long size = Ignore.defaultValue(() -> Web.size(request.toHeadRequest()), -1L);
 				downloader.start(request, file, new DownloadConfiguration(size));
 			}
 			

@@ -26,6 +26,7 @@ import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.ProcessUtils;
 import sune.app.mediadown.util.Utils;
+import sune.app.mediadown.util.Utils.Ignore;
 
 /** @since 00.02.08 */
 public final class FFmpegConverter implements Converter {
@@ -155,7 +156,7 @@ public final class FFmpegConverter implements Converter {
 			if(isDone()) {
 				// Delete input files if and only if the conversion is successfully done
 				for(Input input : command.inputs()) {
-					Utils.ignore(() -> NIO.deleteFile(input.path()));
+					Ignore.callVoid(() -> NIO.deleteFile(input.path()));
 				}
 			}
 			

@@ -14,6 +14,7 @@ import sune.app.mediadown.Shared;
 import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.PathSystem;
 import sune.app.mediadown.util.Utils;
+import sune.app.mediadown.util.Utils.Ignore;
 import sune.app.mediadown.util.Web;
 import sune.app.mediadown.util.Web.GetRequest;
 import sune.app.mediadown.util.Web.StreamResponse;
@@ -34,7 +35,7 @@ public final class MessageManager {
 	}
 	
 	public static final MessageList empty() {
-		return EMPTY == null ? (EMPTY = Utils.ignore(() -> new MessageList(URI_BASE))) : EMPTY;
+		return EMPTY == null ? (EMPTY = Ignore.call(() -> new MessageList(URI_BASE))) : EMPTY;
 	}
 	
 	/** @since 00.02.05 */

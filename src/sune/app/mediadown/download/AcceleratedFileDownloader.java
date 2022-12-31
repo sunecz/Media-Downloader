@@ -22,7 +22,7 @@ import sune.app.mediadown.util.CounterLock;
 import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.Range;
 import sune.app.mediadown.util.Threads;
-import sune.app.mediadown.util.Utils;
+import sune.app.mediadown.util.Utils.Ignore;
 import sune.app.mediadown.util.Web;
 import sune.app.mediadown.util.Web.GetRequest;
 import sune.app.mediadown.util.Web.HeadRequest;
@@ -142,7 +142,7 @@ public class AcceleratedFileDownloader implements InternalDownloader {
 	
 	private final void onError(Pair<InternalDownloader, Exception> pair) {
 		// Stop the downloaders
-		Utils.ignore(() -> doAction(InternalDownloader::stop));
+		Ignore.callVoid(() -> doAction(InternalDownloader::stop));
 		// Notify the event registry
 		eventRegistry.call(DownloadEvent.ERROR, new Pair<>(this, pair.b));
 	}
@@ -163,7 +163,7 @@ public class AcceleratedFileDownloader implements InternalDownloader {
 		AtomicLong bytes = new AtomicLong();
 		
 		if(totalBytes < 0L) {
-			totalBytes = Utils.ignore(() -> Web.size(toHeadRequest(request)), -1L);
+			totalBytes = Ignore.defaultValue(() -> Web.size(toHeadRequest(request)), -1L);
 		}
 		
 		// If the total size is still unknown, we cannot split the file into chunks,
@@ -256,7 +256,7 @@ public class AcceleratedFileDownloader implements InternalDownloader {
 			
 			// Gracefully shutdown the executor and wait, even though at this point all threads should exited
 			executor.shutdown();
-			Utils.ignore(() -> executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS));
+			Ignore.call(() -> executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS));
 		}
 		
 		return bytes.get();
@@ -279,12 +279,12 @@ public class AcceleratedFileDownloader implements InternalDownloader {
 	
 	@Override
 	public void setTracker(DownloadTracker tracker) {
-		Utils.ignore(() -> doAction((downloader) -> downloader.setTracker(tracker)));
+		Ignore.callVoid(() -> doAction((downloader) -> downloader.setTracker(tracker)));
 	}
 	
 	@Override
 	public void setResponseChannelFactory(InputStreamChannelFactory factory) {
-		Utils.ignore(() -> doAction((downloader) -> downloader.setResponseChannelFactory(factory)));
+		Ignore.callVoid(() -> doAction((downloader) -> downloader.setResponseChannelFactory(factory)));
 	}
 	
 	@Override
@@ -348,11 +348,11 @@ public class AcceleratedFileDownloader implements InternalDownloader {
 	
 	@Override
 	public <V> void call(Event<? extends DownloadEvent, V> event) {
-		Utils.ignore(() -> doAction((downloader) -> downloader.call(event)));
+		Ignore.callVoid(() -> doAction((downloader) -> downloader.call(event)));
 	}
 	
 	@Override
 	public <V> void call(Event<? extends DownloadEvent, V> event, V value) {
-		Utils.ignore(() -> doAction((downloader) -> downloader.call(event, value)));
+		Ignore.callVoid(() -> doAction((downloader) -> downloader.call(event, value)));
 	}
 }

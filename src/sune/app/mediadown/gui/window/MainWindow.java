@@ -106,7 +106,9 @@ import sune.app.mediadown.util.MathUtils;
 import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.Threads;
 import sune.app.mediadown.util.Utils;
+import sune.app.mediadown.util.Utils.Ignore;
 import sune.app.mediadown.util.Utils.SizeUnit;
+import sune.app.mediadown.util.Utils.Suppress;
 import sune.util.ssdf2.SSDObject;
 
 public final class MainWindow extends Window<BorderPane> {
@@ -186,7 +188,7 @@ public final class MainWindow extends Window<BorderPane> {
 		List<Pipeline> pipelines = getPipelines();
 		for(Pipeline pipeline : pipelines) {
 			if((pipeline.isStarted() && pipeline.isRunning() || pipeline.isPaused())) {
-				Utils.ignore(pipeline::stop, this::showError);
+				Ignore.callVoid(pipeline::stop, this::showError);
 			}
 		}
 		pipelines.clear();
@@ -194,18 +196,18 @@ public final class MainWindow extends Window<BorderPane> {
 	
 	private final void init() {
 		Disposables.add(() -> {
-			getPipelines().forEach(Utils.suppressException(Pipeline::stop, this::showError));
+			getPipelines().forEach(Suppress.consumer(Pipeline::stop, this::showError));
 		});
 		prepareAddMenu();
 	}
 	
 	/** @since 00.02.02 */
 	private final boolean showMessages() {
-		MessageList list = Utils.ignore(() -> MessageManager.current(), MessageManager.empty());
+		MessageList list = Ignore.defaultValue(() -> MessageManager.current(), MessageManager.empty());
 		String language = MediaDownloader.language().code();
 		if(language.equalsIgnoreCase("auto"))
 			language = MediaDownloader.Languages.localLanguage().code();
-		List<Message> messages = list.difference(language, Utils.ignore(() -> MessageManager.local(), MessageManager.empty()));
+		List<Message> messages = list.difference(language, Ignore.defaultValue(() -> MessageManager.local(), MessageManager.empty()));
 		if(!messages.isEmpty()) {
 			FXUtils.thread(() -> {
 				MessageWindow window = MediaDownloader.window(MessageWindow.NAME);
@@ -225,7 +227,7 @@ public final class MainWindow extends Window<BorderPane> {
 			public void action(ProgressContext context) {
 				context.setProgress(ProgressContext.PROGRESS_INDETERMINATE);
 				context.setText(tr("actions.messages.checking"));
-				Utils.ignore(MainWindow.this::showMessages, MediaDownloader::error);
+				Ignore.callVoid(MainWindow.this::showMessages, MediaDownloader::error);
 			}
 			
 			@Override public void cancel() { /* Do nothing */ }
@@ -234,7 +236,7 @@ public final class MainWindow extends Window<BorderPane> {
 	
 	/** @since 00.02.02 */
 	private final boolean resetAndShowMessages() {
-		Utils.ignore(() -> MessageManager.deleteLocal(), MediaDownloader::error);
+		Ignore.callVoid(() -> MessageManager.deleteLocal(), MediaDownloader::error);
 		return showMessages();
 	}
 	
@@ -462,11 +464,11 @@ public final class MainWindow extends Window<BorderPane> {
 			
 			if(anyNonPaused(infos)) {
 				for(PipelineInfo info : infos) {
-					Utils.ignore(info.pipeline()::pause, this::showError);
+					Ignore.callVoid(info.pipeline()::pause, this::showError);
 				}
 			} else {
 				for(PipelineInfo info : infos) {
-					Utils.ignore(info.pipeline()::resume, this::showError);
+					Ignore.callVoid(info.pipeline()::resume, this::showError);
 				}
 			}
 		});
@@ -484,7 +486,7 @@ public final class MainWindow extends Window<BorderPane> {
 					Pipeline pipeline = info.pipeline();
 					
 					if(pipeline.isStarted() && (pipeline.isRunning() || pipeline.isPaused())) {
-						Utils.ignore(pipeline::stop, this::showError);
+						Ignore.callVoid(pipeline::stop, this::showError);
 					}
 				}
 			} else {
@@ -753,7 +755,7 @@ public final class MainWindow extends Window<BorderPane> {
 	}
 	
 	private final void showFile(PipelineInfo info) {
-		Utils.ignore(() -> OS.current().highlight(info.media().path()), MediaDownloader::error);
+		Ignore.callVoid(() -> OS.current().highlight(info.media().path()), MediaDownloader::error);
 	}
 	
 	/** @since 00.02.05 */
@@ -883,14 +885,14 @@ public final class MainWindow extends Window<BorderPane> {
 	private final void removePipelines(List<PipelineInfo> infos) {
 		infos.stream().map(PipelineInfo::pipeline)
 			.filter((p) -> p != null)
-			.forEach(Utils.suppressException(Pipeline::stop, this::showError));
+			.forEach(Suppress.consumer(Pipeline::stop, this::showError));
 		FXUtils.thread(() -> table.getItems().removeAll(infos));
 	}
 	
 	public final void showSelectionWindow(MediaEngine engine) {
 		TableWindow window = MediaDownloader.window(TableWindow.NAME);
 		Threads.execute(() -> {
-			Utils.ignore(() -> {
+			Ignore.callVoid(() -> {
 				TablePipelineResult<?, ?> result = window.show(this, engine);
 				if(result.isTerminating()) {
 					((ResolvedMediaPipelineResult) result).getValue().forEach(this::addDownload);

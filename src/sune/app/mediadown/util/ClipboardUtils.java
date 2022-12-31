@@ -10,6 +10,7 @@ import org.jsoup.nodes.Element;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.DataFormat;
+import sune.app.mediadown.util.Utils.Ignore;
 
 /** @since 00.02.05 */
 public final class ClipboardUtils {
@@ -38,14 +39,14 @@ public final class ClipboardUtils {
 		
 		if((contents = clipboard.getContent(DataFormat.URL)) != null) {
 			String string = (String) contents;
-			URI uri = Utils.ignore(() -> Utils.uri(string.strip()));
+			URI uri = Ignore.call(() -> Utils.uri(string.strip()));
 			if(uri != null) uris.add(uri);
 		}
 		
 		if((contents = clipboard.getContent(DataFormat.PLAIN_TEXT)) != null) {
 			// May have multiple URIs in the contents
 			for(String line : ((String) contents).split("\\r?\\n")) {
-				URI uri = Utils.ignore(() -> Utils.uri(line.strip()));
+				URI uri = Ignore.call(() -> Utils.uri(line.strip()));
 				if(uri != null) uris.add(uri);
 			}
 		}
@@ -57,14 +58,14 @@ public final class ClipboardUtils {
 			// Probe the content for anchor tags and extract their hrefs.
 			for(Element elLink : document.select("a")) {
 				String href = elLink.attr("href");
-				URI uri = Utils.ignore(() -> Utils.uri(href));
+				URI uri = Ignore.call(() -> Utils.uri(href));
 				if(uri != null) uris.add(uri);
 			}
 			
 			// Always add the textual content of the document,
 			// maybe there's an URL.
 			String text = document.text().strip();
-			URI uri = Utils.ignore(() -> Utils.uri(text));
+			URI uri = Ignore.call(() -> Utils.uri(text));
 			if(uri != null) uris.add(uri);
 		}
 		

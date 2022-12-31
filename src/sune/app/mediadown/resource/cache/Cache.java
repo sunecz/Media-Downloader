@@ -7,7 +7,7 @@ import java.util.NoSuchElementException;
 import java.util.function.Supplier;
 
 import sune.app.mediadown.util.CheckedSupplier;
-import sune.app.mediadown.util.Utils;
+import sune.app.mediadown.util.Utils.Ignore;
 
 /** @since 00.02.07 */
 public class Cache {
@@ -49,7 +49,7 @@ public class Cache {
 	}
 	
 	public <T> T get(Object key) {
-		return Utils.ignore(() -> getChecked(key));
+		return Ignore.call(() -> getChecked(key));
 	}
 	
 	public <T> T getChecked(Object key) throws Exception {

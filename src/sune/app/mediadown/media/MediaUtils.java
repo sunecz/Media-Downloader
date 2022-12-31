@@ -24,6 +24,7 @@ import sune.app.mediadown.util.Opt.OptCondition;
 import sune.app.mediadown.util.Opt.OptMapper;
 import sune.app.mediadown.util.Property;
 import sune.app.mediadown.util.Utils;
+import sune.app.mediadown.util.Utils.Ignore;
 import sune.app.mediadown.util.Web;
 import sune.app.mediadown.util.Web.GetRequest;
 import sune.app.mediadown.util.Web.StreamResponse;
@@ -236,8 +237,7 @@ public final class MediaUtils {
 			Exception exception;
 			List<Media.Builder<?, ?>> media = Opt.of(parsers.get(format)).ifTrue(Objects::nonNull)
 					  .or(() -> Opt.of(defaultFormatParser(format)))
-					  .map((p) -> Utils.ignore(() -> p.parse(uri, format, request, sourceURI, data, size),
-					                           (List<Media.Builder<?, ?>>) null, ex::setValue))
+					  .map((p) -> Ignore.defaultValue(() -> p.parse(uri, format, request, sourceURI, data, size), null, ex::setValue))
 					  .orElseGet(List::of);
 			if((exception = ex.getValue()) != null) throw exception;
 			return media;

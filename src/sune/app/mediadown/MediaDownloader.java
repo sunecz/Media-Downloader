@@ -109,6 +109,7 @@ import sune.app.mediadown.util.Reflection3;
 import sune.app.mediadown.util.SelfProcess;
 import sune.app.mediadown.util.Threads;
 import sune.app.mediadown.util.Utils;
+import sune.app.mediadown.util.Utils.Ignore;
 import sune.app.mediadown.util.Web;
 import sune.app.mediadown.util.Web.GetRequest;
 import sune.app.mediadown.util.Web.HeadRequest;
@@ -745,7 +746,7 @@ public final class MediaDownloader {
 					MediaDownloader.error(new IllegalStateException(message, pair.b));
 				});
 				
-				Utils.ignore(Plugins::loadAll, MediaDownloader::error);
+				Ignore.callVoid(Plugins::loadAll, MediaDownloader::error);
 				
 				return new Finalization();
 			}
@@ -977,7 +978,7 @@ public final class MediaDownloader {
 					// The version can be obtained again once set, if needed
 					|| forceGet) {
 				Request request = new GetRequest(Utils.url(versionFileURI()), Shared.USER_AGENT);
-				newestVersion = Utils.ignore(() -> Version.of(Web.request(request).content), Version.UNKNOWN);
+				newestVersion = Ignore.defaultValue(() -> Version.of(Web.request(request).content), Version.UNKNOWN);
 			}
 			return newestVersion;
 		}
@@ -1222,7 +1223,7 @@ public final class MediaDownloader {
 	
 	private static final void initConfiguration() {
 		Path configDir = NIO.localPath(BASE_RESOURCE).resolve("config");
-		Utils.ignore(() -> NIO.createDir(configDir), MediaDownloader::error);
+		Ignore.callVoid(() -> NIO.createDir(configDir), MediaDownloader::error);
 		
 		Path configPath = configDir.resolve("application.ssdf");
 		SSDCollection data = NIO.exists(configPath) ? SSDF.read(configPath.toFile()) : SSDCollection.empty();
@@ -1265,7 +1266,7 @@ public final class MediaDownloader {
 			Path configPath = configDir.resolve("application.ssdf");
 			
 			if(!NIO.exists(configDir)
-					&& !Utils.ignoreWithCheck(() -> NIO.createDir(configDir), MediaDownloader::error)) {
+					&& !Ignore.callAndCheck(() -> NIO.createDir(configDir), MediaDownloader::error)) {
 				return;
 			}
 			
@@ -1405,9 +1406,9 @@ public final class MediaDownloader {
 		
 		private static final Set<String> getDefaultPlugins() {
 			return Optional.ofNullable(
-				Utils.ignore(() -> PluginListObtainer.obtain().stream()
-				                                     .map((p) -> p.b)
-				                                     .collect(Collectors.toSet()))
+				Ignore.call(() -> PluginListObtainer.obtain().stream()
+				                                    .map((p) -> p.b)
+				                                    .collect(Collectors.toSet()))
 			).orElseGet(Set::of);
 		}
 		
@@ -1415,7 +1416,7 @@ public final class MediaDownloader {
 			for(String plugin : plugins) {
 				String fileName = plugin.replaceAll("[^A-Za-z0-9]+", "-") + ".jar";
 				Path path = NIO.localPath(BASE_RESOURCE, "plugin", fileName);
-				Utils.ignore(() -> NIO.deleteFile(path), MediaDownloader::error);
+				Ignore.callVoid(() -> NIO.deleteFile(path), MediaDownloader::error);
 			}
 		}
 		
@@ -1436,8 +1437,8 @@ public final class MediaDownloader {
 			// 00.02.04 -> 00.02.05: Messages format update (V0 -> V1)
 			if(previousVersion.compareTo(Version.of("00.02.04")) <= 0) {
 				// Do not bother with conversion and just remove the messages.ssdf file
-				Utils.ignore(() -> NIO.deleteFile(NIO.localPath(BASE_RESOURCE).resolve("messages.ssdf")),
-				             MediaDownloader::error);
+				Ignore.callVoid(() -> NIO.deleteFile(NIO.localPath(BASE_RESOURCE).resolve("messages.ssdf")),
+				                MediaDownloader::error);
 			}
 		}
 		
@@ -1445,7 +1446,7 @@ public final class MediaDownloader {
 			Path dir = NIO.localPath(BASE_RESOURCE);
 			
 			// Delete the old plugins directory
-			Utils.ignore(() -> NIO.deleteDir(dir.resolve("plugins")), MediaDownloader::error);
+			Ignore.callVoid(() -> NIO.deleteDir(dir.resolve("plugins")), MediaDownloader::error);
 			
 			// Delete the old default theme
 			try {
@@ -1464,7 +1465,8 @@ public final class MediaDownloader {
 			if(previousVersion.compareTo(Version.of("00.02.07-dev.10")) <= 0) {
 				// Delete the libraries ONLY if run from the JAR file (not from a development environment)
 				if(SelfProcess.inJAR()) {
-					Utils.ignore(() -> NIO.deleteFile(NIO.localPath("lib/ssdf2.jar")), MediaDownloader::error);
+					Ignore.callVoid(() -> NIO.deleteFile(NIO.localPath("lib/ssdf2.jar")),
+					                MediaDownloader::error);
 				}
 			}
 			
@@ -1475,7 +1477,7 @@ public final class MediaDownloader {
 							|| keepFiles.contains(file.getFileName().toString()))
 						continue;
 					
-					Utils.ignore(() -> NIO.deleteFile(file), MediaDownloader::error);
+					Ignore.callVoid(() -> NIO.deleteFile(file), MediaDownloader::error);
 				}
 			} catch(Exception ex) {
 				error(ex);
@@ -1487,7 +1489,7 @@ public final class MediaDownloader {
 					if(!NIO.isDirectory(file) || !NIO.isEmptyDirectory(file))
 						continue;
 					
-					Utils.ignore(() -> NIO.deleteFile(file), MediaDownloader::error);
+					Ignore.callVoid(() -> NIO.deleteFile(file), MediaDownloader::error);
 				}
 			} catch(Exception ex) {
 				error(ex);
@@ -1529,8 +1531,8 @@ public final class MediaDownloader {
 		
 		// To prevent some issues delete the versions.ssdf file so that
 		// all resources will have to be checked on the next start up.
-		Utils.ignore(() -> NIO.deleteFile(NIO.localPath(BASE_RESOURCE).resolve("versions.ssdf")),
-		             MediaDownloader::error);
+		Ignore.callVoid(() -> NIO.deleteFile(NIO.localPath(BASE_RESOURCE).resolve("versions.ssdf")),
+		                MediaDownloader::error);
 		
 		// To prevent some issues, re-save all registered configurations
 		// to force all properties to be revalidated.
@@ -1550,8 +1552,8 @@ public final class MediaDownloader {
 		
 		Path configDir = NIO.localPath(BASE_RESOURCE).resolve("config");
 		configurations.stream()
-			.forEach((c) -> Utils.ignore(() -> c.writer().save(configDir.resolve(c.name() + ".ssdf")),
-			                             MediaDownloader::error));
+			.forEach((c) -> Ignore.callVoid(() -> c.writer().save(configDir.resolve(c.name() + ".ssdf")),
+			                                MediaDownloader::error));
 	}
 	
 	private static final void updateResourcesDirectory(Version previousVersion, boolean force) {
@@ -1565,7 +1567,7 @@ public final class MediaDownloader {
 	}
 	
 	private static final void saveConfiguration() {
-		Utils.ignore(() -> NIO.save(configuration.path(), configuration.data().toString()), MediaDownloader::error);
+		Ignore.callVoid(() -> NIO.save(configuration.path(), configuration.data().toString()), MediaDownloader::error);
 	}
 	
 	private static final void finalizeConfiguration() {
@@ -1578,7 +1580,7 @@ public final class MediaDownloader {
 		propertyName = ApplicationConfiguration.PROPERTY_REMOVE_AT_INIT;
 		if(data.hasCollection(propertyName)) {
 			for(SSDObject path : data.getCollection(propertyName).objectsIterable()) {
-				Utils.ignore(() -> NIO.delete(NIO.path(path.stringValue())), MediaDownloader::error);
+				Ignore.callVoid(() -> NIO.delete(NIO.path(path.stringValue())), MediaDownloader::error);
 			}
 			
 			data.remove(propertyName);
@@ -1711,7 +1713,7 @@ public final class MediaDownloader {
 		public static final void ensure() {
 			String baseDest = PathSystem.getFullPath(BASE_RESOURCE);
 			// Ensure the folder is existent
-			Utils.ignore(() -> NIO.createDir(Path.of(baseDest)), MediaDownloader::error);
+			Ignore.callVoid(() -> NIO.createDir(Path.of(baseDest)), MediaDownloader::error);
 			// Extract the internal resources to the destination folder
 			clear(ResourceRegistry.languages, extract(ResourceRegistry.languages, "language/", ".ssdf", baseDest + "language/"));
 			clear(ResourceRegistry.themes,    extract(ResourceRegistry.themes,    "theme/",    "",      baseDest + "theme/"));
@@ -2278,7 +2280,7 @@ public final class MediaDownloader {
 		}
 		
 		private static final void unchecked(CheckedRunnable op) {
-			Utils.ignore(op);
+			Ignore.callVoid(op);
 		}
 		
 		public static final void load() {

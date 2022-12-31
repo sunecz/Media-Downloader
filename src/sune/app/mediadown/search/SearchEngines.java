@@ -6,7 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import sune.app.mediadown.util.Instantiator;
-import sune.app.mediadown.util.Utils;
+import sune.app.mediadown.util.Utils.Ignore;
 
 /** @since 00.01.17 */
 public final class SearchEngines {
@@ -16,7 +16,7 @@ public final class SearchEngines {
 	
 	public static final void add(String name, Class<? extends SearchEngine> clazz) {
 		if(!engines.containsKey(name)) {
-			SearchEngine engine = Utils.ignore(() -> instantiator.newInstance(clazz));
+			SearchEngine engine = Ignore.call(() -> instantiator.newInstance(clazz));
 			if((engine == null))
 				throw new IllegalStateException("Unable to create an instance of search engine: " + clazz);
 			engines.put(name, engine);
