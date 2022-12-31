@@ -56,7 +56,7 @@ Temporary Items
 /etc/jre/*.jar
 /etc/*.txt
 /dist/
-/jar/
+/build/
 /versions/
 /resources/
 /jre/

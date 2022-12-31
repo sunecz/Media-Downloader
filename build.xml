@@ -1,52 +1,139 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no" ?>
-<project name="generate_jar" default="all">
-	<property name="jarname" value="media-downloader" />
-	<property name="dir.rtd" value="."                />
-	<property name="dir.bin" value="${dir.rtd}/bin"   />
-	<property name="dir.lib" value="${dir.rtd}/lib"   />
-	<property name="dir.ver" value="${dir.rtd}/jar"   />
-	<property name="dir.etc" value="${dir.rtd}/etc"   />
-	<property name="dir.src" value="${dir.rtd}/src"   />
-	<target name="all" depends="jar,jar_jre,src">
-		<!-- Runs all the other targets. -->
-	</target>
-	<target name="jar">
-		<echo message="Generating JAR file..." />
-		<!-- Create a temporary JAR file with all external libraries' content -->
-		<jar destfile="${dir.ver}/${jarname}-dirty.jar">
-			<!-- Include needed libraries -->
-			<zipfileset src="${dir.lib}/sune-utils-load.jar" excludes="META-INF/*.sf,module-info.class,/*.md" />
-			<zipfileset src="${dir.lib}/ssdf2.jar"           excludes="META-INF/*.sf,module-info.class,/*.md" />
-		</jar>
-		<jar destfile="${dir.ver}/${jarname}.jar">
-			<!-- Configure JAR's Manifest file -->
-			<manifest>
-				<attribute name="Main-Class" value="sune.app.mediadown.App" />
-				<attribute name="Class-Path" value="."                      />
-			</manifest>
-			<!-- Include the *.class files -->
-			<fileset dir="${dir.bin}" />
-			<!-- Include filtered libraries' content -->
-			<zipfileset src="${dir.ver}/${jarname}-dirty.jar" excludes="META-INF/*.sf,module-info.class,/*.md" />
-		</jar>
-		<!-- Delete the temporary JAR file -->
-		<delete file="${dir.ver}/${jarname}-dirty.jar" />
-	</target>
-	<target name="jar_jre">
-		<echo message="Generating JAR file for building custom JRE..." />
-		<!-- Create a temporary JAR file with all external libraries' content -->
-		<jar destfile="${dir.etc}/jre/${jarname}-jre.jar">
-			<!-- Configure JAR's Manifest file -->
-			<manifest>
-				<attribute name="Main-Class" value="sune.app.mediadown.App" />
-				<attribute name="Class-Path" value="."                      />
-			</manifest>
-			<!-- Include the *.class files -->
-			<fileset dir="${dir.bin}" />
-		</jar>
-	</target>
-	<target name="src" depends="jar">
-		<echo message="Generating source ZIP file..." />
-		<zip destfile="${dir.ver}/${jarname}-source.jar" basedir="${dir.src}" />
-	</target>
+<project basedir="." default="build" name="Media-Downloader">
+    <property environment="env" />
+
+    <property name="name.jar"    value="media-downloader"   />
+    <property name="path.javafx" value="/usr/share/openjfx" />
+    <property name="path.cwd"    value="."                  />
+    <property name="path.bin"    value="${path.cwd}/bin"    />
+    <property name="path.lib"    value="${path.cwd}/lib"    />
+    <property name="path.build"  value="${path.cwd}/build"  />
+    <property name="path.etc"    value="${path.cwd}/etc"    />
+    <property name="path.src"    value="${path.cwd}/src"    />
+
+    <property name="debuglevel" value="source,lines,vars" />
+    <property name="target" value="11" />
+    <property name="source" value="11" />
+    <property name="modules" value="javafx.controls,javafx.base,javafx.graphics,javafx.web,sune.util.load,sune.memory,ssdf2,sune.api.process,infomas.asl,org.jsoup" />
+    
+    <path id="classpath.libraries">
+        <pathelement location="lib/infomas-asl.jar" />
+        <pathelement location="lib/jsoup.jar" />
+        <pathelement location="lib/ssdf2.jar" />
+        <pathelement location="lib/sune-memory.jar" />
+        <pathelement location="lib/sune-process-api.jar" />
+        <pathelement location="lib/sune-utils-load.jar" />
+    </path>
+    <path id="classpath.javafx">
+        <pathelement location="${path.javafx}/lib/javafx.base.jar" />
+        <pathelement location="${path.javafx}/lib/javafx.controls.jar" />
+        <pathelement location="${path.javafx}/lib/javafx.fxml.jar" />
+        <pathelement location="${path.javafx}/lib/javafx.graphics.jar" />
+        <pathelement location="${path.javafx}/lib/javafx.media.jar" />
+        <pathelement location="${path.javafx}/lib/javafx.swing.jar" />
+        <pathelement location="${path.javafx}/lib/javafx.web.jar" />
+        <pathelement location="${path.javafx}/lib/javafx-swt.jar" />
+    </path>
+    <path id="classpath.mediadownloader">
+        <pathelement location="${path.bin}" />
+        <path refid="classpath.libraries" />
+        <path refid="classpath.javafx" />
+    </path>
+
+    <path id="modulepath.libraries">
+        <path refid="classpath.libraries" />
+    </path>
+    <path id="modulepath.javafx">
+        <path refid="classpath.javafx" />
+    </path>
+    <path id="modulepath.mediadownloader">
+        <path refid="modulepath.libraries" />
+        <path refid="modulepath.javafx" />
+    </path>
+
+    <target name="compile" depends="copy-resources,compile-java" />
+    <target name="build" depends="build-jar,build-jar-src" />
+    <target name="build-jre" depends="build-jar-jre" />
+
+    <target name="clean">
+        <echo message="Deleting the bin directory..." />
+        <delete dir="${path.bin}" />
+    	<echo message="Deleting the build directory..." />
+    	<delete dir="${path.build}" />
+    </target>
+
+    <target name="init-compile">
+        <echo message="Creating the bin directory..." />
+        <mkdir dir="${path.bin}" />
+    </target>
+	
+	<target name="init-build">
+        <echo message="Creating the build directory..." />
+        <mkdir dir="${path.build}" />
+    </target>
+
+    <target name="copy-resources" depends="init-compile">
+        <echo message="Copying resources..." />
+        <copy includeemptydirs="false" todir="${path.bin}">
+            <fileset dir="src">
+                <exclude name="**/*.java" />
+            </fileset>
+        </copy>
+    </target>
+
+    <target name="compile-java" depends="init-compile">
+        <echo message="Compiling Java files..." />
+        <javac debug="true" debuglevel="${debuglevel}" destdir="${path.bin}" deprecation="false" includeantruntime="false" source="${source}" target="${target}" modulepathref="modulepath.mediadownloader">
+            <src path="src" />
+            <classpath refid="classpath.mediadownloader" />
+            <compilerarg line="--add-modules ${modules}" />
+        </javac>
+    </target>
+
+    <target name="build-jar" depends="init-build,compile">
+        <echo message="Building JAR file..." />
+
+        <!-- Create a temporary JAR file with content of all external libraries -->
+        <jar destfile="${path.build}/${name.jar}-dirty.jar">
+            <!-- Include internally required libraries -->
+            <zipfileset src="${path.lib}/sune-utils-load.jar" excludes="META-INF/*.sf,module-info.class,/*.md" />
+            <zipfileset src="${path.lib}/ssdf2.jar"           excludes="META-INF/*.sf,module-info.class,/*.md" />
+        </jar>
+
+        <jar destfile="${path.build}/${name.jar}.jar">
+            <!-- Configure JAR's Manifest file -->
+            <manifest>
+                <attribute name="Main-Class" value="sune.app.mediadown.App" />
+                <attribute name="Class-Path" value="."                      />
+            </manifest>
+
+            <!-- Include the compiled files -->
+            <fileset dir="${path.bin}" />
+            <!-- Include internally required libraries -->
+            <zipfileset src="${path.build}/${name.jar}-dirty.jar" excludes="META-INF/*.sf,module-info.class,/*.md" />
+        </jar>
+
+        <!-- Delete the temporary JAR file -->
+        <delete file="${path.build}/${name.jar}-dirty.jar" />
+    </target>
+
+    <target name="build-jar-src" depends="init-build">
+        <echo message="Building source ZIP file..." />
+        <zip destfile="${path.build}/${name.jar}-source.jar" basedir="${path.src}" />
+    </target>
+
+    <target name="build-jar-jre" depends="init-build,compile">
+        <echo message="Building JAR file for building custom JRE..." />
+
+        <jar destfile="${dir.etc}/jre/${jarname}-jre.jar">
+            <!-- Configure JAR's Manifest file -->
+            <manifest>
+                <attribute name="Main-Class" value="sune.app.mediadown.App" />
+                <attribute name="Class-Path" value="."                      />
+            </manifest>
+
+            <!-- Include the compiled files -->
+            <fileset dir="${dir.bin}" />
+        </jar>
+    </target>
 </project>
