@@ -106,8 +106,6 @@ public final class Pipeline implements EventBindable<EventType>, HasTaskState {
 			}
 		} finally {
 			doStop(TaskStates.DONE);
-			lockDone.unlock();
-			eventRegistry.call(PipelineEvent.END, this);
 		}
 	}
 	
@@ -117,6 +115,9 @@ public final class Pipeline implements EventBindable<EventType>, HasTaskState {
 			invoke();
 		} catch(Exception ex) {
 			error(ex);
+		} finally {
+			lockDone.unlock();
+			eventRegistry.call(PipelineEvent.END, this);
 		}
 	}
 	
