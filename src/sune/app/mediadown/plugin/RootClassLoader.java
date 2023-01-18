@@ -3,6 +3,7 @@ package sune.app.mediadown.plugin;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
@@ -10,6 +11,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import sune.app.mediadown.util.CheckedFunction;
@@ -21,6 +23,8 @@ import sune.app.mediadown.util.UnsafeLegacy;
  * @since 00.02.02
  */
 public final class RootClassLoader {
+	
+	private static final Pattern REGEX_PATH_DIGITS_ONLY = Pattern.compile("\\$\\d+\\.class$");
 	
 	private final ClassLoader loader;
 	private final CheckedFunction<String, byte[]> resolver;
@@ -108,8 +112,24 @@ public final class RootClassLoader {
 	}
 	
 	private final void pushToStack(Deque<Entry<String, String>> stack, Set<String> queued, String path) throws Exception {
-		pushToStackDirect(stack, queued, path);
-		innerClasses(path).forEach((p) -> pushToStackDirect(stack, queued, p));
+		List<String> innerClasses = innerClasses(path);
+		
+		if(!innerClasses.isEmpty()) {
+			List<String> pushAfter = new ArrayList<>(innerClasses.size());
+			
+			for(String innerClassPath : innerClasses) {
+				if(REGEX_PATH_DIGITS_ONLY.matcher(innerClassPath).find()) {
+					pushToStackDirect(stack, queued, innerClassPath);
+				} else {
+					pushAfter.add(innerClassPath);
+				}
+			}
+			
+			pushToStackDirect(stack, queued, path);
+			pushAfter.forEach((p) -> pushToStackDirect(stack, queued, p));
+		} else {
+			pushToStackDirect(stack, queued, path);
+		}
 	}
 	
 	private final boolean isBuiltinDependency(String name) {
@@ -160,7 +180,7 @@ public final class RootClassLoader {
 				
 				// Push all class dependecies to the stack
 				for(String depName : dependencies(bytes)) {
-					if(loaded.contains(depName)
+					if(name.equals(depName) || loaded.contains(depName)
 							|| (classLoaded(loader, depName) && loaded.add(depName))) {
 						continue; // Skip already loaded classes
 					}
