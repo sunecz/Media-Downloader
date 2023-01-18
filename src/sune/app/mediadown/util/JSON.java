@@ -86,6 +86,7 @@ public final class JSON {
 		 */
 		
 		private static final int BUFFER_SIZE = 8192;
+		private static final int CHAR_BYTE_ORDER_MARK = 65279;
 		
 		private static final MethodHandle mh_SSDCollection;
 		private static final MethodHandle mh_SSDValue;
@@ -434,6 +435,12 @@ public final class JSON {
 		
 		public final SSDCollection read() throws IOException {
 			c = next(); // Bootstrap
+			
+			if(c == CHAR_BYTE_ORDER_MARK) {
+				// Skip the BOM
+				c = next();
+			}
+			
 			readNext();
 			return lastParent.b;
 		}
