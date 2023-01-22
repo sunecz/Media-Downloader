@@ -9,6 +9,7 @@ import sune.app.mediadown.event.EventRegistry;
 import sune.app.mediadown.event.EventType;
 import sune.app.mediadown.manager.DownloadManager;
 import sune.app.mediadown.manager.ManagerSubmitResult;
+import sune.app.mediadown.util.Utils.Ignore;
 
 /** @since 00.01.26 */
 public final class DownloadPipelineTask implements PipelineTask<DownloadPipelineResult> {
@@ -34,14 +35,14 @@ public final class DownloadPipelineTask implements PipelineTask<DownloadPipeline
 		DownloadResult downloadResult = result.getValue();
 		
 		// Notify the media of being submitted
-		media.submitted();
+		media.submit(result::cancel);
 		
 		// Bind all events from the pipeline
 		EventRegistry<EventType> eventRegistry = pipeline.getEventRegistry();
 		Download download = downloadResult.download();
 		eventRegistry.bindAll(download, DownloadEvent.values());
 		
-		result.get(); // Wait for the download to finish
+		Ignore.Cancellation.call(result::get); // Wait for the download to finish
 		return (DownloadPipelineResult) downloadResult.pipelineResult();
 	}
 	

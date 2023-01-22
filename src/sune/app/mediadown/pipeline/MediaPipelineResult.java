@@ -29,12 +29,12 @@ public final class MediaPipelineResult implements PipelineResult<DownloadPipelin
 			PipelineTask<DownloadPipelineResult> task
 				= Ignore.defaultValue(() -> PipelineTaskRegistry.instance("ProtectedMediaPipelineTask", data), (PipelineTask<DownloadPipelineResult>) null);
 			
-			// Notify, regardless of the task
-			media.submitted();
-			
 			if(task == null) {
 				throw new IllegalStateException("No pipeline task found for protected media.");
 			}
+			
+			// Notify, regardless of the task
+			media.submit(task::stop);
 			
 			return task;
 		}

@@ -4,12 +4,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 /** @since 00.02.04 */
-public final class StateMutex {
+public class StateMutex {
 	
-	private final AtomicReference<Throwable> exception = new AtomicReference<>();
-	private final AtomicBoolean unlocked = new AtomicBoolean(false);
+	protected final AtomicReference<Throwable> exception = new AtomicReference<>();
+	protected final AtomicBoolean unlocked = new AtomicBoolean(false);
 	
-	private final boolean await(boolean reset) {
+	protected final boolean await(boolean reset) {
 		synchronized(this) {
 			boolean success = unlocked.get();
 			
@@ -31,32 +31,32 @@ public final class StateMutex {
 		}
 	}
 	
-	public final boolean await() {
+	public boolean await() {
 		return await(false);
 	}
 	
-	public final boolean awaitAndReset() {
+	public boolean awaitAndReset() {
 		return await(true);
 	}
 	
-	public final void unlock() {
+	public void unlock() {
 		synchronized(this) {
 			unlocked.set(true);
 			notifyAll();
 		}
 	}
 	
-	public final void reset() {
+	public void reset() {
 		synchronized(this) {
 			unlocked.set(false);
 		}
 	}
 	
-	public final Throwable getException() {
+	public Throwable getException() {
 		return exception.get();
 	}
 	
-	public final Throwable getExceptionAndReset() {
+	public Throwable getExceptionAndReset() {
 		return exception.getAndSet(null);
 	}
 }

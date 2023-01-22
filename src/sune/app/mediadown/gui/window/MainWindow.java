@@ -101,6 +101,7 @@ import sune.app.mediadown.pipeline.PipelineResult;
 import sune.app.mediadown.plugin.PluginFile;
 import sune.app.mediadown.plugin.PluginUpdater;
 import sune.app.mediadown.plugin.Plugins;
+import sune.app.mediadown.util.Cancellable;
 import sune.app.mediadown.util.FXUtils;
 import sune.app.mediadown.util.MathUtils;
 import sune.app.mediadown.util.Pair;
@@ -108,7 +109,6 @@ import sune.app.mediadown.util.Threads;
 import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Utils.Ignore;
 import sune.app.mediadown.util.Utils.SizeUnit;
-import sune.app.mediadown.util.Utils.Suppress;
 import sune.util.ssdf2.SSDObject;
 
 public final class MainWindow extends Window<BorderPane> {
@@ -169,8 +169,7 @@ public final class MainWindow extends Window<BorderPane> {
 		actions.terminate();
 		maybeAutoDisableClipboardWatcher();
 		
-		List<Pipeline> pipelines = getPipelines();
-		if(!pipelines.isEmpty()) {
+		if(!pipelines().isEmpty()) {
 			e.consume();
 			if(!closeRequest.get()) {
 				Threads.execute(() -> {
@@ -185,19 +184,11 @@ public final class MainWindow extends Window<BorderPane> {
 	}
 	
 	private final void internal_stopPipelines() {
-		List<Pipeline> pipelines = getPipelines();
-		for(Pipeline pipeline : pipelines) {
-			if((pipeline.isStarted() && pipeline.isRunning() || pipeline.isPaused())) {
-				Ignore.callVoid(pipeline::stop, this::showError);
-			}
-		}
-		pipelines.clear();
+		pipelines().forEach(this::stopPipeline);
 	}
 	
 	private final void init() {
-		Disposables.add(() -> {
-			getPipelines().forEach(Suppress.consumer(Pipeline::stop, this::showError));
-		});
+		Disposables.add(this::internal_stopPipelines);
 		prepareAddMenu();
 	}
 	
@@ -483,11 +474,7 @@ public final class MainWindow extends Window<BorderPane> {
 			
 			if(anyTerminable(infos)) {
 				for(PipelineInfo info : infos) {
-					Pipeline pipeline = info.pipeline();
-					
-					if(pipeline.isStarted() && (pipeline.isRunning() || pipeline.isPaused())) {
-						Ignore.callVoid(pipeline::stop, this::showError);
-					}
+					stopPipeline(info);
 				}
 			} else {
 				removePipelines(new ArrayList<>(infos));
@@ -755,7 +742,7 @@ public final class MainWindow extends Window<BorderPane> {
 	}
 	
 	private final void showFile(PipelineInfo info) {
-		Ignore.callVoid(() -> OS.current().highlight(info.media().path()), MediaDownloader::error);
+		Ignore.callVoid(() -> OS.current().highlight(info.resolvedMedia().path()), MediaDownloader::error);
 	}
 	
 	/** @since 00.02.05 */
@@ -842,8 +829,9 @@ public final class MainWindow extends Window<BorderPane> {
 					.anyMatch((p) -> p.isStarted() && (p.isRunning() || p.isPaused()));
 	}
 	
-	private final List<Pipeline> getPipelines() {
-		return table.getItems().stream().map(PipelineInfo::pipeline).filter((d) -> d != null).collect(Collectors.toList());
+	/** @since 00.02.08 */
+	private final List<PipelineInfo> pipelines() {
+		return table.getItems();
 	}
 	
 	private final void startPipeline(PipelineInfo info) {
@@ -853,15 +841,37 @@ public final class MainWindow extends Window<BorderPane> {
 			return;
 		}
 		
-		ResolvedMedia media = info.media();
+		ResolvedMedia media = info.resolvedMedia();
 		PipelineMedia pipelineMedia = PipelineMedia.of(media.media(), media.path(), media.configuration(),
 			DownloadConfiguration.ofDefault());
 		PipelineResult<?> input = MediaPipelineResult.of(pipelineMedia);
 		
 		try {
+			info.media(pipelineMedia);
 			pipeline.setInput(input);
 			pipeline.start();
 			pipelineMedia.awaitSubmitted();
+		} catch(Exception ex) {
+			showError(ex);
+		}
+	}
+	
+	/** @since 00.02.08 */
+	private final void stopPipeline(PipelineInfo info) {
+		Pipeline pipeline = info.pipeline();
+		
+		if(!pipeline.isStarted() || (!pipeline.isRunning() && !pipeline.isPaused())) {
+			return;
+		}
+		
+		try {
+			pipeline.stop();
+			pipeline.waitFor();
+			
+			Cancellable cancellable;
+			if((cancellable = info.media().submitValue()) != null) {
+				cancellable.cancel();
+			}
 		} catch(Exception ex) {
 			showError(ex);
 		}
@@ -883,9 +893,7 @@ public final class MainWindow extends Window<BorderPane> {
 	}
 	
 	private final void removePipelines(List<PipelineInfo> infos) {
-		infos.stream().map(PipelineInfo::pipeline)
-			.filter((p) -> p != null)
-			.forEach(Suppress.consumer(Pipeline::stop, this::showError));
+		infos.stream().filter(Objects::nonNull).forEach(this::stopPipeline);
 		FXUtils.thread(() -> table.getItems().removeAll(infos));
 	}
 	
@@ -968,7 +976,7 @@ public final class MainWindow extends Window<BorderPane> {
 		}
 		
 		private final Image image() {
-			MediaGetter getter = (MediaGetter) getTableRow().getItem().media().media().source().instance();
+			MediaGetter getter = (MediaGetter) getTableRow().getItem().resolvedMedia().media().source().instance();
 			return getter != null ? getter.icon() : null;
 		}
 		
@@ -1218,7 +1226,9 @@ public final class MainWindow extends Window<BorderPane> {
 		
 		private final Pipeline pipeline;
 		/** @since 00.02.05 */
-		private final ResolvedMedia media;
+		private final ResolvedMedia resolvedMedia;
+		/** @since 00.02.08 */
+		private PipelineMedia media;
 		
 		/** @since 00.02.08 */
 		private StringProperty sourceProperty;
@@ -1248,9 +1258,9 @@ public final class MainWindow extends Window<BorderPane> {
 		/** @since 00.02.08 */
 		private boolean isQueued;
 		
-		public PipelineInfo(Pipeline pipeline, ResolvedMedia media) {
+		public PipelineInfo(Pipeline pipeline, ResolvedMedia resolvedMedia) {
 			this.pipeline = Objects.requireNonNull(pipeline);
-			this.media = Objects.requireNonNull(media);
+			this.resolvedMedia = Objects.requireNonNull(resolvedMedia);
 			this.pipeline.getEventRegistry().addMany((o) -> stateUpdated = true, PipelineEvent.values());
 		}
 		
@@ -1392,18 +1402,23 @@ public final class MainWindow extends Window<BorderPane> {
 		}
 		
 		/** @since 00.02.08 */
+		public void media(PipelineMedia media) {
+			this.media = media;
+		}
+		
+		/** @since 00.02.08 */
 		public String source() {
-			return media.media().source().toString();
+			return resolvedMedia.media().source().toString();
 		}
 		
 		/** @since 00.02.08 */
 		public String title() {
-			return media.media().metadata().title();
+			return resolvedMedia.media().metadata().title();
 		}
 		
 		/** @since 00.02.08 */
 		public String destination() {
-			return media.path().toString();
+			return resolvedMedia.path().toString();
 		}
 		
 		/** @since 00.02.08 */
@@ -1454,13 +1469,18 @@ public final class MainWindow extends Window<BorderPane> {
 		}
 		
 		/** @since 00.02.08 */
-		public ResolvedMedia media() {
-			return media;
+		public ResolvedMedia resolvedMedia() {
+			return resolvedMedia;
 		}
 		
 		/** @since 00.02.08 */
 		public boolean isQueued() {
 			return isQueued;
+		}
+		
+		/** @since 00.02.08 */
+		public PipelineMedia media() {
+			return media;
 		}
 	}
 	

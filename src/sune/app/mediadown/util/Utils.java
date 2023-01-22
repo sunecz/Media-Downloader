@@ -50,6 +50,7 @@ import java.util.Set;
 import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -1937,6 +1938,93 @@ public final class Utils {
 		public static final <T> T supplier(Callable<T> callable, Supplier<T> defaultValueSupplier,
 				Function<Exception, RuntimeException> exceptionMapper) {
 			return ignore(callable, defaultValueSupplier, exceptionMapper);
+		}
+		
+		public static final class Cancellation {
+			
+			// Forbid anyone to create an instance of this class
+			private Cancellation() {
+			}
+			
+			private static final Function<Exception, RuntimeException> exceptionMapper(
+					Function<Exception, RuntimeException> exceptionMapper) {
+				return ((exception) -> {
+					if(exception instanceof CancellationException
+							|| exception instanceof InterruptedException) {
+						return null;
+					}
+					
+					return exceptionMapper != null
+								? exceptionMapper.apply(exception)
+								: null;
+				});
+			}
+			
+			public static final <T> T call(Callable<T> callable) {
+				return call(callable, (Function<Exception, RuntimeException>) null);
+			}
+			
+			public static final <T> T call(Callable<T> callable, Consumer<Exception> exceptionHandler) {
+				return call(callable, Internal.exceptionMapper(exceptionHandler));
+			}
+			
+			public static final <T> T call(Callable<T> callable, Function<Exception, RuntimeException> exceptionMapper) {
+				return defaultValue(callable, null, exceptionMapper);
+			}
+			
+			public static final <T> void callVoid(CheckedRunnable runnable) {
+				callVoid(runnable, (Function<Exception, RuntimeException>) null);
+			}
+			
+			public static final <T> void callVoid(CheckedRunnable runnable, Consumer<Exception> exceptionHandler) {
+				callVoid(runnable, Internal.exceptionMapper(exceptionHandler));
+			}
+			
+			public static final <T> void callVoid(CheckedRunnable runnable,
+					Function<Exception, RuntimeException> exceptionMapper) {
+				Suppress.runnable(runnable, exceptionMapper(exceptionMapper)).run();
+			}
+			
+			public static final <T> boolean callAndCheck(CheckedRunnable runnable) {
+				return callAndCheck(runnable, (Function<Exception, RuntimeException>) null);
+			}
+			
+			public static final <T> boolean callAndCheck(CheckedRunnable runnable, Consumer<Exception> exceptionHandler) {
+				return callAndCheck(runnable, Internal.exceptionMapper(exceptionHandler));
+			}
+			
+			public static final <T> boolean callAndCheck(CheckedRunnable runnable,
+					Function<Exception, RuntimeException> exceptionMapper) {
+				return Suppress.supplier(runnable, exceptionMapper(exceptionMapper)).get();
+			}
+			
+			public static final <T> T defaultValue(Callable<T> callable, T defaultValue) {
+				return defaultValue(callable, defaultValue, (Function<Exception, RuntimeException>) null);
+			}
+			
+			public static final <T> T defaultValue(Callable<T> callable, T defaultValue,
+					Consumer<Exception> exceptionHandler) {
+				return supplier(callable, () -> defaultValue, exceptionHandler);
+			}
+			
+			public static final <T> T defaultValue(Callable<T> callable, T defaultValue,
+					Function<Exception, RuntimeException> exceptionMapper) {
+				return supplier(callable, () -> defaultValue, exceptionMapper);
+			}
+			
+			public static final <T> T supplier(Callable<T> callable, Supplier<T> defaultValueSupplier) {
+				return supplier(callable, defaultValueSupplier, (Function<Exception, RuntimeException>) null);
+			}
+			
+			public static final <T> T supplier(Callable<T> callable, Supplier<T> defaultValueSupplier,
+					Consumer<Exception> exceptionHandler) {
+				return supplier(callable, defaultValueSupplier, Internal.exceptionMapper(exceptionHandler));
+			}
+			
+			public static final <T> T supplier(Callable<T> callable, Supplier<T> defaultValueSupplier,
+					Function<Exception, RuntimeException> exceptionMapper) {
+				return ignore(callable, defaultValueSupplier, exceptionMapper(exceptionMapper));
+			}
 		}
 	}
 	

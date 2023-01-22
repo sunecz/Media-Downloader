@@ -5,8 +5,10 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import sune.app.mediadown.util.Cancellable;
+
 /** @since 00.01.26 */
-public class ManagerSubmitResult<A, B> implements Future<B> {
+public class ManagerSubmitResult<A, B> implements Future<B>, Cancellable {
 	
 	private final A value;
 	private final Future<B> future;
@@ -21,6 +23,11 @@ public class ManagerSubmitResult<A, B> implements Future<B> {
 	@Override
 	public boolean cancel(boolean mayInterruptIfRunning) {
 		return future.cancel(mayInterruptIfRunning);
+	}
+	
+	@Override
+	public void cancel() throws Exception {
+		cancel(true);
 	}
 	
 	@Override
