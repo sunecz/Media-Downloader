@@ -4,7 +4,6 @@ import static sune.app.mediadown.MediaDownloader.DATE;
 import static sune.app.mediadown.MediaDownloader.VERSION;
 
 import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -91,6 +90,15 @@ public final class MainWindow extends Window<BorderPane> {
 	
 	public static final String NAME = "main";
 	
+	/** @since 00.02.08 */
+	private static final double DEFAULT_WIDTH  = 750.0;
+	/** @since 00.02.08 */
+	private static final double DEFAULT_HEIGHT = 450.0;
+	/** @since 00.02.08 */
+	private static final double MINIMUM_WIDTH  = 600.0;
+	/** @since 00.02.08 */
+	private static final double MINIMUM_HEIGHT = 400.0;
+	
 	private static MainWindow INSTANCE;
 	
 	private final AtomicBoolean closeRequest = new AtomicBoolean();
@@ -113,7 +121,7 @@ public final class MainWindow extends Window<BorderPane> {
 	private MenuItem menuItemUpdateResources;
 	
 	public MainWindow() {
-		super(NAME, new BorderPane(), 750.0, 450.0);
+		super(NAME, new BorderPane(), DEFAULT_WIDTH, DEFAULT_HEIGHT);
 		
 		pane.setTop(initializeMenuBar());
 		pane.setCenter(initializePipelinesTable());
@@ -121,14 +129,16 @@ public final class MainWindow extends Window<BorderPane> {
 		
 		setScene(scene);
 		setOnCloseRequest(this::close);
-		setMinWidth(600);
-		setMinHeight(400);
+		setMinWidth(MINIMUM_WIDTH);
+		setMinHeight(MINIMUM_HEIGHT);
 		setTitle(tr("title", "version", VERSION, "date", DATE));
 		setResizable(true);
 		centerOnScreen();
-		FXUtils.onWindowShowOnce(this, this::init);
+		
+		FXUtils.onWindowShowOnce(this, this::initialize);
 		FXUtils.onWindowShowOnce(this, this::showMessagesAsync);
 		FXUtils.onWindowShowOnce(this, this::maybeAutoEnableClipboardWatcher);
+		
 		INSTANCE = this;
 	}
 	
@@ -142,11 +152,13 @@ public final class MainWindow extends Window<BorderPane> {
 		
 		if(!table.pipelines().isEmpty()) {
 			e.consume();
+			
 			if(!closeRequest.get()) {
 				Threads.execute(() -> {
 					stopPipelines();
 					FXUtils.thread(MediaDownloader::close);
 				});
+				
 				closeRequest.set(true);
 			}
 		} else {
@@ -158,68 +170,68 @@ public final class MainWindow extends Window<BorderPane> {
 		table.stopAll();
 	}
 	
-	private final void init() {
+	/** @since 00.02.08 */
+	private final void initialize() {
 		Disposables.add(this::stopPipelines);
-		prepareAddMenu();
+		
+		// Initialize the menu AFTER the window is shown so that plugins are already loaded.
+		initializeAddMenu();
 	}
 	
 	/** @since 00.02.02 */
 	private final boolean showMessages() {
-		MessageList list = Ignore.defaultValue(() -> MessageManager.current(), MessageManager.empty());
+		MessageList list = Ignore.supplier(MessageManager::current, MessageManager::empty);
 		String language = MediaDownloader.language().code();
-		if(language.equalsIgnoreCase("auto"))
+		
+		if(language.equalsIgnoreCase("auto")) {
 			language = MediaDownloader.Languages.localLanguage().code();
-		List<Message> messages = list.difference(language, Ignore.defaultValue(() -> MessageManager.local(), MessageManager.empty()));
+		}
+		
+		List<Message> messages = list.difference(
+			language, Ignore.supplier(MessageManager::local, MessageManager::empty)
+		);
+		
 		if(!messages.isEmpty()) {
 			FXUtils.thread(() -> {
 				MessageWindow window = MediaDownloader.window(MessageWindow.NAME);
 				window.setArgs("messages", messages);
 				window.show();
 			});
+			
 			return true;
 		}
+		
 		return false;
 	}
 	
 	/** @since 00.02.04 */
 	private final void showMessagesAsync() {
-		actions.submit(new ProgressAction() {
-			
-			@Override
-			public void action(ProgressContext context) {
-				context.setProgress(ProgressContext.PROGRESS_INDETERMINATE);
-				context.setText(tr("actions.messages.checking"));
-				Ignore.callVoid(MainWindow.this::showMessages, MediaDownloader::error);
-			}
-			
-			@Override public void cancel() { /* Do nothing */ }
+		actions.submit((context) -> {
+			context.setProgress(ProgressContext.PROGRESS_INDETERMINATE);
+			context.setText(tr("actions.messages.checking"));
+			Ignore.callVoid(MainWindow.this::showMessages, MediaDownloader::error);
 		});
 	}
 	
 	/** @since 00.02.02 */
 	private final boolean resetAndShowMessages() {
-		Ignore.callVoid(() -> MessageManager.deleteLocal(), MediaDownloader::error);
+		Ignore.callVoid(MessageManager::deleteLocal, MediaDownloader::error);
 		return showMessages();
 	}
 	
 	/** @since 00.02.04 */
 	private final void resetAndShowMessagesAsync() {
-		actions.submit(new ProgressAction() {
+		actions.submit((context) -> {
+			context.setProgress(ProgressContext.PROGRESS_INDETERMINATE);
+			context.setText(tr("actions.messages.checking"));
 			
-			@Override
-			public void action(ProgressContext context) {
-				context.setProgress(ProgressContext.PROGRESS_INDETERMINATE);
-				context.setText(tr("actions.messages.checking"));
-				if(!resetAndShowMessages()) {
-					// Show the dialog in the next pulse so that the progress window can be closed
-					FXUtils.thread(() -> {
-						Translation dialogTranslation = trtr("dialogs.messages_empty");
-						Dialog.showInfo(dialogTranslation.getSingle("title"), dialogTranslation.getSingle("text"));
-					});
-				}
+			if(!resetAndShowMessages()) {
+				// Show the dialog in the next pulse so that the progress window can be closed
+				FXUtils.thread(() -> {
+					Translation tr = trtr("dialogs.messages_empty");
+					Dialog.showInfo(tr.getSingle("title"), tr.getSingle("text"));
+				});
 			}
-			
-			@Override public void cancel() { /* Do nothing */ }
 		});
 	}
 	
@@ -239,23 +251,35 @@ public final class MainWindow extends Window<BorderPane> {
 		}
 	}
 	
-	private final void prepareAddMenu() {
+	/** @since 00.02.08 */
+	private final MenuItem createMediaEngineMenuItem(MediaEngine engine) {
+		MenuItem item = new MenuItem(engine.title());
+		ImageView icon = new ImageView(engine.icon());
+		
+		icon.setFitWidth(16);
+		icon.setFitHeight(16);
+		item.setGraphic(icon);
+		item.getProperties().put("engine", engine);
+		item.setOnAction((e) -> showSelectionWindow((MediaEngine) item.getProperties().get("engine")));
+		
+		return item;
+	}
+	
+	/** @since 00.02.08 */
+	private final void initializeAddMenu() {
 		menuAdd = new ContextMenu();
-		for(MediaEngine engine : MediaEngines.all()) {
-			MenuItem item = new MenuItem(engine.title());
-			ImageView icon = new ImageView(engine.icon());
-			icon.setFitWidth(16);
-			icon.setFitHeight(16);
-			item.setGraphic(icon);
-			item.getProperties().put("engine", engine);
-			item.setOnAction((e) -> showSelectionWindow((MediaEngine) item.getProperties().get("engine")));
-			menuAdd.getItems().add(item);
-		}
+		
+		List<MenuItem> menuItems = MediaEngines.all().stream()
+			.map(this::createMediaEngineMenuItem)
+			.collect(Collectors.toList());
+		
 		MenuItem itemMediaGetter = new MenuItem(tr("context_menus.add.items.media_getter"));
 		itemMediaGetter.setOnAction((e) -> {
 			MediaDownloader.window(MediaGetterWindow.NAME).show(this);
 		});
-		menuAdd.getItems().addAll(itemMediaGetter);
+		menuItems.add(itemMediaGetter);
+		
+		menuAdd.getItems().addAll(menuItems);
 		prepareContextMenuForShowing(menuAdd);
 	}
 	
@@ -412,14 +436,14 @@ public final class MainWindow extends Window<BorderPane> {
 	private final Pane initializeButtons() {
 		btnDownload = new Button(tr("buttons.download"));
 		btnDownload.setOnAction((e) -> {
-			table.start(table.pipelines());
+			table.startAll();
 			btnDownload.setDisable(true);
 			btnDownloadSelected.setDisable(true);
 		});
 		
 		btnDownloadSelected = new Button(tr("buttons.download_selected"));
 		btnDownloadSelected.setOnAction((e) -> {
-			table.start(table.selectedPipelines());
+			table.startSelected();
 			btnDownloadSelected.setDisable(true);
 		});
 		
@@ -529,83 +553,112 @@ public final class MainWindow extends Window<BorderPane> {
 		};
 	}
 	
+	/** @since 00.02.08 */
+	private final void initializeInformationWindowPluginsTab(InformationWindow window) {
+		InformationWindow informationWindow = MediaDownloader.window(InformationWindow.NAME);
+		InformationTab<ItemPlugin> tab = window.selectedTab();
+		Translation tabTranslation = informationWindow.getTranslation().getTranslation("tabs.plugins");
+		
+		tab.list().getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+		
+		// Special buttons for the Plugins tab
+		Button btnUpdateAll = new Button(tabTranslation.getSingle("buttons.update_all"));
+		Button btnUpdateSelected = new Button(tabTranslation.getSingle("buttons.update_selected"));
+		
+		btnUpdateAll.setOnAction((e) -> {
+			ProgressWindow.submitAction(window, action_updatePlugins(window, Plugins.allLoaded()));
+		});
+		
+		btnUpdateSelected.setOnAction((e) -> {
+			Collection<ItemPlugin> selectedItems = tab.list().getSelectionModel().getSelectedItems();
+			Collection<PluginFile> plugins = selectedItems.stream()
+				.map(ItemPlugin::getPlugin)
+				.collect(Collectors.toList());
+			
+			ProgressWindow.submitAction(window, action_updatePlugins(window, plugins));
+		});
+		
+		HBox boxBottom = new HBox(5);
+		HBox boxFill = new HBox();
+		boxBottom.getChildren().addAll(boxFill, btnUpdateAll, btnUpdateSelected);
+		boxBottom.setId("box-bottom");
+		HBox.setHgrow(boxFill, Priority.ALWAYS);
+		
+		GridPane pane = Utils.cast(tab.getContent());
+		pane.getChildren().add(boxBottom);
+		GridPane.setConstraints(boxBottom, 0, 2, 1, 1);
+	}
+	
 	private final void showInformationWindow() {
 		InformationWindow window = MediaDownloader.window(InformationWindow.NAME);
-		Translation translation = window.getTranslation().getTranslation("tabs");
-		TabContent<?>[] tabs = {
-			new TabContent<>(translation.getTranslation("plugins"), ItemPlugin.items()),
-			new TabContent<>(translation.getTranslation("media_engines"), ItemMediaEngine.items()),
-			new TabContent<>(translation.getTranslation("downloaders"), ItemDownloader.items()),
-			new TabContent<>(translation.getTranslation("servers"), ItemServer.items()),
-			new TabContent<>(translation.getTranslation("search_engines"), ItemSearchEngine.items()),
-		};
-		// Special buttons for the Plugins tab
-		tabs[0].setOnInit((win) -> {
-			InformationTab<ItemPlugin> tab = win.getSelectedTab();
-			tab.getList().getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-			Translation tabTranslation = translation.getTranslation("plugins");
-			HBox boxBottom = new HBox(5);
-			Button btnUpdateAll = new Button(tabTranslation.getSingle("buttons.update_all"));
-			Button btnUpdateSelected = new Button(tabTranslation.getSingle("buttons.update_selected"));
-			btnUpdateAll.setOnAction((e) -> {
-				ProgressWindow.submitAction(window, action_updatePlugins(window, Plugins.allLoaded()));
-			});
-			btnUpdateSelected.setOnAction((e) -> {
-				Collection<ItemPlugin> selectedItems = tab.getList().getSelectionModel().getSelectedItems();
-				Collection<PluginFile> plugins = selectedItems.stream().map(ItemPlugin::getPlugin).collect(Collectors.toList());
-				ProgressWindow.submitAction(window, action_updatePlugins(window, plugins));
-			});
-			HBox boxFill = new HBox();
-			boxBottom.getChildren().addAll(boxFill, btnUpdateAll, btnUpdateSelected);
-			boxBottom.setId("box-bottom");
-			HBox.setHgrow(boxFill, Priority.ALWAYS);
-			GridPane pane = (GridPane) tab.getContent();
-			pane.getChildren().add(boxBottom);
-			GridPane.setConstraints(boxBottom, 0, 2, 1, 1);
-		});
+		Translation tr = window.getTranslation().getTranslation("tabs");
+		
+		List<TabContent<?>> tabs = List.of(
+			new TabContent<>(tr.getTranslation("plugins"), ItemPlugin.items()),
+			new TabContent<>(tr.getTranslation("media_engines"), ItemMediaEngine.items()),
+			new TabContent<>(tr.getTranslation("downloaders"), ItemDownloader.items()),
+			new TabContent<>(tr.getTranslation("servers"), ItemServer.items()),
+			new TabContent<>(tr.getTranslation("search_engines"), ItemSearchEngine.items())
+		);
+		
 		// Filter out empty tabs
-		tabs = Arrays.asList(tabs).stream().filter((t) -> t.getItems().length > 0).toArray(TabContent[]::new);
+		tabs = tabs.stream()
+			.filter((tab) -> !tab.items().isEmpty())
+			.collect(Collectors.toList());
+		
+		tabs.get(0).setOnInit(this::initializeInformationWindowPluginsTab);
+		
 		window.setArgs("tabs", tabs);
 		window.show(this);
 	}
 	
-	private final void prepareContextMenuForShowing(ContextMenu menu) {
-		menu.showingProperty().addListener((o) -> {
-			Map<Object, Object> props = menu.getProperties();
-			if((menu.isShowing() && props.containsKey("firstShow"))) {
-				Node node = (Node) props.get("node");
-				double height = menu.getHeight();
-				double screenX = (double) props.get("screenX");
-				double screenY = (double) props.get("screenY") - height + 15.0;
-				props.put("height", height);
-				props.remove("firstShow");
-				menu.hide();
-				menu.show(node, screenX, screenY);
+	private final void prepareContextMenuForShowing(ContextMenu contextMenu) {
+		contextMenu.showingProperty().addListener((o) -> {
+			Map<Object, Object> props = contextMenu.getProperties();
+			
+			if(!contextMenu.isShowing() || !props.containsKey("firstShow")) {
+				return;
 			}
+			
+			Node node = (Node) props.get("node");
+			double height = contextMenu.getHeight();
+			double screenX = (double) props.get("screenX");
+			double screenY = (double) props.get("screenY") - height + 15.0;
+			
+			props.put("height", height);
+			props.remove("firstShow");
+			
+			contextMenu.hide();
+			contextMenu.show(node, screenX, screenY);
 		});
 	}
 	
-	private final void showContextMenuAtNode(ContextMenu menu, Node node) {
-		if((menu.isShowing())) return; // Fix: graphical glitch when the menu is already showing
+	private final void showContextMenuAtNode(ContextMenu contextMenu, Node node) {
+		// Fix: graphical glitch when the menu is already showing
+		if(contextMenu.isShowing()) {
+			return;
+		}
+		
 		Bounds boundsLocal = node.getBoundsInLocal();
 		Bounds boundsScreen = node.localToScreen(boundsLocal);
 		double screenX = boundsScreen.getMinX();
 		double screenY = boundsScreen.getMinY();
-		Map<Object, Object> props = menu.getProperties();
-		if((props.containsKey("height"))) {
+		Map<Object, Object> props = contextMenu.getProperties();
+		
+		if(props.containsKey("height")) {
 			double height = (double) props.get("height");
-			menu.show(node, screenX, screenY - height + 15.0);
+			contextMenu.show(node, screenX, screenY - height + 15.0);
 		} else {
 			props.put("firstShow", true);
-			props.put("node",      node);
-			props.put("screenX",   screenX);
-			props.put("screenY",   screenY);
-			menu.show(this);
+			props.put("node", node);
+			props.put("screenX", screenX);
+			props.put("screenY", screenY);
+			contextMenu.show(this);
 		}
 	}
 	
-	/** @since 00.02.05 */
-	private final PipelineInfo getPipelineInfo(ResolvedMedia media) {
+	/** @since 00.02.08 */
+	private final PipelineInfo createPipelineInfo(ResolvedMedia media) {
 		Pipeline pipeline = Pipeline.create();
 		PipelineInfo info = new PipelineInfo(pipeline, media);
 		TrackerVisitor visitor = new DefaultTrackerVisitor(info);
@@ -674,20 +727,24 @@ public final class MainWindow extends Window<BorderPane> {
 	
 	public final void showSelectionWindow(MediaEngine engine) {
 		TableWindow window = MediaDownloader.window(TableWindow.NAME);
+		
 		Threads.execute(() -> {
 			Ignore.callVoid(() -> {
 				TablePipelineResult<?, ?> result = window.show(this, engine);
-				if(result.isTerminating()) {
-					((ResolvedMediaPipelineResult) result).getValue().forEach(this::addDownload);
+				
+				if(!result.isTerminating()) {
+					return;
 				}
+				
+				ResolvedMediaPipelineResult castedResult = Utils.cast(result);
+				castedResult.getValue().forEach(this::addDownload);
 			}, MediaDownloader::error);
 		});
 	}
 	
 	/** @since 00.02.05 */
 	public final void addDownload(ResolvedMedia media) {
-		PipelineInfo info = getPipelineInfo(media);
-		FXUtils.thread(() -> table.getItems().add(info));
+		table.add(createPipelineInfo(media));
 	}
 	
 	/** @since 00.02.04 */
@@ -701,8 +758,9 @@ public final class MainWindow extends Window<BorderPane> {
 		}
 		
 		public final void terminate() {
-			if(progressWindow != null)
+			if(progressWindow != null) {
 				FXUtils.thread(progressWindow::hide);
+			}
 		}
 	}
 	

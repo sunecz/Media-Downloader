@@ -214,10 +214,14 @@ public class ProgressWindow extends Window<StackPane> {
 		}
 	}
 	
+	@FunctionalInterface
 	public static interface ProgressAction {
 		
 		void action(ProgressContext context);
-		void cancel();
+		
+		default void cancel() {
+			// Do nothing by default
+		}
 	}
 	
 	public static interface ProgressContext {

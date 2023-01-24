@@ -174,7 +174,19 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 		infos.stream().forEachOrdered(PipelineInfo::stop);
 	}
 	
-	public final void remove(List<PipelineInfo> infos) {
+	public void add(PipelineInfo info) {
+		FXUtils.thread(() -> getItems().add(info));
+	}
+	
+	public void add(List<PipelineInfo> infos) {
+		FXUtils.thread(() -> getItems().addAll(infos));
+	}
+	
+	public void remove(PipelineInfo info) {
+		FXUtils.thread(() -> getItems().remove(info));
+	}
+	
+	public void remove(List<PipelineInfo> infos) {
 		FXUtils.thread(() -> getItems().removeAll(infos));
 	}
 	

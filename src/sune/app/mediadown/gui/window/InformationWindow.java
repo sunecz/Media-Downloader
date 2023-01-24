@@ -1,7 +1,8 @@
 package sune.app.mediadown.gui.window;
 
-import java.util.Arrays;
+import java.util.List;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import javafx.geometry.Insets;
 import javafx.geometry.Side;
@@ -21,74 +22,55 @@ import sune.app.mediadown.gui.DraggableWindow;
 import sune.app.mediadown.language.Translation;
 import sune.app.mediadown.util.FXUtils;
 import sune.app.mediadown.util.HorizontalLeftTabPaneSkin;
+import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Utils.Ignore;
 
 public class InformationWindow extends DraggableWindow<StackPane> {
 	
 	public static final String NAME = "information";
 	
-	public static interface Viewable {
-		
-		Pane getInfoPane(InformationTab<?> tab);
-	}
+	private TabPane tabPane;
 	
-	public static class TabContent<T extends Viewable> {
+	public InformationWindow() {
+		super(NAME, new StackPane(), 600.0, 500.0);
+		initModality(Modality.APPLICATION_MODAL);
 		
-		private final String title;
-		private final T[] items;
-		private final Translation translation;
-		
-		private Consumer<InformationWindow> actionOnInit;
-		private boolean isInited;
-		
-		public TabContent(Translation translation, T[] items) {
-			this.title = translation.getSingle("title");
-			this.items = items;
-			this.translation = translation;
-		}
-		
-		public void setOnInit(Consumer<InformationWindow> action) {
-			this.actionOnInit = action;
-		}
-		
-		public void doInit(InformationWindow window) {
-			if((actionOnInit != null && !isInited)) {
-				actionOnInit.accept(window);
-				isInited = true;
+		tabPane = new TabPane();
+		tabPane.setSide(Side.LEFT);
+		tabPane.setSkin(Ignore.call(() -> new HorizontalLeftTabPaneSkin(tabPane)));
+		tabPane.setTabClosingPolicy(TabClosingPolicy.UNAVAILABLE);
+		tabPane.getSelectionModel().selectedItemProperty().addListener((o, ov, tab) -> {
+			if(tab == null) {
+				return;
 			}
-		}
+			
+			Utils.<InformationTab<?>>cast(tab).content().doInit(this);
+		});
 		
-		public String getTitle() {
-			return title;
-		}
+		content.getChildren().add(tabPane);
 		
-		public T[] getItems() {
-			return items;
-		}
-		
-		public Translation getTranslation() {
-			return translation;
-		}
+		FXUtils.onWindowShow(this, () -> {
+			// Add the tab panes before centering the window
+			List<TabContent<?>> tabs = Utils.cast(args.get("tabs"));
+			tabPane.getTabs().setAll(createTabs(tabs));
+			
+			// Center the window
+			Stage parent = (Stage) args.get("parent");
+			if(parent != null) {
+				centerWindow(parent);
+			}
+		});
 	}
 	
-	public static class InformationTab<T extends Viewable> extends Tab {
-		
-		private final TabContent<T> content;
-		
-		public InformationTab(TabContent<T> content) {
-			super(content.getTitle());
-			this.content = content;
-			setContent(new TabContentPane<>(this, content.getItems()));
-		}
-		
-		@SuppressWarnings("unchecked")
-		public ListView<T> getList() {
-			return ((TabContentPane<T>) getContent()).getList();
-		}
-		
-		public TabContent<T> getTabContent() {
-			return content;
-		}
+	/** @since 00.02.08 */
+	@SuppressWarnings("unchecked")
+	private final List<Tab> createTabs(List<TabContent<?>> contents) {
+		return contents.stream().map(InformationTab::new).collect(Collectors.toList());
+	}
+	
+	/** @since 00.02.08 */
+	public <T extends Viewable> InformationTab<T> selectedTab() {
+		return Utils.cast(tabPane.getSelectionModel().getSelectedItem());
 	}
 	
 	private static final class TabContentPane<T extends Viewable> extends GridPane {
@@ -99,26 +81,31 @@ public class InformationWindow extends DraggableWindow<StackPane> {
 		private StackPane paneBottom;
 		private Label lblPlaceholder;
 		
-		public TabContentPane(InformationTab<T> tab, T[] items) {
-			this.tab   = tab;
-			list       = new ListView<>();
-			paneTop    = new StackPane();
+		public TabContentPane(InformationTab<T> tab, List<T> items) {
+			this.tab = tab;
+			list = new ListView<>();
+			paneTop = new StackPane();
 			paneBottom = new StackPane();
+			
 			InformationWindow window = MediaDownloader.window(InformationWindow.NAME);
-			Translation translation = window.getTranslation();
-			lblPlaceholder = new Label(translation.getSingle("labels.no_item_selected"));
+			Translation tr = window.getTranslation();
+			lblPlaceholder = new Label(tr.getSingle("labels.no_item_selected"));
+			
 			list.getSelectionModel().selectedItemProperty().addListener((o, ov, nv) -> selectItem(ov, nv));
 			list.setMaxWidth(Double.MAX_VALUE);
 			paneTop.getChildren().add(list);
 			paneTop.setPadding(new Insets(10, 10, 10, 0));
 			paneBottom.setPadding(new Insets(0, 10, 10, 0));
 			paneBottom.setId("pane-info");
+			
 			getChildren().addAll(paneTop, paneBottom);
+			
 			GridPane.setConstraints(paneTop, 0, 0);
 			GridPane.setConstraints(paneBottom, 0, 1);
 			GridPane.setHgrow(paneTop, Priority.ALWAYS);
 			GridPane.setHgrow(paneBottom, Priority.ALWAYS);
 			GridPane.setVgrow(paneTop, Priority.ALWAYS);
+			
 			list.getItems().setAll(items);
 			emptyItems();
 		}
@@ -128,55 +115,88 @@ public class InformationWindow extends DraggableWindow<StackPane> {
 		}
 		
 		private final void selectItem(T oldItem, T newItem) {
-			if((newItem != null)) {
-				Pane paneInfo = newItem.getInfoPane(tab);
+			if(newItem != null) {
+				Pane paneInfo = newItem.infoPane(tab);
 				paneBottom.getChildren().setAll(paneInfo);
 			} else {
 				emptyItems();
 			}
 		}
 		
-		public final ListView<T> getList() {
+		/** @since 00.02.08 */
+		public final ListView<T> list() {
 			return list;
 		}
 	}
 	
-	private TabPane tabPane;
+	public static interface Viewable {
+		
+		/** @since 00.02.08 */
+		Pane infoPane(InformationTab<?> tab);
+	}
 	
-	public InformationWindow() {
-		super(NAME, new StackPane(), 600.0, 500.0);
-		initModality(Modality.APPLICATION_MODAL);
-		tabPane = new TabPane();
-		tabPane.setTabClosingPolicy(TabClosingPolicy.UNAVAILABLE);
-		tabPane.getSelectionModel().selectedItemProperty().addListener((o, ov, tab) -> {
-			if((tab == null)) return;
-			((InformationTab<?>) tab).getTabContent().doInit(this);
-		});
-		tabPane.setSide(Side.LEFT);
-		Ignore.callVoid(() -> tabPane.setSkin(new HorizontalLeftTabPaneSkin(tabPane)));
-		content.getChildren().add(tabPane);
-		FXUtils.onWindowShow(this, () -> {
-			// Add the tab panes before centering the window
-			TabContent<?>[] tabs = (TabContent[]) args.get("tabs");
-			tabPane.getTabs().setAll(toTabs(tabs));
-			// Center the window
-			Stage parent = (Stage) args.get("parent");
-			if((parent != null)) {
-				centerWindow(parent);
+	public static class TabContent<T extends Viewable> {
+		
+		private final String title;
+		private final List<T> items;
+		private final Translation translation;
+		
+		private Consumer<InformationWindow> actionOnInit;
+		private boolean isInited;
+		
+		public TabContent(Translation translation, List<T> items) {
+			this.title = translation.getSingle("title");
+			this.items = items;
+			this.translation = translation;
+		}
+		
+		public void setOnInit(Consumer<InformationWindow> action) {
+			this.actionOnInit = action;
+		}
+		
+		public void doInit(InformationWindow window) {
+			if(actionOnInit == null || isInited) {
+				return;
 			}
-		});
+			
+			actionOnInit.accept(window);
+			isInited = true;
+		}
+		
+		/** @since 00.02.08 */
+		public String title() {
+			return title;
+		}
+		
+		/** @since 00.02.08 */
+		public List<T> items() {
+			return items;
+		}
+		
+		/** @since 00.02.08 */
+		public Translation translation() {
+			return translation;
+		}
 	}
 	
-	private final Tab[] toTabs(TabContent<?>[] contents) {
-		return Arrays.asList(contents)
-					 .stream()
-					 .map((content) -> new InformationTab<>(content))
-					 .toArray(Tab[]::new);
-	}
-	
-	public <T extends Viewable> InformationTab<T> getSelectedTab() {
-		@SuppressWarnings("unchecked")
-		InformationTab<T> tab = (InformationTab<T>) tabPane.getSelectionModel().getSelectedItem();
-		return tab;
+	public static class InformationTab<T extends Viewable> extends Tab {
+		
+		private final TabContent<T> content;
+		
+		public InformationTab(TabContent<T> content) {
+			super(content.title());
+			this.content = content;
+			setContent(new TabContentPane<>(this, content.items()));
+		}
+		
+		/** @since 00.02.08 */
+		public ListView<T> list() {
+			return Utils.<TabContentPane<T>>cast(getContent()).list();
+		}
+		
+		/** @since 00.02.08 */
+		public TabContent<T> content() {
+			return content;
+		}
 	}
 }

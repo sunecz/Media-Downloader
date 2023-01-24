@@ -1,9 +1,10 @@
 package sune.app.mediadown.gui;
 
-import java.lang.reflect.Array;
 import java.util.Collection;
+import java.util.List;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -38,6 +39,15 @@ import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Worker;
 
 public final class InformationItems {
+	
+	// Forbid anyone to create an instance of this class
+	private InformationItems() {
+	}
+	
+	/** @since 00.02.08 */
+	private static final <I, T> List<T> createItemsList(Collection<I> collection, Function<I, T> func) {
+		return collection.stream().map(func).collect(Collectors.toList());
+	}
 	
 	/** @since 00.01.26 */
 	private static final class InfoPaneEntry {
@@ -131,13 +141,13 @@ public final class InformationItems {
 			this.engine = engine;
 		}
 		
-		public static final ItemMediaEngine[] items() {
-			return createItemsArray(MediaEngines.all(), ItemMediaEngine::new, ItemMediaEngine.class);
+		public static final List<ItemMediaEngine> items() {
+			return createItemsList(MediaEngines.all(), ItemMediaEngine::new);
 		}
 		
 		@Override
-		public Pane getInfoPane(InformationTab<?> tab) {
-			Translation translation = tab.getTabContent().getTranslation();
+		public Pane infoPane(InformationTab<?> tab) {
+			Translation translation = tab.content().translation();
 			InfoPane pane = new InfoPane();
 			pane.addEntry(InfoPaneEntry.image(null, engine.icon(), new Insets(0, 0, 10, 0)));
 			pane.addEntry(InfoPaneEntry.hyperlink(translation.getSingle("labels.url"), engine.url(), engine.url()));
@@ -161,13 +171,13 @@ public final class InformationItems {
 			this.downloader = downloader;
 		}
 		
-		public static final ItemDownloader[] items() {
-			return createItemsArray(Downloaders.all(), ItemDownloader::new, ItemDownloader.class);
+		public static final List<ItemDownloader> items() {
+			return createItemsList(Downloaders.all(), ItemDownloader::new);
 		}
 		
 		@Override
-		public Pane getInfoPane(InformationTab<?> tab) {
-			Translation translation = tab.getTabContent().getTranslation();
+		public Pane infoPane(InformationTab<?> tab) {
+			Translation translation = tab.content().translation();
 			InfoPane pane = new InfoPane();
 			pane.addEntry(InfoPaneEntry.label(translation.getSingle("labels.title"), downloader.title()));
 			pane.addEntry(InfoPaneEntry.label(translation.getSingle("labels.version"), downloader.version()));
@@ -189,13 +199,13 @@ public final class InformationItems {
 			this.server = server;
 		}
 		
-		public static final ItemServer[] items() {
-			return createItemsArray(Servers.all(), ItemServer::new, ItemServer.class);
+		public static final List<ItemServer> items() {
+			return createItemsList(Servers.all(), ItemServer::new);
 		}
 		
 		@Override
-		public Pane getInfoPane(InformationTab<?> tab) {
-			Translation translation = tab.getTabContent().getTranslation();
+		public Pane infoPane(InformationTab<?> tab) {
+			Translation translation = tab.content().translation();
 			InfoPane pane = new InfoPane();
 			pane.addEntry(InfoPaneEntry.image(null, server.icon(), new Insets(0, 0, 10, 0)));
 			pane.addEntry(InfoPaneEntry.hyperlink(translation.getSingle("labels.url"), server.url(), server.url()));
@@ -220,13 +230,13 @@ public final class InformationItems {
 			this.engine = engine;
 		}
 		
-		public static final ItemSearchEngine[] items() {
-			return createItemsArray(SearchEngines.all(), ItemSearchEngine::new, ItemSearchEngine.class);
+		public static final List<ItemSearchEngine> items() {
+			return createItemsList(SearchEngines.all(), ItemSearchEngine::new);
 		}
 		
 		@Override
-		public Pane getInfoPane(InformationTab<?> tab) {
-			Translation translation = tab.getTabContent().getTranslation();
+		public Pane infoPane(InformationTab<?> tab) {
+			Translation translation = tab.content().translation();
 			InfoPane pane = new InfoPane();
 			pane.addEntry(InfoPaneEntry.image(null, engine.getIcon(), new Insets(0, 0, 10, 0)));
 			pane.addEntry(InfoPaneEntry.hyperlink(translation.getSingle("labels.url"), engine.getURL(), engine.getURL()));
@@ -253,8 +263,8 @@ public final class InformationItems {
 			this.plugin = plugin;
 		}
 		
-		public static final ItemPlugin[] items() {
-			return createItemsArray(Plugins.allLoaded(), ItemPlugin::new, ItemPlugin.class);
+		public static final List<ItemPlugin> items() {
+			return createItemsList(Plugins.allLoaded(), ItemPlugin::new);
 		}
 		
 		private static final String getPluginName(Plugin plugin) {
@@ -285,8 +295,8 @@ public final class InformationItems {
 		}
 		
 		@Override
-		public Pane getInfoPane(InformationTab<?> tab) {
-			Translation translation = tab.getTabContent().getTranslation();
+		public Pane infoPane(InformationTab<?> tab) {
+			Translation translation = tab.content().translation();
 			Plugin thePlugin = plugin.getPlugin().instance();
 			InfoPane pane = new InfoPane();
 			pane.addEntry(InfoPaneEntry.label(translation.getSingle("labels.name"), getPluginName(thePlugin)));
@@ -301,18 +311,5 @@ public final class InformationItems {
 		public String toString() {
 			return getPluginTitle(plugin.getPlugin().instance());
 		}
-	}
-	
-	private static final <I, T> T[] createItemsArray(Collection<I> collection, Function<I, T> func, Class<T> clazz) {
-		@SuppressWarnings("unchecked")
-		T[] items = (T[]) Array.newInstance(clazz, collection.size());
-		int index = 0;
-		for(I engine : collection)
-			items[index++] = func.apply(engine);
-		return items;
-	}
-	
-	// Forbid anyone to create an instance of this class
-	private InformationItems() {
 	}
 }
