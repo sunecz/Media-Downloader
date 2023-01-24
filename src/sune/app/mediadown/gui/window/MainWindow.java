@@ -350,6 +350,7 @@ public final class MainWindow extends Window<BorderPane> {
 					contextMenu.hide();
 					menuAdd.show(this, anchorX, anchorY);
 				}),
+			contextMenuItemFactory.createSeparator(),
 			contextMenuItemFactory.create(tr("context_menus.table.items.start"))
 				.setOnActivated((e) -> {
 					List<PipelineInfo> infos = table.selectedPipelines();
@@ -402,6 +403,7 @@ public final class MainWindow extends Window<BorderPane> {
 							: tr("context_menus.table.items.terminate_remove")
 					);
 				}),
+			contextMenuItemFactory.createSeparator(),
 			contextMenuItemFactory.createShowFile(tr("context_menus.table.items.show_file"))
 				.setOnContextMenuShowing((o, ov, pair) -> {
 					ContextMenuItem item = pair.a;

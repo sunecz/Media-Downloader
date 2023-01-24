@@ -25,6 +25,7 @@ import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.ProgressBar;
+import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
@@ -324,6 +325,11 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 		@Override
 		public ContextMenuItem create(String title) {
 			return new ContextMenuItem(title);
+		}
+		
+		@Override
+		public SeparatorContextMenuItem createSeparator() {
+			return new SeparatorContextMenuItem();
 		}
 	}
 	
@@ -646,6 +652,7 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 		ContextMenuItem createTerminate(String title);
 		ContextMenuItem createShowFile(String title);
 		ContextMenuItem create(String title);
+		SeparatorContextMenuItem createSeparator();
 	}
 	
 	public static interface ColumnFactory {
@@ -873,6 +880,12 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 			}
 			
 			return onContextMenuShowing;
+		}
+	}
+	
+	public static class SeparatorContextMenuItem extends SeparatorMenuItem {
+		
+		protected SeparatorContextMenuItem() {
 		}
 	}
 	
