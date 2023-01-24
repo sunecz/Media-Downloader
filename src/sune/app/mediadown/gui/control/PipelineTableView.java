@@ -269,11 +269,11 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 				
 				if(anyNonPaused(infos)) {
 					for(PipelineInfo info : infos) {
-						Ignore.callVoid(info.pipeline()::pause, MediaDownloader::error);
+						Ignore.callVoid(info::pause, MediaDownloader::error);
 					}
 				} else {
 					for(PipelineInfo info : infos) {
-						Ignore.callVoid(info.pipeline()::resume, MediaDownloader::error);
+						Ignore.callVoid(info::resume, MediaDownloader::error);
 					}
 				}
 			});
@@ -926,8 +926,6 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 			}
 		}
 		
-		// TODO: Pause and resume
-		
 		public void start() {
 			Pipeline pipeline = pipeline();
 			
@@ -965,6 +963,34 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 				if((cancellable = media().submitValue()) != null) {
 					cancellable.cancel();
 				}
+			} catch(Exception ex) {
+				MediaDownloader.error(ex);
+			}
+		}
+		
+		public void pause() {
+			Pipeline pipeline = pipeline();
+			
+			if(pipeline.isPaused() || !pipeline.isStarted() || pipeline.isDone() || pipeline.isStopped()) {
+				return;
+			}
+			
+			try {
+				pipeline.pause();
+			} catch(Exception ex) {
+				MediaDownloader.error(ex);
+			}
+		}
+		
+		public void resume() {
+			Pipeline pipeline = pipeline();
+			
+			if(!pipeline.isPaused() || !pipeline.isStarted() || pipeline.isDone() || pipeline.isStopped()) {
+				return;
+			}
+			
+			try {
+				pipeline.resume();
 			} catch(Exception ex) {
 				MediaDownloader.error(ex);
 			}
