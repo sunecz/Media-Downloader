@@ -3,16 +3,16 @@ package sune.app.mediadown.event.tracker;
 /** @since 00.02.08 */
 public final class PipelineStates {
 	
-	public static final String NONE = null;
-	public static final String WAIT = "wait";
-	public static final String INITIALIZATION = "initialization";
-	public static final String DOWNLOAD = "download";
-	public static final String CONVERSION = "conversion";
-	public static final String STOPPED = "stopped";
-	public static final String DONE = "done";
-	public static final String ERROR = "error";
-	public static final String PAUSED = "paused";
-	public static final String RETRY = "retry";
+	public static final String NONE           = null;
+	public static final String WAIT           = "tr(md, windows.main.states.wait)";
+	public static final String INITIALIZATION = "tr(md, windows.main.states.initialization)";
+	public static final String DOWNLOAD       = "tr(md, windows.main.states.download)";
+	public static final String CONVERSION     = "tr(md, windows.main.states.conversion)";
+	public static final String STOPPED        = "tr(md, windows.main.states.stopped)";
+	public static final String DONE           = "tr(md, windows.main.states.done)";
+	public static final String ERROR          = "tr(md, windows.main.states.error)";
+	public static final String PAUSED         = "tr(md, windows.main.states.paused)";
+	public static final String RETRY          = "tr(md, windows.main.states.retry)";
 	
 	private PipelineStates() {
 	}
