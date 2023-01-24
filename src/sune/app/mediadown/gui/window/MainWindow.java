@@ -3,11 +3,15 @@ package sune.app.mediadown.gui.window;
 import static sune.app.mediadown.MediaDownloader.DATE;
 import static sune.app.mediadown.MediaDownloader.VERSION;
 
+import java.net.URI;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import javafx.collections.ListChangeListener.Change;
@@ -72,6 +76,7 @@ import sune.app.mediadown.gui.table.TablePipelineResult;
 import sune.app.mediadown.gui.window.InformationWindow.InformationTab;
 import sune.app.mediadown.gui.window.InformationWindow.TabContent;
 import sune.app.mediadown.language.Translation;
+import sune.app.mediadown.media.Media;
 import sune.app.mediadown.message.Message;
 import sune.app.mediadown.message.MessageList;
 import sune.app.mediadown.message.MessageManager;
@@ -79,6 +84,7 @@ import sune.app.mediadown.pipeline.Pipeline;
 import sune.app.mediadown.plugin.PluginFile;
 import sune.app.mediadown.plugin.PluginUpdater;
 import sune.app.mediadown.plugin.Plugins;
+import sune.app.mediadown.util.ClipboardUtils;
 import sune.app.mediadown.util.FXUtils;
 import sune.app.mediadown.util.MathUtils;
 import sune.app.mediadown.util.Pair;
@@ -140,6 +146,17 @@ public final class MainWindow extends Window<BorderPane> {
 		FXUtils.onWindowShowOnce(this, this::maybeAutoEnableClipboardWatcher);
 		
 		INSTANCE = this;
+	}
+	
+	/** @since 00.02.08 */
+	private static final <T> String listToString(List<T> list, Function<T, String> mapper) {
+		StringBuilder builder = new StringBuilder();
+		
+		for(T item : list) {
+			builder.append(mapper.apply(item)).append('\n');
+		}
+		
+		return builder.toString();
 	}
 	
 	public static final MainWindow getInstance() {
@@ -402,6 +419,68 @@ public final class MainWindow extends Window<BorderPane> {
 							? tr("context_menus.table.items.terminate_cancel")
 							: tr("context_menus.table.items.terminate_remove")
 					);
+				}),
+			contextMenuItemFactory.createSeparator(),
+			contextMenuItemFactory.create(tr("context_menus.table.items.copy_url"))
+				.setOnActivated((e) -> {
+					List<PipelineInfo> infos = table.selectedPipelines();
+					
+					if(infos.isEmpty()) {
+						return;
+					}
+					
+					List<Media> media = infos.stream()
+						.map((info) -> info.resolvedMedia().media())
+						.collect(Collectors.toList());
+					
+					ClipboardUtils.copy(
+						listToString(media, (m) -> m.uri().normalize().toString())
+					);
+				})
+				.setOnContextMenuShowing((o, ov, pair) -> {
+					ContextMenuItem item = pair.a;
+					Stats stats = pair.b;
+					item.setDisable(stats.count() == 0);
+				}),
+			contextMenuItemFactory.create(tr("context_menus.table.items.copy_source_url"))
+				.setOnActivated((e) -> {
+					List<PipelineInfo> infos = table.selectedPipelines();
+					
+					if(infos.isEmpty()) {
+						return;
+					}
+					
+					List<Media> media = infos.stream()
+						.map((info) -> info.resolvedMedia().media())
+						.collect(Collectors.toList());
+					
+					ClipboardUtils.copy(
+						listToString(media, (m) -> Objects.toString(Optional.ofNullable(m.metadata().sourceURI())
+						                                                    .map(URI::normalize).orElse(null)))
+					);
+				})
+				.setOnContextMenuShowing((o, ov, pair) -> {
+					ContextMenuItem item = pair.a;
+					Stats stats = pair.b;
+					item.setDisable(stats.count() == 0);
+				}),
+			contextMenuItemFactory.create(tr("context_menus.table.items.media_info"))
+				.setOnActivated((e) -> {
+					PipelineInfo info = table.selectedPipeline();
+					
+					if(info == null) {
+						return;
+					}
+					
+					Media media = info.resolvedMedia().media();
+					MediaDownloader.window(MediaInfoWindow.NAME)
+						.setArgs("parent", this, "media", media)
+						.show();
+				})
+				.setOnContextMenuShowing((o, ov, pair) -> {
+					ContextMenuItem item = pair.a;
+					Stats stats = pair.b;
+					item.setDisable(stats.count() == 0);
 				}),
 			contextMenuItemFactory.createSeparator(),
 			contextMenuItemFactory.createShowFile(tr("context_menus.table.items.show_file"))

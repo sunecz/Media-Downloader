@@ -249,6 +249,10 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 		return getSelectionModel().getSelectedItems();
 	}
 	
+	public PipelineInfo selectedPipeline() {
+		return getSelectionModel().getSelectedItem();
+	}
+	
 	private static final class DefaultContextMenuItemFactory implements ContextMenuItemFactory {
 		
 		private final PipelineTableView table;

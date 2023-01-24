@@ -38,7 +38,10 @@
 						terminate_remove:   "Odebrat",
 						show_file:          "Zobrazit soubor",
 						pause:              "Pozastavit",
-						resume:             "Pokračovat"
+						resume:             "Pokračovat",
+						copy_url:           "Zkopírovat URL",
+						copy_source_url:    "Zkopírovat zdrojovou URL",
+						media_info:         "Informace o médiu"
 					}
 				},
 				add: {

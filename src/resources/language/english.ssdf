@@ -38,7 +38,10 @@
 						terminate_remove:   "Remove",
 						show_file:          "Show file",
 						pause:              "Pause",
-						resume:             "Resume"
+						resume:             "Resume",
+						copy_url:           "Copy URL",
+						copy_source_url:    "Copy source URL",
+						media_info:         "Media information"
 					}
 				},
 				add: {
