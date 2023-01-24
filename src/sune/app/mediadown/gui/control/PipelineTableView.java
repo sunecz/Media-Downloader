@@ -18,6 +18,8 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.value.ChangeListener;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.ContextMenu;
@@ -73,7 +75,7 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 		setContextMenu(initializeContextMenu());
 		
 		addEventHandler(ContextMenuEvent.CONTEXT_MENU_REQUESTED, (e) -> {
-			Stats stats = Stats.from(pipelines());
+			Stats stats = Stats.from(selectedPipelines());
 			
 			getContextMenu().getItems().stream()
 				.filter((item) -> item instanceof ContextMenuItem)
@@ -317,6 +319,11 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 			});
 			
 			return menuItem;
+		}
+		
+		@Override
+		public ContextMenuItem create(String title) {
+			return new ContextMenuItem(title);
 		}
 	}
 	
@@ -638,6 +645,7 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 		ContextMenuItem createPause(String title);
 		ContextMenuItem createTerminate(String title);
 		ContextMenuItem createShowFile(String title);
+		ContextMenuItem create(String title);
 	}
 	
 	public static interface ColumnFactory {
@@ -847,6 +855,11 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 		
 		protected ContextMenuItem(String title) {
 			super(title);
+		}
+		
+		public ContextMenuItem setOnActivated(EventHandler<ActionEvent> listener) {
+			setOnAction(listener);
+			return this; // Allow chaining
 		}
 		
 		public ContextMenuItem setOnContextMenuShowing(ChangeListener<? super Pair<ContextMenuItem, Stats>> listener) {
