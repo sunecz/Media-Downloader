@@ -262,6 +262,25 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 		}
 		
 		@Override
+		public ContextMenuItem createStart(String title) {
+			ContextMenuItem menuItem = new ContextMenuItem(title);
+			
+			menuItem.setOnAction((e) -> {
+				List<PipelineInfo> infos = table.selectedPipelines();
+				
+				if(infos.isEmpty()) {
+					return; // Nothing to start
+				}
+				
+				for(PipelineInfo info : infos) {
+					Ignore.callVoid(info::start, MediaDownloader::error);
+				}
+			});
+			
+			return menuItem;
+		}
+		
+		@Override
 		public ContextMenuItem createPause(String title) {
 			ContextMenuItem menuItem = new ContextMenuItem(title);
 			
@@ -652,6 +671,7 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 	
 	public static interface ContextMenuItemFactory {
 		
+		ContextMenuItem createStart(String title);
 		ContextMenuItem createPause(String title);
 		ContextMenuItem createTerminate(String title);
 		ContextMenuItem createShowFile(String title);

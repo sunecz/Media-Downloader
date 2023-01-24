@@ -368,18 +368,7 @@ public final class MainWindow extends Window<BorderPane> {
 					menuAdd.show(this, anchorX, anchorY);
 				}),
 			contextMenuItemFactory.createSeparator(),
-			contextMenuItemFactory.create(tr("context_menus.table.items.start"))
-				.setOnActivated((e) -> {
-					List<PipelineInfo> infos = table.selectedPipelines();
-					
-					if(infos.isEmpty()) {
-						return; // Nothing to start
-					}
-					
-					for(PipelineInfo info : infos) {
-						Ignore.callVoid(info::start, MediaDownloader::error);
-					}
-				})
+			contextMenuItemFactory.createStart(tr("context_menus.table.items.start"))
 				.setOnContextMenuShowing((o, ov, pair) -> {
 					ContextMenuItem item = pair.a;
 					Stats stats = pair.b;
