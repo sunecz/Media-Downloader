@@ -31,6 +31,8 @@
 			context_menus: {
 				table: {
 					items: {
+						add:                "Add",
+						start:              "Start",
 						terminate_cancel:   "Cancel",
 						terminate_combined: "Cancel/Remove",
 						terminate_remove:   "Remove",

@@ -341,6 +341,36 @@ public final class MainWindow extends Window<BorderPane> {
 		
 		ContextMenuItemFactory contextMenuItemFactory = table.contextMenuItemFactory();
 		table.getContextMenu().getItems().addAll(List.of(
+			contextMenuItemFactory.create(tr("context_menus.table.items.add"))
+				.setOnActivated((e) -> {
+					ContextMenu contextMenu = table.getContextMenu();
+					double anchorX = contextMenu.getAnchorX();
+					double anchorY = contextMenu.getAnchorY();
+					
+					contextMenu.hide();
+					menuAdd.show(this, anchorX, anchorY);
+				}),
+			contextMenuItemFactory.create(tr("context_menus.table.items.start"))
+				.setOnActivated((e) -> {
+					List<PipelineInfo> infos = table.selectedPipelines();
+					
+					if(infos.isEmpty()) {
+						return; // Nothing to start
+					}
+					
+					for(PipelineInfo info : infos) {
+						Ignore.callVoid(info::start, MediaDownloader::error);
+					}
+				})
+				.setOnContextMenuShowing((o, ov, pair) -> {
+					ContextMenuItem item = pair.a;
+					Stats stats = pair.b;
+					
+					int count = stats.count();
+					int started = stats.started();
+					
+					item.setDisable(started == count);
+				}),
 			contextMenuItemFactory.createPause(tr("context_menus.table.items.pause"))
 				.setOnContextMenuShowing((o, ov, pair) -> {
 					ContextMenuItem item = pair.a;

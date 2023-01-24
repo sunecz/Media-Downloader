@@ -31,6 +31,8 @@
 			context_menus: {
 				table: {
 					items: {
+						add:                "Přidat",
+						start:              "Spustit",
 						terminate_cancel:   "Přerušit",
 						terminate_combined: "Přerušit/Odebrat",
 						terminate_remove:   "Odebrat",
