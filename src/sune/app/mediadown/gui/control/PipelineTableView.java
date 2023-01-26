@@ -217,6 +217,30 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 		stop(selectedPipelines(), false);
 	}
 	
+	public void pause(List<PipelineInfo> infos) {
+		infos.stream().forEachOrdered(PipelineInfo::pause);
+	}
+	
+	public void pauseAll() {
+		pause(pipelines());
+	}
+	
+	public void pauseSelected() {
+		pause(selectedPipelines());
+	}
+	
+	public void resume(List<PipelineInfo> infos) {
+		infos.stream().forEachOrdered(PipelineInfo::resume);
+	}
+	
+	public void resumeAll() {
+		resume(pipelines());
+	}
+	
+	public void resumeSelected() {
+		resume(selectedPipelines());
+	}
+	
 	public ObjectProperty<PipelineInfo> onItemDoubleClicked() {
 		if(onItemDoubleClicked == null) {
 			onItemDoubleClicked = new SimpleObjectProperty<>();
@@ -280,9 +304,7 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 					return; // Nothing to start
 				}
 				
-				for(PipelineInfo info : infos) {
-					Ignore.callVoid(info::start, MediaDownloader::error);
-				}
+				table.start(infos);
 			});
 			
 			menuItem.addOnContextMenuShowing((o, ov, pair) -> {
@@ -310,13 +332,9 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 				}
 				
 				if(anyNonPaused(infos)) {
-					for(PipelineInfo info : infos) {
-						Ignore.callVoid(info::pause, MediaDownloader::error);
-					}
+					table.pause(infos);
 				} else {
-					for(PipelineInfo info : infos) {
-						Ignore.callVoid(info::resume, MediaDownloader::error);
-					}
+					table.resume(infos);
 				}
 			});
 			
@@ -347,7 +365,7 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 				}
 				
 				if(anyTerminable(infos)) {
-					infos.forEach(PipelineInfo::stop);
+					table.stop(infos);
 				} else {
 					table.remove(infos);
 				}

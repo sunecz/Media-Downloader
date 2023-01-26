@@ -44,7 +44,9 @@ import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
 import sune.app.mediadown.Disposables;
 import sune.app.mediadown.Download;
+import sune.app.mediadown.Episode;
 import sune.app.mediadown.MediaDownloader;
+import sune.app.mediadown.Program;
 import sune.app.mediadown.engine.MediaEngine;
 import sune.app.mediadown.engine.MediaEngines;
 import sune.app.mediadown.event.ConversionEvent;
@@ -80,10 +82,14 @@ import sune.app.mediadown.gui.control.PipelineTableView.Stats;
 import sune.app.mediadown.gui.table.ResolvedMedia;
 import sune.app.mediadown.gui.table.ResolvedMediaPipelineResult;
 import sune.app.mediadown.gui.table.TablePipelineResult;
+import sune.app.mediadown.gui.table.TablePipelineUtils;
 import sune.app.mediadown.gui.window.InformationWindow.InformationTab;
 import sune.app.mediadown.gui.window.InformationWindow.TabContent;
 import sune.app.mediadown.language.Translation;
 import sune.app.mediadown.media.Media;
+import sune.app.mediadown.media.MediaFilter;
+import sune.app.mediadown.media.MediaFormat;
+import sune.app.mediadown.media.MediaLanguage;
 import sune.app.mediadown.message.Message;
 import sune.app.mediadown.message.MessageList;
 import sune.app.mediadown.message.MessageManager;
@@ -521,58 +527,46 @@ public final class MainWindow extends Window<BorderPane> {
 			contextMenuItemFactory.createSeparator(),
 			contextMenuItemFactory.create(tr("context_menus.table.items.move_up"))
 				.setOnActivated((e) -> {
-					List<PipelineInfo> infos = table.selectedPipelines();
+					List<Integer> indexes = table.selectedIndexes();
 					
-					if(infos.isEmpty()) {
+					if(indexes.isEmpty()) {
 						return;
 					}
 					
-					selectIndexes(
-						table.getSelectionModel(),
-						moveItemsUp(table.pipelines(), table.selectedIndexes())
-					);
+					selectIndexes(table.getSelectionModel(), moveItemsUp(table.pipelines(), indexes));
 				})
 				.addOnContextMenuShowing(MainWindow::contextMenuItemEnableIfAnySelected),
 			contextMenuItemFactory.create(tr("context_menus.table.items.move_down"))
 				.setOnActivated((e) -> {
-					List<PipelineInfo> infos = table.selectedPipelines();
+					List<Integer> indexes = table.selectedIndexes();
 					
-					if(infos.isEmpty()) {
+					if(indexes.isEmpty()) {
 						return;
 					}
 					
-					selectIndexes(
-						table.getSelectionModel(),
-						moveItemsDown(table.pipelines(), table.selectedIndexes())
-					);
+					selectIndexes(table.getSelectionModel(), moveItemsDown(table.pipelines(), indexes));
 				})
 				.addOnContextMenuShowing(MainWindow::contextMenuItemEnableIfAnySelected),
 			contextMenuItemFactory.create(tr("context_menus.table.items.move_begin"))
 				.setOnActivated((e) -> {
-					List<PipelineInfo> infos = table.selectedPipelines();
+					List<Integer> indexes = table.selectedIndexes();
 					
-					if(infos.isEmpty()) {
+					if(indexes.isEmpty()) {
 						return;
 					}
 					
-					selectIndexes(
-						table.getSelectionModel(),
-						moveItemsBegin(table.pipelines(), table.selectedIndexes())
-					);
+					selectIndexes(table.getSelectionModel(), moveItemsBegin(table.pipelines(), indexes));
 				})
 				.addOnContextMenuShowing(MainWindow::contextMenuItemEnableIfAnySelected),
 			contextMenuItemFactory.create(tr("context_menus.table.items.move_end"))
 				.setOnActivated((e) -> {
-					List<PipelineInfo> infos = table.selectedPipelines();
+					List<Integer> indexes = table.selectedIndexes();
 					
-					if(infos.isEmpty()) {
+					if(indexes.isEmpty()) {
 						return;
 					}
 					
-					selectIndexes(
-						table.getSelectionModel(),
-						moveItemsEnd(table.pipelines(), table.selectedIndexes())
-					);
+					selectIndexes(table.getSelectionModel(), moveItemsEnd(table.pipelines(), indexes));
 				})
 				.addOnContextMenuShowing(MainWindow::contextMenuItemEnableIfAnySelected),
 			contextMenuItemFactory.createSeparator(),
