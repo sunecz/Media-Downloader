@@ -253,6 +253,14 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 		return getSelectionModel().getSelectedItem();
 	}
 	
+	public List<Integer> selectedIndexes() {
+		return getSelectionModel().getSelectedIndices();
+	}
+	
+	public int selectedIndex() {
+		return getSelectionModel().getSelectedIndex();
+	}
+	
 	private static final class DefaultContextMenuItemFactory implements ContextMenuItemFactory {
 		
 		private final PipelineTableView table;
@@ -275,6 +283,16 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 				for(PipelineInfo info : infos) {
 					Ignore.callVoid(info::start, MediaDownloader::error);
 				}
+			});
+			
+			menuItem.addOnContextMenuShowing((o, ov, pair) -> {
+				ContextMenuItem item = pair.a;
+				Stats stats = pair.b;
+				
+				int count = stats.count();
+				int started = stats.started();
+				
+				item.setDisable(started == count);
 			});
 			
 			return menuItem;
@@ -302,6 +320,18 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 				}
 			});
 			
+			menuItem.addOnContextMenuShowing((o, ov, pair) -> {
+				ContextMenuItem item = pair.a;
+				Stats stats = pair.b;
+				
+				int count = stats.count();
+				int started = stats.started();
+				int done = stats.done();
+				int stopped = stats.stopped();
+				
+				item.setDisable(started == 0 || (done == count || stopped == count));
+			});
+			
 			return menuItem;
 		}
 		
@@ -323,6 +353,15 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 				}
 			});
 			
+			menuItem.addOnContextMenuShowing((o, ov, pair) -> {
+				ContextMenuItem item = pair.a;
+				Stats stats = pair.b;
+				
+				int count = stats.count();
+				
+				item.setDisable(count == 0);
+			});
+			
 			return menuItem;
 		}
 		
@@ -340,6 +379,17 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 				for(PipelineInfo info : infos) {
 					showFile(info);
 				}
+			});
+			
+			menuItem.addOnContextMenuShowing((o, ov, pair) -> {
+				ContextMenuItem item = pair.a;
+				Stats stats = pair.b;
+				
+				int started = stats.started();
+				int done = stats.done();
+				int stopped = stats.stopped();
+				
+				item.setDisable(!(started > 0 || done > 0 || stopped > 0));
 			});
 			
 			return menuItem;
@@ -893,7 +943,7 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 			return this; // Allow chaining
 		}
 		
-		public ContextMenuItem setOnContextMenuShowing(ChangeListener<? super Pair<ContextMenuItem, Stats>> listener) {
+		public ContextMenuItem addOnContextMenuShowing(ChangeListener<? super Pair<ContextMenuItem, Stats>> listener) {
 			onContextMenuShowing().addListener(listener);
 			return this; // Allow chaining
 		}

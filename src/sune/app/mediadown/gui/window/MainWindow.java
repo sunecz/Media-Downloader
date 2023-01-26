@@ -5,15 +5,21 @@ import static sune.app.mediadown.MediaDownloader.VERSION;
 
 import java.net.URI;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
+import javafx.beans.Observable;
 import javafx.collections.ListChangeListener.Change;
 import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
@@ -27,6 +33,7 @@ import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TableView;
+import javafx.scene.control.TableView.TableViewSelectionModel;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
@@ -157,6 +164,126 @@ public final class MainWindow extends Window<BorderPane> {
 		}
 		
 		return builder.toString();
+	}
+	
+	/** @since 00.02.08 */
+	private static final void contextMenuItemEnableIfAnySelected(Observable o, Pair<ContextMenuItem, Stats> oldValue,
+			Pair<ContextMenuItem, Stats> pair) {
+		ContextMenuItem item = pair.a;
+		Stats stats = pair.b;
+		item.setDisable(stats.count() == 0);
+	}
+	
+	/** @since 00.02.08 */
+	private static final <T> boolean moveItem(List<T> list, int from, int to) {
+		final int size = list.size();
+		
+		if(from < 0 || from >= size || to < 0 || to >= size) {
+			return false;
+		}
+		
+		Collections.swap(list, from, to);
+		return true;
+	}
+	
+	/** @since 00.02.08 */
+	private static final <T> int[] moveItems(List<T> items, List<Integer> selected, int start, int end,
+			int limit, int step, int offset) {
+		// Must make a copy since we move the items around during the process
+		List<Integer> indexes = List.copyOf(selected);
+		int[] newIndexes = new int[indexes.size()];
+		
+		for(int i = start, p = -1, e = end + step; i != e; p = i, i += step) {
+			int index = indexes.get(i);
+			
+			// Check whether the current item can be moved
+			if(index != limit
+					&& (p < 0 || newIndexes[p] != index + offset)) {
+				moveItem(items, index, index + offset);
+				index += offset;
+			}
+			
+			newIndexes[i] = index;
+		}
+		
+		return newIndexes;
+	}
+	
+	/** @since 00.02.08 */
+	private static final <T> int[] moveItemsUp(List<T> items, List<Integer> selected) {
+		return moveItems(items, selected, 0, selected.size() - 1, 0, 1, -1);
+	}
+	
+	/** @since 00.02.08 */
+	private static final <T> int[] moveItemsDown(List<T> items, List<Integer> selected) {
+		return moveItems(items, selected, selected.size() - 1, 0, items.size() - 1, -1, 1);
+	}
+	
+	/** @since 00.02.08 */
+	private static final <T> void addAll(List<T> list, int index, Collection<T> itemsToAdd) {
+		if(index == list.size()) list.addAll(itemsToAdd); // Allow adding to the end
+		else                     list.addAll(index, itemsToAdd);
+	}
+	
+	/** @since 00.02.08 */
+	private static final <T> int[] moveItemsTo(List<T> items, List<Integer> selected, int destination) {
+		final int totalSize = items.size();
+		
+		if(destination < 0 || destination > totalSize) {
+			return Utils.intArray(selected.toArray(Integer[]::new));
+		}
+		
+		final int selectSize = selected.size();
+		int belowIndexesCount = 0;
+		
+		// Use LinkedHashSet for better contains method performance that is used
+		// in the removeAll method. Linked variant is used to preserve order.
+		Set<T> selectedItems = new LinkedHashSet<>(selectSize);
+		for(int index : selected) {
+			selectedItems.add(items.get(index));
+			
+			if(index < destination) {
+				++belowIndexesCount;
+			}
+		}
+		
+		// Must recalculate since the size of the list will change
+		int destinationAfterRemove = destination - belowIndexesCount;
+		
+		// Use batch methods for better performance
+		items.removeAll(selectedItems);
+		addAll(items, destinationAfterRemove, selectedItems);
+		
+		// Must recalculate the select range since we can also add to the end of the list
+		int selectIndexEnd = Math.min(destination + selectSize, totalSize);
+		int selectIndexStart = selectIndexEnd - selectSize;
+		
+		return IntStream.range(selectIndexStart, selectIndexEnd).toArray();
+	}
+	
+	/** @since 00.02.08 */
+	private static final <T> int[] moveItemsBegin(List<T> items, List<Integer> selected) {
+		return moveItemsTo(items, selected, 0);
+	}
+	
+	/** @since 00.02.08 */
+	private static final <T> int[] moveItemsEnd(List<T> items, List<Integer> selected) {
+		return moveItemsTo(items, selected, items.size());
+	}
+	
+	/** @since 00.02.08 */
+	private static final <T> void selectIndexes(TableViewSelectionModel<T> selection, int[] indexes) {
+		if(indexes == null || indexes.length == 0) {
+			return;
+		}
+		
+		selection.clearSelection();
+		selection.selectIndices(
+			indexes[0],
+			indexes.length > 1
+				? Arrays.copyOfRange(indexes, 1, indexes.length)
+				: null
+		);
 	}
 	
 	public static final MainWindow getInstance() {
@@ -368,27 +495,12 @@ public final class MainWindow extends Window<BorderPane> {
 					menuAdd.show(this, anchorX, anchorY);
 				}),
 			contextMenuItemFactory.createSeparator(),
-			contextMenuItemFactory.createStart(tr("context_menus.table.items.start"))
-				.setOnContextMenuShowing((o, ov, pair) -> {
-					ContextMenuItem item = pair.a;
-					Stats stats = pair.b;
-					
-					int count = stats.count();
-					int started = stats.started();
-					
-					item.setDisable(started == count);
-				}),
+			contextMenuItemFactory.createStart(tr("context_menus.table.items.start")),
 			contextMenuItemFactory.createPause(tr("context_menus.table.items.pause"))
-				.setOnContextMenuShowing((o, ov, pair) -> {
+				.addOnContextMenuShowing((o, ov, pair) -> {
 					ContextMenuItem item = pair.a;
 					Stats stats = pair.b;
 					
-					int count = stats.count();
-					int started = stats.started();
-					int done = stats.done();
-					int stopped = stats.stopped();
-					
-					item.setDisable(started == 0 || (done == count || stopped == count));
 					item.setText(
 						stats.anyNonPaused()
 							? tr("context_menus.table.items.pause")
@@ -396,19 +508,73 @@ public final class MainWindow extends Window<BorderPane> {
 					);
 				}),
 			contextMenuItemFactory.createTerminate(tr("context_menus.table.items.terminate_cancel"))
-				.setOnContextMenuShowing((o, ov, pair) -> {
+				.addOnContextMenuShowing((o, ov, pair) -> {
 					ContextMenuItem item = pair.a;
 					Stats stats = pair.b;
 					
-					int count = stats.count();
-					
-					item.setDisable(count == 0);
 					item.setText(
 						stats.anyTerminable()
 							? tr("context_menus.table.items.terminate_cancel")
 							: tr("context_menus.table.items.terminate_remove")
 					);
 				}),
+			contextMenuItemFactory.createSeparator(),
+			contextMenuItemFactory.create(tr("context_menus.table.items.move_up"))
+				.setOnActivated((e) -> {
+					List<PipelineInfo> infos = table.selectedPipelines();
+					
+					if(infos.isEmpty()) {
+						return;
+					}
+					
+					selectIndexes(
+						table.getSelectionModel(),
+						moveItemsUp(table.pipelines(), table.selectedIndexes())
+					);
+				})
+				.addOnContextMenuShowing(MainWindow::contextMenuItemEnableIfAnySelected),
+			contextMenuItemFactory.create(tr("context_menus.table.items.move_down"))
+				.setOnActivated((e) -> {
+					List<PipelineInfo> infos = table.selectedPipelines();
+					
+					if(infos.isEmpty()) {
+						return;
+					}
+					
+					selectIndexes(
+						table.getSelectionModel(),
+						moveItemsDown(table.pipelines(), table.selectedIndexes())
+					);
+				})
+				.addOnContextMenuShowing(MainWindow::contextMenuItemEnableIfAnySelected),
+			contextMenuItemFactory.create(tr("context_menus.table.items.move_begin"))
+				.setOnActivated((e) -> {
+					List<PipelineInfo> infos = table.selectedPipelines();
+					
+					if(infos.isEmpty()) {
+						return;
+					}
+					
+					selectIndexes(
+						table.getSelectionModel(),
+						moveItemsBegin(table.pipelines(), table.selectedIndexes())
+					);
+				})
+				.addOnContextMenuShowing(MainWindow::contextMenuItemEnableIfAnySelected),
+			contextMenuItemFactory.create(tr("context_menus.table.items.move_end"))
+				.setOnActivated((e) -> {
+					List<PipelineInfo> infos = table.selectedPipelines();
+					
+					if(infos.isEmpty()) {
+						return;
+					}
+					
+					selectIndexes(
+						table.getSelectionModel(),
+						moveItemsEnd(table.pipelines(), table.selectedIndexes())
+					);
+				})
+				.addOnContextMenuShowing(MainWindow::contextMenuItemEnableIfAnySelected),
 			contextMenuItemFactory.createSeparator(),
 			contextMenuItemFactory.create(tr("context_menus.table.items.copy_url"))
 				.setOnActivated((e) -> {
@@ -426,11 +592,7 @@ public final class MainWindow extends Window<BorderPane> {
 						listToString(media, (m) -> m.uri().normalize().toString())
 					);
 				})
-				.setOnContextMenuShowing((o, ov, pair) -> {
-					ContextMenuItem item = pair.a;
-					Stats stats = pair.b;
-					item.setDisable(stats.count() == 0);
-				}),
+				.addOnContextMenuShowing(MainWindow::contextMenuItemEnableIfAnySelected),
 			contextMenuItemFactory.create(tr("context_menus.table.items.copy_source_url"))
 				.setOnActivated((e) -> {
 					List<PipelineInfo> infos = table.selectedPipelines();
@@ -448,11 +610,7 @@ public final class MainWindow extends Window<BorderPane> {
 						                                                    .map(URI::normalize).orElse(null)))
 					);
 				})
-				.setOnContextMenuShowing((o, ov, pair) -> {
-					ContextMenuItem item = pair.a;
-					Stats stats = pair.b;
-					item.setDisable(stats.count() == 0);
-				}),
+				.addOnContextMenuShowing(MainWindow::contextMenuItemEnableIfAnySelected),
 			contextMenuItemFactory.create(tr("context_menus.table.items.media_info"))
 				.setOnActivated((e) -> {
 					PipelineInfo info = table.selectedPipeline();
@@ -466,23 +624,9 @@ public final class MainWindow extends Window<BorderPane> {
 						.setArgs("parent", this, "media", media)
 						.show();
 				})
-				.setOnContextMenuShowing((o, ov, pair) -> {
-					ContextMenuItem item = pair.a;
-					Stats stats = pair.b;
-					item.setDisable(stats.count() == 0);
-				}),
+				.addOnContextMenuShowing(MainWindow::contextMenuItemEnableIfAnySelected),
 			contextMenuItemFactory.createSeparator(),
 			contextMenuItemFactory.createShowFile(tr("context_menus.table.items.show_file"))
-				.setOnContextMenuShowing((o, ov, pair) -> {
-					ContextMenuItem item = pair.a;
-					Stats stats = pair.b;
-					
-					int started = stats.started();
-					int done = stats.done();
-					int stopped = stats.stopped();
-					
-					item.setDisable(!(started > 0 || done > 0 || stopped > 0));
-				})
 		));
 		
 		return table;

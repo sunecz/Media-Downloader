@@ -41,7 +41,11 @@
 						resume:             "Pokračovat",
 						copy_url:           "Zkopírovat URL",
 						copy_source_url:    "Zkopírovat zdrojovou URL",
-						media_info:         "Informace o médiu"
+						media_info:         "Informace o médiu",
+						move_up:            "Posunout nahoru",
+						move_down:          "Posunout dolů",
+						move_begin:         "Posunout na začátek",
+						move_end:           "Posunout na konec"
 					}
 				},
 				add: {

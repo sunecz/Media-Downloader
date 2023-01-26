@@ -41,7 +41,11 @@
 						resume:             "Resume",
 						copy_url:           "Copy URL",
 						copy_source_url:    "Copy source URL",
-						media_info:         "Media information"
+						media_info:         "Media information",
+						move_up:            "Move up",
+						move_down:          "Move down",
+						move_begin:         "Move to the beginning",
+						move_end:           "Move to the end"
 					}
 				},
 				add: {
