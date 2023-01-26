@@ -1,5 +1,6 @@
 package sune.app.mediadown.manager;
 
+import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -14,10 +15,8 @@ public class ManagerSubmitResult<A, B> implements Future<B>, Cancellable {
 	private final Future<B> future;
 	
 	public ManagerSubmitResult(A value, Future<B> future) {
-		if((value == null || future == null))
-			throw new IllegalArgumentException();
-		this.value = value;
-		this.future = future;
+		this.value = Objects.requireNonNull(value);
+		this.future = Objects.requireNonNull(future);
 	}
 	
 	@Override
@@ -41,21 +40,16 @@ public class ManagerSubmitResult<A, B> implements Future<B>, Cancellable {
 	}
 	
 	@Override
-	public B get()
-			throws ExecutionException,
-			       InterruptedException {
+	public B get() throws ExecutionException, InterruptedException {
 		return future.get();
 	}
 	
 	@Override
-	public B get(long timeout, TimeUnit unit)
-			throws ExecutionException,
-			       TimeoutException,
-			       InterruptedException {
+	public B get(long timeout, TimeUnit unit) throws ExecutionException, TimeoutException, InterruptedException {
 		return future.get(timeout, unit);
 	}
 	
-	public A getValue() {
+	public A value() {
 		return value;
 	}
 }

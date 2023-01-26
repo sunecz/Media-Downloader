@@ -51,7 +51,7 @@ public final class ConversionPipelineTask implements PipelineTask<ConversionPipe
 		
 		// Bind all events from the pipeline
 		EventRegistry<EventType> eventRegistry = pipeline.getEventRegistry();
-		Converter converter = result.getValue();
+		Converter converter = result.value();
 		eventRegistry.bindAll(converter, ConversionEvent.values());
 		
 		result.get(); // Wait for the conversion to finish
@@ -59,7 +59,7 @@ public final class ConversionPipelineTask implements PipelineTask<ConversionPipe
 	}
 	
 	private final Converter converter() {
-		return result.getValue();
+		return result.value();
 	}
 	
 	@Override

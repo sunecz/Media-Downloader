@@ -32,7 +32,7 @@ public final class DownloadPipelineTask implements PipelineTask<DownloadPipeline
 	public final DownloadPipelineResult run(Pipeline pipeline) throws Exception {
 		result = DownloadManager.submit(media.media(), media.destination(), media.mediaConfiguration(),
 			media.configuration());
-		DownloadResult downloadResult = result.getValue();
+		DownloadResult downloadResult = result.value();
 		
 		// Notify the media of being submitted
 		media.submit(result::cancel);
@@ -47,7 +47,7 @@ public final class DownloadPipelineTask implements PipelineTask<DownloadPipeline
 	}
 	
 	private final Download download() {
-		return result.getValue().download();
+		return result.value().download();
 	}
 	
 	@Override
