@@ -19,14 +19,25 @@ import sune.app.mediadown.util.Metadata;
 import sune.app.mediadown.util.Threads;
 
 /** @since 00.01.26 */
-public class ConversionManager {
+public final class ConversionManager {
 	
-	private static final ExecutorService EXECUTOR;
+	/** @since 00.02.08 */
+	private static ExecutorService executor;
 	
-	static {
-		int numOfThreads = MediaDownloader.configuration().parallelConversions();
-		EXECUTOR = Threads.Pools.newFixed(numOfThreads);
-		Disposables.add(ConversionManager::dispose);
+	// Forbid anyone to create an instance of this class
+	private ConversionManager() {
+	}
+	
+	/** @since 00.02.08 */
+	private static final ExecutorService executor() {
+		synchronized(ConversionManager.class) {
+			if(executor == null) {
+				executor = Threads.Pools.newFixed(MediaDownloader.configuration().parallelConversions());
+				Disposables.add(ConversionManager::dispose);
+			}
+			
+			return executor;
+		}
 	}
 	
 	/** @since 00.02.08 */
@@ -48,16 +59,25 @@ public class ConversionManager {
 		}
 		
 		Converter converter = createConverter();
-		Future<Void> future = EXECUTOR.submit(createTask(converter, output, inputs, metadata));
+		Future<Void> future = executor().submit(createTask(converter, output, inputs, metadata));
+		
 		return new ManagerSubmitResult<>(converter, future);
 	}
 	
 	public static final void dispose() {
-		EXECUTOR.shutdownNow();
+		synchronized(ConversionManager.class) {
+			if(executor == null) {
+				return;
+			}
+			
+			executor.shutdownNow();
+		}
 	}
 	
 	public static final boolean isRunning() {
-		return !EXECUTOR.isShutdown();
+		synchronized(ConversionManager.class) {
+			return executor != null && !executor.isShutdown();
+		}
 	}
 	
 	/** @since 00.02.08 */

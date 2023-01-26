@@ -48,25 +48,27 @@ public final class DownloadManager {
 		return downloader.download(media, destination, mediaConfiguration);
 	}
 	
-	private static final Callable<Long> createCallable(DownloadResult result) {
+	private static final Callable<Long> createTask(DownloadResult result) {
 		return Utils.callable(result.download()::start, 0L);
 	}
 	
 	public static final ManagerSubmitResult<DownloadResult, Long> submit(Media media, Path destination,
 			MediaDownloadConfiguration mediaConfiguration, DownloadConfiguration configuration) throws Exception {
-		if(media == null || destination == null || mediaConfiguration == null || configuration == null)
+		if(media == null || destination == null || mediaConfiguration == null || configuration == null) {
 			throw new IllegalArgumentException();
+		}
 		
 		DownloadResult result = createDownloadResult(media, destination, mediaConfiguration);
-		Future<Long> future = executor().submit(createCallable(result));
+		Future<Long> future = executor().submit(createTask(result));
 		
 		return new ManagerSubmitResult<>(result, future);
 	}
 	
 	public static final void dispose() {
 		synchronized(DownloadManager.class) {
-			if(executor == null)
+			if(executor == null) {
 				return;
+			}
 			
 			executor.shutdownNow();
 		}
