@@ -23,4 +23,5 @@ public interface InternalDownloader extends EventBindable<DownloadEvent>, EventC
 	Request request();
 	Path output();
 	DownloadConfiguration configuration();
+	long totalBytes();
 }

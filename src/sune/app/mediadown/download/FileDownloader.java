@@ -433,6 +433,11 @@ public class FileDownloader implements InternalDownloader {
 	}
 	
 	@Override
+	public long totalBytes() {
+		return totalBytes;
+	}
+	
+	@Override
 	public boolean isRunning() {
 		return state.is(TaskStates.RUNNING);
 	}

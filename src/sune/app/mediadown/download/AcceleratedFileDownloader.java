@@ -44,6 +44,8 @@ public class AcceleratedFileDownloader implements InternalDownloader {
 	private Path output;
 	private DownloadConfiguration configuration;
 	
+	private long totalBytes;
+	
 	public AcceleratedFileDownloader(TrackerManager manager) {
 		this(manager, acceleratedDownloaderCount());
 	}
@@ -159,7 +161,7 @@ public class AcceleratedFileDownloader implements InternalDownloader {
 		int numOfThreads = count;
 		Range<Long> rangeOutput = configuration.rangeOutput();
 		Range<Long> rangeRequest = configuration.rangeRequest();
-		long totalBytes = configuration.totalBytes();
+		totalBytes = configuration.totalBytes();
 		AtomicLong bytes = new AtomicLong();
 		
 		if(totalBytes < 0L) {
@@ -300,6 +302,11 @@ public class AcceleratedFileDownloader implements InternalDownloader {
 	@Override
 	public DownloadConfiguration configuration() {
 		return configuration;
+	}
+	
+	@Override
+	public long totalBytes() {
+		return totalBytes;
 	}
 	
 	public int count() {
