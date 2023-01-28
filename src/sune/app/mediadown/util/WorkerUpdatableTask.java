@@ -66,8 +66,10 @@ public class WorkerUpdatableTask<P, R> {
 	}
 	
 	public static final <P, R> void runTaskAndThen(WorkerUpdatableTask<P, R> task, Consumer<WorkerResult<R>> then) {
-		if((task == null || then == null))
+		if(task == null || then == null) {
 			throw new IllegalArgumentException("Task and Then action cannot be null");
+		}
+		
 		Threads.execute(() -> {
 			WorkerResult<R> result = task.startAndWait();
 			then.accept(result);
@@ -94,6 +96,11 @@ public class WorkerUpdatableTask<P, R> {
 	public static final <P> WorkerUpdatableTask<Consumer<P>, P[]> arrayTask(Consumer<P> consumer, Supplier<P[]> supplier) {
 		return new WorkerUpdatableTask<>(consumer, (Callback<Consumer<P>, P[]>) (c) -> {
 			P[] array = supplier.get();
+			
+			if(array == null) {
+				return null;
+			}
+			
 			Stream.of(array).forEach(c);
 			return array;
 		});
@@ -103,12 +110,19 @@ public class WorkerUpdatableTask<P, R> {
 			(BiFunction<WorkerProxy, P, Boolean> function,
 			 Supplier<P[]> supplier) {
 		return new WorkerUpdatableTask<>(function, (w, c) -> {
-			P[] a = supplier.get();
-			for(P p : a) {
-				if(!w.isRunning() || !c.apply(w, p))
-					break;
+			P[] array = supplier.get();
+			
+			if(array == null) {
+				return null;
 			}
-			return a;
+			
+			for(P item : array) {
+				if(!w.isRunning() || !c.apply(w, item)) {
+					break;
+				}
+			}
+			
+			return array;
 		});
 	}
 	
@@ -117,7 +131,15 @@ public class WorkerUpdatableTask<P, R> {
 			(CheckedConsumer<P> consumer, CheckedSupplier<P[]> supplier) {
 		return new WorkerUpdatableTask<>(consumer, (CheckedCallback<CheckedConsumer<P>, P[]>) (c) -> {
 			P[] array = supplier.get();
-			for(P item : array) c.accept(item);
+			
+			if(array == null) {
+				return null;
+			}
+			
+			for(P item : array) {
+				c.accept(item);
+			}
+			
 			return array;
 		});
 	}
@@ -126,12 +148,19 @@ public class WorkerUpdatableTask<P, R> {
 	public static final <P> WorkerUpdatableTask<CheckedBiFunction<WorkerProxy, P, Boolean>, P[]> arrayTaskChecked
 			(CheckedBiFunction<WorkerProxy, P, Boolean> function, CheckedSupplier<P[]> supplier) {
 		return new WorkerUpdatableTask<>(function, (w, c) -> {
-			P[] a = supplier.get();
-			for(P p : a) {
-				if(!w.isRunning() || !c.apply(w, p))
-					break;
+			P[] array = supplier.get();
+			
+			if(array == null) {
+				return null;
 			}
-			return a;
+			
+			for(P item : array) {
+				if(!w.isRunning() || !c.apply(w, item)) {
+					break;
+				}
+			}
+			
+			return array;
 		});
 	}
 	
@@ -139,6 +168,11 @@ public class WorkerUpdatableTask<P, R> {
 	public static final <P> WorkerUpdatableTask<Consumer<P>, List<P>> listTask(Consumer<P> consumer, Supplier<List<P>> supplier) {
 		return new WorkerUpdatableTask<>(consumer, (Callback<Consumer<P>, List<P>>) (c) -> {
 			List<P> list = supplier.get();
+			
+			if(list == null) {
+				return null;
+			}
+			
 			list.forEach(c);
 			return list;
 		});
@@ -149,12 +183,19 @@ public class WorkerUpdatableTask<P, R> {
 			(BiFunction<WorkerProxy, P, Boolean> function,
 			 Supplier<List<P>> supplier) {
 		return new WorkerUpdatableTask<>(function, (w, c) -> {
-			List<P> a = supplier.get();
-			for(P p : a) {
-				if(!w.isRunning() || !c.apply(w, p))
-					break;
+			List<P> list = supplier.get();
+			
+			if(list == null) {
+				return null;
 			}
-			return a;
+			
+			for(P item : list) {
+				if(!w.isRunning() || !c.apply(w, item)) {
+					break;
+				}
+			}
+			
+			return list;
 		});
 	}
 	
@@ -163,7 +204,15 @@ public class WorkerUpdatableTask<P, R> {
 			(CheckedConsumer<P> consumer, CheckedSupplier<List<P>> supplier) {
 		return new WorkerUpdatableTask<>(consumer, (CheckedCallback<CheckedConsumer<P>, List<P>>) (c) -> {
 			List<P> list = supplier.get();
-			for(P item : list) c.accept(item);
+			
+			if(list == null) {
+				return null;
+			}
+			
+			for(P item : list) {
+				c.accept(item);
+			}
+			
 			return list;
 		});
 	}
@@ -172,18 +221,31 @@ public class WorkerUpdatableTask<P, R> {
 	public static final <P> WorkerUpdatableTask<CheckedBiFunction<WorkerProxy, P, Boolean>, List<P>> listTaskChecked
 			(CheckedBiFunction<WorkerProxy, P, Boolean> function, CheckedSupplier<List<P>> supplier) {
 		return new WorkerUpdatableTask<>(function, (w, c) -> {
-			List<P> a = supplier.get();
-			for(P p : a) {
-				if(!w.isRunning() || !c.apply(w, p))
-					break;
+			List<P> list = supplier.get();
+			
+			if(list == null) {
+				return null;
 			}
-			return a;
+			
+			for(P item : list) {
+				if(!w.isRunning() || !c.apply(w, item)) {
+					break;
+				}
+			}
+			
+			return list;
 		});
 	}
 	
 	public static final <P> WorkerUpdatableTask<Consumer<P>, Void> arrayVoidTask(Consumer<P> consumer, Supplier<P[]> supplier) {
 		return new WorkerUpdatableTask<>(consumer, (Callback<Consumer<P>, Void>) (c) -> {
-			Stream.of(supplier.get()).forEach(c);
+			P[] array = supplier.get();
+			
+			if(array == null) {
+				return null;
+			}
+			
+			Stream.of(array).forEach(c);
 			return null;
 		});
 	}
@@ -192,10 +254,18 @@ public class WorkerUpdatableTask<P, R> {
 			(BiFunction<WorkerProxy, P, Boolean> function,
 			 Supplier<P[]> supplier) {
 		return new WorkerUpdatableTask<>(function, (w, c) -> {
-			for(P p : supplier.get()) {
-				if(!w.isRunning() || !c.apply(w, p))
-					break;
+			P[] array = supplier.get();
+			
+			if(array == null) {
+				return null;
 			}
+			
+			for(P item : array) {
+				if(!w.isRunning() || !c.apply(w, item)) {
+					break;
+				}
+			}
+			
 			return null;
 		});
 	}
@@ -204,7 +274,16 @@ public class WorkerUpdatableTask<P, R> {
 	public static final <P> WorkerUpdatableTask<CheckedConsumer<P>, Void> arrayVoidTaskChecked
 			(CheckedConsumer<P> consumer, CheckedSupplier<P[]> supplier) {
 		return new WorkerUpdatableTask<>(consumer, (CheckedCallback<CheckedConsumer<P>, Void>) (c) -> {
-			for(P item : supplier.get()) c.accept(item);
+			P[] array = supplier.get();
+			
+			if(array == null) {
+				return null;
+			}
+			
+			for(P item : array) {
+				c.accept(item);
+			}
+			
 			return null;
 		});
 	}
@@ -213,10 +292,18 @@ public class WorkerUpdatableTask<P, R> {
 	public static final <P> WorkerUpdatableTask<CheckedBiFunction<WorkerProxy, P, Boolean>, Void> arrayVoidTaskChecked
 			(CheckedBiFunction<WorkerProxy, P, Boolean> function, CheckedSupplier<P[]> supplier) {
 		return new WorkerUpdatableTask<>(function, (w, c) -> {
-			for(P p : supplier.get()) {
-				if(!w.isRunning() || !c.apply(w, p))
-					break;
+			P[] array = supplier.get();
+			
+			if(array == null) {
+				return null;
 			}
+			
+			for(P item : array) {
+				if(!w.isRunning() || !c.apply(w, item)) {
+					break;
+				}
+			}
+			
 			return null;
 		});
 	}
@@ -224,7 +311,13 @@ public class WorkerUpdatableTask<P, R> {
 	/** @since 00.02.05 */
 	public static final <P> WorkerUpdatableTask<Consumer<P>, Void> listVoidTask(Consumer<P> consumer, Supplier<List<P>> supplier) {
 		return new WorkerUpdatableTask<>(consumer, (Callback<Consumer<P>, Void>) (c) -> {
-			supplier.get().forEach(c);
+			List<P> list = supplier.get();
+			
+			if(list == null) {
+				return null;
+			}
+			
+			list.forEach(c);
 			return null;
 		});
 	}
@@ -234,10 +327,18 @@ public class WorkerUpdatableTask<P, R> {
 			(BiFunction<WorkerProxy, P, Boolean> function,
 			 Supplier<List<P>> supplier) {
 		return new WorkerUpdatableTask<>(function, (w, c) -> {
-			for(P p : supplier.get()) {
-				if(!w.isRunning() || !c.apply(w, p))
-					break;
+			List<P> list = supplier.get();
+			
+			if(list == null) {
+				return null;
 			}
+			
+			for(P item : list) {
+				if(!w.isRunning() || !c.apply(w, item)) {
+					break;
+				}
+			}
+			
 			return null;
 		});
 	}
@@ -246,7 +347,16 @@ public class WorkerUpdatableTask<P, R> {
 	public static final <P> WorkerUpdatableTask<CheckedConsumer<P>, Void> listVoidTaskChecked
 			(CheckedConsumer<P> consumer, CheckedSupplier<List<P>> supplier) {
 		return new WorkerUpdatableTask<>(consumer, (CheckedCallback<CheckedConsumer<P>, Void>) (c) -> {
-			for(P item : supplier.get()) c.accept(item);
+			List<P> list = supplier.get();
+			
+			if(list == null) {
+				return null;
+			}
+			
+			for(P item : list) {
+				c.accept(item);
+			}
+			
 			return null;
 		});
 	}
@@ -255,10 +365,18 @@ public class WorkerUpdatableTask<P, R> {
 	public static final <P> WorkerUpdatableTask<CheckedBiFunction<WorkerProxy, P, Boolean>, Void> listVoidTaskChecked
 			(CheckedBiFunction<WorkerProxy, P, Boolean> function, CheckedSupplier<List<P>> supplier) {
 		return new WorkerUpdatableTask<>(function, (w, c) -> {
-			for(P p : supplier.get()) {
-				if(!w.isRunning() || !c.apply(w, p))
-					break;
+			List<P> list = supplier.get();
+			
+			if(list == null) {
+				return null;
 			}
+			
+			for(P item : list) {
+				if(!w.isRunning() || !c.apply(w, item)) {
+					break;
+				}
+			}
+			
 			return null;
 		});
 	}
@@ -282,19 +400,25 @@ public class WorkerUpdatableTask<P, R> {
 		return new WorkerUpdatableTask<P, Void>(param, (w, p) -> { function.accept(w, p); return null; });
 	}
 	
-	@SuppressWarnings("unchecked")
 	private final void assignResult() {
-		if(!worker.hasNextResult())
+		if(!worker.hasNextResult()) {
 			return;
-		result = (WorkerResult<R>) worker.nextResult();
+		}
+		
+		result = Utils.cast(worker.nextResult());
 	}
 	
 	private final WorkerResult<R> checkResult(Supplier<WorkerResult<R>> supplier) throws Exception {
 		WorkerResult<R> result = supplier.get();
+		
 		if(result != null) {
 			Exception exception = result.getException();
-			if(exception != null) throw exception;
+			
+			if(exception != null) {
+				throw exception;
+			}
 		}
+		
 		return result;
 	}
 	
