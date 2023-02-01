@@ -7,10 +7,16 @@ import sune.app.mediadown.convert.Converter;
 import sune.app.mediadown.event.ConversionEvent;
 import sune.app.mediadown.event.EventRegistry;
 import sune.app.mediadown.event.EventType;
+import sune.app.mediadown.event.QueueEvent;
 import sune.app.mediadown.gui.table.ResolvedMedia;
 import sune.app.mediadown.manager.ConversionManager;
 import sune.app.mediadown.manager.ManagerSubmitResult;
 import sune.app.mediadown.util.Metadata;
+import sune.app.mediadown.util.Pair;
+import sune.app.mediadown.util.PositionAwareQueueTaskExecutor.PositionAwareQueueTaskResult;
+import sune.app.mediadown.util.QueueContext;
+import sune.app.mediadown.util.Utils;
+import sune.app.mediadown.util.Utils.Ignore;
 
 /** @since 00.01.26 */
 public final class ConversionPipelineTask implements PipelineTask<ConversionPipelineResult> {
@@ -47,14 +53,29 @@ public final class ConversionPipelineTask implements PipelineTask<ConversionPipe
 		Metadata altered = metadata.copy();
 		altered.set("noExplicitInputFormat", true);
 		
-		result = ConversionManager.submit(output, inputs, altered);
+		result = ConversionManager.instance().submit(output, inputs, altered);
+		QueueContext context = result.context();
+		
+		// Notify the pipeline if the position in a queue changed
+		PositionAwareQueueTaskResult<Long> positionAwareTaskResult = Utils.cast(result.taskResult());
+		positionAwareTaskResult.queuePositionProperty().addListener((o, ov, queuePosition) -> {
+			pipeline.getEventRegistry().call(
+				QueueEvent.POSITION_UPDATE,
+				new Pair<>(context, queuePosition.intValue())
+			);
+		});
+		
+		pipeline.getEventRegistry().call(
+			QueueEvent.POSITION_UPDATE,
+			new Pair<>(context, positionAwareTaskResult.queuePosition())
+		);
 		
 		// Bind all events from the pipeline
 		EventRegistry<EventType> eventRegistry = pipeline.getEventRegistry();
 		Converter converter = result.value();
 		eventRegistry.bindAll(converter, ConversionEvent.values());
 		
-		result.get(); // Wait for the conversion to finish
+		Ignore.Cancellation.call(result::get); // Wait for the conversion to finish
 		return ConversionPipelineResult.noConversion();
 	}
 	

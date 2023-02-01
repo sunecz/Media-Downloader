@@ -2,9 +2,7 @@ package sune.app.mediadown.manager;
 
 import java.nio.file.Path;
 import java.util.NoSuchElementException;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
+import java.util.Objects;
 
 import sune.app.mediadown.Disposables;
 import sune.app.mediadown.MediaDownloader;
@@ -13,31 +11,37 @@ import sune.app.mediadown.download.DownloadResult;
 import sune.app.mediadown.download.Downloader;
 import sune.app.mediadown.download.Downloaders;
 import sune.app.mediadown.download.MediaDownloadConfiguration;
+import sune.app.mediadown.event.tracker.PipelineStates;
 import sune.app.mediadown.media.Media;
-import sune.app.mediadown.util.Threads;
-import sune.app.mediadown.util.Utils;
+import sune.app.mediadown.util.PositionAwareQueueTaskExecutor;
+import sune.app.mediadown.util.PositionAwareQueueTaskExecutor.PositionAwareQueueTaskResult;
+import sune.app.mediadown.util.QueueContext;
+import sune.app.mediadown.util.QueueTaskExecutor.QueueTask;
 
 /** @since 00.01.26 */
-public final class DownloadManager {
+public final class DownloadManager implements QueueContext {
 	
-	private static ExecutorService executor;
+	/** @since 00.02.08 */
+	private static DownloadManager instance;
+	
+	private PositionAwareQueueTaskExecutor<Long> executor;
 	
 	// Forbid anyone to create an instance of this class
 	private DownloadManager() {
 	}
 	
-	private static final ExecutorService executor() {
+	private final PositionAwareQueueTaskExecutor<Long> executor() {
 		synchronized(DownloadManager.class) {
 			if(executor == null) {
-				executor = Threads.Pools.newFixed(MediaDownloader.configuration().parallelDownloads());
-				Disposables.add(DownloadManager::dispose);
+				executor = new PositionAwareQueueTaskExecutor<>(MediaDownloader.configuration().parallelDownloads());
+				Disposables.add(this::dispose);
 			}
 			
 			return executor;
 		}
 	}
 	
-	private static final DownloadResult createDownloadResult(Media media, Path destination,
+	private final DownloadResult createDownloadResult(Media media, Path destination,
 			MediaDownloadConfiguration mediaConfiguration) throws Exception {
 		Downloader downloader = Downloaders.forMedia(media);
 		
@@ -48,35 +52,62 @@ public final class DownloadManager {
 		return downloader.download(media, destination, mediaConfiguration);
 	}
 	
-	private static final Callable<Long> createTask(DownloadResult result) {
-		return Utils.callable(result.download()::start, 0L);
+	private final DownloadManagerTask createTask(DownloadResult result) {
+		return new DownloadManagerTask(result);
 	}
 	
-	public static final ManagerSubmitResult<DownloadResult, Long> submit(Media media, Path destination,
+	/** @since 00.02.08 */
+	public static final DownloadManager instance() {
+		return instance == null ? instance = new DownloadManager() : instance;
+	}
+	
+	public final PositionAwareManagerSubmitResult<DownloadResult, Long> submit(Media media, Path destination,
 			MediaDownloadConfiguration mediaConfiguration, DownloadConfiguration configuration) throws Exception {
 		if(media == null || destination == null || mediaConfiguration == null || configuration == null) {
 			throw new IllegalArgumentException();
 		}
 		
 		DownloadResult result = createDownloadResult(media, destination, mediaConfiguration);
-		Future<Long> future = executor().submit(createTask(result));
+		PositionAwareQueueTaskResult<Long> taskResult = executor().submit(createTask(result));
 		
-		return new ManagerSubmitResult<>(result, future);
+		return new PositionAwareManagerSubmitResult<>(result, taskResult, this);
 	}
 	
-	public static final void dispose() {
+	public final void dispose() throws Exception {
 		synchronized(DownloadManager.class) {
 			if(executor == null) {
 				return;
 			}
 			
-			executor.shutdownNow();
+			executor.stop();
 		}
 	}
 	
-	public static final boolean isRunning() {
+	public final boolean isRunning() {
 		synchronized(DownloadManager.class) {
-			return executor != null && !executor.isShutdown();
+			return executor != null && executor.isRunning();
+		}
+	}
+	
+	/** @since 00.02.08 */
+	@Override
+	public String contextState() {
+		return PipelineStates.DOWNLOAD;
+	}
+	
+	/** @since 00.02.08 */
+	private static final class DownloadManagerTask implements QueueTask<Long> {
+		
+		private final DownloadResult result;
+		
+		private DownloadManagerTask(DownloadResult result) {
+			this.result = Objects.requireNonNull(result);
+		}
+		
+		@Override
+		public Long call() throws Exception {
+			result.download().start();
+			return 0L;
 		}
 	}
 }

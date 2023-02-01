@@ -7,8 +7,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import javafx.beans.property.DoubleProperty;
@@ -40,7 +38,10 @@ import javafx.scene.text.Text;
 import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.MediaGetter;
 import sune.app.mediadown.download.DownloadConfiguration;
+import sune.app.mediadown.event.Event;
+import sune.app.mediadown.event.EventType;
 import sune.app.mediadown.event.PipelineEvent;
+import sune.app.mediadown.event.QueueEvent;
 import sune.app.mediadown.event.tracker.ConversionTracker;
 import sune.app.mediadown.event.tracker.DownloadTracker;
 import sune.app.mediadown.event.tracker.PipelineProgress;
@@ -48,14 +49,12 @@ import sune.app.mediadown.event.tracker.Tracker;
 import sune.app.mediadown.event.tracker.TrackerView;
 import sune.app.mediadown.gui.control.PipelineTableView.PipelineInfo;
 import sune.app.mediadown.gui.table.ResolvedMedia;
-import sune.app.mediadown.language.Translation;
+import sune.app.mediadown.language.Translator;
 import sune.app.mediadown.os.OS;
 import sune.app.mediadown.pipeline.MediaPipelineResult;
 import sune.app.mediadown.pipeline.Pipeline;
 import sune.app.mediadown.pipeline.PipelineMedia;
 import sune.app.mediadown.pipeline.PipelineResult;
-import sune.app.mediadown.plugin.PluginFile;
-import sune.app.mediadown.plugin.Plugins;
 import sune.app.mediadown.util.Cancellable;
 import sune.app.mediadown.util.FXUtils;
 import sune.app.mediadown.util.Pair;
@@ -681,59 +680,6 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 					setText(stateText(item));
 				}
 			}
-			
-			private static final class Translator {
-				
-				private static final Pattern REGEX_TRANSLATE = Pattern.compile("^tr\\(([^,]+),\\s*([^\\)]+)\\)$");
-				
-				private Translator() {
-				}
-				
-				private static final boolean quickCanTranslate(String state) {
-					return state != null && state.indexOf("tr(") == 0;
-				}
-				
-				private static final Translation translation(String context) {
-					int index = context.indexOf(':');
-					
-					if(index < 0) {
-						return MediaDownloader.translation();
-					}
-					
-					String schema = context.substring(0, index);
-					switch(schema) {
-						case "plugin": {
-							String name = context.substring(index + 1);
-							PluginFile plugin = Plugins.getLoaded(name);
-							
-							if(plugin != null) {
-								return plugin.getInstance().translation();
-							}
-							
-							// Fall-through
-						}
-						default: {
-							return MediaDownloader.translation();
-						}
-					}
-				}
-				
-				private static final String translate(String state) {
-					Matcher matcher = REGEX_TRANSLATE.matcher(state);
-					
-					if(!matcher.matches()) {
-						return state;
-					}
-					
-					String context = matcher.group(1);
-					String path = matcher.group(2);
-					return translation(context).getSingle(path);
-				}
-				
-				public static final String maybeTranslate(String state) {
-					return quickCanTranslate(state) ? translate(state) : state;
-				}
-			}
 		}
 	}
 	
@@ -984,6 +930,8 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 	public static final class PipelineInfo implements TrackerView {
 		
 		private static final long MIN_UPDATE_DIFF_TIME = 250L * 1000000L; // 250 ms
+		private static final Event<? extends EventType, ?>[] STATE_UPDATE_EVENTS
+			= Utils.merge(PipelineEvent.values(), QueueEvent.values());
 		
 		public static final String TEXT_NONE = null;
 		
@@ -1009,7 +957,7 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 		public PipelineInfo(Pipeline pipeline, ResolvedMedia resolvedMedia) {
 			this.pipeline = Objects.requireNonNull(pipeline);
 			this.resolvedMedia = Objects.requireNonNull(resolvedMedia);
-			this.pipeline.getEventRegistry().addMany((o) -> stateUpdated = true, PipelineEvent.values());
+			this.pipeline.getEventRegistry().addMany((o) -> stateUpdated = true, STATE_UPDATE_EVENTS);
 		}
 		
 		private final StringProperty newStateProperty() {

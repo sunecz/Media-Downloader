@@ -7,8 +7,13 @@ import sune.app.mediadown.download.DownloadResult;
 import sune.app.mediadown.event.DownloadEvent;
 import sune.app.mediadown.event.EventRegistry;
 import sune.app.mediadown.event.EventType;
+import sune.app.mediadown.event.QueueEvent;
 import sune.app.mediadown.manager.DownloadManager;
-import sune.app.mediadown.manager.ManagerSubmitResult;
+import sune.app.mediadown.manager.PositionAwareManagerSubmitResult;
+import sune.app.mediadown.util.Pair;
+import sune.app.mediadown.util.PositionAwareQueueTaskExecutor.PositionAwareQueueTaskResult;
+import sune.app.mediadown.util.QueueContext;
+import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Utils.Ignore;
 
 /** @since 00.01.26 */
@@ -17,7 +22,7 @@ public final class DownloadPipelineTask implements PipelineTask<DownloadPipeline
 	/** @since 00.02.08 */
 	private final PipelineMedia media;
 	
-	private ManagerSubmitResult<DownloadResult, Long> result;
+	private PositionAwareManagerSubmitResult<DownloadResult, Long> result;
 	
 	private DownloadPipelineTask(PipelineMedia media) {
 		this.media = Objects.requireNonNull(media);
@@ -30,12 +35,27 @@ public final class DownloadPipelineTask implements PipelineTask<DownloadPipeline
 	
 	@Override
 	public final DownloadPipelineResult run(Pipeline pipeline) throws Exception {
-		result = DownloadManager.submit(media.media(), media.destination(), media.mediaConfiguration(),
+		result = DownloadManager.instance().submit(media.media(), media.destination(), media.mediaConfiguration(),
 			media.configuration());
 		DownloadResult downloadResult = result.value();
+		QueueContext context = result.context();
 		
 		// Notify the media of being submitted
 		media.submit(result::cancel);
+		
+		// Notify the pipeline if the position in a queue changed
+		PositionAwareQueueTaskResult<Long> positionAwareTaskResult = Utils.cast(result.taskResult());
+		positionAwareTaskResult.queuePositionProperty().addListener((o, ov, queuePosition) -> {
+			pipeline.getEventRegistry().call(
+				QueueEvent.POSITION_UPDATE,
+				new Pair<>(context, queuePosition.intValue())
+			);
+		});
+		
+		pipeline.getEventRegistry().call(
+			QueueEvent.POSITION_UPDATE,
+			new Pair<>(context, positionAwareTaskResult.queuePosition())
+		);
 		
 		// Bind all events from the pipeline
 		EventRegistry<EventType> eventRegistry = pipeline.getEventRegistry();

@@ -1,55 +1,60 @@
 package sune.app.mediadown.manager;
 
 import java.util.Objects;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import sune.app.mediadown.util.Cancellable;
+import sune.app.mediadown.util.QueueContext;
+import sune.app.mediadown.util.QueueTaskExecutor.QueueTaskResult;
 
 /** @since 00.01.26 */
-public class ManagerSubmitResult<A, B> implements Future<B>, Cancellable {
+public class ManagerSubmitResult<A, B> implements QueueTaskResult<B>, Cancellable {
 	
 	private final A value;
-	private final Future<B> future;
+	/** @since 00.02.08 */
+	private final QueueTaskResult<B> taskResult;
+	/** @since 00.02.08 */
+	private final QueueContext context;
 	
-	public ManagerSubmitResult(A value, Future<B> future) {
+	/** @since 00.02.08 */
+	public ManagerSubmitResult(A value, QueueTaskResult<B> taskResult, QueueContext context) {
 		this.value = Objects.requireNonNull(value);
-		this.future = Objects.requireNonNull(future);
-	}
-	
-	@Override
-	public boolean cancel(boolean mayInterruptIfRunning) {
-		return future.cancel(mayInterruptIfRunning);
+		this.taskResult = Objects.requireNonNull(taskResult);
+		this.context = Objects.requireNonNull(context);
 	}
 	
 	@Override
 	public void cancel() throws Exception {
-		cancel(true);
+		taskResult.cancel();
+	}
+	
+	/** @since 00.02.08 */
+	@Override
+	public boolean awaitQueued() {
+		return taskResult.awaitQueued();
 	}
 	
 	@Override
-	public boolean isCancelled() {
-		return future.isCancelled();
+	public B get() throws Exception {
+		return taskResult.get();
 	}
 	
+	/** @since 00.02.08 */
 	@Override
-	public boolean isDone() {
-		return future.isDone();
-	}
-	
-	@Override
-	public B get() throws ExecutionException, InterruptedException {
-		return future.get();
-	}
-	
-	@Override
-	public B get(long timeout, TimeUnit unit) throws ExecutionException, TimeoutException, InterruptedException {
-		return future.get(timeout, unit);
+	public Exception exception() {
+		return taskResult.exception();
 	}
 	
 	public A value() {
 		return value;
+	}
+	
+	/** @since 00.02.08 */
+	public QueueTaskResult<B> taskResult() {
+		return taskResult;
+	}
+	
+	/** @since 00.02.08 */
+	public QueueContext context() {
+		return context;
 	}
 }

@@ -86,13 +86,7 @@
 				waiting:        "Čekání...",
 				error:          "Chyba: %{text}",
 				completed:      "Hotovo",
-				stopped:        "Zrušeno",
-				download: {
-					update: "Stahování... %{percent}%% (%{speed}/s, zbývá: %{time_left}s)",
-				},
-				conversion: {
-					update: "Konverze... %{percent}%% (%{time_current}/%{time_total}s)",
-				}
+				stopped:        "Zrušeno"
 			},
 			states: {
 				wait:           "Čekání",
@@ -103,7 +97,8 @@
 				done:           "Hotovo",
 				error:          "Chyba",
 				paused:         "Pozastaveno",
-				retry:          "Opakování"
+				retry:          "Opakování",
+				queued:         "Ve frontě: %{context}s (%{position}d)"
 			},
 			dialogs: {
 				messages_empty: {

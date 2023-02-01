@@ -86,13 +86,7 @@
 				waiting:        "Waiting...",
 				error:          "Error: %{text}",
 				completed:      "Completed",
-				stopped:        "Cancelled",
-				download: {
-					update: "Downloading... %{percent}%% (%{speed}/s, ETA: %{time_left}s)",
-				},
-				conversion: {
-					update: "Conversion... %{percent}%% (%{time_current}/%{time_total}s)",
-				}
+				stopped:        "Cancelled"
 			},
 			states: {
 				wait:           "Wait",
@@ -103,7 +97,8 @@
 				done:           "Done",
 				error:          "Error",
 				paused:         "Paused",
-				retry:          "Retry"
+				retry:          "Retry",
+				queued:         "Queued: %{context}s (%{position}d)"
 			},
 			dialogs: {
 				messages_empty: {

@@ -13,6 +13,7 @@ public final class PipelineStates {
 	public static final String ERROR          = "tr(md, windows.main.states.error)";
 	public static final String PAUSED         = "tr(md, windows.main.states.paused)";
 	public static final String RETRY          = "tr(md, windows.main.states.retry)";
+	public static final String QUEUED         = "tr(md, windows.main.states.queued)";
 	
 	private PipelineStates() {
 	}

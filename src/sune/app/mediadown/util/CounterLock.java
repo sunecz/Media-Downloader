@@ -6,13 +6,19 @@ public final class CounterLock {
 	
 	private final AtomicInteger counter;
 	private final Object lock = new Object();
+	private final int minValue;
 	
 	public CounterLock() {
-		this(0);
+		this(0, 0);
 	}
 	
-	public CounterLock(int value) {
-		this.counter = new AtomicInteger(value);
+	public CounterLock(int initialValue) {
+		this(initialValue, 0);
+	}
+	
+	public CounterLock(int initialValue, int minValue) {
+		this.counter = new AtomicInteger(initialValue);
+		this.minValue = minValue;
 	}
 	
 	public final void increment() {
@@ -23,15 +29,14 @@ public final class CounterLock {
 	
 	public final void decrement() {
 		synchronized(lock) {
-			counter.getAndDecrement();
-			if((counter.get() <= 0)) {
+			if(counter.decrementAndGet() <= minValue) {
 				lock.notifyAll();
 			}
 		}
 	}
 	
 	public final boolean await() {
-		while(counter.get() > 0) {
+		while(counter.get() > minValue) {
 			synchronized(lock) {
 				try {
 					lock.wait();
@@ -40,11 +45,13 @@ public final class CounterLock {
 				}
 			}
 		}
+		
 		return true;
 	}
 	
 	public final void free() {
 		counter.set(0);
+		
 		synchronized(lock) {
 			lock.notifyAll();
 		}

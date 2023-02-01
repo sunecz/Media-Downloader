@@ -1214,10 +1214,23 @@ public final class Utils {
 		return Normalizer.normalize(string, Normalizer.Form.NFD).replaceAll("[^\\p{ASCII}]", "");
 	}
 	
-	public static final Object[] merge(Object[] array, Object... others) {
-		Object[] newArray = new Object[array.length + others.length];
+	/** @since 00.02.08 */
+	@SafeVarargs
+	public static final <T> T[] merge(T[] array, T... others) {
+		if(array == null) {
+			return null;
+		}
+		
+		if(others == null || others.length == 0) {
+			return array;
+		}
+		
+		@SuppressWarnings("unchecked")
+		T[] newArray = (T[]) Array.newInstance(array.getClass().getComponentType(), array.length + others.length);
+		
 		System.arraycopy(array,  0, newArray, 0,            array .length);
 		System.arraycopy(others, 0, newArray, array.length, others.length);
+		
 		return newArray;
 	}
 	

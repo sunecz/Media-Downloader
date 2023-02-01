@@ -50,6 +50,7 @@ import sune.app.mediadown.engine.MediaEngines;
 import sune.app.mediadown.event.ConversionEvent;
 import sune.app.mediadown.event.DownloadEvent;
 import sune.app.mediadown.event.PipelineEvent;
+import sune.app.mediadown.event.QueueEvent;
 import sune.app.mediadown.event.tracker.ConversionTracker;
 import sune.app.mediadown.event.tracker.DownloadTracker;
 import sune.app.mediadown.event.tracker.PipelineProgress;
@@ -83,6 +84,7 @@ import sune.app.mediadown.gui.table.TablePipelineResult;
 import sune.app.mediadown.gui.window.InformationWindow.InformationTab;
 import sune.app.mediadown.gui.window.InformationWindow.TabContent;
 import sune.app.mediadown.language.Translation;
+import sune.app.mediadown.language.Translator;
 import sune.app.mediadown.media.Media;
 import sune.app.mediadown.message.Message;
 import sune.app.mediadown.message.MessageList;
@@ -952,6 +954,21 @@ public final class MainWindow extends Window<BorderPane> {
 			}
 			
 			tracker.visit(visitor);
+		});
+		
+		pipeline.addEventListener(QueueEvent.POSITION_UPDATE, (pair) -> {
+			if(!pipeline.isRunning()) {
+				return;
+			}
+			
+			info.update(new PipelineInfoData.OfText(
+				Utils.format(
+					Translator.maybeTranslate(PipelineStates.QUEUED),
+					"context", Translator.maybeTranslate(pair.a.contextState()),
+					"position", pair.b
+				),
+				PipelineInfo.TEXT_NONE
+			));
 		});
 		
 		return info;
