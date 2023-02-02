@@ -67,6 +67,10 @@ public class QueueTaskExecutor<V> {
 		return executor().submit(task);
 	}
 	
+	protected void cancelTask(InternalQueueTask task) {
+		// Do nothing by default
+	}
+	
 	protected void loop() {
 		while(true) {
 			InternalQueueTask task = null;
@@ -210,6 +214,8 @@ public class QueueTaskExecutor<V> {
 			if(future != null) {
 				future.cancel(true);
 			}
+			
+			cancelTask(this);
 			
 			mtxQueued.unlock();
 		}

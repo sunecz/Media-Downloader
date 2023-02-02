@@ -37,6 +37,16 @@ public class PositionAwareQueueTaskExecutor<V> extends QueueTaskExecutor<V> {
 	}
 	
 	@Override
+	protected void cancelTask(InternalQueueTask task) {
+		PositionAwareInternalQueueTask castedTask = Utils.cast(task);
+		int position = castedTask.position();
+		
+		for(InternalQueueTask t : submittedTasks) {
+			Utils.<PositionAwareInternalQueueTask>cast(t).taskCancelled(position);
+		}
+	}
+	
+	@Override
 	public PositionAwareQueueTaskResult<V> submit(QueueTask<V> task) {
 		return Utils.cast(super.submit(task));
 	}
@@ -62,6 +72,10 @@ public class PositionAwareQueueTaskExecutor<V> extends QueueTaskExecutor<V> {
 			
 			int queuePosition = this.position - lowerSubmittedTaskCount.incrementAndGet();
 			queuePositionProperty().set(queuePosition);
+		}
+		
+		protected final void taskCancelled(int position) {
+			taskSubmitted(position);
 		}
 		
 		@Override
