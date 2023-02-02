@@ -27,14 +27,12 @@ public class PositionAwareQueueTaskExecutor<V> extends QueueTaskExecutor<V> {
 	protected Future<V> submitTask(InternalQueueTask task) {
 		PositionAwareInternalQueueTask castedTask = Utils.cast(task);
 		
-		if(castedTask.isCancelled()) {
-			return null;
-		}
-		
-		int position = castedTask.position();
-		
-		for(InternalQueueTask t : submittedTasks) {
-			Utils.<PositionAwareInternalQueueTask>cast(t).taskSubmitted(position);
+		if(!castedTask.isCancelled()) {
+			int position = castedTask.position();
+			
+			for(InternalQueueTask t : submittedTasks) {
+				Utils.<PositionAwareInternalQueueTask>cast(t).taskSubmitted(position);
+			}
 		}
 		
 		return super.submitTask(task);

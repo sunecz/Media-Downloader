@@ -1003,7 +1003,7 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 		public void stop() {
 			Pipeline pipeline = pipeline();
 			
-			if(!pipeline.isStarted() || (!pipeline.isRunning() && !pipeline.isPaused())) {
+			if(pipeline.isStopped() || !pipeline.isStarted() || pipeline.isDone()) {
 				return;
 			}
 			

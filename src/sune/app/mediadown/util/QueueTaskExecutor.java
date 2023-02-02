@@ -75,7 +75,8 @@ public class QueueTaskExecutor<V> {
 		while(true) {
 			InternalQueueTask task = null;
 			
-			while(isRunning() && lockTasks.await()
+			while(isRunning()
+					&& lockTasks.await() // Wait for available slots
 					&& (task = submittedTasks.poll()) == null) {
 				mtxSubmitted.awaitAndReset();
 			}
@@ -114,6 +115,7 @@ public class QueueTaskExecutor<V> {
 		state.set(STATE_STOPPING);
 		state.unset(STATE_RUNNING);
 		
+		submittedTasks.clear();
 		lockTasks.free();
 		mtxSubmitted.unlock();
 		
@@ -125,8 +127,8 @@ public class QueueTaskExecutor<V> {
 			
 			if(es != null) {
 				if(cancel) {
-					for(InternalQueueTask future : queuedTasks) {
-						future.cancel();
+					for(InternalQueueTask task : queuedTasks) {
+						task.cancel();
 					}
 				}
 				
@@ -230,32 +232,26 @@ public class QueueTaskExecutor<V> {
 		
 		@Override
 		public V call() throws Exception {
-			V result = null;
-			
 			try {
-				result = run();
+				return run();
 			} catch(Exception ex) {
 				exception = ex;
 				throw ex; // Propagate
 			} finally {
 				lockTasks.decrement();
 			}
-			
-			return result;
 		}
 		
 		@Override
 		public boolean awaitQueued() {
 			mtxQueued.await();
 			
-			return future != null && future.isCancelled();
+			return !isCancelled();
 		}
 		
 		@Override
 		public V get() throws Exception {
-			mtxQueued.await();
-			
-			return future != null ? future.get() : null;
+			return awaitQueued() ? future.get() : null;
 		}
 		
 		@Override

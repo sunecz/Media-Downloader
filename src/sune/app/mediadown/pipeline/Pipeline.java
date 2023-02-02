@@ -175,11 +175,13 @@ public final class Pipeline implements EventBindable<EventType>, HasTaskState {
 		
 		state.unset(TaskStates.RUNNING);
 		state.unset(TaskStates.PAUSED);
-		
 		state.set(stopState);
 		
-		stopTask();
-		lockPause.unlock();
+		try {
+			stopTask();
+		} finally {
+			lockPause.unlock();
+		}
 	}
 	
 	public final void setInput(PipelineResult<?> input) {
@@ -214,7 +216,7 @@ public final class Pipeline implements EventBindable<EventType>, HasTaskState {
 	}
 	
 	public final void stop() throws Exception {
-		if(!isStarted() || isStopped() || isDone()) {
+		if(isStopped() || !isStarted() || isDone()) {
 			return;
 		}
 		
@@ -222,7 +224,7 @@ public final class Pipeline implements EventBindable<EventType>, HasTaskState {
 	}
 	
 	public final void pause() throws Exception {
-		if(!isStarted() || isPaused() || isStopped() || isDone()) {
+		if(isPaused() || !isStarted() || isStopped() || isDone()) {
 			return;
 		}
 		
@@ -235,7 +237,7 @@ public final class Pipeline implements EventBindable<EventType>, HasTaskState {
 	}
 	
 	public final void resume() throws Exception {
-		if(!isStarted() || !isPaused() || isStopped() || isDone()) {
+		if(!isPaused() || !isStarted() || isStopped() || isDone()) {
 			return;
 		}
 		
@@ -250,9 +252,11 @@ public final class Pipeline implements EventBindable<EventType>, HasTaskState {
 	
 	/** @since 00.01.27 */
 	public final Pipeline waitFor() {
-		if(!isStopped() && !isDone()) {
-			lockDone.await();
+		if(isStopped() || isDone()) {
+			return this;
 		}
+		
+		lockDone.await();
 		
 		return this;
 	}

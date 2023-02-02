@@ -63,7 +63,7 @@ public final class DownloadPipelineTask implements PipelineTask<DownloadPipeline
 		eventRegistry.bindAll(download, DownloadEvent.values());
 		
 		Ignore.Cancellation.call(result::get); // Wait for the download to finish
-		return (DownloadPipelineResult) downloadResult.pipelineResult();
+		return Utils.cast(downloadResult.pipelineResult());
 	}
 	
 	private final Download download() {
