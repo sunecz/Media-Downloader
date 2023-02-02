@@ -10,7 +10,6 @@ import javafx.beans.property.SimpleIntegerProperty;
 public class PositionAwareQueueTaskExecutor<V> extends QueueTaskExecutor<V> {
 	
 	protected final AtomicInteger nextPosition = new AtomicInteger();
-	protected final AtomicInteger queuedTaskCount = new AtomicInteger();
 	
 	public PositionAwareQueueTaskExecutor(int maxTaskCount) {
 		super(maxTaskCount);
@@ -19,7 +18,7 @@ public class PositionAwareQueueTaskExecutor<V> extends QueueTaskExecutor<V> {
 	@Override
 	protected InternalQueueTask createTask(QueueTask<V> task) {
 		int position = nextPosition.getAndIncrement();
-		int queuePosition = position - queuedTaskCount.get();
+		int queuePosition = position - queuedTasks.size();
 		
 		return new PositionAwareInternalQueueTask(task, position, queuePosition);
 	}
@@ -27,6 +26,11 @@ public class PositionAwareQueueTaskExecutor<V> extends QueueTaskExecutor<V> {
 	@Override
 	protected Future<V> submitTask(InternalQueueTask task) {
 		PositionAwareInternalQueueTask castedTask = Utils.cast(task);
+		
+		if(castedTask.isCancelled()) {
+			return null;
+		}
+		
 		int position = castedTask.position();
 		
 		for(InternalQueueTask t : submittedTasks) {
@@ -39,6 +43,11 @@ public class PositionAwareQueueTaskExecutor<V> extends QueueTaskExecutor<V> {
 	@Override
 	protected void cancelTask(InternalQueueTask task) {
 		PositionAwareInternalQueueTask castedTask = Utils.cast(task);
+		
+		if(castedTask.isQueued()) {
+			return;
+		}
+		
 		int position = castedTask.position();
 		
 		for(InternalQueueTask t : submittedTasks) {
@@ -54,7 +63,7 @@ public class PositionAwareQueueTaskExecutor<V> extends QueueTaskExecutor<V> {
 	protected class PositionAwareInternalQueueTask extends InternalQueueTask
 			implements PositionAwareQueueTaskResult<V> {
 		
-		private final AtomicInteger lowerSubmittedTaskCount = new AtomicInteger();
+		private final AtomicInteger lowerSubmittedTaskCount;
 		private final int position;
 		private final IntegerProperty queuePosition;
 		
@@ -62,7 +71,7 @@ public class PositionAwareQueueTaskExecutor<V> extends QueueTaskExecutor<V> {
 			super(task);
 			this.position = position;
 			this.queuePosition = new SimpleIntegerProperty(queuePosition);
-			lowerSubmittedTaskCount.set(queuePosition - position);
+			this.lowerSubmittedTaskCount = new AtomicInteger(position - queuePosition);
 		}
 		
 		protected final void taskSubmitted(int position) {

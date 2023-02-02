@@ -53,10 +53,27 @@ public class StateMutex {
 	}
 	
 	public Throwable getException() {
-		return exception.get();
+		return exception();
 	}
 	
 	public Throwable getExceptionAndReset() {
+		return exceptionAndReset();
+	}
+	
+	/** @since 00.02.08 */
+	public Throwable exception() {
+		return exception.get();
+	}
+	
+	/** @since 00.02.08 */
+	public Throwable exceptionAndReset() {
 		return exception.getAndSet(null);
+	}
+	
+	/** @since 00.02.08 */
+	public boolean isUnlocked() {
+		synchronized(this) {
+			return unlocked.get();
+		}
 	}
 }

@@ -198,11 +198,19 @@ public class QueueTaskExecutor<V> {
 		}
 		
 		protected V run() throws Exception {
-			if(isCancelled.get()) {
+			if(isCancelled()) {
 				return null;
 			}
 			
 			return task.call();
+		}
+		
+		protected boolean isCancelled() {
+			return isCancelled.get();
+		}
+		
+		protected boolean isQueued() {
+			return mtxQueued.isUnlocked();
 		}
 		
 		@Override

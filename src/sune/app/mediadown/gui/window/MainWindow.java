@@ -965,7 +965,7 @@ public final class MainWindow extends Window<BorderPane> {
 				Utils.format(
 					Translator.maybeTranslate(PipelineStates.QUEUED),
 					"context", Translator.maybeTranslate(pair.a.contextState()),
-					"position", pair.b
+					"position", pair.b + 1
 				),
 				PipelineInfo.TEXT_NONE
 			));
