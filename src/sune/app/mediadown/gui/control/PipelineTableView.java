@@ -55,7 +55,6 @@ import sune.app.mediadown.pipeline.MediaPipelineResult;
 import sune.app.mediadown.pipeline.Pipeline;
 import sune.app.mediadown.pipeline.PipelineMedia;
 import sune.app.mediadown.pipeline.PipelineResult;
-import sune.app.mediadown.util.Cancellable;
 import sune.app.mediadown.util.FXUtils;
 import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.Threads;
@@ -1011,11 +1010,6 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 			try {
 				pipeline.stop();
 				pipeline.waitFor();
-				
-				Cancellable cancellable;
-				if((cancellable = media().submitValue()) != null) {
-					cancellable.cancel();
-				}
 			} catch(Exception ex) {
 				MediaDownloader.error(ex);
 			}

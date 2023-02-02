@@ -86,6 +86,7 @@ public final class ConversionPipelineTask implements PipelineTask<ConversionPipe
 	@Override
 	public final void stop() throws Exception {
 		converter().stop();
+		result.cancel();
 	}
 	
 	@Override

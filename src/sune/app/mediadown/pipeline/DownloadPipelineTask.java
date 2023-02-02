@@ -41,7 +41,7 @@ public final class DownloadPipelineTask implements PipelineTask<DownloadPipeline
 		QueueContext context = result.context();
 		
 		// Notify the media of being submitted
-		media.submit(result::cancel);
+		media.submit();
 		
 		// Notify the pipeline if the position in a queue changed
 		PositionAwareQueueTaskResult<Long> positionAwareTaskResult = Utils.cast(result.taskResult());
@@ -73,6 +73,7 @@ public final class DownloadPipelineTask implements PipelineTask<DownloadPipeline
 	@Override
 	public final void stop() throws Exception {
 		download().stop();
+		result.cancel();
 	}
 	
 	@Override

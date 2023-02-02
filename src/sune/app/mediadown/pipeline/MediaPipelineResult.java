@@ -34,7 +34,7 @@ public final class MediaPipelineResult implements PipelineResult<DownloadPipelin
 			}
 			
 			// Notify, regardless of the task
-			media.submit(task::stop);
+			media.submit();
 			
 			return task;
 		}

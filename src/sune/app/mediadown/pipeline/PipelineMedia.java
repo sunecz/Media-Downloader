@@ -6,8 +6,7 @@ import java.util.Objects;
 import sune.app.mediadown.download.DownloadConfiguration;
 import sune.app.mediadown.download.MediaDownloadConfiguration;
 import sune.app.mediadown.media.Media;
-import sune.app.mediadown.util.Cancellable;
-import sune.app.mediadown.util.StateValue;
+import sune.app.mediadown.util.StateMutex;
 
 /** @since 00.02.08 */
 public class PipelineMedia {
@@ -17,7 +16,7 @@ public class PipelineMedia {
 	private final MediaDownloadConfiguration mediaConfiguration;
 	private final DownloadConfiguration configuration;
 	
-	private final StateValue<Cancellable> submitValue = new StateValue<>();
+	private final StateMutex mtxSubmitted = new StateMutex();
 	
 	private PipelineMedia(Media media, Path destination, MediaDownloadConfiguration mediaConfiguration,
 	        DownloadConfiguration configuration) {
@@ -32,12 +31,12 @@ public class PipelineMedia {
 		return new PipelineMedia(media, destination, mediaConfiguration, configuration);
 	}
 	
-	public void submit(Cancellable value) {
-		submitValue.unlock(value);
+	public void awaitSubmitted() {
+		mtxSubmitted.await();
 	}
 	
-	public void awaitSubmitted() {
-		submitValue.await();
+	public void submit() {
+		mtxSubmitted.unlock();
 	}
 	
 	public Media media() {
@@ -54,9 +53,5 @@ public class PipelineMedia {
 	
 	public DownloadConfiguration configuration() {
 		return configuration;
-	}
-	
-	public Cancellable submitValue() {
-		return submitValue.value();
 	}
 }

@@ -7,6 +7,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import sune.app.mediadown.InternalState;
 
@@ -179,6 +180,7 @@ public class QueueTaskExecutor<V> {
 		
 		protected final QueueTask<V> task;
 		protected final StateMutex mtxQueued = new StateMutex();
+		protected final AtomicBoolean isCancelled = new AtomicBoolean();
 		protected Future<V> future;
 		protected Exception exception;
 		
@@ -192,11 +194,19 @@ public class QueueTaskExecutor<V> {
 		}
 		
 		protected V run() throws Exception {
+			if(isCancelled.get()) {
+				return null;
+			}
+			
 			return task.call();
 		}
 		
 		@Override
 		public void cancel() throws Exception {
+			if(!isCancelled.compareAndSet(false, true)) {
+				return; // Already cancelled
+			}
+			
 			if(future != null) {
 				future.cancel(true);
 			}
