@@ -12,7 +12,7 @@ class MacOS implements OS {
 	private static MacOS INSTANCE;
 	
 	// Forbid anyone to create an instance of this class
-	protected MacOS() {
+	private MacOS() {
 	}
 	
 	public static final MacOS instance() {
@@ -21,8 +21,9 @@ class MacOS implements OS {
 	
 	@Override
 	public void highlight(Path path) throws IOException {
-		String command = String.format("open -R \"%s\"", path.toAbsolutePath().toString());
-		Runtime.getRuntime().exec(command);
+		Runtime.getRuntime().exec(new String[] {
+			"open", "-R", path.toAbsolutePath().toString()
+		});
 	}
 	
 	@Override

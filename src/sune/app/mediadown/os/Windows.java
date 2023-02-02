@@ -12,7 +12,7 @@ class Windows implements OS {
 	private static Windows INSTANCE;
 	
 	// Forbid anyone to create an instance of this class
-	protected Windows() {
+	private Windows() {
 	}
 	
 	public static final Windows instance() {
