@@ -480,6 +480,10 @@ public final class Choosers {
 			this.extension = extension;
 		}
 		
+		private static final String cleanExtension(String extension) {
+			return extension.replaceFirst("^\\*\\.", "");
+		}
+		
 		public static final SelectedItem ofFile(Path path, ExtensionFilter extension) {
 			return new SelectedItem(path, Objects.requireNonNull(extension));
 		}
@@ -490,6 +494,27 @@ public final class Choosers {
 		
 		public Path path() {
 			return path;
+		}
+		
+		public Path pathWithExtension() {
+			if(extension == null) {
+				return path;
+			}
+			
+			List<String> extensions = extension.getExtensions();
+			String fileName = path.getFileName().toString();
+			String lowerCaseFileName = fileName.toLowerCase();
+			
+			// Keep the explicit extension, if present
+			for(String ext : extensions) {
+				if(lowerCaseFileName.endsWith('.' + cleanExtension(ext).toLowerCase())) {
+					return path;
+				}
+			}
+			
+			// Otherwise, append the first extension
+			String suffix = '.' + cleanExtension(extensions.get(0));
+			return path.resolveSibling(fileName + suffix);
 		}
 		
 		public ExtensionFilter extension() {

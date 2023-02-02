@@ -294,7 +294,7 @@ public final class TablePipelineUtils {
 						throw new IllegalStateException("Unknown format");
 					}
 					
-					resolved.add(resolveSingleMedia(pair.b, path.path(), outputFormat, subtitlesLanguages));
+					resolved.add(resolveSingleMedia(pair.b, path.pathWithExtension(), outputFormat, subtitlesLanguages));
 				}
 			} else {
 				Choosers.OfDirectory.Chooser chooser = Choosers.OfDirectory.configuredBuilder()
@@ -353,7 +353,7 @@ public final class TablePipelineUtils {
 						throw new IllegalStateException("Unknown format");
 					}
 					
-					resolved.add(resolveSingleMedia(media, path.path(), outputFormat, subtitlesLanguages));
+					resolved.add(resolveSingleMedia(media, path.pathWithExtension(), outputFormat, subtitlesLanguages));
 				}
 			} else {
 				Choosers.OfDirectory.Chooser chooser = Choosers.OfDirectory.configuredBuilder()
