@@ -13,6 +13,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Predicate;
 
 import sune.app.mediadown.InternalState;
 import sune.app.mediadown.TaskStates;
@@ -22,6 +23,7 @@ import sune.app.mediadown.event.EventRegistry;
 import sune.app.mediadown.event.Listener;
 import sune.app.mediadown.event.tracker.DownloadTracker;
 import sune.app.mediadown.event.tracker.TrackerManager;
+import sune.app.mediadown.exception.RejectedResponseException;
 import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.Range;
 import sune.app.mediadown.util.SyncObject;
@@ -30,6 +32,7 @@ import sune.app.mediadown.util.Web.GetRequest;
 import sune.app.mediadown.util.Web.HeadRequest;
 import sune.app.mediadown.util.Web.PostRequest;
 import sune.app.mediadown.util.Web.Request;
+import sune.app.mediadown.util.Web.Response;
 import sune.app.mediadown.util.Web.StreamResponse;
 
 /** @since 00.02.08 */
@@ -181,6 +184,12 @@ public class FileDownloader implements InternalDownloader {
 		
 		// Prepare the response
 		response = Web.requestStream(req);
+		
+		// Filter the response, if a filter is specified
+		Predicate<Response> filter;
+		if((filter = configuration.responseFilter()) != null && !filter.test(response)) {
+			throw new RejectedResponseException();
+		}
 		
 		// Try to obtain the total size, if not set
 		if(size <= 0L) {
@@ -430,6 +439,11 @@ public class FileDownloader implements InternalDownloader {
 	@Override
 	public DownloadConfiguration configuration() {
 		return configuration;
+	}
+	
+	@Override
+	public Response response() {
+		return response;
 	}
 	
 	@Override

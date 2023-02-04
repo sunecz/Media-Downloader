@@ -27,6 +27,7 @@ import sune.app.mediadown.util.Web;
 import sune.app.mediadown.util.Web.GetRequest;
 import sune.app.mediadown.util.Web.HeadRequest;
 import sune.app.mediadown.util.Web.Request;
+import sune.app.mediadown.util.Web.Response;
 
 /** @since 00.02.08 */
 public class AcceleratedFileDownloader implements InternalDownloader {
@@ -44,6 +45,7 @@ public class AcceleratedFileDownloader implements InternalDownloader {
 	private Path output;
 	private DownloadConfiguration configuration;
 	
+	private volatile Response response;
 	private long totalBytes;
 	
 	public AcceleratedFileDownloader(TrackerManager manager) {
@@ -153,6 +155,17 @@ public class AcceleratedFileDownloader implements InternalDownloader {
 		return new FileDownloader(manager);
 	}
 	
+	private final void maybeSetResponse(Response responseToSet) {
+		// Only set the response once
+		if(response == null) {
+			synchronized(this) {
+				if(response == null) {
+					response = responseToSet;
+				}
+			}
+		}
+	}
+	
 	@Override
 	public long start(Request request, Path output, DownloadConfiguration configuration) throws Exception {
 		this.configuration = configuration;
@@ -195,8 +208,9 @@ public class AcceleratedFileDownloader implements InternalDownloader {
 		if(numOfThreads == 1) {
 			InternalDownloader downloader = downloaders.get(0);
 			DownloadConfiguration downloadConfiguration
-				= new DownloadConfiguration(rangeOutput, rangeRequest, size);
+				= DownloadConfiguration.ofRanges(rangeOutput, rangeRequest, size);
 			long downloaded = downloader.start(request, output, downloadConfiguration);
+			maybeSetResponse(downloader.response());
 			
 			if(downloaded > 0L) {
 				bytes.getAndAdd(downloaded);
@@ -221,8 +235,9 @@ public class AcceleratedFileDownloader implements InternalDownloader {
 				executor.submit(() -> {
 					try {
 						DownloadConfiguration downloadConfiguration
-							= new DownloadConfiguration(rangeOut, rangeReq, size);
+							= DownloadConfiguration.ofRanges(rangeOut, rangeReq, size);
 						long downloaded = downloader.start(request, output, downloadConfiguration);
+						maybeSetResponse(downloader.response());
 						
 						if(downloaded > 0L) {
 							bytes.getAndAdd(downloaded);
@@ -302,6 +317,11 @@ public class AcceleratedFileDownloader implements InternalDownloader {
 	@Override
 	public DownloadConfiguration configuration() {
 		return configuration;
+	}
+	
+	@Override
+	public Response response() {
+		return response;
 	}
 	
 	@Override

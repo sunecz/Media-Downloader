@@ -25,6 +25,7 @@ module sune.app.mediadown {
 	exports sune.app.mediadown.engine;
 	exports sune.app.mediadown.event;
 	exports sune.app.mediadown.event.tracker;
+	exports sune.app.mediadown.exception;
 	exports sune.app.mediadown.ffmpeg;
 	exports sune.app.mediadown.gui;
 	exports sune.app.mediadown.gui.control;

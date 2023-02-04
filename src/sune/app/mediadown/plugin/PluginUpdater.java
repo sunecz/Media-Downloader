@@ -147,7 +147,7 @@ public final class PluginUpdater {
 			public void start() throws Exception {
 				GetRequest request = new GetRequest(Utils.url(pluginURL), Shared.USER_AGENT);
 				long size = Ignore.defaultValue(() -> Web.size(request.toHeadRequest()), -1L);
-				downloader.start(request, file, new DownloadConfiguration(size));
+				downloader.start(request, file, DownloadConfiguration.ofTotalBytes(size));
 			}
 			
 			@Override
