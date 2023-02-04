@@ -126,7 +126,7 @@
 	<target name="build-jar-jre" depends="init-build,compile">
 		<echo message="Building JAR file for building custom JRE..." />
 
-		<jar destfile="${dir.etc}/jre/${jarname}-jre.jar">
+		<jar destfile="${path.etc}/jre/${name.jar}-jre.jar">
 			<!-- Configure JAR's Manifest file -->
 			<manifest>
 				<attribute name="Main-Class" value="sune.app.mediadown.App" />
@@ -134,7 +134,7 @@
 			</manifest>
 
 			<!-- Include the compiled files -->
-			<fileset dir="${dir.bin}" />
+			<fileset dir="${path.bin}" />
 		</jar>
 	</target>
 	
