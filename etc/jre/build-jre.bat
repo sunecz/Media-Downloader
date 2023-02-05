@@ -34,7 +34,7 @@ set OUTPUT=jre\%os_name%
 set MANUAL_MODULES=infomas.asl,org.jsoup,ssdf2,sune.memory,sune.api.process,sune.util.load
 
 echo Getting dependencies from the JAR...
-jdeps --module-path "%PATH_JAVAFX%";"%PATH_LIB%" --add-modules="%MANUAL_MODULES%" --print-module-deps "%jar_name%" > deps.txt
+jdeps --module-path "%PATH_JAVAFX%;%PATH_LIB%" --add-modules="%MANUAL_MODULES%" --print-module-deps --ignore-missing-deps "%jar_name%" > deps.txt
 set /p JDEPS=<deps.txt
 
 set JDEPS=%JDEPS%,java.net.http,java.management,java.sql,java.naming,java.compiler,java.instrument,jdk.jdi,jdk.sctp,jdk.localedata,jdk.accessibility,jdk.scripting.nashorn
