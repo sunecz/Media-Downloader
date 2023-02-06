@@ -29,9 +29,8 @@ import sune.app.mediadown.plugin.PluginMemory.MemoryFile;
 import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.Utils;
-import sune.util.load.ContentsResolver;
-import sune.util.load.RootClassLoader;
-import sune.util.load.ZIPLoader;
+import sune.util.load.ModuleLazyLoader;
+import sune.util.load.RootAnalyzingClassLoader;
 import sune.util.memory.GrowableMemory;
 import sune.util.memory.MemoryPointer;
 import sune.util.ssdf2.SSDF;
@@ -178,18 +177,7 @@ final class DefaultPluginLoader implements PluginLoader {
 	
 	private static final void loadClassFromZIP(ClassLoader classLoader, Path path, String className) throws Exception {
 		try(ZipFile file = new ZipFile(path.toFile(), Shared.CHARSET)) {
-			ContentsResolver resolver = ((classPath) -> {
-				ZipEntry entry = file.getEntry(classPath);
-				
-				if(entry == null) {
-					throw new IllegalStateException("Class not found at: " + classPath);
-				}
-				
-				return file.getInputStream(entry).readAllBytes();
-			});
-			
-			RootClassLoader rootClassLoader = new RootClassLoader(classLoader, resolver);
-			rootClassLoader.loadClass(RootClassLoader.classNameToPath(className));
+			(new PluginRootClassLoader(classLoader, file)).loadClass(PluginRootClassLoader.classNameToPath(className));
 		}
 	}
 	
@@ -242,8 +230,9 @@ final class DefaultPluginLoader implements PluginLoader {
 					instanceBootstrap.init();
 				}
 				
-				// Load the plugin itself, define and load the classes
-				ZIPLoader.load(path, moduleName, loader);
+				// Load the plugin itself as a separate module
+				ModuleLazyLoader.loadModule(path, moduleName, loader);
+				
 				initPluginMemory(plugin);
 				initPluginInstance(plugin);
 				initPlugin(plugin);
@@ -313,6 +302,27 @@ final class DefaultPluginLoader implements PluginLoader {
 			}
 			
 			copy = null;
+		}
+	}
+	
+	private static final class PluginRootClassLoader extends RootAnalyzingClassLoader {
+		
+		private final ZipFile file;
+		
+		public PluginRootClassLoader(ClassLoader loader, ZipFile file) {
+			super(loader);
+			this.file = file;
+		}
+		
+		@Override
+		protected byte[] bytes(String path) throws Exception {
+			ZipEntry entry = file.getEntry(path);
+			
+			if(entry == null) {
+				throw new IllegalStateException("Class not found at: " + path);
+			}
+			
+			return file.getInputStream(entry).readAllBytes();
 		}
 	}
 }
