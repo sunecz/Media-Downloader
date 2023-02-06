@@ -65,6 +65,9 @@ import sune.app.mediadown.gui.window.PreviewWindow;
 import sune.app.mediadown.gui.window.TableWindow;
 import sune.app.mediadown.language.Language;
 import sune.app.mediadown.language.Translation;
+import sune.app.mediadown.library.Libraries;
+import sune.app.mediadown.library.Library;
+import sune.app.mediadown.library.LibraryEvent;
 import sune.app.mediadown.library.NativeLibraries;
 import sune.app.mediadown.library.NativeLibrary;
 import sune.app.mediadown.logging.Log;
@@ -115,9 +118,6 @@ import sune.app.mediadown.util.Web.GetRequest;
 import sune.app.mediadown.util.Web.HeadRequest;
 import sune.app.mediadown.util.Web.Request;
 import sune.app.mediadown.util.Web.StreamResponse;
-import sune.util.load.Libraries;
-import sune.util.load.Libraries.Library;
-import sune.util.load.Libraries.LibraryLoadListener;
 import sune.util.load.ModuleUtils;
 import sune.util.ssdf2.SSDAnnotation;
 import sune.util.ssdf2.SSDCollection;
@@ -150,6 +150,9 @@ public final class MediaDownloader {
 	private static final String BASE_RESOURCE = "/resources/";
 	
 	private static final int TIMEOUT = 8000;
+	
+	// TODO: Finalize
+	private static Libraries libraries;
 	
 	private static final InputStream stream(String base, String path) {
 		return MediaDownloader.class.getResourceAsStream(base + path);
@@ -229,7 +232,7 @@ public final class MediaDownloader {
 				}
 			}
 			classesCount += NativeLibraries.all().size();
-			classesCount += Libraries.all().size();
+			classesCount += libraries != null ? libraries.all().size() : 0;
 			classesCount += countPlugins ? Plugins.all().size() : 0;
 			return classesCount;
 		}
@@ -400,6 +403,8 @@ public final class MediaDownloader {
 			
 			@Override
 			public InitializationState run(Arguments args) {
+				libraries = Libraries.create();
+				
 				registerNativeLibraries();
 				registerLibraries();
 				registerResources();
@@ -548,29 +553,34 @@ public final class MediaDownloader {
 			
 			@Override
 			public InitializationState run(Arguments args) {
-				Libraries.load(new LibraryLoadListener() {
-					
-					@Override
-					public void onLoading(Library library) {
-						setText(String.format("Loading library %s...", library.getName()));
-					}
-					
-					@Override
-					public void onLoaded(Library library, boolean success) {
-						update(String.format("Loading library %s... %s", library.getName(), success ? "done" : "error"));
-					}
-					
-					@Override
-					public void onNotLoaded(Library[] libraries) {
-						String text = String.format("Cannot load libraries (%d)", libraries.length);
-						StringBuilder content = new StringBuilder();
-						for(Library library : libraries) {
-							content.append(String.format("%s (%s)\n", library.getName(), library.getPath()));
-						}
-						Dialog.showContentError("Critical error", text, content.toString());
-						System.exit(-1);
-					}
+				// TODO: Clean up
+				
+				List<Library> notLoaded = new LinkedList<>();
+				
+				libraries.on(LibraryEvent.LOADING, (library) -> {
+					setText(String.format("Loading library %s...", library.getName()));
 				});
+				
+				libraries.on(LibraryEvent.LOADED, (library) -> {
+					update(String.format("Loading library %s... %s", library.getName(), "done"));
+				});
+				
+				libraries.on(LibraryEvent.NOT_LOADED, (pair) -> {
+					notLoaded.add(pair.a);
+				});
+				
+				boolean success = libraries.load();
+				
+				if(!success) {
+					String text = String.format("Cannot load libraries (%d)", notLoaded.size());
+					StringBuilder content = new StringBuilder();
+					for(Library library : notLoaded) {
+						content.append(String.format("%s (%s)\n", library.getName(), library.getPath()));
+					}
+					Dialog.showContentError("Critical error", text, content.toString());
+					System.exit(-1);
+				}
+				
 				return new MaybeDisposeOfExternalResources();
 			}
 			
@@ -1139,7 +1149,7 @@ public final class MediaDownloader {
 		}
 		
 		// Generate list of all libraries to check
-		for(Library library : Libraries.all()) {
+		for(Library library : libraries.all()) {
 			checker.addEntry(library.getPath(), Requirements.ANY, "");
 		}
 		
@@ -1196,7 +1206,7 @@ public final class MediaDownloader {
 		if(requirements != Requirements.ANY
 				&& !requirements.equals(Requirements.CURRENT))
 			return;
-		Libraries.add(path, name);
+		libraries.add(path, name);
 	}
 	
 	private static final void registerNativeLibraries() {
@@ -1210,9 +1220,10 @@ public final class MediaDownloader {
 		addLibrary(path.resolve("sune-process-api.jar"), "sune.api.process");
 		addLibrary(path.resolve("jsoup.jar"),            "org.jsoup");
 		// Define modules for builtin libraries so that plugins can use them
-		ModuleUtils.defineDummyModule("sune.app.mediadown");
-		ModuleUtils.defineDummyModule("sune.util.load");
-		ModuleUtils.defineDummyModule("ssdf2");
+		ClassLoader classLoader = ClassLoader.getSystemClassLoader();
+		ModuleUtils.defineDummyModule("sune.app.mediadown", classLoader);
+		ModuleUtils.defineDummyModule("sune.util.load", classLoader);
+		ModuleUtils.defineDummyModule("ssdf2", classLoader);
 	}
 	
 	private static final void registerResources() {
