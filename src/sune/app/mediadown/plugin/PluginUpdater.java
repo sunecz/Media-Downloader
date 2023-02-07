@@ -4,7 +4,6 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.StringReader;
 import java.nio.file.Path;
-import java.util.regex.Pattern;
 
 import sune.app.mediadown.Download;
 import sune.app.mediadown.MediaDownloader;
@@ -17,6 +16,7 @@ import sune.app.mediadown.event.Listener;
 import sune.app.mediadown.event.tracker.TrackerManager;
 import sune.app.mediadown.update.Version;
 import sune.app.mediadown.update.VersionType;
+import sune.app.mediadown.util.Regex;
 import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Utils.Ignore;
 import sune.app.mediadown.util.Web;
@@ -26,9 +26,9 @@ import sune.app.mediadown.util.Web.StringResponse;
 public final class PluginUpdater {
 	
 	/** @since 00.02.08 */
-	private static final Pattern REGEX_ONLY_DIGITS = Pattern.compile("^\\d+$");
+	private static final Regex REGEX_ONLY_DIGITS = Regex.of("^\\d+$");
 	/** @since 00.02.08 */
-	private static final Pattern REGEX_VERSION_VALUE = Pattern.compile("-(\\d+)$");
+	private static final Regex REGEX_VERSION_VALUE = Regex.of("-(\\d+)$");
 	
 	/** @since 00.02.08 */
 	private static final String fixPluginVersionString(Version version) {

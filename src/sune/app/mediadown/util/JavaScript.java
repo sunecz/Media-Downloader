@@ -6,7 +6,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
@@ -187,7 +186,7 @@ public final class JavaScript {
 	
 	public static final String varcontent(String script, String name) {
 		StringBuilder sb = new StringBuilder();
-		Pattern pat = Pattern.compile("(?:var\\s+)?" + Pattern.quote(name) + "\\s*=");
+		Regex pat = Regex.of("(?:var\\s+)?" + Regex.quote(name) + "\\s*=");
 		Matcher mat = pat.matcher(script);
 		
 		if(mat.find()) {
@@ -225,7 +224,7 @@ public final class JavaScript {
 	public static final Map<String, String> varcontents(String script) {
 		Map<String, String> vars = new LinkedHashMap<>();
 		StringBuilder sb = new StringBuilder();
-		Pattern pat = Pattern.compile("(?:var\\s+)?([^\\s=]*)\\s*=");
+		Regex pat = Regex.of("(?:var\\s+)?([^\\s=]*)\\s*=");
 		Matcher mat = pat.matcher(script);
 		
 		while(mat.find()) {

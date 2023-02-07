@@ -40,6 +40,7 @@ import sune.app.mediadown.pipeline.PipelineResult;
 import sune.app.mediadown.resource.ResourceRegistry;
 import sune.app.mediadown.util.ClipboardUtils;
 import sune.app.mediadown.util.FXUtils;
+import sune.app.mediadown.util.Regex;
 import sune.app.mediadown.util.Threads;
 import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Utils.Ignore;
@@ -113,7 +114,7 @@ public class MediaGetterWindow extends DraggableWindow<VBox> {
 	}
 	
 	private final List<String> nonEmptyURLs() {
-		return Stream.of(txtURLs.getText().split("\\r?\\n"))
+		return Stream.of(Regex.of("\\r?\\n").split(txtURLs.getText()))
 					.map(String::trim)
 					.filter(Predicate.not(String::isEmpty))
 					.distinct()

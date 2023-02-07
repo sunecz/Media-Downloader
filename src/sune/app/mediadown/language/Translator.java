@@ -1,16 +1,16 @@
 package sune.app.mediadown.language;
 
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.plugin.PluginFile;
 import sune.app.mediadown.plugin.Plugins;
+import sune.app.mediadown.util.Regex;
 
 /** @since 00.02.08 */
 public final class Translator {
 	
-	private static final Pattern REGEX_TRANSLATE = Pattern.compile("^tr\\(([^,]+),\\s*([^\\)]+)\\)$");
+	private static final Regex REGEX_TRANSLATE = Regex.of("^tr\\(([^,]+),\\s*([^\\)]+)\\)$");
 	
 	// Forbid anyone to create an instance of this class
 	private Translator() {

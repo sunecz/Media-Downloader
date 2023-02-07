@@ -4,7 +4,6 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import sune.api.process.ReadOnlyProcess;
@@ -25,13 +24,14 @@ import sune.app.mediadown.logging.Log;
 import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.ProcessUtils;
+import sune.app.mediadown.util.Regex;
 import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Utils.Ignore;
 
 /** @since 00.02.08 */
 public final class FFmpegConverter implements Converter {
 	
-	private static final Pattern REGEX_LINE_PROGRESS = Pattern.compile("^(?:frame|size)=.*?time=(.*?)\\s.*$");
+	private static final Regex REGEX_LINE_PROGRESS = Regex.of("^(?:frame|size)=.*?time=(.*?)\\s.*$");
 	
 	private final InternalState state = new InternalState(TaskStates.INITIAL);
 	private final EventRegistry<ConversionEvent> eventRegistry = new EventRegistry<>();

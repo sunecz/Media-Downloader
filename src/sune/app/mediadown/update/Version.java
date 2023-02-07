@@ -4,7 +4,8 @@ import java.util.Comparator;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+
+import sune.app.mediadown.util.Regex;
 
 public final class Version implements Comparable<Version> {
 	
@@ -186,7 +187,7 @@ public final class Version implements Comparable<Version> {
 	/** @since 00.02.07 */
 	private static final class Parser {
 		
-		private static final Pattern REGEX = Pattern.compile("^(\\d+)(?:\\.(\\d+)(?:\\.(\\d+)(?:-(?:([a-z]+)\\.)?(\\d+))?)?)?$");
+		private static final Regex REGEX = Regex.of("^(\\d+)(?:\\.(\\d+)(?:\\.(\\d+)(?:-(?:([a-z]+)\\.)?(\\d+))?)?)?$");
 		private static Parser INSTANCE;
 		
 		// Forbid anyone to create an instance of this class

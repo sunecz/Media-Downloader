@@ -15,7 +15,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import javafx.geometry.Pos;
@@ -72,6 +71,7 @@ import sune.app.mediadown.util.FXUtils;
 import sune.app.mediadown.util.HorizontalLeftTabPaneSkin;
 import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.Password;
+import sune.app.mediadown.util.Regex;
 import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Utils.Ignore;
 import sune.util.ssdf2.SSDObject;
@@ -279,7 +279,7 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 	private final void addGroupTitlesFromTranslation(String prefix, Translation translation) {
 		if(!translation.hasCollection("group")) return;
 		String namePrefix = translation.getData().getParent().getFullName();
-		namePrefix = namePrefix.replaceFirst("^" + Pattern.quote(prefix + '.'), "");
+		namePrefix = namePrefix.replaceFirst("^" + Regex.quote(prefix + '.'), "");
 		for(SSDObject item : translation.getTranslation("group").getData().objectsIterable()) {
 			if(item.getType() != SSDType.STRING) continue;
 			groupTitles.putIfAbsent(namePrefix + '.' + item.getName(), item.stringValue());
@@ -341,7 +341,7 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 		String configName = configuration.name();
 		boolean isAppConfig = configName.equals(MediaDownloader.configuration().name());
 		String formName = isAppConfig ? null : configName;
-		String regexConfigName = '^' + Pattern.quote(configName + '.');
+		String regexConfigName = '^' + Regex.quote(configName + '.');
 		
 		for(Entry<String, ConfigurationProperty<?>> entry : configuration.properties().entrySet()) {
 			ConfigurationProperty<?> property = entry.getValue();
@@ -408,7 +408,7 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 			ConfigurationFormFieldProperty fieldProperty = field.property();
 			Configuration configuration = fieldProperty.configuration();
 			
-			String regexConfigName = '^' + Pattern.quote(configuration.name() + '.');
+			String regexConfigName = '^' + Regex.quote(configuration.name() + '.');
 			String name = field.name().replaceFirst(regexConfigName, "");
 			configuration.writer().set(name, field.value());
 			

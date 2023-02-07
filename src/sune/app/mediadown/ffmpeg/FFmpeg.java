@@ -8,7 +8,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -30,6 +29,7 @@ import sune.app.mediadown.util.Metadata;
 import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.OSUtils;
 import sune.app.mediadown.util.Pair;
+import sune.app.mediadown.util.Regex;
 import sune.app.mediadown.util.Utils.Ignore;
 
 /** @since 00.02.08 */
@@ -591,7 +591,7 @@ public final class FFmpeg {
 		
 		private static final class Creator {
 			
-			private static final Pattern REGEX_CODEC_COPY = Pattern.compile("^c:(?:([va]):)?(\\d+)$");
+			private static final Regex REGEX_CODEC_COPY = Regex.of("^c:(?:([va]):)?(\\d+)$");
 			private static final int VALUE_TYPE_VIDEO = 0b1 << 0;
 			private static final int VALUE_TYPE_AUDIO = 0b1 << 1;
 			private static final int VALUE_TYPE_ALL = VALUE_TYPE_VIDEO | VALUE_TYPE_AUDIO;
@@ -727,7 +727,7 @@ public final class FFmpeg {
 		
 		private static final class Constructor {
 			
-			private static final Pattern REGEX_NEEDS_QUOTES = Pattern.compile("[\\s\"']");
+			private static final Regex REGEX_NEEDS_QUOTES = Regex.of("[\\s\"']");
 			
 			private final Command command;
 			

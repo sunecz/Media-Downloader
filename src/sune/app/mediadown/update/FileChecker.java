@@ -11,7 +11,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.function.Predicate;
-import java.util.regex.Pattern;
 
 import sune.app.mediadown.event.Event;
 import sune.app.mediadown.event.EventBindable;
@@ -20,6 +19,7 @@ import sune.app.mediadown.event.FileCheckEvent;
 import sune.app.mediadown.event.Listener;
 import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.Pair;
+import sune.app.mediadown.util.Regex;
 
 public class FileChecker implements EventBindable<FileCheckEvent> {
 	
@@ -158,7 +158,7 @@ public class FileChecker implements EventBindable<FileCheckEvent> {
 				return null;
 			}
 			
-			String[] parts = line.split(Pattern.quote(STRING_DELIMITER));
+			String[] parts = line.split(Regex.quote(STRING_DELIMITER));
 			if(parts.length < 4) {
 				return null;
 			}

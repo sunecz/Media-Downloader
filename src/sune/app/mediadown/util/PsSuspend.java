@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Path;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import sune.api.process.Processes;
 import sune.api.process.ReadOnlyProcess;
@@ -37,7 +36,7 @@ public final class PsSuspend {
 			boolean isAccepted = false;
 			Process process = Runtime.getRuntime().exec(String.format("reg query %s", REG_KEY));
 			BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-			Pattern pattern = Pattern.compile("^\\s+([^\\s]+)\\s+([^\\s]+)\\s+([^\\s]+)$");
+			Regex pattern = Regex.of("^\\s+([^\\s]+)\\s+([^\\s]+)\\s+([^\\s]+)$");
 			String line;
 			while((line = reader.readLine()) != null) {
 				Matcher matcher = pattern.matcher(line);

@@ -4,7 +4,6 @@ import java.net.URI;
 import java.util.List;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -31,6 +30,7 @@ import sune.app.mediadown.gui.DraggableWindow;
 import sune.app.mediadown.util.ClipboardWatcher;
 import sune.app.mediadown.util.ClipboardWatcher.ClipboardContents;
 import sune.app.mediadown.util.FXUtils;
+import sune.app.mediadown.util.Regex;
 import sune.app.mediadown.util.Utils;
 
 /** @since 00.02.07 */
@@ -38,7 +38,7 @@ public class ClipboardWatcherWindow extends DraggableWindow<VBox> {
 	
 	public static final String NAME = "clipboard_watcher";
 	
-	private static final Pattern REGEX_TRAILING_END_SEPARATORS = Pattern.compile("[\\n\\r]+$");
+	private static final Regex REGEX_TRAILING_END_SEPARATORS = Regex.of("[\\n\\r]+$");
 	
 	private final Label lblStatus;
 	private final TextArea txtURLs;
@@ -219,7 +219,7 @@ public class ClipboardWatcherWindow extends DraggableWindow<VBox> {
 	}
 	
 	private final List<String> nonEmptyURLs() {
-		return Stream.of(txtURLs.getText().split("\\r?\\n"))
+		return Stream.of(Regex.of("\\r?\\n").split(txtURLs.getText()))
 					.map(String::trim)
 					.filter(Predicate.not(String::isEmpty))
 					.distinct()

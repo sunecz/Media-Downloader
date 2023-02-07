@@ -30,6 +30,7 @@ import sune.app.mediadown.media.MediaFormat;
 import sune.app.mediadown.media.MediaResolution;
 import sune.app.mediadown.media.MediaType;
 import sune.app.mediadown.util.CheckedFunction;
+import sune.app.mediadown.util.Regex;
 import sune.app.mediadown.util.Singleton;
 import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Web;
@@ -345,7 +346,7 @@ public final class MPD {
 			double timescaleMult = 1.0 / template.timescale();
 			formatMap.put("Time", String.valueOf(time));
 			formatMap.put("Number", String.valueOf(count));
-			String uri = Utils.replaceAll("\\$(.*?)\\$", templateURI, this::format);
+			String uri = Regex.of("\\$(.*?)\\$").replaceAll(templateURI, this::format);
 			URI uriObj = baseURI.resolve(uri);
 			segments.add(new MPDSegment(uriObj, duration * timescaleMult, time * timescaleMult));
 			time += duration;

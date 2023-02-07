@@ -7,7 +7,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+
+import sune.app.mediadown.util.Regex;
 
 /** @since 00.02.05 */
 public final class MediaMimeType {
@@ -17,17 +18,17 @@ public final class MediaMimeType {
 	public static final MediaMimeType NONE = new MediaMimeType("", "", DEFAULT_MAP);
 	public static final MediaMimeType DEFAULT = new MediaMimeType("application", "octet-stream", DEFAULT_MAP);
 	
-	private static final Pattern REGEX;
-	private static final Pattern REGEX_PARAMETER;
+	private static final Regex REGEX;
+	private static final Regex REGEX_PARAMETER;
 	
 	static {
 		// See: https://datatracker.ietf.org/doc/html/rfc7230#section-3.2.6
 		//    & https://datatracker.ietf.org/doc/html/rfc7231#section-3.1.1.1
-		String rbase = Pattern.quote("!#$%&'*+-.^_`|~") + "\\p{Alnum}";
+		String rbase = Regex.quote("!#$%&'*+-.^_`|~") + "\\p{Alnum}";
 		String token = "[" + rbase + "]+";
 		String param = "[" + rbase + "=\\s\"]+";
-		REGEX = Pattern.compile("^(" + token + ")/(" + token + ")((?:\\s*;" + param + ")*)$");
-		REGEX_PARAMETER = Pattern.compile("^\\s*(" + token + ")\\s*=\\s*(" + token + "|\"" + token + "\")\\s*$");
+		REGEX = Regex.of("^(" + token + ")/(" + token + ")((?:\\s*;" + param + ")*)$");
+		REGEX_PARAMETER = Regex.of("^\\s*(" + token + ")\\s*=\\s*(" + token + "|\"" + token + "\")\\s*$");
 	}
 	
 	private final String type;

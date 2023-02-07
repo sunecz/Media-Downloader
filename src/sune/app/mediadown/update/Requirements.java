@@ -1,9 +1,9 @@
 package sune.app.mediadown.update;
 
 import java.util.Objects;
-import java.util.regex.Pattern;
 
 import sune.app.mediadown.util.OSUtils;
+import sune.app.mediadown.util.Regex;
 
 /** @since 00.02.07 */
 public final class Requirements {
@@ -39,7 +39,7 @@ public final class Requirements {
 	public static final Requirements parse(String value) {
 		if(value == null || value.isEmpty())
 			throw new IllegalArgumentException("Invalid Requirement string");
-		String[] parts = value.split(Pattern.quote(STRING_DELIMITER));
+		String[] parts = value.split(Regex.quote(STRING_DELIMITER));
 		if(parts.length != 2)
 			throw new IllegalArgumentException("Invalid Requirement string");
 		String osName = parts[0];

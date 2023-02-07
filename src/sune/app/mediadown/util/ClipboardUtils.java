@@ -45,7 +45,7 @@ public final class ClipboardUtils {
 		
 		if((contents = clipboard.getContent(DataFormat.PLAIN_TEXT)) != null) {
 			// May have multiple URIs in the contents
-			for(String line : ((String) contents).split("\\r?\\n")) {
+			for(String line : Regex.of("\\r?\\n").split((String) contents)) {
 				URI uri = Ignore.call(() -> Utils.uri(line.strip()));
 				if(uri != null) uris.add(uri);
 			}

@@ -13,7 +13,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import sune.app.mediadown.download.segment.RemoteFileSegment;
@@ -22,6 +21,7 @@ import sune.app.mediadown.download.segment.RemoteFileSegmentsHolder;
 import sune.app.mediadown.media.MediaResolution;
 import sune.app.mediadown.util.CheckedFunction;
 import sune.app.mediadown.util.Pair;
+import sune.app.mediadown.util.Regex;
 import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Web;
 import sune.app.mediadown.util.Web.GetRequest;
@@ -274,8 +274,8 @@ public final class M3U {
 		private static final String NAME_KEY         = "EXT-X-KEY";
 		private static final String NAME_SEGMENT     = "EXTINF";
 		
-		private static final Pattern PATTERN_ATTRIBUTE_LIST
-			= Pattern.compile("([A-Z0-9\\-]+)=([^,\\x0A\\x0D]+|\"[^\"\\x0A\\x0D]+\")");
+		private static final Regex PATTERN_ATTRIBUTE_LIST
+			= Regex.of("([A-Z0-9\\-]+)=([^,\\x0A\\x0D]+|\"[^\"\\x0A\\x0D]+\")");
 		
 		private final URI baseURI;
 		private final URI uri;

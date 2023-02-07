@@ -7,13 +7,14 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
+import sune.app.mediadown.util.Regex;
 
 /** @since 00.02.02 */
 public final class Arguments {
 	
-	private static final Pattern PATTERN_ARG = Pattern.compile("^--?(?<name>[A-Za-z0-9_\\-]+)(?:=(?<value>.*))?$");
+	private static final Regex PATTERN_ARG = Regex.of("^--?(?<name>[A-Za-z0-9_\\-]+)(?:=(?<value>.*))?$");
 	
 	private final Map<String, Argument> arguments;
 	private final String[] args;

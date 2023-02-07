@@ -9,10 +9,10 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import sune.app.mediadown.util.Pair;
+import sune.app.mediadown.util.Regex;
 
 public final class RemoteConfiguration {
 	
@@ -37,7 +37,7 @@ public final class RemoteConfiguration {
 		int end = name.indexOf(CHAR_FLAGS_CLOSE);
 		if(end <= 0) return name; // Invalid name with flags
 		Stream.of(name.substring(beg + 1, end)
-		              .split(Pattern.quote("" + CHAR_FLAGS_DELIMITER)))
+		              .split(Regex.quote("" + CHAR_FLAGS_DELIMITER)))
 		      .forEach(flags::add);
 		return name.substring(0, beg);
 	}
@@ -48,8 +48,8 @@ public final class RemoteConfiguration {
 			return new ValueHolder(value); // Simple value
 		}
 		Map<String, Property> map = new LinkedHashMap<>();
-		final String regexValue = Pattern.quote("" + CHAR_DELIMITER_VALUE);
-		final String regexProp  = Pattern.quote("" + CHAR_DELIMITER_PROP);
+		final String regexValue = Regex.quote("" + CHAR_DELIMITER_VALUE);
+		final String regexProp  = Regex.quote("" + CHAR_DELIMITER_PROP);
 		Set<String> flags = new HashSet<>();
 		String[] values = value.split(regexValue);
 		for(String val : values) {

@@ -56,9 +56,7 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import java.util.regex.MatchResult;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -67,7 +65,6 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 
 import javafx.scene.paint.Color;
-import javafx.util.Callback;
 import sune.app.mediadown.Shared;
 import sune.app.mediadown.media.MediaFormat;
 import sune.app.mediadown.util.Web.GetRequest;
@@ -733,25 +730,6 @@ public final class Utils {
 		return sb.toString();
 	}
 	
-	public static final String replaceAll(String regex, String string, Callback<MatchResult, String> callback) {
-		return replaceAll(Pattern.compile(regex), string, callback);
-	}
-	
-	/** @since 00.02.05 */
-	public static final String replaceAll(Pattern regex, String string, Callback<MatchResult, String> callback) {
-		Matcher matcher = regex.matcher(string);
-		while(matcher.find()) {
-			MatchResult matchResult = matcher.toMatchResult();
-			String before = string.substring(0, matchResult.start());
-			String replacement = callback.call(matchResult);
-			String after = string.substring(matchResult.end());
-			string = before + replacement + after;
-			matcher.reset(string);
-			matcher.region(before.length() + replacement.length(), string.length());
-		}
-		return string;
-	}
-	
 	public static final Pair<Integer, Integer> stringBetween(String string, int chOpen, int chClose) {
 		return stringBetween(string, chOpen, chClose, 0, string.length());
 	}
@@ -843,10 +821,10 @@ public final class Utils {
 		return index >= 0 ? string.substring(0, index) : string;
 	}
 	
-	private static Pattern PATTERN_U4D;
+	private static Regex PATTERN_U4D;
 	private static final void ensurePatternU4D() {
 		if((PATTERN_U4D == null)) {
-			PATTERN_U4D = Pattern.compile("\\\\u(\\p{XDigit}{4})");
+			PATTERN_U4D = Regex.of("\\\\u(\\p{XDigit}{4})");
 		}
 	}
 	
@@ -1713,12 +1691,12 @@ public final class Utils {
 	}
 	
 	/** @since 00.02.05 */
-	private static Pattern regexUnicodeWord;
+	private static Regex regexUnicodeWord;
 	
 	/** @since 00.02.05 */
-	private static final Pattern regexUnicodeWord() {
+	private static final Regex regexUnicodeWord() {
 		return regexUnicodeWord == null
-					? (regexUnicodeWord = Pattern.compile("\\w+", Pattern.UNICODE_CHARACTER_CLASS))
+					? (regexUnicodeWord = Regex.of("\\w+", Regex.Flags.UNICODE_CHARACTER_CLASS))
 					:  regexUnicodeWord;
 	}
 	
@@ -1727,7 +1705,7 @@ public final class Utils {
 		if(string == null || string.isEmpty()) return string;
 		Objects.requireNonNull(transformer);
 		Property<Integer> ctr = new Property<>(0);
-		return replaceAll(regexUnicodeWord(), string, (matches) -> {
+		return regexUnicodeWord().replaceAll(string, (matches) -> {
 			String value = transformer.apply(matches.group(0), ctr.getValue());
 			ctr.setValue(ctr.getValue() + 1);
 			return value;
@@ -2291,14 +2269,14 @@ public final class Utils {
 		private static final String PATTERN_STRING_INSERT_ARGUMENTS;
 		
 		static {
-			PATTERN_STRING_EXTRACT_VARIABLE ="(?:(?:var|const|let)\\s+)?%s\\s*=\\s*";
-			PATTERN_STRING_EXTRACT_FUNCTION_PARAMS ="%s\\s*\\(";
-			PATTERN_STRING_INSERT_ARGUMENTS ="[\"']\\s*\\+\\s*([^\\+\\s]+)\\s*(?:\\+\\s*[\"'])?";
+			PATTERN_STRING_EXTRACT_VARIABLE = "(?:(?:var|const|let)\\s+)?%s\\s*=\\s*";
+			PATTERN_STRING_EXTRACT_FUNCTION_PARAMS = "%s\\s*\\(";
+			PATTERN_STRING_INSERT_ARGUMENTS = "[\"']\\s*\\+\\s*([^\\+\\s]+)\\s*(?:\\+\\s*[\"'])?";
 		}
 		
 		public static final String extractVariableContent(String script, String varName, int offset) {
 			StringBuilder builder = new StringBuilder();
-			Pattern pattern = Pattern.compile(String.format(PATTERN_STRING_EXTRACT_VARIABLE, Pattern.quote(varName)));
+			Regex pattern = Regex.of(String.format(PATTERN_STRING_EXTRACT_VARIABLE, Regex.quote(varName)));
 			Matcher matcher = pattern.matcher(script);
 			if((matcher.find(offset))) {
 				int start = matcher.end();
@@ -2322,7 +2300,7 @@ public final class Utils {
 		
 		public static final String extractFunctionPararms(String script, String funcName, int offset) {
 			StringBuilder builder = new StringBuilder();
-			Pattern pattern = Pattern.compile(String.format(PATTERN_STRING_EXTRACT_FUNCTION_PARAMS, Pattern.quote(funcName)));
+			Regex pattern = Regex.of(String.format(PATTERN_STRING_EXTRACT_FUNCTION_PARAMS, Regex.quote(funcName)));
 			Matcher matcher = pattern.matcher(script);
 			if((matcher.find(offset))) {
 				int start = matcher.end();
@@ -2345,7 +2323,7 @@ public final class Utils {
 		}
 		
 		public static final String insertArgumentsToString(String statement, Map<String, String> args) {
-			return Utils.replaceAll(PATTERN_STRING_INSERT_ARGUMENTS, statement, (result) -> {
+			return Regex.of(PATTERN_STRING_INSERT_ARGUMENTS).replaceAll(statement, (result) -> {
 				return args.getOrDefault(result.group(1), result.group(1));
 			});
 		}

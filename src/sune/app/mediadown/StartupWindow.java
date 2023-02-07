@@ -16,6 +16,7 @@ import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import sune.app.mediadown.util.FXTask;
+import sune.app.mediadown.util.Regex;
 
 // Since this window is shown well before anything else is initialized,
 // we must use only basic methods and components.
@@ -43,7 +44,7 @@ public final class StartupWindow extends Stage {
 		boxBottom = new VBox();
 		lblStatus = new Label("Initializing window...");
 		prgbar    = new ProgressBar();
-		String[] words = title.split("\\s+");
+		String[] words = Regex.of("\\s+").split(title);
 		for(int i = 0, l = words.length; i < l; ++i) {
 			Label lblTitle = new Label(words[i].toUpperCase());
 			lblTitle.getStyleClass().add("lbl-title");

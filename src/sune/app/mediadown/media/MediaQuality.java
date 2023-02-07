@@ -8,11 +8,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import sune.app.mediadown.util.ComparatorCombiner;
+import sune.app.mediadown.util.Regex;
 import sune.app.mediadown.util.Utils;
 
 /** @since 00.02.05 */
@@ -564,7 +564,7 @@ public final class MediaQuality implements Comparable<MediaQuality> {
 	
 	private static final class ProgressiveScanStringParser implements MediaQualityParser {
 		
-		private static final Pattern REGEX = Pattern.compile("^(\\d+)p?$");
+		private static final Regex REGEX = Regex.of("^(\\d+)p?$");
 		
 		@Override
 		public MediaQuality parse(String string, MediaType mediaType) {
