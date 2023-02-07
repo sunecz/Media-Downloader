@@ -425,10 +425,14 @@ public final class JSON {
 					case 't': readTrue(); break;
 					case 'f': readFalse(); break;
 					case 'n': readNull(); break;
-					default:
-						if(c == '-' || Character.isDigit(c))
+					default: {
+						if(c == '-' || Character.isDigit(c)) {
 							readNumber();
-						break;
+							break;
+						}
+						
+						throw new IOException("Invalid JSON");
+					}
 				}
 			}
 		}
