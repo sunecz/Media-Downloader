@@ -438,15 +438,17 @@ public final class JSON {
 		}
 		
 		public final SSDCollection read() throws IOException {
-			c = next(); // Bootstrap
-			
-			if(c == CHAR_BYTE_ORDER_MARK) {
-				// Skip the BOM
-				c = next();
+			try(input) {
+				c = next(); // Bootstrap
+				
+				if(c == CHAR_BYTE_ORDER_MARK) {
+					// Skip the BOM
+					c = next();
+				}
+				
+				readNext();
+				return lastParent.b;
 			}
-			
-			readNext();
-			return lastParent.b;
 		}
 	}
 }
