@@ -73,9 +73,8 @@ public final class Regex {
 	
 	public String replaceAll(CharSequence input, Callback<MatchResult, String> callback) {
 		StringBuilder str = new StringBuilder(input);
-		Matcher matcher = matcher(str);
 		
-		while(matcher.find()) {
+		for(Matcher matcher = matcher(str); matcher.find();) {
 			MatchResult result = matcher.toMatchResult();
 			int start = result.start(), end = result.end();
 			String replacement = callback.call(result);

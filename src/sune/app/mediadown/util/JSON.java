@@ -176,7 +176,7 @@ public final class JSON {
 				SSDValue fixValue, frmValue;
 				if(type == SSDType.STRING) {
 					fixValue = createValue('\"' + rawValue + '\"');
-					frmValue = createValue(Utils.replaceUnicode4Digits(rawValue).replaceAll("\\\\(.)", "$1"));
+					frmValue = createValue(Utils.replaceUnicodeEscapeSequences(rawValue).replaceAll("\\\\(.)", "$1"));
 				} else {
 					fixValue = frmValue = createValue(rawValue); // Optimization
 				}

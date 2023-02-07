@@ -821,41 +821,26 @@ public final class Utils {
 		return index >= 0 ? string.substring(0, index) : string;
 	}
 	
-	private static Regex PATTERN_U4D;
-	private static final void ensurePatternU4D() {
-		if((PATTERN_U4D == null)) {
-			PATTERN_U4D = Regex.of("\\\\u(\\p{XDigit}{4})");
+	private static Regex REGEX_UNICODE_ESCAPE;
+	
+	private static final Regex regexUnicodeEscape() {
+		if(REGEX_UNICODE_ESCAPE == null) {
+			REGEX_UNICODE_ESCAPE = Regex.of("\\\\u+(\\p{XDigit}{4})");
 		}
+		
+		return REGEX_UNICODE_ESCAPE;
 	}
 	
-	public static final String replaceUnicode4Digits(String string) {
-		ensurePatternU4D();
-		StringBuilder builder = new StringBuilder(string.length());
-		Matcher matcher = PATTERN_U4D.matcher(string);
-		int position = 0;
-		while(matcher.find()) {
-			builder.append(string, position, matcher.start());
-			String character = Character.toString(Integer.parseInt(matcher.group(1), 16));
-			builder.append(character);
-			position = matcher.end();
-		}
-		builder.append(string, position, string.length());
-		return builder.toString();
+	public static final String replaceUnicodeEscapeSequences(String string) {
+		return regexUnicodeEscape().replaceAll(string, (match) -> {
+			return Character.toString(Integer.parseInt(match.group(1), 16));
+		});
 	}
 	
-	public static final String prefixUnicode4Digits(String string, String prefix) {
-		ensurePatternU4D();
-		StringBuilder builder = new StringBuilder(string.length());
-		Matcher matcher = PATTERN_U4D.matcher(string);
-		int position = 0;
-		while(matcher.find()) {
-			builder.append(string, position, matcher.start());
-			builder.append(prefix);
-			builder.append(matcher.group(0));
-			position = matcher.end();
-		}
-		builder.append(string, position, string.length());
-		return builder.toString();
+	public static final String prefixUnicodeEscapeSequences(String string, String prefix) {
+		return regexUnicodeEscape().replaceAll(string, (match) -> {
+			return prefix + match.group(0);
+		});
 	}
 	
 	public static final int backTill(String string, int ch, int from) {
