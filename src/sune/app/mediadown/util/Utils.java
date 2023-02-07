@@ -858,10 +858,6 @@ public final class Utils {
 		return builder.toString();
 	}
 	
-	public static final String fromCharCode(int... codePoints) {
-		return new String(codePoints, 0, codePoints.length);
-	}
-	
 	public static final int backTill(String string, int ch, int from) {
 		return backTill(string, ch, from, 1);
 	}
