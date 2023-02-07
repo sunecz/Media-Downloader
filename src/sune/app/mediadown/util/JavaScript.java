@@ -11,6 +11,9 @@ import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
 
+import sune.util.ssdf2.SSDCollection;
+import sune.util.ssdf2.SSDF;
+
 /**
  * Class containing some useful JavaScript-related functions.
  * @see
@@ -265,6 +268,11 @@ public final class JavaScript {
 	
 	public static final String fromCharCode(int... codePoints) {
 	    return new String(codePoints, 0, codePoints.length);
+	}
+	
+	/** @since 00.02.08 */
+	public static final SSDCollection readObject(String string) {
+		return SSDF.read(string);
 	}
 	
 	// forbid anyone to create an instance of this class
