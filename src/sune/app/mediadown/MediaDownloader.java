@@ -45,6 +45,7 @@ import sune.app.mediadown.event.EventBindableAction;
 import sune.app.mediadown.event.EventBinder;
 import sune.app.mediadown.event.EventType;
 import sune.app.mediadown.event.FileCheckEvent;
+import sune.app.mediadown.event.LibraryEvent;
 import sune.app.mediadown.event.NativeLibraryLoaderEvent;
 import sune.app.mediadown.event.PluginLoaderEvent;
 import sune.app.mediadown.event.tracker.DownloadTracker;
@@ -67,7 +68,6 @@ import sune.app.mediadown.language.Language;
 import sune.app.mediadown.language.Translation;
 import sune.app.mediadown.library.Libraries;
 import sune.app.mediadown.library.Library;
-import sune.app.mediadown.library.LibraryEvent;
 import sune.app.mediadown.library.NativeLibraries;
 import sune.app.mediadown.library.NativeLibrary;
 import sune.app.mediadown.logging.Log;
@@ -145,14 +145,13 @@ public final class MediaDownloader {
 	private static Arguments arguments;
 	/** @since 00.02.02 */
 	private static String jreVersion;
+	/** @since 00.02.08 */
+	private static Libraries libraries;
 	
 	private static final AtomicBoolean isDisposed = new AtomicBoolean();
 	private static final String BASE_RESOURCE = "/resources/";
 	
 	private static final int TIMEOUT = 8000;
-	
-	// TODO: Finalize
-	private static Libraries libraries;
 	
 	private static final InputStream stream(String base, String path) {
 		return MediaDownloader.class.getResourceAsStream(base + path);
@@ -553,30 +552,30 @@ public final class MediaDownloader {
 			
 			@Override
 			public InitializationState run(Arguments args) {
-				// TODO: Clean up
-				
 				List<Library> notLoaded = new LinkedList<>();
 				
 				libraries.addEventListener(LibraryEvent.LOADING, (library) -> {
-					setText(String.format("Loading library %s...", library.getName()));
+					setText(String.format("Loading library %s...", library.name()));
 				});
 				
 				libraries.addEventListener(LibraryEvent.LOADED, (library) -> {
-					update(String.format("Loading library %s... %s", library.getName(), "done"));
+					update(String.format("Loading library %s... %s", library.name(), "done"));
 				});
 				
 				libraries.addEventListener(LibraryEvent.NOT_LOADED, (pair) -> {
 					notLoaded.add(pair.a);
 				});
 				
-				boolean success = libraries.load();
+				boolean success = libraries.load(ClassLoader.getSystemClassLoader());
 				
 				if(!success) {
 					String text = String.format("Cannot load libraries (%d)", notLoaded.size());
 					StringBuilder content = new StringBuilder();
+					
 					for(Library library : notLoaded) {
-						content.append(String.format("%s (%s)\n", library.getName(), library.getPath()));
+						content.append(String.format("%s (%s)\n", library.name(), library.path()));
 					}
+					
 					Dialog.showContentError("Critical error", text, content.toString());
 					System.exit(-1);
 				}
@@ -1150,7 +1149,7 @@ public final class MediaDownloader {
 		
 		// Generate list of all libraries to check
 		for(Library library : libraries.all()) {
-			checker.addEntry(library.getPath(), Requirements.ANY, "");
+			checker.addEntry(library.path(), Requirements.ANY, "");
 		}
 		
 		// Generate the list of entries

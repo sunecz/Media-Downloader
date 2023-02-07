@@ -3,23 +3,22 @@ package sune.app.mediadown.library;
 import java.nio.file.Path;
 import java.util.Objects;
 
+/** @since 00.02.08 */
 public final class Library {
 	
 	private final String name;
-	private final Path   path;
+	private final Path path;
 	
 	public Library(String name, Path path) {
-		if((name == null || path == null))
-			throw new IllegalArgumentException("Name and path cannot be null");
-		this.name = name;
-		this.path = path;
+		this.name = Objects.requireNonNull(name);
+		this.path = Objects.requireNonNull(path);
 	}
 	
-	public String getName() {
+	public String name() {
 		return name;
 	}
 	
-	public Path getPath() {
+	public Path path() {
 		return path;
 	}
 	
@@ -30,9 +29,11 @@ public final class Library {
 	
 	@Override
 	public boolean equals(Object obj) {
-		if((this == obj))
+		if(this == obj)
 			return true;
-		if((obj == null || getClass() != obj.getClass()))
+		if(obj == null)
+			return false;
+		if(getClass() != obj.getClass())
 			return false;
 		Library other = (Library) obj;
 		return Objects.equals(name, other.name) && Objects.equals(path, other.path);
