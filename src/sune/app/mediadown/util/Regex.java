@@ -79,7 +79,6 @@ public final class Regex {
 			int start = result.start(), end = result.end();
 			String replacement = callback.call(result);
 			str.replace(start, end, replacement);
-			matcher.reset(str);
 			matcher.region(start + replacement.length(), str.length());
 		}
 		
