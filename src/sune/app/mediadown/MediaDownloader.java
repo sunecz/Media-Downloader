@@ -557,15 +557,15 @@ public final class MediaDownloader {
 				
 				List<Library> notLoaded = new LinkedList<>();
 				
-				libraries.on(LibraryEvent.LOADING, (library) -> {
+				libraries.addEventListener(LibraryEvent.LOADING, (library) -> {
 					setText(String.format("Loading library %s...", library.getName()));
 				});
 				
-				libraries.on(LibraryEvent.LOADED, (library) -> {
+				libraries.addEventListener(LibraryEvent.LOADED, (library) -> {
 					update(String.format("Loading library %s... %s", library.getName(), "done"));
 				});
 				
-				libraries.on(LibraryEvent.NOT_LOADED, (pair) -> {
+				libraries.addEventListener(LibraryEvent.NOT_LOADED, (pair) -> {
 					notLoaded.add(pair.a);
 				});
 				

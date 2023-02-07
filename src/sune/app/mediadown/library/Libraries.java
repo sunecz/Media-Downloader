@@ -8,13 +8,14 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import sune.app.mediadown.event.Event;
+import sune.app.mediadown.event.EventBindable;
 import sune.app.mediadown.event.EventRegistry;
 import sune.app.mediadown.event.Listener;
 import sune.app.mediadown.util.Pair;
 import sune.util.load.ModuleLazyLoader;
 import sune.util.load.ModuleUtils;
 
-public final class Libraries {
+public final class Libraries implements EventBindable<LibraryEvent> {
 	
 	// TODO: Refactor, clean up
 	
@@ -96,11 +97,13 @@ public final class Libraries {
 		return load(libraries);
 	}
 	
-	public final <E> void on(Event<LibraryEvent, E> event, Listener<E> listener) {
+	@Override
+	public <V> void addEventListener(Event<? extends LibraryEvent, V> event, Listener<V> listener) {
 		eventRegistry.add(event, listener);
 	}
 	
-	public final <E> void off(Event<LibraryEvent, E> event, Listener<E> listener) {
+	@Override
+	public <V> void removeEventListener(Event<? extends LibraryEvent, V> event, Listener<V> listener) {
 		eventRegistry.remove(event, listener);
 	}
 }
