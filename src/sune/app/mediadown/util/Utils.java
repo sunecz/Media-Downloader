@@ -835,7 +835,7 @@ public final class Utils {
 		int position = 0;
 		while(matcher.find()) {
 			builder.append(string, position, matcher.start());
-			String character = fromCharCode(Integer.parseInt(matcher.group(1), 16));
+			String character = Character.toString(Integer.parseInt(matcher.group(1), 16));
 			builder.append(character);
 			position = matcher.end();
 		}
