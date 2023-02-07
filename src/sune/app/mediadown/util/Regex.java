@@ -81,7 +81,7 @@ public final class Regex {
 			String replacement = callback.call(result);
 			str.replace(start, end, replacement);
 			matcher.reset(str);
-			matcher.region(start + replacement.length(), input.length());
+			matcher.region(start + replacement.length(), str.length());
 		}
 		
 		return str.toString();
