@@ -79,11 +79,7 @@ public final class Regex {
 			MatchResult result = matcher.toMatchResult();
 			int start = result.start(), end = result.end();
 			str.append(input, offset, start);
-			
-			String replacement = callback.call(result);
-			str.append(replacement);
-			
-			matcher.region(start + replacement.length(), length);
+			str.append(callback.call(result));
 			offset = end;
 		}
 		
