@@ -72,16 +72,22 @@ public final class Regex {
 	}
 	
 	public String replaceAll(CharSequence input, Callback<MatchResult, String> callback) {
+		Matcher matcher = matcher(input);
+		
+		if(!matcher.find()) {
+			return input.toString(); // Optimization
+		}
+		
 		int length = input.length(), offset = 0;
 		StringBuilder str = new StringBuilder(length);
 		
-		for(Matcher matcher = matcher(input); matcher.find();) {
+		do {
 			MatchResult result = matcher.toMatchResult();
 			int start = result.start(), end = result.end();
 			str.append(input, offset, start);
 			str.append(callback.call(result));
 			offset = end;
-		}
+		} while(matcher.find());
 		
 		if(offset < length) {
 			str.append(input, offset, length);
