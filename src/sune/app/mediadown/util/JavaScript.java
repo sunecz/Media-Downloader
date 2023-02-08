@@ -272,7 +272,12 @@ public final class JavaScript {
 	
 	/** @since 00.02.08 */
 	public static final SSDCollection readObject(String string) {
-		return SSDF.readJSON(string);
+		return SSDF.readJSON(Utils.prefixUnicodeEscapeSequences(string, "\\"));
+	}
+	
+	/** @since 00.02.08 */
+	public static final String replaceUnicodeEscapeSequences(String string) {
+		return Utils.replaceUnicodeEscapeSequences(string);
 	}
 	
 	// forbid anyone to create an instance of this class
