@@ -272,7 +272,7 @@ public final class JavaScript {
 	
 	/** @since 00.02.08 */
 	public static final SSDCollection readObject(String string) {
-		return SSDF.read(string);
+		return SSDF.readJSON(string);
 	}
 	
 	// forbid anyone to create an instance of this class
