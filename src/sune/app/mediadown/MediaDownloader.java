@@ -304,13 +304,16 @@ public final class MediaDownloader {
 						
 						// Move the directories around so that the new JRE is in the correct location
 						Path oldJREPath = oldJREPath();
+						Path newJREPath = newJREPath();
 						setText("Deleting old JRE...");
 						NIO.deleteDir(oldJREPath);
 						setText("Copying new JRE...");
-						NIO.copyDir(newJREPath(), oldJREPath);
+						NIO.copyDir(newJREPath, oldJREPath);
 						
+						// Get Java executable in the new directory
+						Path exePath = oldJREPath.resolve(newJREPath.relativize(SelfProcess.exePath()));
 						// Make sure the new executable is actually executable
-						NIO.makeExecutable(SelfProcess.exePath());
+						NIO.makeExecutable(exePath);
 						
 						// Launch the previous process again
 						setText("Launching application using the new JRE...");
