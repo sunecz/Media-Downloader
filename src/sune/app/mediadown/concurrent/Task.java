@@ -38,12 +38,12 @@ public abstract class Task implements EventBindable<EventType>, HasTaskState {
 			exception.set(ex);
 			call(TaskEvent.ERROR, new Pair<>(this, ex));
 		} finally {
-			mtxDone.unlock();
+			stop(TaskStates.DONE);
 			call(TaskEvent.END, this);
 		}
 	}
 	
-	protected void stop(int stopState) throws Exception {
+	protected void stop(int stopState) {
 		if(isStopped() || isDone()) {
 			return;
 		}
@@ -53,6 +53,7 @@ public abstract class Task implements EventBindable<EventType>, HasTaskState {
 		state.set(stopState);
 		
 		lockPause.unlock();
+		mtxDone.unlock();
 	}
 	
 	protected void awaitPaused() {
@@ -121,13 +122,9 @@ public abstract class Task implements EventBindable<EventType>, HasTaskState {
 	public void await() throws Exception {
 		mtxDone.await();
 		
-		try {
-			Exception ex;
-			if((ex = exception.get()) != null) {
-				throw ex; // Propagate
-			}
-		} finally {
-			stop(TaskStates.DONE);
+		Exception ex;
+		if((ex = exception.get()) != null) {
+			throw ex; // Propagate
 		}
 	}
 	

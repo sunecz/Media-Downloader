@@ -15,11 +15,17 @@ import sune.app.mediadown.util.CheckedBiFunction;
 public interface MediaEngine extends MediaGetter {
 	
 	@Deprecated
-	List<Program> getPrograms() throws Exception;
+	default List<Program> getPrograms() throws Exception {
+		return null;
+	}
 	@Deprecated
-	List<Episode> getEpisodes(Program program) throws Exception;
+	default List<Episode> getEpisodes(Program program) throws Exception {
+		return null;
+	}
 	@Deprecated
-	List<Media>   getMedia(Episode episode) throws Exception;
+	default List<Media> getMedia(Episode episode) throws Exception {
+		return null;
+	}
 	
 	@Deprecated
 	default WorkerUpdatableTask<CheckedBiFunction<WorkerProxy, Program, Boolean>, Void> getPrograms

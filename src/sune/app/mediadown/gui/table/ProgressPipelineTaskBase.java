@@ -3,11 +3,12 @@ package sune.app.mediadown.gui.table;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import sune.app.mediadown.InternalState;
 import sune.app.mediadown.MediaDownloader;
+import sune.app.mediadown.TaskStates;
 import sune.app.mediadown.concurrent.CounterLock;
 import sune.app.mediadown.concurrent.ListTask;
 import sune.app.mediadown.concurrent.ListTask.ListTaskEvent;
@@ -31,12 +32,7 @@ public abstract class ProgressPipelineTaskBase<T, R extends PipelineResult<?>, W
 	
 	protected final W window;
 	
-	protected final AtomicBoolean running = new AtomicBoolean();
-	protected final AtomicBoolean started = new AtomicBoolean();
-	protected final AtomicBoolean stopped = new AtomicBoolean();
-	protected final AtomicBoolean paused = new AtomicBoolean();
-	
-	protected final SyncObject lockPause = new SyncObject();
+	protected final InternalState state = new InternalState(TaskStates.INITIAL);
 	protected final SyncObject lockResult = new SyncObject();
 	
 	protected final Set<T> resultSet = new HashSet<>();
@@ -65,12 +61,29 @@ public abstract class ProgressPipelineTaskBase<T, R extends PipelineResult<?>, W
 	
 	// -----
 	
+	private final void stop(int stopState) throws Exception {
+		if(isStopped() || isDone()) {
+			return;
+		}
+		
+		state.unset(TaskStates.RUNNING);
+		state.unset(TaskStates.PAUSED);
+		state.set(stopState);
+		
+		try {
+			if(task != null) {
+				task.stop();
+			}
+		} finally {
+			lockResult.unlock();
+		}
+	}
+	
 	@Override
 	public R run(Pipeline pipeline) throws Exception {
-		started.set(true);
-		running.set(true);
-		stopped.set(false);
-		paused.set(false);
+		state.clear(TaskStates.STARTED);
+		state.set(TaskStates.RUNNING);
+		
 		resultSet.clear();
 		result.clear();
 		
@@ -103,16 +116,19 @@ public abstract class ProgressPipelineTaskBase<T, R extends PipelineResult<?>, W
 					
 					task.startAndWait();
 					
-					// Check whether the task was cancelled
 					if(task.isStopped()) {
 						onCancelled();
 					}
 				} catch(Exception ex) {
 					MediaDownloader.error(ex);
 				} finally {
-					context.setProgress(ProgressContext.PROGRESS_DONE);
-					running.set(false);
-					lockResult.unlock();
+					try {
+						stop(TaskStates.DONE);
+					} catch(Exception ex) {
+						MediaDownloader.error(ex);
+					} finally {
+						context.setProgress(ProgressContext.PROGRESS_DONE);
+					}
 				}
 			}
 			
@@ -130,48 +146,71 @@ public abstract class ProgressPipelineTaskBase<T, R extends PipelineResult<?>, W
 	
 	@Override
 	public void stop() throws Exception {
-		stopped.set(true);
+		if(!isStarted() || isStopped() || isDone()) {
+			return;
+		}
+		
+		if(task != null) {
+			task.stop();
+		}
+		
+		stop(TaskStates.STOPPED);
 	}
 	
 	@Override
 	public void pause() throws Exception {
-		paused.set(true);
+		if(!isStarted() || isPaused() || isStopped() || isDone()) {
+			return;
+		}
+		
+		state.set(TaskStates.PAUSED);
+		state.unset(TaskStates.RUNNING);
+		
+		if(task != null) {
+			task.pause();
+		}
 	}
 	
 	@Override
 	public void resume() throws Exception {
-		paused.set(false);
-		lockPause.unlock();
+		if(!isStarted() || !isPaused() || isStopped() || isDone()) {
+			return;
+		}
+		
+		state.unset(TaskStates.PAUSED);
+		state.set(TaskStates.RUNNING);
+		
+		if(task != null) {
+			task.resume();
+		}
 	}
 	
 	@Override
-	public boolean isRunning() throws Exception {
-		return running.get();
+	public boolean isRunning() {
+		return state.is(TaskStates.RUNNING);
 	}
 	
 	@Override
-	public boolean isStarted() throws Exception {
-		return started.get();
+	public boolean isDone() {
+		return state.is(TaskStates.DONE);
 	}
 	
 	@Override
-	public boolean isDone() throws Exception {
-		return !stopped.get();
+	public boolean isStarted() {
+		return state.is(TaskStates.STARTED);
 	}
 	
 	@Override
-	public boolean isPaused() throws Exception {
-		return paused.get();
+	public boolean isPaused() {
+		return state.is(TaskStates.PAUSED);
 	}
 	
 	@Override
-	public boolean isStopped() throws Exception {
-		return stopped.get();
+	public boolean isStopped() {
+		return state.is(TaskStates.STOPPED);
 	}
 	
 	public final ObservableList<Object> getResultList() {
-		@SuppressWarnings("unchecked")
-		ObservableList<Object> castedResult = (ObservableList<Object>) result;
-		return castedResult;
+		return Utils.cast(result);
 	}
 }

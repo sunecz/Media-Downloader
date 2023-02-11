@@ -15,7 +15,9 @@ import sune.app.mediadown.util.CheckedBiFunction;
 public interface MediaGetter {
 	
 	@Deprecated
-	List<Media> getMedia(URI uri, Map<String, Object> data) throws Exception;
+	default List<Media> getMedia(URI uri, Map<String, Object> data) throws Exception {
+		return null;
+	}
 	
 	@Deprecated
 	default List<Media> getMedia(URI uri) throws Exception {
@@ -34,7 +36,6 @@ public interface MediaGetter {
 		return WorkerUpdatableTask.listVoidTaskChecked(function, () -> getMedia(uri, data));
 	}
 	
-	@Deprecated
 	default boolean isDirectMediaSupported() {
 		// Just return false, this method is not needed to be implemented
 		return false;
@@ -44,6 +45,11 @@ public interface MediaGetter {
 	default boolean isCompatibleURL(String url) {
 		// Just return false, this method is not needed to be implemented
 		return false;
+	}
+	
+	// TODO: Make non-default
+	default boolean isCompatibleURL(URI uri) {
+		return isCompatibleURL(uri.toString());
 	}
 	
 	// TODO: Make non-default
