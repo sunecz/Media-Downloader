@@ -428,4 +428,15 @@ public final class NIO {
 			throws IOException {
 		setPosixFilePermissions(path, chmodPermissions(owner, group, others));
 	}
+	
+	/** @since 00.02.08 */
+	public static final void makeExecutable(Path path) throws IOException {
+		File file = path.toFile();
+		
+		if(file.canExecute()) {
+			return;
+		}
+		
+		file.setExecutable(true, true);
+	}
 }

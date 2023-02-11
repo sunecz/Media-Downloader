@@ -309,6 +309,9 @@ public final class MediaDownloader {
 						setText("Copying new JRE...");
 						NIO.copyDir(newJREPath(), oldJREPath);
 						
+						// Make sure the new executable is actually executable
+						NIO.makeExecutable(SelfProcess.exePath());
+						
 						// Launch the previous process again
 						setText("Launching application using the new JRE...");
 						String runCommand = args.getValue("run-command");
