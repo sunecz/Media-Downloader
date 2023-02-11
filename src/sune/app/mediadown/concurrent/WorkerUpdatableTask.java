@@ -1,4 +1,4 @@
-package sune.app.mediadown.util;
+package sune.app.mediadown.concurrent;
 
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -9,7 +9,14 @@ import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import javafx.util.Callback;
+import sune.app.mediadown.util.CheckedBiConsumer;
+import sune.app.mediadown.util.CheckedBiFunction;
+import sune.app.mediadown.util.CheckedCallback;
+import sune.app.mediadown.util.CheckedConsumer;
+import sune.app.mediadown.util.CheckedSupplier;
+import sune.app.mediadown.util.Utils;
 
+@Deprecated
 public class WorkerUpdatableTask<P, R> {
 	
 	private final Worker worker;

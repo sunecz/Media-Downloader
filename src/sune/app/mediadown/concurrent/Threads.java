@@ -1,4 +1,4 @@
-package sune.app.mediadown.util;
+package sune.app.mediadown.concurrent;
 
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -7,6 +7,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+/** @since 00.02.08 */
 public final class Threads {
 	
 	private static final AtomicBoolean shuttingDown = new AtomicBoolean();
@@ -23,7 +24,6 @@ public final class Threads {
 	private Threads() {
 	}
 	
-	/** @since 00.02.07 */
 	private static final Thread addThread(Thread thread) {
 		if(!isRunning()) {
 			return null;
@@ -37,7 +37,6 @@ public final class Threads {
 		executor.execute(runnable);
 	}
 	
-	/** @since 00.02.07 */
 	public static final void executeEnsured(Runnable runnable) {
 		executorEnsured.execute(runnable);
 	}
@@ -65,22 +64,18 @@ public final class Threads {
 		return running.get() && !shuttingDown.get();
 	}
 	
-	/** @since 00.02.07 */
 	public static final int maxNumberOfThreads() {
 		return Runtime.getRuntime().availableProcessors();
 	}
 	
-	/** @since 00.02.07 */
 	public static final Thread newThread(Runnable runnable) {
 		return addThread(threadFactory.newThread(runnable));
 	}
 	
-	/** @since 00.02.07 */
 	public static final Thread newThreadUnmanaged(Runnable runnable) {
 		return threadFactory.newThread(runnable);
 	}
 	
-	/** @since 00.02.07 */
 	public static final class Pools {
 		
 		// Forbid anyone to create an instance of this class

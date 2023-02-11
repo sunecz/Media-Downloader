@@ -6,15 +6,15 @@ import java.util.Map;
 
 import javafx.scene.control.TableView;
 import sune.app.mediadown.MediaGetter;
+import sune.app.mediadown.concurrent.WorkerProxy;
+import sune.app.mediadown.concurrent.WorkerUpdatableTask;
+import sune.app.mediadown.concurrent.WorkerUpdatableTaskUtils;
 import sune.app.mediadown.gui.window.TableWindow;
 import sune.app.mediadown.media.Media;
 import sune.app.mediadown.resource.cache.GlobalCache;
 import sune.app.mediadown.util.CheckedBiFunction;
 import sune.app.mediadown.util.CheckedFunction;
 import sune.app.mediadown.util.Utils;
-import sune.app.mediadown.util.WorkerProxy;
-import sune.app.mediadown.util.WorkerUpdatableTask;
-import sune.app.mediadown.util.WorkerUpdatableTaskUtils;
 
 /** @since 00.01.27 */
 public final class MediaGetterPipelineTask extends TableWindowPipelineTaskBase<Media, MediaGetterPipelineResult> {

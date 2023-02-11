@@ -4,9 +4,9 @@ import java.util.function.BiFunction;
 
 import javafx.scene.image.Image;
 import sune.app.mediadown.Program;
+import sune.app.mediadown.concurrent.WorkerProxy;
+import sune.app.mediadown.concurrent.WorkerUpdatableTask;
 import sune.app.mediadown.engine.MediaEngine;
-import sune.app.mediadown.util.WorkerProxy;
-import sune.app.mediadown.util.WorkerUpdatableTask;
 
 /** @since 00.01.17 */
 public interface SearchEngine {

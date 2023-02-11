@@ -1,4 +1,4 @@
-package sune.app.mediadown.util;
+package sune.app.mediadown.concurrent;
 
 public class WorkerResult<T> {
 	

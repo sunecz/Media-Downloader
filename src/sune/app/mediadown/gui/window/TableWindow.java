@@ -23,6 +23,7 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.MediaGetter;
+import sune.app.mediadown.concurrent.SyncObject;
 import sune.app.mediadown.engine.MediaEngine;
 import sune.app.mediadown.event.PipelineEvent;
 import sune.app.mediadown.gui.DraggableWindow;
@@ -38,7 +39,6 @@ import sune.app.mediadown.pipeline.PipelineTask;
 import sune.app.mediadown.util.FXUtils;
 import sune.app.mediadown.util.History;
 import sune.app.mediadown.util.Pair;
-import sune.app.mediadown.util.SyncObject;
 import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Utils.Ignore;
 

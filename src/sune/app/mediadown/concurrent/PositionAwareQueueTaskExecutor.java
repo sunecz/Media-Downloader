@@ -1,10 +1,11 @@
-package sune.app.mediadown.util;
+package sune.app.mediadown.concurrent;
 
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.SimpleIntegerProperty;
+import sune.app.mediadown.util.Utils;
 
 /** @since 00.02.08 */
 public class PositionAwareQueueTaskExecutor<V> extends QueueTaskExecutor<V> {

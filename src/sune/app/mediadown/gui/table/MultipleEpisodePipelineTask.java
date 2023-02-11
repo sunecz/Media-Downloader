@@ -11,6 +11,8 @@ import java.util.stream.Collectors;
 import javafx.scene.control.TableView;
 import sune.app.mediadown.Episode;
 import sune.app.mediadown.MediaDownloader;
+import sune.app.mediadown.concurrent.WorkerProxy;
+import sune.app.mediadown.concurrent.WorkerUpdatableTask;
 import sune.app.mediadown.engine.MediaEngine;
 import sune.app.mediadown.gui.window.DownloadConfigurationWindow;
 import sune.app.mediadown.gui.window.DownloadConfigurationWindow.DownloadConfiguration;
@@ -28,8 +30,6 @@ import sune.app.mediadown.util.Choosers;
 import sune.app.mediadown.util.FXUtils;
 import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.Utils;
-import sune.app.mediadown.util.WorkerProxy;
-import sune.app.mediadown.util.WorkerUpdatableTask;
 
 /** @since 00.01.27 */
 public final class MultipleEpisodePipelineTask extends MediaEnginePipelineTaskBase<Episode, Pair<Episode, List<Media>>, ResolvedMediaPipelineResult> {

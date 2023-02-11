@@ -21,9 +21,9 @@ import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
 import sune.app.mediadown.Disposables;
+import sune.app.mediadown.concurrent.Threads;
 import sune.app.mediadown.util.FXFix;
 import sune.app.mediadown.util.FXUtils;
-import sune.app.mediadown.util.Threads;
 
 public class ProgressWindow extends Window<StackPane> {
 	

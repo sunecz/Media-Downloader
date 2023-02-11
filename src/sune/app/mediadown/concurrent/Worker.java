@@ -1,4 +1,4 @@
-package sune.app.mediadown.util;
+package sune.app.mediadown.concurrent;
 
 import java.util.Queue;
 import java.util.concurrent.Callable;
@@ -11,8 +11,10 @@ import sune.app.mediadown.HasTaskState;
 import sune.app.mediadown.InternalState;
 import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.TaskStates;
+import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Utils.Ignore;
 
+/** @since 00.02.08 */
 public final class Worker implements HasTaskState {
 	
 	private static final int STATE_SUBMITTED = 1 << 6;
@@ -161,7 +163,6 @@ public final class Worker implements HasTaskState {
 		lockSubmit.unlock();
 	}
 	
-	/** @since 00.02.08 */
 	public void stop() {
 		if(!isStarted() || isStopped() || isDone()) {
 			return;

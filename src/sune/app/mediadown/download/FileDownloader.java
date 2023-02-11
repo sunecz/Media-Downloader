@@ -17,6 +17,7 @@ import java.util.function.Predicate;
 
 import sune.app.mediadown.InternalState;
 import sune.app.mediadown.TaskStates;
+import sune.app.mediadown.concurrent.SyncObject;
 import sune.app.mediadown.event.DownloadEvent;
 import sune.app.mediadown.event.Event;
 import sune.app.mediadown.event.EventRegistry;
@@ -26,7 +27,6 @@ import sune.app.mediadown.event.tracker.TrackerManager;
 import sune.app.mediadown.exception.RejectedResponseException;
 import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.Range;
-import sune.app.mediadown.util.SyncObject;
 import sune.app.mediadown.util.Web;
 import sune.app.mediadown.util.Web.GetRequest;
 import sune.app.mediadown.util.Web.HeadRequest;

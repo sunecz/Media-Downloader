@@ -6,6 +6,9 @@ import java.util.Objects;
 
 import sune.app.mediadown.Disposables;
 import sune.app.mediadown.MediaDownloader;
+import sune.app.mediadown.concurrent.PositionAwareQueueTaskExecutor;
+import sune.app.mediadown.concurrent.PositionAwareQueueTaskExecutor.PositionAwareQueueTaskResult;
+import sune.app.mediadown.concurrent.QueueTaskExecutor.QueueTask;
 import sune.app.mediadown.download.DownloadConfiguration;
 import sune.app.mediadown.download.DownloadResult;
 import sune.app.mediadown.download.Downloader;
@@ -13,10 +16,7 @@ import sune.app.mediadown.download.Downloaders;
 import sune.app.mediadown.download.MediaDownloadConfiguration;
 import sune.app.mediadown.event.tracker.PipelineStates;
 import sune.app.mediadown.media.Media;
-import sune.app.mediadown.util.PositionAwareQueueTaskExecutor;
-import sune.app.mediadown.util.PositionAwareQueueTaskExecutor.PositionAwareQueueTaskResult;
 import sune.app.mediadown.util.QueueContext;
-import sune.app.mediadown.util.QueueTaskExecutor.QueueTask;
 
 /** @since 00.01.26 */
 public final class DownloadManager implements QueueContext {

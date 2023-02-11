@@ -1,4 +1,4 @@
-package sune.app.mediadown.util;
+package sune.app.mediadown.concurrent;
 
 /**
  * General object for use when basic synchronization is needed.
@@ -6,6 +6,8 @@ package sune.app.mediadown.util;
  * @author Sune
  */
 public final class SyncObject {
+	
+	// TODO: Refactor
 	
 	private Throwable exception;
 	

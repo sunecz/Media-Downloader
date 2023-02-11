@@ -8,6 +8,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import sune.app.mediadown.HasTaskState;
 import sune.app.mediadown.InternalState;
 import sune.app.mediadown.TaskStates;
+import sune.app.mediadown.concurrent.SyncObject;
+import sune.app.mediadown.concurrent.Threads;
 import sune.app.mediadown.event.Event;
 import sune.app.mediadown.event.EventBindable;
 import sune.app.mediadown.event.EventRegistry;
@@ -17,8 +19,6 @@ import sune.app.mediadown.event.PipelineEvent;
 import sune.app.mediadown.util.CheckedConsumer;
 import sune.app.mediadown.util.History;
 import sune.app.mediadown.util.Pair;
-import sune.app.mediadown.util.SyncObject;
-import sune.app.mediadown.util.Threads;
 
 /** @since 00.01.26 */
 public final class Pipeline implements EventBindable<EventType>, HasTaskState {

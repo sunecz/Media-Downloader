@@ -8,6 +8,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import sune.app.mediadown.MediaDownloader;
+import sune.app.mediadown.concurrent.CounterLock;
+import sune.app.mediadown.concurrent.SyncObject;
+import sune.app.mediadown.concurrent.WorkerProxy;
+import sune.app.mediadown.concurrent.WorkerUpdatableTask;
 import sune.app.mediadown.gui.ProgressWindow;
 import sune.app.mediadown.gui.ProgressWindow.ProgressAction;
 import sune.app.mediadown.gui.ProgressWindow.ProgressContext;
@@ -17,12 +21,8 @@ import sune.app.mediadown.pipeline.PipelineResult;
 import sune.app.mediadown.pipeline.PipelineTask;
 import sune.app.mediadown.util.CheckedBiFunction;
 import sune.app.mediadown.util.CheckedFunction;
-import sune.app.mediadown.util.CounterLock;
 import sune.app.mediadown.util.FXUtils;
-import sune.app.mediadown.util.SyncObject;
 import sune.app.mediadown.util.Utils.Ignore;
-import sune.app.mediadown.util.WorkerProxy;
-import sune.app.mediadown.util.WorkerUpdatableTask;
 
 /** @since 00.02.07 */
 public abstract class ProgressPipelineTaskBase<T, R extends PipelineResult<?>, W extends Window<?>>

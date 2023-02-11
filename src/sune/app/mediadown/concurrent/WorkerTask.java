@@ -1,8 +1,11 @@
-package sune.app.mediadown.util;
+package sune.app.mediadown.concurrent;
 
 import java.util.concurrent.Callable;
 import java.util.function.Consumer;
 
+import sune.app.mediadown.util.Utils;
+
+@Deprecated
 public class WorkerTask<T> {
 	
 	private final Worker worker;

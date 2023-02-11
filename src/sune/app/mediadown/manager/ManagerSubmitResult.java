@@ -2,9 +2,9 @@ package sune.app.mediadown.manager;
 
 import java.util.Objects;
 
+import sune.app.mediadown.concurrent.QueueTaskExecutor.QueueTaskResult;
 import sune.app.mediadown.util.Cancellable;
 import sune.app.mediadown.util.QueueContext;
-import sune.app.mediadown.util.QueueTaskExecutor.QueueTaskResult;
 
 /** @since 00.01.26 */
 public class ManagerSubmitResult<A, B> implements QueueTaskResult<B>, Cancellable {

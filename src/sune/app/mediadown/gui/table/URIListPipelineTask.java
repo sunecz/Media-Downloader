@@ -7,14 +7,14 @@ import java.util.Map;
 
 import sune.app.mediadown.MediaGetter;
 import sune.app.mediadown.MediaGetters;
+import sune.app.mediadown.concurrent.WorkerProxy;
+import sune.app.mediadown.concurrent.WorkerUpdatableTask;
 import sune.app.mediadown.gui.Window;
 import sune.app.mediadown.media.Media;
 import sune.app.mediadown.resource.cache.GlobalCache;
 import sune.app.mediadown.util.CheckedBiFunction;
 import sune.app.mediadown.util.CheckedFunction;
 import sune.app.mediadown.util.Pair;
-import sune.app.mediadown.util.WorkerProxy;
-import sune.app.mediadown.util.WorkerUpdatableTask;
 
 /** @since 00.02.07 */
 public final class URIListPipelineTask

@@ -4,14 +4,14 @@ import java.util.List;
 
 import javafx.scene.control.TableView;
 import sune.app.mediadown.MediaGetter;
+import sune.app.mediadown.concurrent.WorkerProxy;
+import sune.app.mediadown.concurrent.WorkerUpdatableTask;
 import sune.app.mediadown.engine.MediaEngine;
 import sune.app.mediadown.gui.window.TableWindow;
 import sune.app.mediadown.media.Media;
 import sune.app.mediadown.util.CheckedBiFunction;
 import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.Utils;
-import sune.app.mediadown.util.WorkerProxy;
-import sune.app.mediadown.util.WorkerUpdatableTask;
 
 /** @since 00.01.27 */
 public final class MediaOnlyPipelineTask extends MediaEnginePipelineTaskBase<Media, Pair<MediaGetter, Media>, ResolvedMediaPipelineResult> {

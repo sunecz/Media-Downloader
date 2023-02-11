@@ -5,6 +5,9 @@ import java.util.Objects;
 
 import sune.app.mediadown.Disposables;
 import sune.app.mediadown.MediaDownloader;
+import sune.app.mediadown.concurrent.PositionAwareQueueTaskExecutor;
+import sune.app.mediadown.concurrent.PositionAwareQueueTaskExecutor.PositionAwareQueueTaskResult;
+import sune.app.mediadown.concurrent.QueueTaskExecutor.QueueTask;
 import sune.app.mediadown.convert.ConversionMedia;
 import sune.app.mediadown.convert.Converter;
 import sune.app.mediadown.event.tracker.PipelineStates;
@@ -14,10 +17,7 @@ import sune.app.mediadown.ffmpeg.FFmpeg;
 import sune.app.mediadown.ffmpeg.FFmpegConverter;
 import sune.app.mediadown.gui.table.ResolvedMedia;
 import sune.app.mediadown.util.Metadata;
-import sune.app.mediadown.util.PositionAwareQueueTaskExecutor;
-import sune.app.mediadown.util.PositionAwareQueueTaskExecutor.PositionAwareQueueTaskResult;
 import sune.app.mediadown.util.QueueContext;
-import sune.app.mediadown.util.QueueTaskExecutor.QueueTask;
 
 /** @since 00.01.26 */
 public final class ConversionManager implements QueueContext {

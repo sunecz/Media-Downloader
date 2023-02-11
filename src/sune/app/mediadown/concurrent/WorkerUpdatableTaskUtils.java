@@ -1,11 +1,14 @@
-package sune.app.mediadown.util;
+package sune.app.mediadown.concurrent;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import sune.app.mediadown.resource.cache.Cache;
+import sune.app.mediadown.util.CheckedBiFunction;
+import sune.app.mediadown.util.CheckedFunction;
 
 /** @since 00.02.07 */
+@Deprecated
 public final class WorkerUpdatableTaskUtils {
 	
 	// Forbid anyone to create an instance of this class

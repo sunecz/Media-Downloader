@@ -24,6 +24,7 @@ import javafx.stage.Stage;
 import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.MediaGetter;
 import sune.app.mediadown.MediaGetters;
+import sune.app.mediadown.concurrent.Threads;
 import sune.app.mediadown.gui.Dialog;
 import sune.app.mediadown.gui.DraggableWindow;
 import sune.app.mediadown.gui.Window;
@@ -41,7 +42,6 @@ import sune.app.mediadown.resource.ResourceRegistry;
 import sune.app.mediadown.util.ClipboardUtils;
 import sune.app.mediadown.util.FXUtils;
 import sune.app.mediadown.util.Regex;
-import sune.app.mediadown.util.Threads;
 import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Utils.Ignore;
 

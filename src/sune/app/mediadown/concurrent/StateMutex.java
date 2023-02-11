@@ -1,15 +1,17 @@
-package sune.app.mediadown.util;
+package sune.app.mediadown.concurrent;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-/** @since 00.02.04 */
-public class StateMutex {
+/** @since 00.02.08 */
+public final class StateMutex {
 	
-	protected final AtomicReference<Throwable> exception = new AtomicReference<>();
-	protected final AtomicBoolean unlocked = new AtomicBoolean(false);
+	// TODO: Make synchronized-free
 	
-	protected final boolean await(boolean reset) {
+	private final AtomicReference<Throwable> exception = new AtomicReference<>();
+	private final AtomicBoolean unlocked = new AtomicBoolean(false);
+	
+	private final boolean await(boolean reset) {
 		synchronized(this) {
 			boolean success = unlocked.get();
 			
@@ -52,25 +54,14 @@ public class StateMutex {
 		}
 	}
 	
-	public Throwable getException() {
-		return exception();
-	}
-	
-	public Throwable getExceptionAndReset() {
-		return exceptionAndReset();
-	}
-	
-	/** @since 00.02.08 */
 	public Throwable exception() {
 		return exception.get();
 	}
 	
-	/** @since 00.02.08 */
 	public Throwable exceptionAndReset() {
 		return exception.getAndSet(null);
 	}
 	
-	/** @since 00.02.08 */
 	public boolean isUnlocked() {
 		synchronized(this) {
 			return unlocked.get();

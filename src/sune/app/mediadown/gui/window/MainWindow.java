@@ -45,6 +45,7 @@ import javafx.stage.WindowEvent;
 import sune.app.mediadown.Disposables;
 import sune.app.mediadown.Download;
 import sune.app.mediadown.MediaDownloader;
+import sune.app.mediadown.concurrent.Threads;
 import sune.app.mediadown.engine.MediaEngine;
 import sune.app.mediadown.engine.MediaEngines;
 import sune.app.mediadown.event.ConversionEvent;
@@ -97,7 +98,6 @@ import sune.app.mediadown.util.ClipboardUtils;
 import sune.app.mediadown.util.FXUtils;
 import sune.app.mediadown.util.MathUtils;
 import sune.app.mediadown.util.Pair;
-import sune.app.mediadown.util.Threads;
 import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Utils.Ignore;
 

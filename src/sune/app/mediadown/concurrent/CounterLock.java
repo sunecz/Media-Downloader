@@ -1,7 +1,8 @@
-package sune.app.mediadown.util;
+package sune.app.mediadown.concurrent;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+/** @since 00.02.08 */
 public final class CounterLock {
 	
 	private final AtomicInteger counter;

@@ -2,6 +2,7 @@ package sune.app.mediadown.pipeline;
 
 import java.util.List;
 
+import sune.app.mediadown.concurrent.PositionAwareQueueTaskExecutor.PositionAwareQueueTaskResult;
 import sune.app.mediadown.convert.ConversionMedia;
 import sune.app.mediadown.convert.Converter;
 import sune.app.mediadown.event.ConversionEvent;
@@ -13,7 +14,6 @@ import sune.app.mediadown.manager.ConversionManager;
 import sune.app.mediadown.manager.ManagerSubmitResult;
 import sune.app.mediadown.util.Metadata;
 import sune.app.mediadown.util.Pair;
-import sune.app.mediadown.util.PositionAwareQueueTaskExecutor.PositionAwareQueueTaskResult;
 import sune.app.mediadown.util.QueueContext;
 import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Utils.Ignore;

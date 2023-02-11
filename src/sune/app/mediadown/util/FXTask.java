@@ -3,6 +3,8 @@ package sune.app.mediadown.util;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicReference;
 
+import sune.app.mediadown.concurrent.SyncObject;
+
 public final class FXTask<T> implements Runnable {
 	
 	private static final Object NO_RESULT = new Object();

@@ -3,6 +3,7 @@ package sune.app.mediadown.pipeline;
 import java.util.Objects;
 
 import sune.app.mediadown.Download;
+import sune.app.mediadown.concurrent.PositionAwareQueueTaskExecutor.PositionAwareQueueTaskResult;
 import sune.app.mediadown.download.DownloadResult;
 import sune.app.mediadown.event.DownloadEvent;
 import sune.app.mediadown.event.EventRegistry;
@@ -11,7 +12,6 @@ import sune.app.mediadown.event.QueueEvent;
 import sune.app.mediadown.manager.DownloadManager;
 import sune.app.mediadown.manager.PositionAwareManagerSubmitResult;
 import sune.app.mediadown.util.Pair;
-import sune.app.mediadown.util.PositionAwareQueueTaskExecutor.PositionAwareQueueTaskResult;
 import sune.app.mediadown.util.QueueContext;
 import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Utils.Ignore;

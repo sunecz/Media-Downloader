@@ -5,10 +5,10 @@ import java.util.List;
 import java.util.Map;
 
 import javafx.scene.image.Image;
+import sune.app.mediadown.concurrent.WorkerProxy;
+import sune.app.mediadown.concurrent.WorkerUpdatableTask;
 import sune.app.mediadown.media.Media;
 import sune.app.mediadown.util.CheckedBiFunction;
-import sune.app.mediadown.util.WorkerProxy;
-import sune.app.mediadown.util.WorkerUpdatableTask;
 
 /** @since 00.02.05 */
 public interface MediaGetter {

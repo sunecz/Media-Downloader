@@ -18,6 +18,7 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import sune.app.mediadown.MediaDownloader;
+import sune.app.mediadown.concurrent.Worker;
 import sune.app.mediadown.download.Downloader;
 import sune.app.mediadown.download.Downloaders;
 import sune.app.mediadown.engine.MediaEngine;
@@ -36,7 +37,6 @@ import sune.app.mediadown.server.Servers;
 import sune.app.mediadown.update.Version;
 import sune.app.mediadown.util.FXUtils;
 import sune.app.mediadown.util.Utils;
-import sune.app.mediadown.util.Worker;
 
 public final class InformationItems {
 	

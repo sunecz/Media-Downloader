@@ -1,6 +1,6 @@
 package sune.app.mediadown.manager;
 
-import sune.app.mediadown.util.PositionAwareQueueTaskExecutor.PositionAwareQueueTaskResult;
+import sune.app.mediadown.concurrent.PositionAwareQueueTaskExecutor.PositionAwareQueueTaskResult;
 import sune.app.mediadown.util.QueueContext;
 import sune.app.mediadown.util.Utils;
 

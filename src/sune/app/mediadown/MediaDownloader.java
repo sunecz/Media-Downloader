@@ -33,6 +33,7 @@ import java.util.stream.Collectors;
 
 import javafx.scene.image.Image;
 import sune.app.mediadown.MediaDownloader.Versions.VersionEntryAccessor;
+import sune.app.mediadown.concurrent.Threads;
 import sune.app.mediadown.configuration.ApplicationConfiguration;
 import sune.app.mediadown.configuration.ApplicationConfigurationAccessor;
 import sune.app.mediadown.configuration.ApplicationConfigurationAccessor.UsePreReleaseVersions;
@@ -110,7 +111,6 @@ import sune.app.mediadown.util.Property;
 import sune.app.mediadown.util.Reflection2;
 import sune.app.mediadown.util.Reflection3;
 import sune.app.mediadown.util.SelfProcess;
-import sune.app.mediadown.util.Threads;
 import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Utils.Ignore;
 import sune.app.mediadown.util.Web;

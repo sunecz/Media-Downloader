@@ -3,10 +3,10 @@ package sune.app.mediadown.pipeline;
 import java.nio.file.Path;
 import java.util.Objects;
 
+import sune.app.mediadown.concurrent.StateMutex;
 import sune.app.mediadown.download.DownloadConfiguration;
 import sune.app.mediadown.download.MediaDownloadConfiguration;
 import sune.app.mediadown.media.Media;
-import sune.app.mediadown.util.StateMutex;
 
 /** @since 00.02.08 */
 public class PipelineMedia {

@@ -18,6 +18,7 @@ module sune.app.mediadown {
 	requires transitive org.jsoup;
 	// Exports
 	exports sune.app.mediadown;
+	exports sune.app.mediadown.concurrent;
 	exports sune.app.mediadown.configuration;
 	exports sune.app.mediadown.convert;
 	exports sune.app.mediadown.download;
