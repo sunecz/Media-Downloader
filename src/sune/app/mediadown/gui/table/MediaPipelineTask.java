@@ -4,12 +4,11 @@ import java.util.List;
 
 import javafx.scene.control.TableView;
 import sune.app.mediadown.Episode;
-import sune.app.mediadown.concurrent.WorkerProxy;
+import sune.app.mediadown.concurrent.ListTask;
 import sune.app.mediadown.concurrent.WorkerUpdatableTask;
 import sune.app.mediadown.engine.MediaEngine;
 import sune.app.mediadown.gui.window.TableWindow;
 import sune.app.mediadown.media.Media;
-import sune.app.mediadown.util.CheckedBiFunction;
 import sune.app.mediadown.util.Pair;
 
 /** @since 00.01.27 */
@@ -23,11 +22,11 @@ public final class MediaPipelineTask extends MediaEnginePipelineTaskBase<Media, 
 	}
 	
 	@Override
-	protected final CheckedBiFunction<Media, CheckedBiFunction<WorkerProxy, Pair<Episode, Media>, Boolean>,
-			WorkerUpdatableTask<CheckedBiFunction<WorkerProxy, Pair<Episode, Media>, Boolean>, Void>> getFunction(MediaEngine engine) {
-		return ((media, function) -> WorkerUpdatableTask.voidTaskChecked(null, (proxy, value) -> {
-			function.apply(proxy, new Pair<>(episode, media));
-		}));
+	protected final ListTask<Pair<Episode, Media>> getFunction(Media item, MediaEngine engine) {
+		return ListTask.of((task) -> {
+			// TODO: What?
+			task.add(new Pair<>(episode, item));
+		});
 	}
 	
 	@Override

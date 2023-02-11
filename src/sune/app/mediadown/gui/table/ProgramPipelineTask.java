@@ -9,15 +9,15 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import sune.app.mediadown.Episode;
 import sune.app.mediadown.Program;
-import sune.app.mediadown.concurrent.WorkerProxy;
-import sune.app.mediadown.concurrent.WorkerUpdatableTask;
-import sune.app.mediadown.concurrent.WorkerUpdatableTaskUtils;
+import sune.app.mediadown.concurrent.ListTask;
+import sune.app.mediadown.concurrent.ListTask.ListTaskEvent;
 import sune.app.mediadown.engine.MediaEngine;
 import sune.app.mediadown.gui.window.TableWindow;
 import sune.app.mediadown.language.Translation;
+import sune.app.mediadown.resource.cache.Cache;
 import sune.app.mediadown.resource.cache.GlobalCache;
-import sune.app.mediadown.util.CheckedBiFunction;
 import sune.app.mediadown.util.Utils;
+import sune.app.mediadown.util.Utils.Ignore;
 
 /** @since 00.01.27 */
 public final class ProgramPipelineTask extends MediaEnginePipelineTaskBase<Program, Episode, ProgramPipelineResult> {
@@ -27,10 +27,23 @@ public final class ProgramPipelineTask extends MediaEnginePipelineTaskBase<Progr
 	}
 	
 	@Override
-	protected final CheckedBiFunction<Program, CheckedBiFunction<WorkerProxy, Episode, Boolean>,
-			WorkerUpdatableTask<CheckedBiFunction<WorkerProxy, Episode, Boolean>, Void>> getFunction(MediaEngine engine) {
-		return ((program, f) -> WorkerUpdatableTaskUtils.cachedListBiTask(GlobalCache.ofEpisodes(), program,
-		                                                                  f, engine::getEpisodes, program));
+	protected final ListTask<Episode> getFunction(Program item, MediaEngine engine) {
+		return ListTask.of((task) -> {
+			// TODO: Can be abstracted
+			Cache cache = GlobalCache.ofEpisodes();
+			Program key = item;
+			
+			if(cache.has(key)) {
+				task.add(cache.getChecked(key));
+			} else {
+				cache.setChecked(key, () -> {
+					ListTask<Episode> t = engine._getEpisodes(item);
+					t.addEventListener(ListTaskEvent.ITEM_ADDED, (p) -> Ignore.callVoid(() -> task.add(Utils.cast(p.b))));
+					t.startAndWait();
+					return t.list();
+				});
+			}
+		});
 	}
 	
 	@Override

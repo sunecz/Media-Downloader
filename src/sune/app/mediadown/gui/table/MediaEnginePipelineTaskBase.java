@@ -2,13 +2,13 @@ package sune.app.mediadown.gui.table;
 
 import java.util.List;
 
-import sune.app.mediadown.concurrent.WorkerProxy;
-import sune.app.mediadown.concurrent.WorkerUpdatableTask;
+import sune.app.mediadown.concurrent.ListTask;
+import sune.app.mediadown.concurrent.ListTask.ListTaskEvent;
 import sune.app.mediadown.engine.MediaEngine;
 import sune.app.mediadown.gui.window.TableWindow;
 import sune.app.mediadown.pipeline.PipelineResult;
-import sune.app.mediadown.util.CheckedBiFunction;
-import sune.app.mediadown.util.CheckedFunction;
+import sune.app.mediadown.util.Utils;
+import sune.app.mediadown.util.Utils.Ignore;
 
 /** @since 00.01.27 */
 public abstract class MediaEnginePipelineTaskBase<A, B, R extends PipelineResult<?>>
@@ -23,20 +23,18 @@ public abstract class MediaEnginePipelineTaskBase<A, B, R extends PipelineResult
 		this.items = items;
 	}
 	
-	protected abstract CheckedBiFunction<A, CheckedBiFunction<WorkerProxy, B, Boolean>,
-		WorkerUpdatableTask<CheckedBiFunction<WorkerProxy, B, Boolean>, Void>> getFunction(MediaEngine engine);
+	protected abstract ListTask<B> getFunction(A item, MediaEngine engine);
 	protected abstract R getResult(TableWindow window, MediaEngine engine, List<B> result);
 	
 	@Override
-	protected CheckedFunction<CheckedBiFunction<WorkerProxy, B, Boolean>,
-			WorkerUpdatableTask<CheckedBiFunction<WorkerProxy, B, Boolean>, Void>> getTask() {
-		return ((function) -> WorkerUpdatableTask.voidTaskChecked(null, (proxy, value) -> {
+	protected ListTask<B> getTask() {
+		return ListTask.of((task) -> {
 			for(A item : items) {
-				if(!running.get() || proxy.isCanceled())
-					break;
-				getFunction(engine).apply(item, function).startAndWaitChecked();
+				ListTask<B> t = getFunction(item, engine);
+				t.addEventListener(ListTaskEvent.ITEM_ADDED, (p) -> Ignore.callVoid(() -> task.add(Utils.cast(p.b))));
+				t.startAndWait();
 			}
-		}));
+		});
 	}
 	
 	@Override

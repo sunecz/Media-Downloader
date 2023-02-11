@@ -7,13 +7,10 @@ import java.util.Map;
 
 import sune.app.mediadown.MediaGetter;
 import sune.app.mediadown.MediaGetters;
-import sune.app.mediadown.concurrent.WorkerProxy;
-import sune.app.mediadown.concurrent.WorkerUpdatableTask;
+import sune.app.mediadown.concurrent.ListTask;
 import sune.app.mediadown.gui.Window;
 import sune.app.mediadown.media.Media;
 import sune.app.mediadown.resource.cache.GlobalCache;
-import sune.app.mediadown.util.CheckedBiFunction;
-import sune.app.mediadown.util.CheckedFunction;
 import sune.app.mediadown.util.Pair;
 
 /** @since 00.02.07 */
@@ -29,31 +26,29 @@ public final class URIListPipelineTask
 	}
 	
 	@Override
-	protected final CheckedFunction<CheckedBiFunction<WorkerProxy, Pair<MediaGetter, List<Media>>, Boolean>,
-			WorkerUpdatableTask<CheckedBiFunction<WorkerProxy, Pair<MediaGetter, List<Media>>, Boolean>, Void>> getTask() {
-		return ((function) -> WorkerUpdatableTask.voidTaskChecked(null, (proxy, value) -> {
+	protected final ListTask<Pair<MediaGetter, List<Media>>> getTask() {
+		return ListTask.of((task) -> {
 			errors.clear();
 			
 			for(URI uri : uris) {
-				if(!running.get() || proxy.isCanceled())
-					break;
-				
 				MediaGetter getter = MediaGetters.fromURI(uri);
+				
 				if(getter != null) {
 					List<Media> list = GlobalCache.ofURIs().getChecked(uri, () -> {
-						List<Media> l = new ArrayList<>();
-						getter.getMedia(uri, Map.of(), (p, media) -> l.add(media))
-						      .startAndWaitChecked();
-						return l;
+						// TODO: Maybe allow chaining?
+						ListTask<Media> t = getter._getMedia(uri, Map.of());
+						t.startAndWait();
+						return t.list();
 					});
 					
-					if(!function.apply(proxy, new Pair<>(getter, list)))
+					if(!task.add(new Pair<>(getter, list))) {
 						break;
+					}
 				} else {
 					errors.add(uri);
 				}
 			}
-		}));
+		});
 	}
 	
 	@Override

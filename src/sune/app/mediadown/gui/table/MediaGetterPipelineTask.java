@@ -6,15 +6,14 @@ import java.util.Map;
 
 import javafx.scene.control.TableView;
 import sune.app.mediadown.MediaGetter;
-import sune.app.mediadown.concurrent.WorkerProxy;
-import sune.app.mediadown.concurrent.WorkerUpdatableTask;
-import sune.app.mediadown.concurrent.WorkerUpdatableTaskUtils;
+import sune.app.mediadown.concurrent.ListTask;
+import sune.app.mediadown.concurrent.ListTask.ListTaskEvent;
 import sune.app.mediadown.gui.window.TableWindow;
 import sune.app.mediadown.media.Media;
+import sune.app.mediadown.resource.cache.Cache;
 import sune.app.mediadown.resource.cache.GlobalCache;
-import sune.app.mediadown.util.CheckedBiFunction;
-import sune.app.mediadown.util.CheckedFunction;
 import sune.app.mediadown.util.Utils;
+import sune.app.mediadown.util.Utils.Ignore;
 
 /** @since 00.01.27 */
 public final class MediaGetterPipelineTask extends TableWindowPipelineTaskBase<Media, MediaGetterPipelineResult> {
@@ -30,11 +29,23 @@ public final class MediaGetterPipelineTask extends TableWindowPipelineTaskBase<M
 	}
 	
 	@Override
-	protected final CheckedFunction<CheckedBiFunction<WorkerProxy, Media, Boolean>,
-			WorkerUpdatableTask<CheckedBiFunction<WorkerProxy, Media, Boolean>, Void>> getTask() {
-		return ((f) -> WorkerUpdatableTaskUtils.cachedListBiTask(GlobalCache.ofURIs(), uri, f,
-		                                                         (u, a) -> getter.getMedia(u, Map.of(), a),
-		                                                         uri));
+	protected final ListTask<Media> getTask() {
+		return ListTask.of((task) -> {
+			// TODO: Can be abstracted
+			Cache cache = GlobalCache.ofURIs();
+			URI key = uri;
+			
+			if(cache.has(key)) {
+				task.add(cache.getChecked(key));
+			} else {
+				cache.setChecked(key, () -> {
+					ListTask<Media> t = getter._getMedia(key, Map.of());
+					t.addEventListener(ListTaskEvent.ITEM_ADDED, (p) -> Ignore.callVoid(() -> task.add(Utils.cast(p.b))));
+					t.startAndWait();
+					return t.list();
+				});
+			}
+		});
 	}
 	
 	@Override

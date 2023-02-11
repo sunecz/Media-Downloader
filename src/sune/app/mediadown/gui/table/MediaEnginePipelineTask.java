@@ -9,16 +9,15 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumn.SortType;
 import javafx.scene.control.TableView;
 import sune.app.mediadown.Program;
-import sune.app.mediadown.concurrent.WorkerProxy;
-import sune.app.mediadown.concurrent.WorkerUpdatableTask;
-import sune.app.mediadown.concurrent.WorkerUpdatableTaskUtils;
+import sune.app.mediadown.concurrent.ListTask;
+import sune.app.mediadown.concurrent.ListTask.ListTaskEvent;
 import sune.app.mediadown.engine.MediaEngine;
 import sune.app.mediadown.gui.window.TableWindow;
 import sune.app.mediadown.language.Translation;
+import sune.app.mediadown.resource.cache.Cache;
 import sune.app.mediadown.resource.cache.GlobalCache;
-import sune.app.mediadown.util.CheckedBiFunction;
-import sune.app.mediadown.util.CheckedFunction;
 import sune.app.mediadown.util.Utils;
+import sune.app.mediadown.util.Utils.Ignore;
 
 /** @since 00.01.27 */
 public final class MediaEnginePipelineTask extends TableWindowPipelineTaskBase<Program, MediaEnginePipelineResult> {
@@ -31,10 +30,23 @@ public final class MediaEnginePipelineTask extends TableWindowPipelineTaskBase<P
 	}
 	
 	@Override
-	protected final CheckedFunction<CheckedBiFunction<WorkerProxy, Program, Boolean>,
-			WorkerUpdatableTask<CheckedBiFunction<WorkerProxy, Program, Boolean>, Void>> getTask() {
-		return ((f) -> WorkerUpdatableTaskUtils.cachedListTask(GlobalCache.ofPrograms(), engine.getClass(),
-		                                                       f, engine::getPrograms));
+	protected final ListTask<Program> getTask() {
+		return ListTask.of((task) -> {
+			// TODO: Can be abstracted
+			Cache cache = GlobalCache.ofPrograms();
+			Class<?> key = engine.getClass();
+			
+			if(cache.has(key)) {
+				task.add(cache.getChecked(key));
+			} else {
+				cache.setChecked(key, () -> {
+					ListTask<Program> t = engine._getPrograms();
+					t.addEventListener(ListTaskEvent.ITEM_ADDED, (p) -> Ignore.callVoid(() -> task.add(Utils.cast(p.b))));
+					t.startAndWait();
+					return t.list();
+				});
+			}
+		});
 	}
 	
 	@Override

@@ -11,8 +11,7 @@ import java.util.stream.Collectors;
 import javafx.scene.control.TableView;
 import sune.app.mediadown.Episode;
 import sune.app.mediadown.MediaDownloader;
-import sune.app.mediadown.concurrent.WorkerProxy;
-import sune.app.mediadown.concurrent.WorkerUpdatableTask;
+import sune.app.mediadown.concurrent.ListTask;
 import sune.app.mediadown.engine.MediaEngine;
 import sune.app.mediadown.gui.window.DownloadConfigurationWindow;
 import sune.app.mediadown.gui.window.DownloadConfigurationWindow.DownloadConfiguration;
@@ -25,7 +24,6 @@ import sune.app.mediadown.media.MediaFilter;
 import sune.app.mediadown.media.MediaFormat;
 import sune.app.mediadown.media.MediaLanguage;
 import sune.app.mediadown.resource.cache.GlobalCache;
-import sune.app.mediadown.util.CheckedBiFunction;
 import sune.app.mediadown.util.Choosers;
 import sune.app.mediadown.util.FXUtils;
 import sune.app.mediadown.util.Pair;
@@ -39,12 +37,11 @@ public final class MultipleEpisodePipelineTask extends MediaEnginePipelineTaskBa
 	}
 	
 	@Override
-	protected final CheckedBiFunction<Episode, CheckedBiFunction<WorkerProxy, Pair<Episode, List<Media>>, Boolean>,
-			WorkerUpdatableTask<CheckedBiFunction<WorkerProxy, Pair<Episode, List<Media>>, Boolean>, Void>> getFunction(MediaEngine engine) {
-		return ((episode, function) -> WorkerUpdatableTask.voidTaskChecked(null, (proxy, value) -> {
-			List<Media> media = GlobalCache.ofMedia().getChecked(episode, () -> engine.getMedia(episode));
-			function.apply(proxy, new Pair<>(episode, media));
-		}));
+	protected final ListTask<Pair<Episode, List<Media>>> getFunction(Episode item, MediaEngine engine) {
+		return ListTask.of((task) -> {
+			List<Media> media = GlobalCache.ofMedia().getChecked(item, () -> engine.getMedia(item));
+			task.add(new Pair<>(item, media));
+		});
 	}
 	
 	@Override

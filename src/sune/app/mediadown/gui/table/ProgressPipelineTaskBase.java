@@ -9,9 +9,9 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.concurrent.CounterLock;
+import sune.app.mediadown.concurrent.ListTask;
+import sune.app.mediadown.concurrent.ListTask.ListTaskEvent;
 import sune.app.mediadown.concurrent.SyncObject;
-import sune.app.mediadown.concurrent.WorkerProxy;
-import sune.app.mediadown.concurrent.WorkerUpdatableTask;
 import sune.app.mediadown.gui.ProgressWindow;
 import sune.app.mediadown.gui.ProgressWindow.ProgressAction;
 import sune.app.mediadown.gui.ProgressWindow.ProgressContext;
@@ -19,14 +19,15 @@ import sune.app.mediadown.gui.Window;
 import sune.app.mediadown.pipeline.Pipeline;
 import sune.app.mediadown.pipeline.PipelineResult;
 import sune.app.mediadown.pipeline.PipelineTask;
-import sune.app.mediadown.util.CheckedBiFunction;
-import sune.app.mediadown.util.CheckedFunction;
 import sune.app.mediadown.util.FXUtils;
+import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Utils.Ignore;
 
 /** @since 00.02.07 */
 public abstract class ProgressPipelineTaskBase<T, R extends PipelineResult<?>, W extends Window<?>>
 		implements PipelineTask<R> {
+	
+	// TODO: Clean up
 	
 	protected final W window;
 	
@@ -41,6 +42,8 @@ public abstract class ProgressPipelineTaskBase<T, R extends PipelineResult<?>, W
 	protected final Set<T> resultSet = new HashSet<>();
 	protected final ObservableList<T> result = FXCollections.observableArrayList();
 	
+	private volatile ListTask<T> task;
+	
 	public ProgressPipelineTaskBase(W window) {
 		this.window = window;
 	}
@@ -51,8 +54,7 @@ public abstract class ProgressPipelineTaskBase<T, R extends PipelineResult<?>, W
 		ProgressWindow.submitAction(window, action);
 	}
 	
-	protected abstract CheckedFunction<CheckedBiFunction<WorkerProxy, T, Boolean>,
-		WorkerUpdatableTask<CheckedBiFunction<WorkerProxy, T, Boolean>, Void>> getTask();
+	protected abstract ListTask<T> getTask();
 	protected abstract R getResult(W window, List<T> result);
 	protected abstract String getProgressText(W window);
 	
@@ -81,15 +83,10 @@ public abstract class ProgressPipelineTaskBase<T, R extends PipelineResult<?>, W
 					context.setProgress(ProgressContext.PROGRESS_INDETERMINATE);
 					context.setText(getProgressText(window));
 					
-					getTask().apply((proxy, item) -> {
-						if(paused.get()) {
-							lockPause.await();
-						}
-						
-						if(stopped.get()) {
-							proxy.cancel();
-							return false;
-						}
+					task = getTask();
+					
+					task.addEventListener(ListTaskEvent.ITEM_ADDED, (pair) -> {
+						T item = Utils.cast(pair.b);
 						
 						FXUtils.thread(() -> {
 							// Remove duplicates while adding the items
@@ -97,15 +94,17 @@ public abstract class ProgressPipelineTaskBase<T, R extends PipelineResult<?>, W
 								result.add(item);
 								resultSet.add(item);
 							}
+							
 							lock.decrement();
 						});
 						
 						lock.increment();
-						return true;
-					}).startAndWaitChecked();
+					});
+					
+					task.startAndWait();
 					
 					// Check whether the task was cancelled
-					if(stopped.get()) {
+					if(task.isStopped()) {
 						onCancelled();
 					}
 				} catch(Exception ex) {
@@ -122,8 +121,10 @@ public abstract class ProgressPipelineTaskBase<T, R extends PipelineResult<?>, W
 				Ignore.callVoid(ProgressPipelineTaskBase.this::stop);
 			}
 		});
+		
 		lockResult.await();
 		lock.await();
+		
 		return getResult(window, result);
 	}
 	
