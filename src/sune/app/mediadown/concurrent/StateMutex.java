@@ -6,8 +6,6 @@ import java.util.concurrent.atomic.AtomicReference;
 /** @since 00.02.08 */
 public final class StateMutex {
 	
-	// TODO: Make synchronized-free
-	
 	private final AtomicReference<Throwable> exception = new AtomicReference<>();
 	private final AtomicBoolean unlocked = new AtomicBoolean(false);
 	
@@ -49,9 +47,7 @@ public final class StateMutex {
 	}
 	
 	public void reset() {
-		synchronized(this) {
-			unlocked.set(false);
-		}
+		unlocked.set(false);
 	}
 	
 	public Throwable exception() {
@@ -63,8 +59,6 @@ public final class StateMutex {
 	}
 	
 	public boolean isUnlocked() {
-		synchronized(this) {
-			return unlocked.get();
-		}
+		return unlocked.get();
 	}
 }
