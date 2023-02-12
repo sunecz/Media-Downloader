@@ -1,6 +1,7 @@
 package sune.app.mediadown.concurrent;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
@@ -79,6 +80,14 @@ public abstract class ListTask<T> extends Task {
 	
 	public <W extends T, V> void forwardAdd(ListTask<V> other, Function<W, V> transform) {
 		forward(other, ListTaskEvent.ADD, ListTask::add, (p) -> transform.apply(Utils.<W>cast(p.b)));
+	}
+	
+	public <W extends T> void forwardAdd(Collection<W> collection) {
+		forwardAdd(collection, Function.identity());
+	}
+	
+	public <W extends T, V> void forwardAdd(Collection<V> collection, Function<W, V> transform) {
+		addEventListener(ListTaskEvent.ADD, (p) -> collection.add(transform.apply(Utils.<W>cast(p.b))));
 	}
 	
 	// Convenience method
