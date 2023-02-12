@@ -135,7 +135,7 @@ public final class MediaUtils {
 	public static final String mediaTitle(String programName, String numSeason, String numEpisode, String episodeName,
 			boolean splitSeasonAndEpisode, boolean canConvertSeason, boolean canConvertEpisode) {
 		if(programName == null || programName.isBlank())
-			throw new IllegalArgumentException("Program name cannot be null");
+			throw new IllegalArgumentException("Program name cannot be null or blank");
 		
 		Map<String, Object> args = new HashMap<>();
 		args.put("translation", mediaTitleTranslation());
