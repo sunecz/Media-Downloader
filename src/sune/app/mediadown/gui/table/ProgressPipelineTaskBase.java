@@ -28,8 +28,6 @@ import sune.app.mediadown.util.Utils.Ignore;
 public abstract class ProgressPipelineTaskBase<T, R extends PipelineResult<?>, W extends Window<?>>
 		implements PipelineTask<R> {
 	
-	// TODO: Clean up
-	
 	protected final W window;
 	
 	protected final InternalState state = new InternalState(TaskStates.INITIAL);
@@ -97,7 +95,7 @@ public abstract class ProgressPipelineTaskBase<T, R extends PipelineResult<?>, W
 					context.setText(getProgressText(window));
 					
 					task = getTask();
-					task.addEventListener(ListTaskEvent.ITEM_ADDED, (pair) -> {
+					task.addEventListener(ListTaskEvent.ADD, (pair) -> {
 						T item = Utils.cast(pair.b);
 						
 						FXUtils.thread(() -> {

@@ -58,7 +58,7 @@ public abstract class ListTask<T> extends Task {
 		
 		list.add(item);
 		
-		call(ListTaskEvent.ITEM_ADDED, new Pair<>(this, item));
+		call(ListTaskEvent.ADD, new Pair<>(this, item));
 		
 		return true;
 	}
@@ -74,11 +74,11 @@ public abstract class ListTask<T> extends Task {
 	}
 	
 	public <W extends T> void forwardAdd(ListTask<W> other) {
-		forward(other, ListTaskEvent.ITEM_ADDED, ListTask::add, (p) -> Utils.<W>cast(p.b));
+		forward(other, ListTaskEvent.ADD, ListTask::add, (p) -> Utils.<W>cast(p.b));
 	}
 	
 	public <W extends T, V> void forwardAdd(ListTask<V> other, Function<W, V> transform) {
-		forward(other, ListTaskEvent.ITEM_ADDED, ListTask::add, (p) -> transform.apply(Utils.<W>cast(p.b)));
+		forward(other, ListTaskEvent.ADD, ListTask::add, (p) -> transform.apply(Utils.<W>cast(p.b)));
 	}
 	
 	public List<T> list() {
@@ -91,8 +91,20 @@ public abstract class ListTask<T> extends Task {
 	
 	public static final class ListTaskEvent implements EventType {
 		
-		public static final Event<ListTaskEvent, Pair<Task, Object>> ITEM_ADDED = new Event<>();
+		public static final Event<ListTaskEvent, Pair<Task, Object>> ADD = new Event<>();
 		
-		// TODO: Add missing methods
+		private static Event<ListTaskEvent, ?>[] values;
+		
+		// Forbid anyone to create an instance of this class
+		private ListTaskEvent() {
+		}
+		
+		public static final Event<ListTaskEvent, ?>[] values() {
+			if(values == null) {
+				values = Utils.array(ADD);
+			}
+			
+			return values;
+		}
 	}
 }

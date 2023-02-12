@@ -13,6 +13,7 @@ import sune.app.mediadown.event.EventType;
 import sune.app.mediadown.event.Listener;
 import sune.app.mediadown.util.CheckedBiConsumer;
 import sune.app.mediadown.util.Pair;
+import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Utils.Ignore;
 
 /** @since 00.02.08 */
@@ -188,6 +189,18 @@ public abstract class Task implements EventBindable<EventType>, HasTaskState {
 		public static final Event<TaskEvent, Task> END                    = new Event<>();
 		public static final Event<TaskEvent, Pair<Task, Exception>> ERROR = new Event<>();
 		
-		// TODO: Add missing methods
+		private static Event<TaskEvent, ?>[] values;
+		
+		// Forbid anyone to create an instance of this class
+		private TaskEvent() {
+		}
+		
+		public static final Event<TaskEvent, ?>[] values() {
+			if(values == null) {
+				values = Utils.array(BEGIN, PAUSE, RESUME, END, ERROR);
+			}
+			
+			return values;
+		}
 	}
 }

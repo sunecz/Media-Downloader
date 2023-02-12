@@ -31,7 +31,7 @@ public abstract class MediaEnginePipelineTaskBase<A, B, R extends PipelineResult
 		return ListTask.of((task) -> {
 			for(A item : items) {
 				ListTask<B> t = getFunction(item, engine);
-				t.addEventListener(ListTaskEvent.ITEM_ADDED, (p) -> Ignore.callVoid(() -> task.add(Utils.cast(p.b))));
+				t.addEventListener(ListTaskEvent.ADD, (p) -> Ignore.callVoid(() -> task.add(Utils.cast(p.b))));
 				t.startAndWait();
 			}
 		});

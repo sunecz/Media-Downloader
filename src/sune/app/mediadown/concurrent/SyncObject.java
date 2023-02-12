@@ -7,28 +7,23 @@ package sune.app.mediadown.concurrent;
  */
 public final class SyncObject {
 	
-	// TODO: Refactor
-	
-	private Throwable exception;
-	
 	public final boolean await() {
+		boolean success = true;
+		
 		synchronized(this) {
 			try {
 				wait();
 			} catch(InterruptedException ex) {
-				exception = ex;
+				success = false;
 			}
 		}
-		return exception != null;
+		
+		return success;
 	}
 	
 	public final void unlock() {
 		synchronized(this) {
 			notifyAll();
 		}
-	}
-	
-	public final Throwable getException() {
-		return exception;
 	}
 }
