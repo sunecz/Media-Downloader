@@ -4,8 +4,8 @@ import java.net.URI;
 import java.util.Map;
 
 import javafx.scene.image.Image;
-import sune.app.mediadown.concurrent.ListTask;
 import sune.app.mediadown.media.Media;
+import sune.app.mediadown.task.ListTask;
 
 /** @since 00.02.05 */
 public interface MediaGetter {

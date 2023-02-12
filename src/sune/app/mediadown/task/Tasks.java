@@ -1,4 +1,4 @@
-package sune.app.mediadown.concurrent;
+package sune.app.mediadown.task;
 
 import java.util.List;
 import java.util.function.Supplier;

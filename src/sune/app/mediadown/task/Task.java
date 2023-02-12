@@ -1,4 +1,4 @@
-package sune.app.mediadown.concurrent;
+package sune.app.mediadown.task;
 
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
@@ -6,6 +6,9 @@ import java.util.function.Function;
 import sune.app.mediadown.HasTaskState;
 import sune.app.mediadown.InternalState;
 import sune.app.mediadown.TaskStates;
+import sune.app.mediadown.concurrent.StateMutex;
+import sune.app.mediadown.concurrent.SyncObject;
+import sune.app.mediadown.concurrent.Threads;
 import sune.app.mediadown.event.Event;
 import sune.app.mediadown.event.EventBindable;
 import sune.app.mediadown.event.EventRegistry;

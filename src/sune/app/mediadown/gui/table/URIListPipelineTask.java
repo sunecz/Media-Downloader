@@ -5,12 +5,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import sune.app.mediadown.concurrent.ListTask;
 import sune.app.mediadown.entity.MediaGetter;
 import sune.app.mediadown.entity.MediaGetters;
 import sune.app.mediadown.gui.Window;
 import sune.app.mediadown.media.Media;
 import sune.app.mediadown.resource.cache.GlobalCache;
+import sune.app.mediadown.task.ListTask;
 import sune.app.mediadown.util.Pair;
 
 /** @since 00.02.07 */

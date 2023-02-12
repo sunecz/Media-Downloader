@@ -2,8 +2,8 @@ package sune.app.mediadown.entity;
 
 import java.util.Map;
 
-import sune.app.mediadown.concurrent.ListTask;
 import sune.app.mediadown.media.Media;
+import sune.app.mediadown.task.ListTask;
 
 /** @since 00.02.05 */
 public interface MediaEngine extends MediaGetter {

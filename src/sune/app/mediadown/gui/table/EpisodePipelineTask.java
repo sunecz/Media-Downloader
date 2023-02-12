@@ -3,13 +3,13 @@ package sune.app.mediadown.gui.table;
 import java.util.List;
 
 import javafx.scene.control.TableView;
-import sune.app.mediadown.concurrent.ListTask;
-import sune.app.mediadown.concurrent.Tasks;
 import sune.app.mediadown.entity.Episode;
 import sune.app.mediadown.entity.MediaEngine;
 import sune.app.mediadown.gui.window.TableWindow;
 import sune.app.mediadown.media.Media;
 import sune.app.mediadown.resource.cache.GlobalCache;
+import sune.app.mediadown.task.ListTask;
+import sune.app.mediadown.task.Tasks;
 import sune.app.mediadown.util.Utils;
 
 /** @since 00.01.27 */

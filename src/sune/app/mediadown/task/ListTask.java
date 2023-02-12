@@ -1,4 +1,4 @@
-package sune.app.mediadown.concurrent;
+package sune.app.mediadown.task;
 
 import java.util.ArrayList;
 import java.util.Collection;
