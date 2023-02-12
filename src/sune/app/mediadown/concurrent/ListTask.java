@@ -81,6 +81,12 @@ public abstract class ListTask<T> extends Task {
 		forward(other, ListTaskEvent.ADD, ListTask::add, (p) -> transform.apply(Utils.<W>cast(p.b)));
 	}
 	
+	// Convenience method
+	public List<T> startAndGet() throws Exception {
+		startAndWait();
+		return list();
+	}
+	
 	public List<T> list() {
 		return list;
 	}

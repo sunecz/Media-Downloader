@@ -11,6 +11,11 @@ import sune.app.mediadown.media.Media;
 public interface MediaGetter {
 	
 	/** @since 00.02.08 */
+	default ListTask<Media> getMedia(URI uri) throws Exception {
+		return getMedia(uri, Map.of());
+	}
+	
+	/** @since 00.02.08 */
 	ListTask<Media> getMedia(URI uri, Map<String, Object> data) throws Exception;
 	/** @since 00.02.08 */
 	boolean isCompatibleURI(URI uri);
