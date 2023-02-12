@@ -10,14 +10,12 @@ import javafx.scene.control.TableColumn.SortType;
 import javafx.scene.control.TableView;
 import sune.app.mediadown.Program;
 import sune.app.mediadown.concurrent.ListTask;
-import sune.app.mediadown.concurrent.ListTask.ListTaskEvent;
 import sune.app.mediadown.engine.MediaEngine;
 import sune.app.mediadown.gui.window.TableWindow;
 import sune.app.mediadown.language.Translation;
 import sune.app.mediadown.resource.cache.Cache;
 import sune.app.mediadown.resource.cache.GlobalCache;
 import sune.app.mediadown.util.Utils;
-import sune.app.mediadown.util.Utils.Ignore;
 
 /** @since 00.01.27 */
 public final class MediaEnginePipelineTask extends TableWindowPipelineTaskBase<Program, MediaEnginePipelineResult> {
@@ -37,11 +35,12 @@ public final class MediaEnginePipelineTask extends TableWindowPipelineTaskBase<P
 			Class<?> key = engine.getClass();
 			
 			if(cache.has(key)) {
-				task.add(cache.getChecked(key));
+				List<Program> l = cache.getChecked(key);
+				task.addAll(l);
 			} else {
 				cache.setChecked(key, () -> {
-					ListTask<Program> t = engine._getPrograms();
-					t.addEventListener(ListTaskEvent.ITEM_ADDED, (p) -> Ignore.callVoid(() -> task.add(Utils.cast(p.b))));
+					ListTask<Program> t = engine.getPrograms();
+					t.forwardAdd(task);
 					t.startAndWait();
 					return t.list();
 				});

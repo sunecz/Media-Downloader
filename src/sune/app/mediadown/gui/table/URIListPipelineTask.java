@@ -35,8 +35,7 @@ public final class URIListPipelineTask
 				
 				if(getter != null) {
 					List<Media> list = GlobalCache.ofURIs().getChecked(uri, () -> {
-						// TODO: Maybe allow chaining?
-						ListTask<Media> t = getter._getMedia(uri, Map.of());
+						ListTask<Media> t = getter.getMedia(uri, Map.of());
 						t.startAndWait();
 						return t.list();
 					});

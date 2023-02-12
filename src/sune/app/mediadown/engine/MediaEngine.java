@@ -1,62 +1,23 @@
 package sune.app.mediadown.engine;
 
-import java.util.List;
+import java.util.Map;
 
 import sune.app.mediadown.Episode;
 import sune.app.mediadown.MediaGetter;
 import sune.app.mediadown.Program;
 import sune.app.mediadown.concurrent.ListTask;
-import sune.app.mediadown.concurrent.WorkerProxy;
-import sune.app.mediadown.concurrent.WorkerUpdatableTask;
 import sune.app.mediadown.media.Media;
-import sune.app.mediadown.util.CheckedBiFunction;
 
 /** @since 00.02.05 */
 public interface MediaEngine extends MediaGetter {
 	
-	@Deprecated
-	default List<Program> getPrograms() throws Exception {
-		return null;
-	}
-	@Deprecated
-	default List<Episode> getEpisodes(Program program) throws Exception {
-		return null;
-	}
-	@Deprecated
-	default List<Media> getMedia(Episode episode) throws Exception {
-		return null;
-	}
+	/** @since 00.02.08 */
+	ListTask<Program> getPrograms() throws Exception;
+	/** @since 00.02.08 */
+	ListTask<Episode> getEpisodes(Program program) throws Exception;
 	
-	@Deprecated
-	default WorkerUpdatableTask<CheckedBiFunction<WorkerProxy, Program, Boolean>, Void> getPrograms
-			(CheckedBiFunction<WorkerProxy, Program, Boolean> function) {
-		return WorkerUpdatableTask.listVoidTaskChecked(function, () -> getPrograms());
-	}
-	
-	@Deprecated
-	default WorkerUpdatableTask<CheckedBiFunction<WorkerProxy, Episode, Boolean>, Void> getEpisodes
-			(Program program, CheckedBiFunction<WorkerProxy, Episode, Boolean> function) {
-		return WorkerUpdatableTask.listVoidTaskChecked(function, () -> getEpisodes(program));
-	}
-	
-	@Deprecated
-	default WorkerUpdatableTask<CheckedBiFunction<WorkerProxy, Media, Boolean>, Void> getMedia
-			(Episode episode, CheckedBiFunction<WorkerProxy, Media, Boolean> function) {
-		return WorkerUpdatableTask.listVoidTaskChecked(function, () -> getMedia(episode));
-	}
-	
-	// TODO: Make non-default
-	default ListTask<Program> _getPrograms() throws Exception {
-		return ListTask.empty();
-	}
-	
-	// TODO: Make non-default
-	default ListTask<Episode> _getEpisodes(Program program) throws Exception {
-		return ListTask.empty();
-	}
-	
-	// TODO: Make non-default
-	default ListTask<Media> _getMedia(Episode episode) throws Exception {
-		return ListTask.empty();
+	/** @since 00.02.08 */
+	default ListTask<Media> getMedia(Episode episode) throws Exception {
+		return getMedia(episode.uri(), Map.of());
 	}
 }

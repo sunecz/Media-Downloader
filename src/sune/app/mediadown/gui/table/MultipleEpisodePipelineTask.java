@@ -39,7 +39,12 @@ public final class MultipleEpisodePipelineTask extends MediaEnginePipelineTaskBa
 	@Override
 	protected final ListTask<Pair<Episode, List<Media>>> getFunction(Episode item, MediaEngine engine) {
 		return ListTask.of((task) -> {
-			List<Media> media = GlobalCache.ofMedia().getChecked(item, () -> engine.getMedia(item));
+			List<Media> media = GlobalCache.ofMedia().getChecked(item, () -> {
+				ListTask<Media> t = engine.getMedia(item);
+				t.startAndWait();
+				return t.list();
+			});
+			
 			task.add(new Pair<>(item, media));
 		});
 	}

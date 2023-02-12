@@ -24,6 +24,7 @@ import javafx.stage.Stage;
 import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.MediaGetter;
 import sune.app.mediadown.MediaGetters;
+import sune.app.mediadown.concurrent.ListTask;
 import sune.app.mediadown.concurrent.Threads;
 import sune.app.mediadown.gui.Dialog;
 import sune.app.mediadown.gui.DraggableWindow;
@@ -71,7 +72,8 @@ public class MediaGetterWindow extends DraggableWindow<VBox> {
 			cmbGetters.setDisable(!isSingle);
 			
 			if(isSingle) {
-				MediaGetter getter = MediaGetters.fromURL(urls.get(0));
+				MediaGetter getter = MediaGetters.fromURI(Utils.uri(urls.get(0)));
+				
 				if(getter != null) {
 					cmbGetters.getSelectionModel().select(getter);
 				}
@@ -289,9 +291,14 @@ public class MediaGetterWindow extends DraggableWindow<VBox> {
 		}
 		
 		@Override
-		public List<Media> getMedia(URI uri, Map<String, Object> data) throws Exception {
+		public ListTask<Media> getMedia(URI uri, Map<String, Object> data) throws Exception {
 			// Do nothing
 			return null;
+		}
+		
+		@Override
+		public boolean isCompatibleURI(URI uri) {
+			return false;
 		}
 		
 		@Override

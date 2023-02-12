@@ -5,14 +5,12 @@ import java.util.List;
 import javafx.scene.control.TableView;
 import sune.app.mediadown.Episode;
 import sune.app.mediadown.concurrent.ListTask;
-import sune.app.mediadown.concurrent.ListTask.ListTaskEvent;
 import sune.app.mediadown.engine.MediaEngine;
 import sune.app.mediadown.gui.window.TableWindow;
 import sune.app.mediadown.media.Media;
 import sune.app.mediadown.resource.cache.Cache;
 import sune.app.mediadown.resource.cache.GlobalCache;
 import sune.app.mediadown.util.Utils;
-import sune.app.mediadown.util.Utils.Ignore;
 
 /** @since 00.01.27 */
 public final class EpisodePipelineTask extends MediaEnginePipelineTaskBase<Episode, Media, EpisodePipelineResult> {
@@ -29,11 +27,12 @@ public final class EpisodePipelineTask extends MediaEnginePipelineTaskBase<Episo
 			Episode key = item;
 			
 			if(cache.has(key)) {
-				task.add(cache.getChecked(key));
+				List<Media> l = cache.getChecked(key);
+				task.addAll(l);
 			} else {
 				cache.setChecked(key, () -> {
-					ListTask<Media> t = engine._getMedia(item);
-					t.addEventListener(ListTaskEvent.ITEM_ADDED, (p) -> Ignore.callVoid(() -> task.add(Utils.cast(p.b))));
+					ListTask<Media> t = engine.getMedia(item);
+					t.forwardAdd(task);
 					t.startAndWait();
 					return t.list();
 				});

@@ -1,9 +1,9 @@
 package sune.app.mediadown.engine;
 
+import java.net.URI;
 import java.util.Collection;
 
 import sune.app.mediadown.util.ObjectHolder;
-import sune.app.mediadown.util.Utils;
 
 public final class MediaEngines {
 	
@@ -17,11 +17,9 @@ public final class MediaEngines {
 	public static final MediaEngine get(String name) { return holder.get(name); }
 	public static final Collection<MediaEngine> all() { return holder.all(); }
 	
-	public static final MediaEngine getMediaEngineFromURL(String url) {
-		return Utils.isValidURL(url)
-					? holder.stream()
-						.filter((o) -> o.isCompatibleURL(url))
-						.findFirst().orElse(null)
-					: null;
+	public static final MediaEngine fromURI(URI uri) {
+		return holder.stream()
+					.filter((o) -> o.isCompatibleURI(uri))
+					.findFirst().orElse(null);
 	}
 }

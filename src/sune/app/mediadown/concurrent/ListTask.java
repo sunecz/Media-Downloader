@@ -3,6 +3,7 @@ package sune.app.mediadown.concurrent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Function;
 
 import sune.app.mediadown.event.Event;
 import sune.app.mediadown.event.EventType;
@@ -60,6 +61,24 @@ public abstract class ListTask<T> extends Task {
 		call(ListTaskEvent.ITEM_ADDED, new Pair<>(this, item));
 		
 		return true;
+	}
+	
+	public boolean addAll(List<T> list) throws Exception {
+		for(T item : list) {
+			if(!add(item)) {
+				return false;
+			}
+		}
+		
+		return true;
+	}
+	
+	public <W extends T> void forwardAdd(ListTask<W> other) {
+		forward(other, ListTaskEvent.ITEM_ADDED, ListTask::add, (p) -> Utils.<W>cast(p.b));
+	}
+	
+	public <W extends T, V> void forwardAdd(ListTask<V> other, Function<W, V> transform) {
+		forward(other, ListTaskEvent.ITEM_ADDED, ListTask::add, (p) -> transform.apply(Utils.<W>cast(p.b)));
 	}
 	
 	public List<T> list() {

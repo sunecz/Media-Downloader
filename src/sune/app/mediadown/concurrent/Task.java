@@ -1,6 +1,7 @@
 package sune.app.mediadown.concurrent;
 
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 
 import sune.app.mediadown.HasTaskState;
 import sune.app.mediadown.InternalState;
@@ -10,7 +11,9 @@ import sune.app.mediadown.event.EventBindable;
 import sune.app.mediadown.event.EventRegistry;
 import sune.app.mediadown.event.EventType;
 import sune.app.mediadown.event.Listener;
+import sune.app.mediadown.util.CheckedBiConsumer;
 import sune.app.mediadown.util.Pair;
+import sune.app.mediadown.util.Utils.Ignore;
 
 /** @since 00.02.08 */
 public abstract class Task implements EventBindable<EventType>, HasTaskState {
@@ -130,6 +133,11 @@ public abstract class Task implements EventBindable<EventType>, HasTaskState {
 	
 	public Exception exception() {
 		return exception.get();
+	}
+	
+	public <C extends Task, V, P> void forward(C other, Event<? extends EventType, V> event,
+			CheckedBiConsumer<C, P> method, Function<V, P> transform) {
+		addEventListener(event, (p) -> Ignore.callVoid(() -> method.accept(other, transform.apply(p))));
 	}
 	
 	@Override

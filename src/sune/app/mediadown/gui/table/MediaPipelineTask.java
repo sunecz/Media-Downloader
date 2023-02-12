@@ -5,7 +5,6 @@ import java.util.List;
 import javafx.scene.control.TableView;
 import sune.app.mediadown.Episode;
 import sune.app.mediadown.concurrent.ListTask;
-import sune.app.mediadown.concurrent.WorkerUpdatableTask;
 import sune.app.mediadown.engine.MediaEngine;
 import sune.app.mediadown.gui.window.TableWindow;
 import sune.app.mediadown.media.Media;

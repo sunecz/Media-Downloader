@@ -7,13 +7,11 @@ import java.util.Map;
 import javafx.scene.control.TableView;
 import sune.app.mediadown.MediaGetter;
 import sune.app.mediadown.concurrent.ListTask;
-import sune.app.mediadown.concurrent.ListTask.ListTaskEvent;
 import sune.app.mediadown.gui.window.TableWindow;
 import sune.app.mediadown.media.Media;
 import sune.app.mediadown.resource.cache.Cache;
 import sune.app.mediadown.resource.cache.GlobalCache;
 import sune.app.mediadown.util.Utils;
-import sune.app.mediadown.util.Utils.Ignore;
 
 /** @since 00.01.27 */
 public final class MediaGetterPipelineTask extends TableWindowPipelineTaskBase<Media, MediaGetterPipelineResult> {
@@ -36,11 +34,12 @@ public final class MediaGetterPipelineTask extends TableWindowPipelineTaskBase<M
 			URI key = uri;
 			
 			if(cache.has(key)) {
-				task.add(cache.getChecked(key));
+				List<Media> l = cache.getChecked(key);
+				task.addAll(l);
 			} else {
 				cache.setChecked(key, () -> {
-					ListTask<Media> t = getter._getMedia(key, Map.of());
-					t.addEventListener(ListTaskEvent.ITEM_ADDED, (p) -> Ignore.callVoid(() -> task.add(Utils.cast(p.b))));
+					ListTask<Media> t = getter.getMedia(key, Map.of());
+					t.forwardAdd(task);
 					t.startAndWait();
 					return t.list();
 				});

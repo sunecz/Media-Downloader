@@ -12,7 +12,7 @@ import sune.app.mediadown.TaskStates;
 import sune.app.mediadown.concurrent.CounterLock;
 import sune.app.mediadown.concurrent.ListTask;
 import sune.app.mediadown.concurrent.ListTask.ListTaskEvent;
-import sune.app.mediadown.concurrent.SyncObject;
+import sune.app.mediadown.concurrent.StateMutex;
 import sune.app.mediadown.gui.ProgressWindow;
 import sune.app.mediadown.gui.ProgressWindow.ProgressAction;
 import sune.app.mediadown.gui.ProgressWindow.ProgressContext;
@@ -33,7 +33,7 @@ public abstract class ProgressPipelineTaskBase<T, R extends PipelineResult<?>, W
 	protected final W window;
 	
 	protected final InternalState state = new InternalState(TaskStates.INITIAL);
-	protected final SyncObject lockResult = new SyncObject();
+	protected final StateMutex mtxDone = new StateMutex();
 	
 	protected final Set<T> resultSet = new HashSet<>();
 	protected final ObservableList<T> result = FXCollections.observableArrayList();
@@ -75,7 +75,7 @@ public abstract class ProgressPipelineTaskBase<T, R extends PipelineResult<?>, W
 				task.stop();
 			}
 		} finally {
-			lockResult.unlock();
+			mtxDone.unlock();
 		}
 	}
 	
@@ -87,17 +87,16 @@ public abstract class ProgressPipelineTaskBase<T, R extends PipelineResult<?>, W
 		resultSet.clear();
 		result.clear();
 		
-		final CounterLock lock = new CounterLock();
 		submit(new ProgressAction() {
 			
 			@Override
 			public void action(ProgressContext context) {
 				try {
+					final CounterLock lock = new CounterLock();
 					context.setProgress(ProgressContext.PROGRESS_INDETERMINATE);
 					context.setText(getProgressText(window));
 					
 					task = getTask();
-					
 					task.addEventListener(ListTaskEvent.ITEM_ADDED, (pair) -> {
 						T item = Utils.cast(pair.b);
 						
@@ -115,6 +114,7 @@ public abstract class ProgressPipelineTaskBase<T, R extends PipelineResult<?>, W
 					});
 					
 					task.startAndWait();
+					lock.await();
 					
 					if(task.isStopped()) {
 						onCancelled();
@@ -138,8 +138,7 @@ public abstract class ProgressPipelineTaskBase<T, R extends PipelineResult<?>, W
 			}
 		});
 		
-		lockResult.await();
-		lock.await();
+		mtxDone.await();
 		
 		return getResult(window, result);
 	}
