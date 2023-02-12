@@ -5,9 +5,9 @@ import java.util.List;
 import java.util.Map;
 
 import javafx.scene.control.TableView;
-import sune.app.mediadown.MediaGetter;
 import sune.app.mediadown.concurrent.ListTask;
 import sune.app.mediadown.concurrent.Tasks;
+import sune.app.mediadown.entity.MediaGetter;
 import sune.app.mediadown.gui.window.TableWindow;
 import sune.app.mediadown.media.Media;
 import sune.app.mediadown.resource.cache.GlobalCache;

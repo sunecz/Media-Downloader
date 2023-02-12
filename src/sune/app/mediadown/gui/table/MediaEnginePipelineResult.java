@@ -2,8 +2,8 @@ package sune.app.mediadown.gui.table;
 
 import java.util.List;
 
-import sune.app.mediadown.Program;
-import sune.app.mediadown.engine.MediaEngine;
+import sune.app.mediadown.entity.MediaEngine;
+import sune.app.mediadown.entity.Program;
 import sune.app.mediadown.gui.window.TableWindow;
 import sune.app.mediadown.pipeline.Pipeline;
 

@@ -11,9 +11,9 @@ import sune.app.mediadown.concurrent.PositionAwareQueueTaskExecutor.PositionAwar
 import sune.app.mediadown.concurrent.QueueTaskExecutor.QueueTask;
 import sune.app.mediadown.download.DownloadConfiguration;
 import sune.app.mediadown.download.DownloadResult;
-import sune.app.mediadown.download.Downloader;
-import sune.app.mediadown.download.Downloaders;
 import sune.app.mediadown.download.MediaDownloadConfiguration;
+import sune.app.mediadown.entity.Downloader;
+import sune.app.mediadown.entity.Downloaders;
 import sune.app.mediadown.event.tracker.PipelineStates;
 import sune.app.mediadown.media.Media;
 import sune.app.mediadown.util.QueueContext;

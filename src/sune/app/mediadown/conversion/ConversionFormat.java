@@ -1,9 +1,9 @@
-package sune.app.mediadown.convert;
+package sune.app.mediadown.conversion;
 
 import java.util.Objects;
 
-import sune.app.mediadown.convert.ConversionCommand.Input;
-import sune.app.mediadown.convert.ConversionCommand.Output;
+import sune.app.mediadown.conversion.ConversionCommand.Input;
+import sune.app.mediadown.conversion.ConversionCommand.Output;
 import sune.app.mediadown.media.Media;
 import sune.app.mediadown.media.MediaFormat;
 import sune.app.mediadown.util.Metadata;

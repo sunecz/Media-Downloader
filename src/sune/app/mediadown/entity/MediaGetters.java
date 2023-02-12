@@ -1,15 +1,10 @@
-package sune.app.mediadown;
+package sune.app.mediadown.entity;
 
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
-
-import sune.app.mediadown.engine.MediaEngine;
-import sune.app.mediadown.engine.MediaEngines;
-import sune.app.mediadown.server.Server;
-import sune.app.mediadown.server.Servers;
 
 /** @since 00.01.27 */
 public final class MediaGetters {

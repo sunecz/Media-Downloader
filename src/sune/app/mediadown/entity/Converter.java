@@ -1,6 +1,7 @@
-package sune.app.mediadown.convert;
+package sune.app.mediadown.entity;
 
 import sune.app.mediadown.HasTaskState;
+import sune.app.mediadown.conversion.ConversionCommand;
 import sune.app.mediadown.event.ConversionEvent;
 import sune.app.mediadown.event.EventBindable;
 

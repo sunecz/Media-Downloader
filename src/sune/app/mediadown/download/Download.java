@@ -1,5 +1,6 @@
-package sune.app.mediadown;
+package sune.app.mediadown.download;
 
+import sune.app.mediadown.HasTaskState;
 import sune.app.mediadown.event.DownloadEvent;
 import sune.app.mediadown.event.EventBindable;
 

@@ -9,11 +9,11 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import javafx.scene.control.TableView;
-import sune.app.mediadown.Episode;
 import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.concurrent.ListTask;
 import sune.app.mediadown.concurrent.Tasks;
-import sune.app.mediadown.engine.MediaEngine;
+import sune.app.mediadown.entity.Episode;
+import sune.app.mediadown.entity.MediaEngine;
 import sune.app.mediadown.gui.window.DownloadConfigurationWindow;
 import sune.app.mediadown.gui.window.DownloadConfigurationWindow.DownloadConfiguration;
 import sune.app.mediadown.gui.window.DownloadConfigurationWindow.Feature;

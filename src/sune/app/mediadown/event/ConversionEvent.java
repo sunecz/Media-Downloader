@@ -1,6 +1,6 @@
 package sune.app.mediadown.event;
 
-import sune.app.mediadown.convert.Converter;
+import sune.app.mediadown.entity.Converter;
 import sune.app.mediadown.event.tracker.TrackerManager;
 import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.Utils;

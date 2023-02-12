@@ -1,4 +1,4 @@
-package sune.app.mediadown.download;
+package sune.app.mediadown.entity;
 
 import java.util.Collection;
 import java.util.Objects;

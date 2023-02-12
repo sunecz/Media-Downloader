@@ -1,4 +1,4 @@
-package sune.app.mediadown.convert;
+package sune.app.mediadown.conversion;
 
 import java.nio.file.Path;
 import java.util.Objects;

@@ -25,7 +25,7 @@ import javafx.scene.text.Font;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import sune.app.mediadown.MediaDownloader;
-import sune.app.mediadown.MediaGetters;
+import sune.app.mediadown.entity.MediaGetters;
 import sune.app.mediadown.gui.DraggableWindow;
 import sune.app.mediadown.util.ClipboardWatcher;
 import sune.app.mediadown.util.ClipboardWatcher.ClipboardContents;

@@ -3,8 +3,8 @@ package sune.app.mediadown.pipeline;
 import java.util.List;
 
 import sune.app.mediadown.concurrent.PositionAwareQueueTaskExecutor.PositionAwareQueueTaskResult;
-import sune.app.mediadown.convert.ConversionMedia;
-import sune.app.mediadown.convert.Converter;
+import sune.app.mediadown.conversion.ConversionMedia;
+import sune.app.mediadown.entity.Converter;
 import sune.app.mediadown.event.ConversionEvent;
 import sune.app.mediadown.event.EventRegistry;
 import sune.app.mediadown.event.EventType;

@@ -5,9 +5,9 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.nio.file.Path;
 
-import sune.app.mediadown.Download;
 import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.Shared;
+import sune.app.mediadown.download.Download;
 import sune.app.mediadown.download.DownloadConfiguration;
 import sune.app.mediadown.download.FileDownloader;
 import sune.app.mediadown.event.DownloadEvent;

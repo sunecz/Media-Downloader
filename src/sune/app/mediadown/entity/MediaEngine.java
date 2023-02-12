@@ -1,10 +1,7 @@
-package sune.app.mediadown.engine;
+package sune.app.mediadown.entity;
 
 import java.util.Map;
 
-import sune.app.mediadown.Episode;
-import sune.app.mediadown.MediaGetter;
-import sune.app.mediadown.Program;
 import sune.app.mediadown.concurrent.ListTask;
 import sune.app.mediadown.media.Media;
 

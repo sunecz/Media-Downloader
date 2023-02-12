@@ -3,7 +3,7 @@ package sune.app.mediadown.pipeline;
 import java.util.List;
 import java.util.Objects;
 
-import sune.app.mediadown.convert.ConversionMedia;
+import sune.app.mediadown.conversion.ConversionMedia;
 import sune.app.mediadown.gui.table.ResolvedMedia;
 import sune.app.mediadown.util.Metadata;
 

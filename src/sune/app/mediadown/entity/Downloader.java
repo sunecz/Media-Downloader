@@ -1,7 +1,9 @@
-package sune.app.mediadown.download;
+package sune.app.mediadown.entity;
 
 import java.nio.file.Path;
 
+import sune.app.mediadown.download.DownloadResult;
+import sune.app.mediadown.download.MediaDownloadConfiguration;
 import sune.app.mediadown.media.Media;
 
 /** @since 00.02.05 */

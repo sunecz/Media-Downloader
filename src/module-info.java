@@ -20,10 +20,10 @@ module sune.app.mediadown {
 	exports sune.app.mediadown;
 	exports sune.app.mediadown.concurrent;
 	exports sune.app.mediadown.configuration;
-	exports sune.app.mediadown.convert;
+	exports sune.app.mediadown.conversion;
 	exports sune.app.mediadown.download;
 	exports sune.app.mediadown.download.segment;
-	exports sune.app.mediadown.engine;
+	exports sune.app.mediadown.entity;
 	exports sune.app.mediadown.event;
 	exports sune.app.mediadown.event.tracker;
 	exports sune.app.mediadown.exception;
@@ -48,7 +48,6 @@ module sune.app.mediadown {
 	exports sune.app.mediadown.registry;
 	exports sune.app.mediadown.resource;
 	exports sune.app.mediadown.resource.cache;
-	exports sune.app.mediadown.server;
 	exports sune.app.mediadown.theme;
 	exports sune.app.mediadown.update;
 	exports sune.app.mediadown.util;

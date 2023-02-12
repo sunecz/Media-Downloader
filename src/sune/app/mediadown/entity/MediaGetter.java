@@ -1,4 +1,4 @@
-package sune.app.mediadown;
+package sune.app.mediadown.entity;
 
 import java.net.URI;
 import java.util.Map;

@@ -13,12 +13,12 @@ import java.util.stream.Stream;
 
 import sune.api.process.Processes;
 import sune.api.process.ReadOnlyProcess;
-import sune.app.mediadown.convert.ConversionCommand;
-import sune.app.mediadown.convert.ConversionCommand.Input;
-import sune.app.mediadown.convert.ConversionCommand.Option;
-import sune.app.mediadown.convert.ConversionCommand.Output;
-import sune.app.mediadown.convert.ConversionFormat;
-import sune.app.mediadown.convert.ConversionMedia;
+import sune.app.mediadown.conversion.ConversionCommand;
+import sune.app.mediadown.conversion.ConversionFormat;
+import sune.app.mediadown.conversion.ConversionMedia;
+import sune.app.mediadown.conversion.ConversionCommand.Input;
+import sune.app.mediadown.conversion.ConversionCommand.Option;
+import sune.app.mediadown.conversion.ConversionCommand.Output;
 import sune.app.mediadown.gui.table.ResolvedMedia;
 import sune.app.mediadown.media.AudioMedia;
 import sune.app.mediadown.media.Media;

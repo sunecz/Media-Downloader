@@ -1,6 +1,5 @@
 package sune.app.mediadown.download;
 
-import sune.app.mediadown.Download;
 import sune.app.mediadown.pipeline.ConversionPipelineResult;
 import sune.app.mediadown.pipeline.PipelineResultable;
 
