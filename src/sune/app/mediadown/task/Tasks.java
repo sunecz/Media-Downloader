@@ -19,9 +19,17 @@ public final class Tasks {
 		return ListTask.of(runnable);
 	}
 	
+	public static final <T> ListTask<T> listOfOne(CheckedSupplier<T> supplier) {
+		return list((task) -> task.add(supplier.get()));
+	}
+	
+	public static final <T> ListTask<T> listOfMany(CheckedSupplier<List<T>> supplier) {
+		return list((task) -> task.addAll(supplier.get()));
+	}
+	
 	public static final <T, K> ListTask<T> cachedList(Supplier<Cache> cacheSupplier, K key,
 			CheckedFunction<K, ListTask<T>> creator) {
-		return ListTask.of((task) -> {
+		return list((task) -> {
 			Cache cache = cacheSupplier.get();
 			
 			if(cache.has(key)) {
@@ -36,13 +44,5 @@ public final class Tasks {
 				});
 			}
 		});
-	}
-	
-	public static final <T> ListTask<T> listOfOne(CheckedSupplier<T> supplier) {
-		return ListTask.of((task) -> task.add(supplier.get()));
-	}
-	
-	public static final <T> ListTask<T> listOfMany(CheckedSupplier<List<T>> supplier) {
-		return ListTask.of((task) -> task.addAll(supplier.get()));
 	}
 }

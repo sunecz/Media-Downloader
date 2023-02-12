@@ -6,9 +6,6 @@ import sune.app.mediadown.entity.MediaEngine;
 import sune.app.mediadown.gui.window.TableWindow;
 import sune.app.mediadown.pipeline.PipelineResult;
 import sune.app.mediadown.task.ListTask;
-import sune.app.mediadown.task.ListTask.ListTaskEvent;
-import sune.app.mediadown.util.Utils;
-import sune.app.mediadown.util.Utils.Ignore;
 
 /** @since 00.01.27 */
 public abstract class MediaEnginePipelineTaskBase<A, B, R extends PipelineResult<?>>
@@ -31,7 +28,7 @@ public abstract class MediaEnginePipelineTaskBase<A, B, R extends PipelineResult
 		return ListTask.of((task) -> {
 			for(A item : items) {
 				ListTask<B> t = getFunction(item, engine);
-				t.addEventListener(ListTaskEvent.ADD, (p) -> Ignore.callVoid(() -> task.add(Utils.cast(p.b))));
+				t.forwardAdd(task);
 				t.startAndWait();
 			}
 		});
