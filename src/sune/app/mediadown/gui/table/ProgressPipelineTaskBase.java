@@ -136,7 +136,7 @@ public abstract class ProgressPipelineTaskBase<T, R extends PipelineResult<?>, W
 			}
 		});
 		
-		mtxDone.await();
+		mtxDone.awaitAndReset();
 		
 		return getResult(window, result);
 	}
