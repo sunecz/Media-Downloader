@@ -5,6 +5,7 @@ import java.util.List;
 import javafx.scene.control.TableView;
 import sune.app.mediadown.MediaGetter;
 import sune.app.mediadown.concurrent.ListTask;
+import sune.app.mediadown.concurrent.Tasks;
 import sune.app.mediadown.engine.MediaEngine;
 import sune.app.mediadown.gui.window.TableWindow;
 import sune.app.mediadown.media.Media;
@@ -23,10 +24,7 @@ public final class MediaOnlyPipelineTask extends MediaEnginePipelineTaskBase<Med
 	
 	@Override
 	protected final ListTask<Pair<MediaGetter, Media>> getFunction(Media item, MediaEngine engine) {
-		return ListTask.of((task) -> {
-			// TODO: What?
-			task.add(new Pair<>(getter, item));
-		});
+		return Tasks.listOne(() -> new Pair<>(getter, item));
 	}
 	
 	@Override

@@ -10,10 +10,10 @@ import javafx.scene.control.TableColumn.SortType;
 import javafx.scene.control.TableView;
 import sune.app.mediadown.Program;
 import sune.app.mediadown.concurrent.ListTask;
+import sune.app.mediadown.concurrent.Tasks;
 import sune.app.mediadown.engine.MediaEngine;
 import sune.app.mediadown.gui.window.TableWindow;
 import sune.app.mediadown.language.Translation;
-import sune.app.mediadown.resource.cache.Cache;
 import sune.app.mediadown.resource.cache.GlobalCache;
 import sune.app.mediadown.util.Utils;
 
@@ -29,23 +29,7 @@ public final class MediaEnginePipelineTask extends TableWindowPipelineTaskBase<P
 	
 	@Override
 	protected final ListTask<Program> getTask() {
-		return ListTask.of((task) -> {
-			// TODO: Can be abstracted
-			Cache cache = GlobalCache.ofPrograms();
-			Class<?> key = engine.getClass();
-			
-			if(cache.has(key)) {
-				List<Program> l = cache.getChecked(key);
-				task.addAll(l);
-			} else {
-				cache.setChecked(key, () -> {
-					ListTask<Program> t = engine.getPrograms();
-					t.forwardAdd(task);
-					t.startAndWait();
-					return t.list();
-				});
-			}
-		});
+		return Tasks.cachedList(GlobalCache::ofPrograms, engine.getClass(), (k) -> engine.getPrograms());
 	}
 	
 	@Override

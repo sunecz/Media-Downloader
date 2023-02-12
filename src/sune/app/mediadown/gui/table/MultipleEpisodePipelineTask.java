@@ -12,6 +12,7 @@ import javafx.scene.control.TableView;
 import sune.app.mediadown.Episode;
 import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.concurrent.ListTask;
+import sune.app.mediadown.concurrent.Tasks;
 import sune.app.mediadown.engine.MediaEngine;
 import sune.app.mediadown.gui.window.DownloadConfigurationWindow;
 import sune.app.mediadown.gui.window.DownloadConfigurationWindow.DownloadConfiguration;
@@ -38,14 +39,14 @@ public final class MultipleEpisodePipelineTask extends MediaEnginePipelineTaskBa
 	
 	@Override
 	protected final ListTask<Pair<Episode, List<Media>>> getFunction(Episode item, MediaEngine engine) {
-		return ListTask.of((task) -> {
+		return Tasks.listOne(() -> {
 			List<Media> media = GlobalCache.ofMedia().getChecked(item, () -> {
 				ListTask<Media> t = engine.getMedia(item);
 				t.startAndWait();
 				return t.list();
 			});
 			
-			task.add(new Pair<>(item, media));
+			return new Pair<>(item, media);
 		});
 	}
 	

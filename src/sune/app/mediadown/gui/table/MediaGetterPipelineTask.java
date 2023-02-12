@@ -7,9 +7,9 @@ import java.util.Map;
 import javafx.scene.control.TableView;
 import sune.app.mediadown.MediaGetter;
 import sune.app.mediadown.concurrent.ListTask;
+import sune.app.mediadown.concurrent.Tasks;
 import sune.app.mediadown.gui.window.TableWindow;
 import sune.app.mediadown.media.Media;
-import sune.app.mediadown.resource.cache.Cache;
 import sune.app.mediadown.resource.cache.GlobalCache;
 import sune.app.mediadown.util.Utils;
 
@@ -28,23 +28,7 @@ public final class MediaGetterPipelineTask extends TableWindowPipelineTaskBase<M
 	
 	@Override
 	protected final ListTask<Media> getTask() {
-		return ListTask.of((task) -> {
-			// TODO: Can be abstracted
-			Cache cache = GlobalCache.ofURIs();
-			URI key = uri;
-			
-			if(cache.has(key)) {
-				List<Media> l = cache.getChecked(key);
-				task.addAll(l);
-			} else {
-				cache.setChecked(key, () -> {
-					ListTask<Media> t = getter.getMedia(key, Map.of());
-					t.forwardAdd(task);
-					t.startAndWait();
-					return t.list();
-				});
-			}
-		});
+		return Tasks.cachedList(GlobalCache::ofURIs, uri, (k) -> getter.getMedia(k, Map.of()));
 	}
 	
 	@Override

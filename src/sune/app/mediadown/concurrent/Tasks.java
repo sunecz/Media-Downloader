@@ -1,0 +1,48 @@
+package sune.app.mediadown.concurrent;
+
+import java.util.List;
+import java.util.function.Supplier;
+
+import sune.app.mediadown.resource.cache.Cache;
+import sune.app.mediadown.util.CheckedConsumer;
+import sune.app.mediadown.util.CheckedFunction;
+import sune.app.mediadown.util.CheckedSupplier;
+
+/** @since 00.02.08 */
+public final class Tasks {
+	
+	// Forbid anyone to create an instance of this class
+	private Tasks() {
+	}
+	
+	public static final <T> ListTask<T> list(CheckedConsumer<ListTask<T>> runnable) {
+		return ListTask.of(runnable);
+	}
+	
+	public static final <T, K> ListTask<T> cachedList(Supplier<Cache> cacheSupplier, K key,
+			CheckedFunction<K, ListTask<T>> creator) {
+		return ListTask.of((task) -> {
+			Cache cache = cacheSupplier.get();
+			
+			if(cache.has(key)) {
+				List<T> l = cache.getChecked(key);
+				task.addAll(l);
+			} else {
+				cache.setChecked(key, () -> {
+					ListTask<T> t = creator.apply(key);
+					t.forwardAdd(task);
+					t.startAndWait();
+					return t.list();
+				});
+			}
+		});
+	}
+	
+	public static final <T> ListTask<T> listOne(CheckedSupplier<T> supplier) {
+		return ListTask.of((task) -> task.add(supplier.get()));
+	}
+	
+	public static final <T> ListTask<T> listMany(CheckedSupplier<List<T>> supplier) {
+		return ListTask.of((task) -> task.addAll(supplier.get()));
+	}
+}
