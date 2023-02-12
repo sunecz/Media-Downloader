@@ -30,8 +30,6 @@ import sune.app.mediadown.plugin.Plugin;
 import sune.app.mediadown.plugin.PluginFile;
 import sune.app.mediadown.plugin.PluginUpdater;
 import sune.app.mediadown.plugin.Plugins;
-import sune.app.mediadown.search.SearchEngine;
-import sune.app.mediadown.search.SearchEngines;
 import sune.app.mediadown.server.Server;
 import sune.app.mediadown.server.Servers;
 import sune.app.mediadown.update.Version;
@@ -218,37 +216,6 @@ public final class InformationItems {
 		@Override
 		public String toString() {
 			return server.toString();
-		}
-	}
-	
-	/** @since 00.01.17 */
-	public static final class ItemSearchEngine implements Viewable {
-		
-		private final SearchEngine engine;
-		
-		public ItemSearchEngine(SearchEngine engine) {
-			this.engine = engine;
-		}
-		
-		public static final List<ItemSearchEngine> items() {
-			return createItemsList(SearchEngines.all(), ItemSearchEngine::new);
-		}
-		
-		@Override
-		public Pane infoPane(InformationTab<?> tab) {
-			Translation translation = tab.content().translation();
-			InfoPane pane = new InfoPane();
-			pane.addEntry(InfoPaneEntry.image(null, engine.getIcon(), new Insets(0, 0, 10, 0)));
-			pane.addEntry(InfoPaneEntry.hyperlink(translation.getSingle("labels.url"), engine.getURL(), engine.getURL()));
-			pane.addEntry(InfoPaneEntry.label(translation.getSingle("labels.title"), engine.getTitle()));
-			pane.addEntry(InfoPaneEntry.label(translation.getSingle("labels.version"), engine.getVersion()));
-			pane.addEntry(InfoPaneEntry.label(translation.getSingle("labels.author"), engine.getAuthor()));
-			return pane;
-		}
-		
-		@Override
-		public String toString() {
-			return engine.toString();
 		}
 	}
 	

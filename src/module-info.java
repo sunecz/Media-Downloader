@@ -48,7 +48,6 @@ module sune.app.mediadown {
 	exports sune.app.mediadown.registry;
 	exports sune.app.mediadown.resource;
 	exports sune.app.mediadown.resource.cache;
-	exports sune.app.mediadown.search;
 	exports sune.app.mediadown.server;
 	exports sune.app.mediadown.theme;
 	exports sune.app.mediadown.update;

@@ -152,15 +152,6 @@
 						author:  "Autor"
 					}
 				},
-				search_engines: {
-					title: "Vyhledávače",
-					labels: {
-						url:     "URL",
-						title:   "Název",
-						version: "Verze",
-						author:  "Autor"
-					}
-				},
 				plugins: {
 					title: "Pluginy",
 					labels: {

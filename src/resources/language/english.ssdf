@@ -152,15 +152,6 @@
 						author:  "Author"
 					}
 				},
-				search_engines: {
-					title: "Search engines",
-					labels: {
-						url:     "URL",
-						title:   "Title",
-						version: "Version",
-						author:  "Author"
-					}
-				},
 				plugins: {
 					title: "Plugins",
 					labels: {

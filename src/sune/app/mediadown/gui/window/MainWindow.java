@@ -66,7 +66,6 @@ import sune.app.mediadown.gui.Dialog;
 import sune.app.mediadown.gui.InformationItems.ItemDownloader;
 import sune.app.mediadown.gui.InformationItems.ItemMediaEngine;
 import sune.app.mediadown.gui.InformationItems.ItemPlugin;
-import sune.app.mediadown.gui.InformationItems.ItemSearchEngine;
 import sune.app.mediadown.gui.InformationItems.ItemServer;
 import sune.app.mediadown.gui.ProgressWindow;
 import sune.app.mediadown.gui.ProgressWindow.ProgressAction;
@@ -831,8 +830,7 @@ public final class MainWindow extends Window<BorderPane> {
 			new TabContent<>(tr.getTranslation("plugins"), ItemPlugin.items()),
 			new TabContent<>(tr.getTranslation("media_engines"), ItemMediaEngine.items()),
 			new TabContent<>(tr.getTranslation("downloaders"), ItemDownloader.items()),
-			new TabContent<>(tr.getTranslation("servers"), ItemServer.items()),
-			new TabContent<>(tr.getTranslation("search_engines"), ItemSearchEngine.items())
+			new TabContent<>(tr.getTranslation("servers"), ItemServer.items())
 		);
 		
 		// Filter out empty tabs
