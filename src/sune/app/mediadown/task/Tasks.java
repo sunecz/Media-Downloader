@@ -38,11 +38,11 @@ public final class Tasks {
 		});
 	}
 	
-	public static final <T> ListTask<T> listOne(CheckedSupplier<T> supplier) {
+	public static final <T> ListTask<T> listOfOne(CheckedSupplier<T> supplier) {
 		return ListTask.of((task) -> task.add(supplier.get()));
 	}
 	
-	public static final <T> ListTask<T> listMany(CheckedSupplier<List<T>> supplier) {
+	public static final <T> ListTask<T> listOfMany(CheckedSupplier<List<T>> supplier) {
 		return ListTask.of((task) -> task.addAll(supplier.get()));
 	}
 }

@@ -23,7 +23,7 @@ public final class MediaPipelineTask extends MediaEnginePipelineTaskBase<Media, 
 	
 	@Override
 	protected final ListTask<Pair<Episode, Media>> getFunction(Media item, MediaEngine engine) {
-		return Tasks.listOne(() -> new Pair<>(episode, item));
+		return Tasks.listOfOne(() -> new Pair<>(episode, item));
 	}
 	
 	@Override
