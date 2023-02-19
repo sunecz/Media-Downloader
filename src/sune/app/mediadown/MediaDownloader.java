@@ -310,11 +310,6 @@ public final class MediaDownloader {
 						setText("Copying new JRE...");
 						NIO.copyDir(newJREPath, oldJREPath);
 						
-						// Get Java executable in the new directory
-						Path exePath = oldJREPath.resolve(newJREPath.relativize(SelfProcess.exePath()));
-						// Make sure the new executable is actually executable
-						NIO.makeExecutable(exePath);
-						
 						// Launch the previous process again
 						setText("Launching application using the new JRE...");
 						String runCommand = args.getValue("run-command");
@@ -378,6 +373,9 @@ public final class MediaDownloader {
 								if(parent != null && parent.equals(oldJREPath)) {
 									exePath = newJREPath.resolve(oldJREPath.relativize(exePath));
 								}
+								
+								// Make sure the new executable is actually executable
+								NIO.makeExecutable(exePath);
 								
 								// Start a new process to finish updating the JRE
 								SelfProcess.launch(exePath, List.of(
