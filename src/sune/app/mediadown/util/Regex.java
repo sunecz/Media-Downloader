@@ -1,13 +1,12 @@
 package sune.app.mediadown.util;
 
 import java.lang.ref.WeakReference;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.MatchResult;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
-
-import javafx.util.Callback;
 
 /**
  * @since 00.02.08
@@ -71,29 +70,20 @@ public final class Regex {
 		return pattern().asPredicate();
 	}
 	
-	public String replaceAll(CharSequence input, Callback<MatchResult, String> callback) {
-		Matcher matcher = matcher(input);
-		
-		if(!matcher.find()) {
-			return input.toString(); // Optimization
-		}
-		
-		int length = input.length(), offset = 0;
-		StringBuilder str = new StringBuilder(length);
-		
-		do {
-			MatchResult result = matcher.toMatchResult();
-			int start = result.start(), end = result.end();
-			str.append(input, offset, start);
-			str.append(callback.call(result));
-			offset = end;
-		} while(matcher.find());
-		
-		if(offset < length) {
-			str.append(input, offset, length);
-		}
-		
-		return str.toString();
+	public String replaceAll(CharSequence input, String replacement) {
+		return matcher(input).replaceAll(replacement);
+	}
+	
+	public String replaceAll(CharSequence input, Function<MatchResult, String> replacer) {
+		return matcher(input).replaceAll(replacer);
+	}
+	
+	public String replaceFirst(CharSequence input, String replacement) {
+		return matcher(input).replaceFirst(replacement);
+	}
+	
+	public String replaceFirst(CharSequence input, Function<MatchResult, String> replacer) {
+		return matcher(input).replaceFirst(replacer);
 	}
 	
 	public Pattern pattern() {
