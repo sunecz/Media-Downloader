@@ -4,6 +4,7 @@ import static java.nio.file.StandardOpenOption.APPEND;
 import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.READ;
 
+import java.awt.Desktop;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -14,7 +15,9 @@ import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Array;
 import java.net.MalformedURLException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
+import java.net.URLConnection;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.channels.FileChannel;
@@ -459,6 +462,13 @@ public final class Utils {
 	}
 	
 	@Deprecated
+	public static final InputStream urlStream(String url, int timeout) throws IOException {
+		URLConnection con = new URL(url).openConnection();
+		con.setConnectTimeout(timeout);
+		return con.getInputStream();
+	}
+	
+	@Deprecated
 	public static final String urlBasename(String url) {
 		return removeURLData(basename(url));
 	}
@@ -539,6 +549,14 @@ public final class Utils {
 	@Deprecated
 	public static final boolean isValidURL(String url) {
 		return url != null && !url.isEmpty() && Ignore.defaultValue(() -> { return new URL(url).toURI(); }, (URI) null) != null;
+	}
+	
+	@Deprecated
+	public static final void visitURL(String url) {
+		try {
+			Desktop.getDesktop().browse(new URI(url));
+		} catch(URISyntaxException | IOException ex) {
+		}
 	}
 	
 	@Deprecated
