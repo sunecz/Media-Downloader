@@ -27,6 +27,7 @@ import javafx.stage.Stage;
 import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.entity.MediaGetters;
 import sune.app.mediadown.gui.DraggableWindow;
+import sune.app.mediadown.net.Net;
 import sune.app.mediadown.util.ClipboardWatcher;
 import sune.app.mediadown.util.ClipboardWatcher.ClipboardContents;
 import sune.app.mediadown.util.FXUtils;
@@ -177,7 +178,7 @@ public class ClipboardWatcherWindow extends DraggableWindow<VBox> {
 			.map(String::trim)
 			.filter(Predicate.not(String::isEmpty))
 			.filter(Utils::isValidURL)
-			.map(Utils::uri)
+			.map(Net::uri)
 			.collect(Collectors.toList());
 		
 		if(!uris.isEmpty()) {
@@ -246,12 +247,12 @@ public class ClipboardWatcherWindow extends DraggableWindow<VBox> {
 				                              translation.getSingle("error.url_invalid"));
 				return;
 			}
-			mediaGetterWindow().showSelectionWindow(this, Utils.uri(url), this::closeIfTrue);
+			mediaGetterWindow().showSelectionWindow(this, Net.uri(url), this::closeIfTrue);
 		} else {
 			List<URI> uris = Utils.deduplicate(
 				urls.stream()
 					.filter(Utils::isValidURL)
-					.map(Utils::uri)
+					.map(Net::uri)
 					.collect(Collectors.toList())
 			);
 			mediaGetterWindow().showSelectionWindow(this, uris, this::closeIfTrue);

@@ -29,6 +29,7 @@ import sune.app.mediadown.download.segment.RemoteFileSegmentsHolder;
 import sune.app.mediadown.media.MediaFormat;
 import sune.app.mediadown.media.MediaResolution;
 import sune.app.mediadown.media.MediaType;
+import sune.app.mediadown.net.Net;
 import sune.app.mediadown.util.CheckedFunction;
 import sune.app.mediadown.util.Regex;
 import sune.app.mediadown.util.Singleton;
@@ -75,15 +76,15 @@ public final class MPD {
 	}
 	
 	private static final CheckedFunction<URI, StreamResponse> streamResolver(Request request) {
-		return ((uri) -> Web.requestStream(request.setURL(Utils.url(uri))));
+		return ((uri) -> Web.requestStream(request.setURL(Net.url(uri))));
 	}
 	
 	public static final Map<MediaFormat, List<MPDFile>> parse(Request request) throws Exception {
-		return new MPDReader(Utils.uri(request.url), streamResolver(request)).read();
+		return new MPDReader(Net.uri(request.url), streamResolver(request)).read();
 	}
 	
 	public static final Map<MediaFormat, List<MPDFile>> parse(String uri, String content) throws Exception {
-		return new MPDReader(Utils.uri(uri), content).read();
+		return new MPDReader(Net.uri(uri), content).read();
 	}
 	
 	public static final List<MPDCombinedFile> reduce(Map<MediaFormat, List<MPDFile>> result) {
@@ -456,7 +457,7 @@ public final class MPD {
 			Element elBaseURI;
 			if((elBaseURI = document.selectFirst("MPD > BaseURL")) != null) {
 				// Replace the presumed base URI by the new one
-				baseURI = Utils.uri(elBaseURI.html());
+				baseURI = Net.uri(elBaseURI.html());
 			}
 			Map<MediaFormat, List<MPDFile>> map = new LinkedHashMap<>();
 			for(Element elementAdaptationSet : document.getElementsByTag(AdaptationSet.NODE_NAME)) {
@@ -467,7 +468,7 @@ public final class MPD {
 		}
 		
 		public final Map<MediaFormat, List<MPDFile>> read() throws Exception {
-			URI baseURI = Utils.uri(Utils.baseURL(uri.toString()));
+			URI baseURI = Net.uri(Utils.baseURL(uri.toString()));
 			Document document = null;
 			if(streamResolver != null) {
 				try(StreamResponse response = streamResolver.apply(uri)) {

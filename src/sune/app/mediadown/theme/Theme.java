@@ -16,6 +16,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import sune.app.mediadown.MediaDownloader;
+import sune.app.mediadown.net.Net;
 import sune.app.mediadown.resource.Extractable;
 import sune.app.mediadown.resource.InputStreamResolver;
 import sune.app.mediadown.update.Version;
@@ -372,7 +373,7 @@ public class Theme implements Extractable {
 					readInfo(stream, builder);
 				} else {
 					readEmptyInfoNoFiles(strPath, builder);
-					readFiles(Path.of(Utils.uri(Theme.class.getResource(strPath))), builder);
+					readFiles(Path.of(Net.uri(Theme.class.getResource(strPath))), builder);
 				}
 			}
 			

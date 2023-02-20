@@ -19,6 +19,7 @@ import sune.app.mediadown.event.DownloadEvent;
 import sune.app.mediadown.event.FileCheckEvent;
 import sune.app.mediadown.event.tracker.DownloadTracker;
 import sune.app.mediadown.event.tracker.TrackerManager;
+import sune.app.mediadown.net.Net;
 import sune.app.mediadown.update.FileChecker;
 import sune.app.mediadown.update.Requirements;
 import sune.app.mediadown.update.Updater;
@@ -83,7 +84,7 @@ public final class Resources {
 			}
 		});
 		
-		GetRequest request = new GetRequest(Utils.url(uri), Shared.USER_AGENT);
+		GetRequest request = new GetRequest(Net.url(uri), Shared.USER_AGENT);
 		downloader.start(request, destination, DownloadConfiguration.ofDefault());
 		
 		return destination;
@@ -115,7 +116,7 @@ public final class Resources {
 		
 		FileChecker checker = localFileChecker(predicateComputeHash);
 		Updater updater = Updater.ofResources(URL_BASE, PATH_RESOURCES, TIMEOUT, checker,
-			(url, file) -> download(Utils.uri(url), file, receiver),
+			(url, file) -> download(Net.uri(url), file, receiver),
 			(file, webDir) -> Utils.urlConcat(webDir, NIO.localPath().relativize(file).toString().replace('\\', '/')),
 			(file) -> PATH_RESOURCES.resolve(file.getFileName()),
 			(entryLoc, entryWeb) -> {

@@ -7,6 +7,7 @@ import sune.app.mediadown.entity.MediaEngine;
 import sune.app.mediadown.entity.MediaGetter;
 import sune.app.mediadown.gui.window.TableWindow;
 import sune.app.mediadown.media.Media;
+import sune.app.mediadown.net.Net;
 import sune.app.mediadown.task.ListTask;
 import sune.app.mediadown.task.Tasks;
 import sune.app.mediadown.util.Pair;
@@ -30,7 +31,7 @@ public final class MediaOnlyPipelineTask extends MediaEnginePipelineTaskBase<Med
 	@Override
 	protected final ResolvedMediaPipelineResult getResult(TableWindow window, MediaEngine engine, List<Pair<MediaGetter, Media>> result) {
 		List<ResolvedMedia> resultResolved = TablePipelineUtils.resolveMedia(window, result,
-			(p) -> Utils.fileNameNoType(Utils.url(p.b.uri()).toExternalForm()));
+			(p) -> Utils.fileNameNoType(Net.url(p.b.uri()).toExternalForm()));
 		return new ResolvedMediaPipelineResult(window, resultResolved);
 	}
 	

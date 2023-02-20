@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Supplier;
 
+import sune.app.mediadown.net.Net;
 import sune.app.mediadown.util.Utils;
 
 /** @since 00.02.05 */
@@ -149,11 +150,11 @@ public final class MediaMetadata {
 		}
 		
 		public final Builder sourceURI(URL sourceURL) {
-			return sourceURI(Utils.uri(sourceURL));
+			return sourceURI(Net.uri(sourceURL));
 		}
 		
 		public final Builder sourceURI(String sourceURL) {
-			return sourceURI(Utils.uri(sourceURL));
+			return sourceURI(Net.uri(sourceURL));
 		}
 		
 		public final Builder title(String title) {

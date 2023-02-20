@@ -14,6 +14,7 @@ import sune.app.mediadown.event.DownloadEvent;
 import sune.app.mediadown.event.Event;
 import sune.app.mediadown.event.Listener;
 import sune.app.mediadown.event.tracker.TrackerManager;
+import sune.app.mediadown.net.Net;
 import sune.app.mediadown.update.Version;
 import sune.app.mediadown.update.VersionType;
 import sune.app.mediadown.util.Regex;
@@ -57,7 +58,7 @@ public final class PluginUpdater {
 		String configURL = Utils.urlFixSlashes(Utils.urlConcat(baseURL, "config"));
 		StringResponse response;
 		try {
-			response = Web.request(new GetRequest(Utils.url(configURL), Shared.USER_AGENT));
+			response = Web.request(new GetRequest(Net.url(configURL), Shared.USER_AGENT));
 		} catch(Exception ex) {
 			// Request failed, nothing else to do
 			return versionPlugin;
@@ -145,7 +146,7 @@ public final class PluginUpdater {
 			
 			@Override
 			public void start() throws Exception {
-				GetRequest request = new GetRequest(Utils.url(pluginURL), Shared.USER_AGENT);
+				GetRequest request = new GetRequest(Net.url(pluginURL), Shared.USER_AGENT);
 				long size = Ignore.defaultValue(() -> Web.size(request.toHeadRequest()), -1L);
 				downloader.start(request, file, DownloadConfiguration.ofTotalBytes(size));
 			}

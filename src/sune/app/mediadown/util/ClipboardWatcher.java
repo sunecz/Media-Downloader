@@ -25,6 +25,7 @@ import java.util.stream.Stream;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.scene.input.DataFormat;
+import sune.app.mediadown.net.Net;
 import sune.app.mediadown.util.Utils.Ignore;
 
 /** @since 00.02.07 */
@@ -131,7 +132,7 @@ public final class ClipboardWatcher {
 				|| format == DataFormat.RTF) {
 			return ensureString(data, charset(flavor));
 		} else if(format == DataFormat.URL) {
-			return Utils.uri(ensureString(data, charset(flavor)));
+			return Net.uri(ensureString(data, charset(flavor)));
 		} else if(format == DataFormat.IMAGE) {
 			// Currently, do not convert to JavaFX to not include another module (javafx.swing)
 			return (Image) data;

@@ -24,6 +24,7 @@ import sune.app.mediadown.event.EventType;
 import sune.app.mediadown.event.Listener;
 import sune.app.mediadown.event.tracker.DownloadTracker;
 import sune.app.mediadown.event.tracker.TrackerManager;
+import sune.app.mediadown.net.Net;
 import sune.app.mediadown.resource.JRE.JREEvent;
 import sune.app.mediadown.update.FileChecker;
 import sune.app.mediadown.update.Requirements;
@@ -246,7 +247,7 @@ public final class JRE implements EventBindable<JREEvent> {
 				eventRegistry.call(JREEvent.DOWNLOAD_END, context);
 			});
 			
-			GetRequest request = new GetRequest(Utils.url(uri), Shared.USER_AGENT);
+			GetRequest request = new GetRequest(Net.url(uri), Shared.USER_AGENT);
 			downloader.start(request, destination, DownloadConfiguration.ofDefault());
 			
 			return destination;
@@ -279,7 +280,7 @@ public final class JRE implements EventBindable<JREEvent> {
 			if(!NIO.exists(baseDirNew)) NIO.createDir(baseDirNew);
 			Path localPath = PathSystem.getPath(CLAZZ, "");
 			Updater updater = Updater.ofResources(baseURL, baseDirOld, TIMEOUT, checker,
-				(url, file) -> download(Utils.uri(url), ensurePathInDirectory(baseDirOld.relativize(file), baseDirNew, true)),
+				(url, file) -> download(Net.uri(url), ensurePathInDirectory(baseDirOld.relativize(file), baseDirNew, true)),
 				(file, webDir) -> Utils.urlConcat(webDir, ensurePathInDirectory(localPath.relativize(file), baseDirOld, false).toString().replace('\\', '/')),
 				(file) -> ensurePathInDirectory(localPath.relativize(file), baseDirOld, true),
 				(entryLoc, entryWeb) -> {

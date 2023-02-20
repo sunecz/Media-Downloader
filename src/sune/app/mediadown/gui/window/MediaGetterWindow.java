@@ -36,6 +36,7 @@ import sune.app.mediadown.gui.table.URIListPipelineResult;
 import sune.app.mediadown.gui.table.URIListPipelineTask;
 import sune.app.mediadown.language.Translation;
 import sune.app.mediadown.media.Media;
+import sune.app.mediadown.net.Net;
 import sune.app.mediadown.pipeline.Pipeline;
 import sune.app.mediadown.pipeline.PipelineResult;
 import sune.app.mediadown.resource.ResourceRegistry;
@@ -72,7 +73,7 @@ public class MediaGetterWindow extends DraggableWindow<VBox> {
 			cmbGetters.setDisable(!isSingle);
 			
 			if(isSingle) {
-				MediaGetter getter = MediaGetters.fromURI(Utils.uri(urls.get(0)));
+				MediaGetter getter = MediaGetters.fromURI(Net.uri(urls.get(0)));
 				
 				if(getter != null) {
 					cmbGetters.getSelectionModel().select(getter);
@@ -207,7 +208,7 @@ public class MediaGetterWindow extends DraggableWindow<VBox> {
 				FXUtils.showErrorWindow(this, translation.getSingle("errors.title"), translation.getSingle("errors.url_invalid"));
 				return;
 			}
-			showSelectionWindow(getter, Utils.uri(url));
+			showSelectionWindow(getter, Net.uri(url));
 		} else {
 			showSelectionWindowURLs(urls);
 		}
@@ -222,7 +223,7 @@ public class MediaGetterWindow extends DraggableWindow<VBox> {
 	}
 	
 	private final void showSelectionWindowURLs(List<String> urls) {
-		showSelectionWindow(urls.stream().filter(Utils::isValidURL).map(Utils::uri).collect(Collectors.toList()));
+		showSelectionWindow(urls.stream().filter(Utils::isValidURL).map(Net::uri).collect(Collectors.toList()));
 	}
 	
 	/** @since 00.02.07 */

@@ -11,9 +11,9 @@ import java.util.Objects;
 
 import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.Shared;
+import sune.app.mediadown.net.Net;
 import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.PathSystem;
-import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Utils.Ignore;
 import sune.app.mediadown.util.Web;
 import sune.app.mediadown.util.Web.GetRequest;
@@ -25,7 +25,7 @@ import sune.util.ssdf2.SSDF;
 public final class MessageManager {
 	
 	private static final Path PATH_LOCAL = PathSystem.getPath("resources/messages.ssdf");
-	private static final URI  URI_BASE   = Utils.uri("https://app.sune.tech/mediadown/msg/");
+	private static final URI  URI_BASE   = Net.uri("https://app.sune.tech/mediadown/msg/");
 	
 	private static MessageList EMPTY;
 	private static MessageList LOCAL;
@@ -83,7 +83,7 @@ public final class MessageManager {
 			SSDCollection data = MessageList.emptyData();
 			URI baseURI = versionBaseURI(version);
 			URI uri = baseURI.resolve("list");
-			try(StreamResponse response = Web.requestStream(new GetRequest(Utils.url(uri), Shared.USER_AGENT))) {
+			try(StreamResponse response = Web.requestStream(new GetRequest(Net.url(uri), Shared.USER_AGENT))) {
 				data = SSDF.read(response.stream);
 			}
 			

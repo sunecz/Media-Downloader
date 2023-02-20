@@ -74,6 +74,7 @@ import sune.app.mediadown.library.NativeLibrary;
 import sune.app.mediadown.logging.Log;
 import sune.app.mediadown.media.MediaFormat;
 import sune.app.mediadown.media.MediaTitleFormat;
+import sune.app.mediadown.net.Net;
 import sune.app.mediadown.plugin.PluginConfiguration;
 import sune.app.mediadown.plugin.PluginFile;
 import sune.app.mediadown.plugin.PluginUpdater;
@@ -990,7 +991,7 @@ public final class MediaDownloader {
 			if(newestVersion == null
 					// The version can be obtained again once set, if needed
 					|| forceGet) {
-				Request request = new GetRequest(Utils.url(versionFileURI()), Shared.USER_AGENT);
+				Request request = new GetRequest(Net.url(versionFileURI()), Shared.USER_AGENT);
 				newestVersion = Ignore.defaultValue(() -> Version.of(Web.request(request).content), Version.UNKNOWN);
 			}
 			return newestVersion;
@@ -1065,7 +1066,7 @@ public final class MediaDownloader {
 				
 				// Check whether the remote JAR file exists or not
 				do {
-					try(StreamResponse response = Web.peek(new HeadRequest(Utils.url(jarUrl), Shared.USER_AGENT))) {
+					try(StreamResponse response = Web.peek(new HeadRequest(Net.url(jarUrl), Shared.USER_AGENT))) {
 						// If the remote file exists, we can continue in the process
 						if(response.code == 200) break;
 						
@@ -1102,7 +1103,7 @@ public final class MediaDownloader {
 				});
 				
 				// Download the new version's JAR file
-				GetRequest request = new GetRequest(Utils.url(jarUrl), Shared.USER_AGENT);
+				GetRequest request = new GetRequest(Net.url(jarUrl), Shared.USER_AGENT);
 				downloader.start(request, newJar, DownloadConfiguration.ofDefault());
 				
 				// Get the current run command, so that the application can be run again
@@ -1407,7 +1408,7 @@ public final class MediaDownloader {
 			
 			try {
 				String urlLegacy = URL_BASE_DAT + "plugin/list";
-				try(StreamResponse response = Web.requestStream(new GetRequest(Utils.url(urlLegacy), Shared.USER_AGENT));
+				try(StreamResponse response = Web.requestStream(new GetRequest(Net.url(urlLegacy), Shared.USER_AGENT));
 					BufferedReader reader = new BufferedReader(new InputStreamReader(response.stream))) {
 					reader.lines().forEach(list::add);
 				}
@@ -1931,7 +1932,7 @@ public final class MediaDownloader {
 			String listURL = Utils.urlConcat(URL_BASE_VER, version, config.value("plugin_list"));
 			String prefix  = config.value("plugin_prefix");
 			
-			try(StreamResponse response = Web.requestStream(new GetRequest(Utils.url(listURL), Shared.USER_AGENT));
+			try(StreamResponse response = Web.requestStream(new GetRequest(Net.url(listURL), Shared.USER_AGENT));
 				BufferedReader reader = new BufferedReader(new InputStreamReader(response.stream))) {
 				for(String line; (line = reader.readLine()) != null;) {
 					// Parsing of metadata
@@ -2038,7 +2039,7 @@ public final class MediaDownloader {
 					// Check whether there is a file available for the current application version
 					if(versionUrl != null) {
 						String jarUrl = Utils.urlConcat(versionUrl, "plugin.jar");
-						GetRequest request = new GetRequest(Utils.url(jarUrl), Shared.USER_AGENT);
+						GetRequest request = new GetRequest(Net.url(jarUrl), Shared.USER_AGENT);
 						
 						NIO.createDir(path.getParent()); // Ensure parent directory
 						downloader.start(request, path, downloadConfiguration);
@@ -2118,7 +2119,7 @@ public final class MediaDownloader {
 								// Check whether there is a newer version of the plugin
 								if(pluginURL != null) {
 									Path file = Path.of(plugin.getPath());
-									GetRequest request = new GetRequest(Utils.url(pluginURL), Shared.USER_AGENT);
+									GetRequest request = new GetRequest(Net.url(pluginURL), Shared.USER_AGENT);
 									
 									NIO.createDir(file.getParent()); // Ensure parent directory
 									NIO.deleteFile(file); // Ensure the file does not exist
