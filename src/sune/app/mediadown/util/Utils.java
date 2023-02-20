@@ -4,7 +4,6 @@ import static java.nio.file.StandardOpenOption.APPEND;
 import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.READ;
 
-import java.awt.Desktop;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -15,9 +14,7 @@ import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Array;
 import java.net.MalformedURLException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
-import java.net.URLConnection;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.channels.FileChannel;
@@ -64,7 +61,6 @@ import java.util.stream.StreamSupport;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 
-import javafx.scene.paint.Color;
 import sune.app.mediadown.Shared;
 import sune.app.mediadown.media.MediaFormat;
 import sune.app.mediadown.util.Web.GetRequest;
@@ -105,48 +101,6 @@ public final class Utils {
 	}
 	
 	// --- Public methods ---
-	
-	private static final String jsoup_baseUri(URI baseUri) {
-		return baseUri == null ? "" : baseUri.toString();
-	}
-	
-	public static final Document document(String url) {
-		return document(uri(url));
-	}
-	
-	/** @since 00.02.05 */
-	public static final Document document(URL url) {
-		return document(uri(url));
-	}
-	
-	/** @since 00.02.05 */
-	public static final Document document(URI uri) {
-		uri = uri.normalize();
-		try(StreamResponse response = Web.requestStream(new GetRequest(uri.toURL(), USER_AGENT))) {
-			return Jsoup.parse(response.stream, CHARSET.name(), jsoup_baseUri(uri));
-		} catch(Exception ex) {
-			// Ignore
-		}
-		return null;
-	}
-	
-	public static final Document parseDocument(String content) {
-		return parseDocument(content, (URI) null);
-	}
-	
-	public static final Document parseDocument(String content, String baseUri) {
-		return parseDocument(content, uri(baseUri));
-	}
-	
-	/** @since 00.02.05 */
-	public static final Document parseDocument(String content, URL baseUri) {
-		return parseDocument(content, uri(baseUri));
-	}
-	
-	/** @since 00.02.05 */
-	public static final Document parseDocument(String content, URI baseUri) {
-		return Jsoup.parse(content, jsoup_baseUri(baseUri));
-	}
 	
 	public static final <T> T[] toArray(Collection<T> collection, Class<? extends T> clazz) {
 		if((collection == null || clazz == null))
@@ -214,44 +168,6 @@ public final class Utils {
 		return index >= 0 ? url.substring(index+1) : url;
 	}
 	
-	public static final String urlBasename(String url) {
-		return removeURLData(basename(url));
-	}
-	
-	public static final String urlConcat(String... parts) {
-		StringBuilder sb = new StringBuilder();
-		for(int i = 0, l = parts.length; i < l; ++i) {
-			if(i != 0) sb.append(URL_DELIMITER);
-			sb.append(parts[i]);
-		}
-		return urlFixSlashes(sb.toString());
-	}
-	
-	public static final String urlFixSlashes(String url) {
-		return url.replaceAll("([^:])//+", "$1/");
-	}
-	
-	public static final String urlDirname(String url) {
-		int schema = url.indexOf("://");
-		int index  = -1;
-		if((schema >= 0)) {
-			String subStr = url.substring(schema + 3);
-			index = subStr.lastIndexOf(URL_DELIMITER);
-			if((index >= 0)) {
-				index += url.length() - subStr.length();
-			}
-		} else {
-			index = url.lastIndexOf(URL_DELIMITER);
-		}
-		return index >= 0 ? url.substring(0, index) : url;
-	}
-	
-	public static final InputStream urlStream(String url, int timeout) throws IOException {
-		URLConnection con = new URL(url).openConnection();
-		con.setConnectTimeout(timeout);
-		return con.getInputStream();
-	}
-	
 	public static final double convertToSeconds(String string) {
 		double val  = 0.0;
 		double mult = 60.0 * 60.0;
@@ -296,14 +212,6 @@ public final class Utils {
 		}
 	}
 	
-	public static final String urlFix(String url) {
-		return urlFix(url, false);
-	}
-	
-	public static final String urlFix(String url, boolean useHTTPS) {
-		return url.startsWith("//") ? "http" + (useHTTPS ? "s:" : ":") + url : url;
-	}
-	
 	public static final String fileName(String path) {
 		return basename(path.replace('\\', '/'));
 	}
@@ -318,11 +226,6 @@ public final class Utils {
 		String name = fileName(path);
 		int index = name.lastIndexOf('.');
 		return index >= 0 ? name.substring(0, index) : name;
-	}
-	
-	public static final String removeURLData(String url) {
-		int index = url.lastIndexOf('?');
-		return index >= 0 ? url.substring(0, index) : url;
 	}
 	
 	// Provides realtively fast method for converting a string into an integer
@@ -364,33 +267,6 @@ public final class Utils {
 		}
 		
 		return neg ? value : -value;
-	}
-	
-	public static final URI uri(String uri) {
-		return URI.create(uri);
-	}
-	
-	public static final URL url(String url) {
-		try {
-			return new URL(url);
-		} catch(MalformedURLException ex) {
-			// Ignore
-		}
-		return null;
-	}
-	
-	public static final URL url(URI uri) {
-		try {
-			return uri.toURL();
-		} catch(MalformedURLException ex) {
-			// Ignore
-		}
-		return null;
-	}
-	
-	/** @since 00.02.00 */
-	public static final boolean isValidURL(String url) {
-		return url != null && !url.isEmpty() && Ignore.defaultValue(() -> { return new URL(url).toURI(); }, (URI) null) != null;
 	}
 	
 	public static final <T> int indexOf(T needle, T[] haystack) {
@@ -442,14 +318,6 @@ public final class Utils {
 	
 	public static final String addFormatExtension(String name, MediaFormat format) {
 		return name + (!format.fileExtensions().isEmpty() ? '.' + format.fileExtensions().get(0) : "");
-	}
-	
-	public static final void visitURL(String url) {
-		try {
-			Desktop.getDesktop().browse(new URI(url));
-		} catch(URISyntaxException |
-				IOException ex) {
-		}
 	}
 	
 	public static final String num2string(double value, int decimals) {
@@ -538,7 +406,122 @@ public final class Utils {
 	
 	// ---------------- [END]   Base64 Encode
 	
-	// ---------------- [BEGIN] URL utilities
+	// ---------------- [BEGIN] Net utilities
+	
+	private static final String jsoup_baseUri(URI baseUri) {
+		return baseUri == null ? "" : baseUri.toString();
+	}
+	
+	public static final Document document(String url) {
+		return document(uri(url));
+	}
+	
+	/** @since 00.02.05 */
+	public static final Document document(URL url) {
+		return document(uri(url));
+	}
+	
+	/** @since 00.02.05 */
+	public static final Document document(URI uri) {
+		uri = uri.normalize();
+		try(StreamResponse response = Web.requestStream(new GetRequest(uri.toURL(), USER_AGENT))) {
+			return Jsoup.parse(response.stream, CHARSET.name(), jsoup_baseUri(uri));
+		} catch(Exception ex) {
+			// Ignore
+		}
+		return null;
+	}
+	
+	public static final Document parseDocument(String content) {
+		return parseDocument(content, (URI) null);
+	}
+	
+	public static final Document parseDocument(String content, String baseUri) {
+		return parseDocument(content, uri(baseUri));
+	}
+	
+	/** @since 00.02.05 */
+	public static final Document parseDocument(String content, URL baseUri) {
+		return parseDocument(content, uri(baseUri));
+	}
+	
+	/** @since 00.02.05 */
+	public static final Document parseDocument(String content, URI baseUri) {
+		return Jsoup.parse(content, jsoup_baseUri(baseUri));
+	}
+	
+	public static final String urlBasename(String url) {
+		return removeURLData(basename(url));
+	}
+	
+	public static final String urlConcat(String... parts) {
+		StringBuilder sb = new StringBuilder();
+		for(int i = 0, l = parts.length; i < l; ++i) {
+			if(i != 0) sb.append(URL_DELIMITER);
+			sb.append(parts[i]);
+		}
+		return urlFixSlashes(sb.toString());
+	}
+	
+	public static final String urlFixSlashes(String url) {
+		return url.replaceAll("([^:])//+", "$1/");
+	}
+	
+	public static final String urlDirname(String url) {
+		int schema = url.indexOf("://");
+		int index  = -1;
+		if((schema >= 0)) {
+			String subStr = url.substring(schema + 3);
+			index = subStr.lastIndexOf(URL_DELIMITER);
+			if((index >= 0)) {
+				index += url.length() - subStr.length();
+			}
+		} else {
+			index = url.lastIndexOf(URL_DELIMITER);
+		}
+		return index >= 0 ? url.substring(0, index) : url;
+	}
+	
+	
+	public static final String urlFix(String url) {
+		return urlFix(url, false);
+	}
+	
+	public static final String urlFix(String url, boolean useHTTPS) {
+		return url.startsWith("//") ? "http" + (useHTTPS ? "s:" : ":") + url : url;
+	}
+	
+	public static final String removeURLData(String url) {
+		int index = url.lastIndexOf('?');
+		return index >= 0 ? url.substring(0, index) : url;
+	}
+	
+	public static final URI uri(String uri) {
+		return URI.create(uri);
+	}
+	
+	public static final URL url(String url) {
+		try {
+			return new URL(url);
+		} catch(MalformedURLException ex) {
+			// Ignore
+		}
+		return null;
+	}
+	
+	public static final URL url(URI uri) {
+		try {
+			return uri.toURL();
+		} catch(MalformedURLException ex) {
+			// Ignore
+		}
+		return null;
+	}
+	
+	/** @since 00.02.00 */
+	public static final boolean isValidURL(String url) {
+		return url != null && !url.isEmpty() && Ignore.defaultValue(() -> { return new URL(url).toURI(); }, (URI) null) != null;
+	}
 	
 	public static final Map<String, String> urlParams(String params) {
 		Map<String, String> map = new LinkedHashMap<>();
@@ -708,7 +691,37 @@ public final class Utils {
 		return null;
 	}
 	
-	// ---------------- [END]   URL utilities
+	public static final boolean isRelativeURL(String url) {
+		// this determines the protocol definition
+		int index = url.indexOf("://");
+		// at least one character for the protocol
+		// at least one character for the path
+		return index <= 0 || index >= url.length() - 3;
+	}
+	
+	public static final String baseURL(String url) {
+		String baseURL = Utils.urlDirname(url);
+		if(!baseURL.endsWith("/")) baseURL += '/';
+		return baseURL;
+	}
+	
+	public static final String toURL(Path path) {
+		StringBuilder builder = new StringBuilder();
+		for(Path part : path) {
+			if((builder.length() > 0))
+				builder.append('/');
+			builder.append(encodeURL(part.toString()).replace("+", "%20"));
+		}
+		builder.insert(0, path.getRoot().toString().replace('\\', '/'));
+		return "file:///" + builder.toString();
+	}
+	
+	/** @since 00.02.05 */
+	public static final URI uri(URL url) {
+		return Ignore.defaultValue(() -> url.toURI(), null, (Function<Exception, RuntimeException>) IllegalArgumentException::new);
+	}
+	
+	// ---------------- [END]   Net utilities
 	
 	// ---------------- [BEGIN] String utilities
 	
@@ -1029,14 +1042,6 @@ public final class Utils {
 		return array;
 	}
 	
-	public static final boolean isRelativeURL(String url) {
-		// this determines the protocol definition
-		int index = url.indexOf("://");
-		// at least one character for the protocol
-		// at least one character for the path
-		return index <= 0 || index >= url.length() - 3;
-	}
-	
 	public static final <T> T loopTo(Iterator<T> iterator, int index) {
 		int current = 0;
 		T item;
@@ -1046,14 +1051,6 @@ public final class Utils {
 				return item;
 		}
 		return null;
-	}
-	
-	public static final String webColor(Color color) {
-		return String.format("rgba(%d, %d, %d, %.2f)",
-							 (int) (color.getRed()   * 255.0),
-							 (int) (color.getGreen() * 255.0),
-							 (int) (color.getBlue()  * 255.0),
-							 color.getOpacity());
 	}
 	
 	public static final boolean startsWithIgnoreCase(String string, String value) {
@@ -1144,12 +1141,6 @@ public final class Utils {
 		return (int) string.codePoints().filter((i) -> i == codePoint).count();
 	}
 	
-	public static final String baseURL(String url) {
-		String baseURL = Utils.urlDirname(url);
-		if(!baseURL.endsWith("/")) baseURL += '/';
-		return baseURL;
-	}
-	
 	public static final InputStream stringStream(String string) {
 		return new ByteArrayInputStream(string.getBytes(Shared.CHARSET));
 	}
@@ -1229,17 +1220,6 @@ public final class Utils {
 		return eachWord
 					? transformEachWord(string, (str, ctr) -> Utils.titlize(str))
 					: titlize(string);
-	}
-	
-	public static final String toURL(Path path) {
-		StringBuilder builder = new StringBuilder();
-		for(Path part : path) {
-			if((builder.length() > 0))
-				builder.append('/');
-			builder.append(encodeURL(part.toString()).replace("+", "%20"));
-		}
-		builder.insert(0, path.getRoot().toString().replace('\\', '/'));
-		return "file:///" + builder.toString();
 	}
 	
 	public static final <T> Callable<T> callable(CheckedRunnable runnable) {
@@ -1526,11 +1506,6 @@ public final class Utils {
 	/** @since 00.02.05 */
 	public static final <T> int compareIndex(T a, T b, T[] all, BiFunction<T, T, Boolean> equals) {
 		return Integer.compare(indexOf(a, all, equals), indexOf(b, all, equals));
-	}
-	
-	/** @since 00.02.05 */
-	public static final URI uri(URL url) {
-		return Ignore.defaultValue(() -> url.toURI(), null, (Function<Exception, RuntimeException>) IllegalArgumentException::new);
 	}
 	
 	/** @since 00.02.05 */
