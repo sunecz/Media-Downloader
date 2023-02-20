@@ -27,7 +27,6 @@ import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.OSUtils;
 import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.Property;
-import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Web.GetRequest;
 
 public final class Resources {
@@ -117,7 +116,7 @@ public final class Resources {
 		FileChecker checker = localFileChecker(predicateComputeHash);
 		Updater updater = Updater.ofResources(URL_BASE, PATH_RESOURCES, TIMEOUT, checker,
 			(url, file) -> download(Net.uri(url), file, receiver),
-			(file, webDir) -> Utils.urlConcat(webDir, NIO.localPath().relativize(file).toString().replace('\\', '/')),
+			(file, webDir) -> Net.uriConcat(webDir, NIO.localPath().relativize(file).toString().replace('\\', '/')),
 			(file) -> PATH_RESOURCES.resolve(file.getFileName()),
 			(entryLoc, entryWeb) -> {
 				if((entryLoc == null)) return false;

@@ -23,7 +23,6 @@ import sune.app.mediadown.net.Net;
 import sune.app.mediadown.util.CheckedFunction;
 import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.Regex;
-import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Web;
 import sune.app.mediadown.util.Web.GetRequest;
 import sune.app.mediadown.util.Web.Request;
@@ -45,14 +44,14 @@ public final class M3U {
 	}
 	
 	public static final List<M3UFile> parse(Request request) throws Exception {
-		URI baseURI = Net.uri(Utils.baseURL(request.url.toString()));
+		URI baseURI = Net.baseURI(Net.uri(request.url));
 		try(M3UReader reader = new M3UReader(baseURI, Net.uri(request.url), streamResolver(request), null)) {
 			return reader.read();
 		}
 	}
 	
 	public static final List<M3UFile> parse(String uri, String content) throws Exception {
-		URI baseURI = Net.uri(Utils.baseURL(uri));
+		URI baseURI = Net.baseURI(Net.uri(uri));
 		try(M3UReader reader = new M3UReader(baseURI, Net.uri(uri), streamResolver(), content)) {
 			return reader.read();
 		}
@@ -415,12 +414,12 @@ public final class M3U {
 		}
 		
 		private final URI resolveURI(String uri) {
-			return Utils.isRelativeURL(uri) ? baseURI.resolve(uri) : Net.uri(uri);
+			return Net.isRelativeURI(uri) ? baseURI.resolve(uri) : Net.uri(uri);
 		}
 		
 		private final List<M3UFile> readStreamInfo(String uri) throws Exception {
 			URI resolvedURI = resolveURI(uri);
-			URI resolvedBaseURI = Utils.isRelativeURL(uri) ? resolveURI(uri) : Net.uri(Utils.baseURL(uri));
+			URI resolvedBaseURI = Net.isRelativeURI(uri) ? resolveURI(uri) : Net.baseURI(Net.uri(uri));
 			MediaResolution resolution = fileBuilder.resolution();
 			try(M3UReader reader = new M3UReader(resolvedBaseURI, resolvedURI, streamResolver, null, resolution)) {
 				return reader.read();

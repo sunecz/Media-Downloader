@@ -9,13 +9,14 @@ import org.jsoup.nodes.Document;
 import org.jsoup.parser.Parser;
 
 import sune.app.mediadown.Shared;
+import sune.app.mediadown.net.Net;
 
 public final class XML {
 	
 	public static final Document parseURL(String url) {
 		try(InputStream stream = new URL(url).openStream()) {
 			// pass the stream directly to the Jsoup parses method
-			return Jsoup.parse(stream, Shared.CHARSET.name(), Utils.baseURL(url), Parser.xmlParser());
+			return Jsoup.parse(stream, Shared.CHARSET.name(), Net.baseURI(Net.uri(url)).toString(), Parser.xmlParser());
 		} catch(IOException ex) {
 		}
 		return null;

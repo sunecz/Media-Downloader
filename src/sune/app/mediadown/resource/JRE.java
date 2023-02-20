@@ -281,7 +281,7 @@ public final class JRE implements EventBindable<JREEvent> {
 			Path localPath = PathSystem.getPath(CLAZZ, "");
 			Updater updater = Updater.ofResources(baseURL, baseDirOld, TIMEOUT, checker,
 				(url, file) -> download(Net.uri(url), ensurePathInDirectory(baseDirOld.relativize(file), baseDirNew, true)),
-				(file, webDir) -> Utils.urlConcat(webDir, ensurePathInDirectory(localPath.relativize(file), baseDirOld, false).toString().replace('\\', '/')),
+				(file, webDir) -> Net.uriConcat(webDir, ensurePathInDirectory(localPath.relativize(file), baseDirOld, false).toString().replace('\\', '/')),
 				(file) -> ensurePathInDirectory(localPath.relativize(file), baseDirOld, true),
 				(entryLoc, entryWeb) -> {
 					visitedFiles.add(ensurePathInDirectory(localPath.relativize(entryWeb.getPath()), baseDirOld, true));

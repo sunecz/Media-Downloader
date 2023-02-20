@@ -204,7 +204,7 @@ public class MediaGetterWindow extends DraggableWindow<VBox> {
 		if(urls.size() == 1) {
 			MediaGetter getter = cmbGetters.getValue();
 			String url = urls.get(0);
-			if(!Utils.isValidURL(url)) {
+			if(!Net.isValidURI(url)) {
 				FXUtils.showErrorWindow(this, translation.getSingle("errors.title"), translation.getSingle("errors.url_invalid"));
 				return;
 			}
@@ -223,7 +223,7 @@ public class MediaGetterWindow extends DraggableWindow<VBox> {
 	}
 	
 	private final void showSelectionWindowURLs(List<String> urls) {
-		showSelectionWindow(urls.stream().filter(Utils::isValidURL).map(Net::uri).collect(Collectors.toList()));
+		showSelectionWindow(urls.stream().filter(Net::isValidURI).map(Net::uri).collect(Collectors.toList()));
 	}
 	
 	/** @since 00.02.07 */

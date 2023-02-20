@@ -177,7 +177,7 @@ public class ClipboardWatcherWindow extends DraggableWindow<VBox> {
 		List<URI> uris = text.lines()
 			.map(String::trim)
 			.filter(Predicate.not(String::isEmpty))
-			.filter(Utils::isValidURL)
+			.filter(Net::isValidURI)
 			.map(Net::uri)
 			.collect(Collectors.toList());
 		
@@ -242,7 +242,7 @@ public class ClipboardWatcherWindow extends DraggableWindow<VBox> {
 		
 		if(urls.size() == 1) {
 			String url = urls.get(0);
-			if(!Utils.isValidURL(url)) {
+			if(!Net.isValidURI(url)) {
 				FXUtils.showErrorWindow(this, translation.getSingle("error.title"),
 				                              translation.getSingle("error.url_invalid"));
 				return;
@@ -251,7 +251,7 @@ public class ClipboardWatcherWindow extends DraggableWindow<VBox> {
 		} else {
 			List<URI> uris = Utils.deduplicate(
 				urls.stream()
-					.filter(Utils::isValidURL)
+					.filter(Net::isValidURI)
 					.map(Net::uri)
 					.collect(Collectors.toList())
 			);

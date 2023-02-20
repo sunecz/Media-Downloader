@@ -18,7 +18,6 @@ import sune.app.mediadown.net.Net;
 import sune.app.mediadown.update.Version;
 import sune.app.mediadown.update.VersionType;
 import sune.app.mediadown.util.Regex;
-import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Utils.Ignore;
 import sune.app.mediadown.util.Web;
 import sune.app.mediadown.util.Web.GetRequest;
@@ -55,7 +54,7 @@ public final class PluginUpdater {
 	public static final Version newestVersion(String baseURL, Version versionPlugin) {
 		if((versionPlugin == null)) return Version.UNKNOWN;
 		if((baseURL == null || baseURL.isEmpty())) return versionPlugin;
-		String configURL = Utils.urlConcat(baseURL, "config");
+		String configURL = Net.uriConcat(baseURL, "config");
 		StringResponse response;
 		try {
 			response = Web.request(new GetRequest(Net.url(configURL), Shared.USER_AGENT));
@@ -128,7 +127,7 @@ public final class PluginUpdater {
 	}
 	
 	public static final String versionURL(String baseURL, Version version) {
-		return Utils.urlConcat(baseURL, pluginVersionString(version));
+		return Net.uriConcat(baseURL, pluginVersionString(version));
 	}
 	
 	public static final String versionURL(PluginFile file, Version version) {
@@ -209,7 +208,7 @@ public final class PluginUpdater {
 	}
 	
 	public static final String check(PluginFile file) {
-		return isNewerVersionAvailable(file) ? Utils.urlConcat(newestVersionURL(file), "plugin.jar") : null;
+		return isNewerVersionAvailable(file) ? Net.uriConcat(newestVersionURL(file), "plugin.jar") : null;
 	}
 	
 	/** @since 00.01.27 */

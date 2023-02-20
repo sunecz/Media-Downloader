@@ -83,7 +83,7 @@ public final class ClipboardWatcher {
 		if(flavor == DataFlavor.stringFlavor) {
 			String maybeURL = Ignore.defaultValue(() -> ensureString(contents.getTransferData(flavor), charset(flavor)), "");
 			// Also check whether the string is an URL, so a better format is returned
-			return Utils.isValidURL(maybeURL) ? DataFormat.URL : DataFormat.PLAIN_TEXT;
+			return Net.isValidURI(maybeURL) ? DataFormat.URL : DataFormat.PLAIN_TEXT;
 		}
 		
 		if(flavor == DataFlavor.imageFlavor) {

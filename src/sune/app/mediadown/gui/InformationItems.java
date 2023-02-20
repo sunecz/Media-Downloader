@@ -28,13 +28,15 @@ import sune.app.mediadown.entity.Servers;
 import sune.app.mediadown.gui.window.InformationWindow.InformationTab;
 import sune.app.mediadown.gui.window.InformationWindow.Viewable;
 import sune.app.mediadown.language.Translation;
+import sune.app.mediadown.net.Net;
+import sune.app.mediadown.os.OS;
 import sune.app.mediadown.plugin.Plugin;
 import sune.app.mediadown.plugin.PluginFile;
 import sune.app.mediadown.plugin.PluginUpdater;
 import sune.app.mediadown.plugin.Plugins;
 import sune.app.mediadown.update.Version;
 import sune.app.mediadown.util.FXUtils;
-import sune.app.mediadown.util.Utils;
+import sune.app.mediadown.util.Utils.Ignore;
 
 public final class InformationItems {
 	
@@ -79,7 +81,7 @@ public final class InformationItems {
 						? new InfoPaneEntry(title, (() -> {
 							Hyperlink link = new Hyperlink(text);
 							link.setStyle("-fx-padding: 0");
-							link.setOnAction((e) -> Utils.visitURL(url));
+							link.setOnAction((e) -> Ignore.callVoid(() -> OS.current().browse(Net.uri(url))));
 							return link;
 						}))
 						: null;

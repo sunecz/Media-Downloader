@@ -956,7 +956,7 @@ public final class MediaDownloader {
 				EventBinder binder = new EventBinder();
 				
 				FileChecker checker = localFileChecker(true, (path) -> true);
-				String baseURL = Utils.urlConcat(URL_BASE_LIB, versionLib);
+				String baseURL = Net.uriConcat(URL_BASE_LIB, versionLib);
 				Updater updater = Updater.ofLibraries(baseURL, NIO.localPath(), TIMEOUT, checker, downloader, null);
 				
 				binder.register(CheckEvent.class, updater);
@@ -1130,7 +1130,7 @@ public final class MediaDownloader {
 	public static final RemoteConfiguration remoteConfiguration() {
 		if(remoteConfiguration == null) {
 			try {
-				String configURL = Utils.urlConcat(URL_BASE_VER, VERSION.stringRelease(), "config");
+				String configURL = Net.uriConcat(URL_BASE_VER, VERSION.stringRelease(), "config");
 				remoteConfiguration = RemoteConfiguration.from(Utils.urlStream(configURL, TIMEOUT));
 			} catch(IOException ex) {
 				error(ex);
@@ -1929,7 +1929,7 @@ public final class MediaDownloader {
 			Requirements requirements = Requirements.CURRENT;
 			String version = VERSION.stringRelease();
 			RemoteConfiguration config = remoteConfiguration();
-			String listURL = Utils.urlConcat(URL_BASE_VER, version, config.value("plugin_list"));
+			String listURL = Net.uriConcat(URL_BASE_VER, version, config.value("plugin_list"));
 			String prefix  = config.value("plugin_prefix");
 			
 			try(StreamResponse response = Web.requestStream(new GetRequest(Net.url(listURL), Shared.USER_AGENT));
@@ -2038,7 +2038,7 @@ public final class MediaDownloader {
 					
 					// Check whether there is a file available for the current application version
 					if(versionUrl != null) {
-						String jarUrl = Utils.urlConcat(versionUrl, "plugin.jar");
+						String jarUrl = Net.uriConcat(versionUrl, "plugin.jar");
 						GetRequest request = new GetRequest(Net.url(jarUrl), Shared.USER_AGENT);
 						
 						NIO.createDir(path.getParent()); // Ensure parent directory

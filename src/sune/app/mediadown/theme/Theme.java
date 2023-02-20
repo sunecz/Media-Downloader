@@ -102,7 +102,7 @@ public class Theme implements Extractable {
 		if(!NIO.exists(file))
 			return null; // Do not throw exception
 		
-		return Utils.toURL(file);
+		return Net.uri(file).toString();
 	}
 	
 	@Override

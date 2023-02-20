@@ -468,7 +468,7 @@ public final class MPD {
 		}
 		
 		public final Map<MediaFormat, List<MPDFile>> read() throws Exception {
-			URI baseURI = Net.uri(Utils.baseURL(uri.toString()));
+			URI baseURI = Net.baseURI(uri);
 			Document document = null;
 			if(streamResolver != null) {
 				try(StreamResponse response = streamResolver.apply(uri)) {

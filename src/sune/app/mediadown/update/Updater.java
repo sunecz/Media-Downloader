@@ -44,7 +44,7 @@ public abstract class Updater implements EventBindable<CheckEvent> {
 	}
 	
 	private static final String urlConcat(String... strings) {
-		return Utils.urlConcat(strings); // Forward call
+		return Net.uriConcat(strings); // Forward call
 	}
 	
 	private static final boolean shouldDownloadEntry(FileCheckerEntry entry, String requiredHash) {
