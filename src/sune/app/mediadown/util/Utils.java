@@ -408,20 +408,24 @@ public final class Utils {
 	
 	// ---------------- [BEGIN] Net utilities
 	
+	@Deprecated
 	private static final String jsoup_baseUri(URI baseUri) {
 		return baseUri == null ? "" : baseUri.toString();
 	}
 	
+	@Deprecated
 	public static final Document document(String url) {
 		return document(uri(url));
 	}
 	
 	/** @since 00.02.05 */
+	@Deprecated
 	public static final Document document(URL url) {
 		return document(uri(url));
 	}
 	
 	/** @since 00.02.05 */
+	@Deprecated
 	public static final Document document(URI uri) {
 		uri = uri.normalize();
 		try(StreamResponse response = Web.requestStream(new GetRequest(uri.toURL(), USER_AGENT))) {
@@ -432,28 +436,34 @@ public final class Utils {
 		return null;
 	}
 	
+	@Deprecated
 	public static final Document parseDocument(String content) {
 		return parseDocument(content, (URI) null);
 	}
 	
+	@Deprecated
 	public static final Document parseDocument(String content, String baseUri) {
 		return parseDocument(content, uri(baseUri));
 	}
 	
 	/** @since 00.02.05 */
+	@Deprecated
 	public static final Document parseDocument(String content, URL baseUri) {
 		return parseDocument(content, uri(baseUri));
 	}
 	
 	/** @since 00.02.05 */
+	@Deprecated
 	public static final Document parseDocument(String content, URI baseUri) {
 		return Jsoup.parse(content, jsoup_baseUri(baseUri));
 	}
 	
+	@Deprecated
 	public static final String urlBasename(String url) {
 		return removeURLData(basename(url));
 	}
 	
+	@Deprecated
 	public static final String urlConcat(String... parts) {
 		StringBuilder sb = new StringBuilder();
 		for(int i = 0, l = parts.length; i < l; ++i) {
@@ -463,10 +473,12 @@ public final class Utils {
 		return urlFixSlashes(sb.toString());
 	}
 	
+	@Deprecated
 	public static final String urlFixSlashes(String url) {
 		return url.replaceAll("([^:])//+", "$1/");
 	}
 	
+	@Deprecated
 	public static final String urlDirname(String url) {
 		int schema = url.indexOf("://");
 		int index  = -1;
@@ -482,24 +494,28 @@ public final class Utils {
 		return index >= 0 ? url.substring(0, index) : url;
 	}
 	
-	
+	@Deprecated
 	public static final String urlFix(String url) {
 		return urlFix(url, false);
 	}
 	
+	@Deprecated
 	public static final String urlFix(String url, boolean useHTTPS) {
 		return url.startsWith("//") ? "http" + (useHTTPS ? "s:" : ":") + url : url;
 	}
 	
+	@Deprecated
 	public static final String removeURLData(String url) {
 		int index = url.lastIndexOf('?');
 		return index >= 0 ? url.substring(0, index) : url;
 	}
 	
+	@Deprecated
 	public static final URI uri(String uri) {
 		return URI.create(uri);
 	}
 	
+	@Deprecated
 	public static final URL url(String url) {
 		try {
 			return new URL(url);
@@ -509,6 +525,7 @@ public final class Utils {
 		return null;
 	}
 	
+	@Deprecated
 	public static final URL url(URI uri) {
 		try {
 			return uri.toURL();
@@ -519,10 +536,12 @@ public final class Utils {
 	}
 	
 	/** @since 00.02.00 */
+	@Deprecated
 	public static final boolean isValidURL(String url) {
 		return url != null && !url.isEmpty() && Ignore.defaultValue(() -> { return new URL(url).toURI(); }, (URI) null) != null;
 	}
 	
+	@Deprecated
 	public static final Map<String, String> urlParams(String params) {
 		Map<String, String> map = new LinkedHashMap<>();
 		int queryIndex;
@@ -537,6 +556,7 @@ public final class Utils {
 		return map;
 	}
 	
+	@Deprecated
 	public static final class URLParameter {
 		
 		private final String name;
@@ -593,6 +613,7 @@ public final class Utils {
 		}
 	}
 	
+	@Deprecated
 	private static final void insertURLParameter(String name, String value, Map<String, URLParameter> parent) {
 		if((name.indexOf('[')) > 0) {
 			String valName = name;
@@ -612,6 +633,7 @@ public final class Utils {
 		parent.put(name, URLParameter.createString(name, value));
 	}
 	
+	@Deprecated
 	private static final void parseURLParameter(String param, Map<String, URLParameter> parent) {
 		int index;
 		if((index = param.indexOf('=')) <= 0)
@@ -621,6 +643,7 @@ public final class Utils {
 		insertURLParameter(name, value, parent);
 	}
 	
+	@Deprecated
 	public static final Map<String, URLParameter> urlParamsExtended(String url) {
 		Map<String, URLParameter> params = new LinkedHashMap<>();
 		int queryIndex;
@@ -631,6 +654,7 @@ public final class Utils {
 		return params;
 	}
 	
+	@Deprecated
 	private static final void convertArrayURLParameterToString(StringBuilder sb, String parentName, URLParameter param) {
 		boolean first = true;
 		for(URLParameter urlp : param.arrayValue().values()) {
@@ -646,6 +670,7 @@ public final class Utils {
 		}
 	}
 	
+	@Deprecated
 	public static final String joinURLParamsExtended(Map<String, URLParameter> params) {
 		StringBuilder sb = new StringBuilder();
 		boolean first = true;
@@ -663,6 +688,7 @@ public final class Utils {
 		return sb.toString();
 	}
 	
+	@Deprecated
 	public static final String joinURLParams(Map<String, String> params) {
 		StringBuilder sb = new StringBuilder();
 		boolean first = true;
@@ -675,6 +701,7 @@ public final class Utils {
 		return sb.toString();
 	}
 	
+	@Deprecated
 	public static final String encodeURL(String url) {
 		try {
 			return URLEncoder.encode(url, CHARSET.name());
@@ -683,6 +710,7 @@ public final class Utils {
 		return null;
 	}
 	
+	@Deprecated
 	public static final String decodeURL(String url) {
 		try {
 			return URLDecoder.decode(url, CHARSET.name());
@@ -691,6 +719,7 @@ public final class Utils {
 		return null;
 	}
 	
+	@Deprecated
 	public static final boolean isRelativeURL(String url) {
 		// this determines the protocol definition
 		int index = url.indexOf("://");
@@ -699,12 +728,14 @@ public final class Utils {
 		return index <= 0 || index >= url.length() - 3;
 	}
 	
+	@Deprecated
 	public static final String baseURL(String url) {
 		String baseURL = Utils.urlDirname(url);
 		if(!baseURL.endsWith("/")) baseURL += '/';
 		return baseURL;
 	}
 	
+	@Deprecated
 	public static final String toURL(Path path) {
 		StringBuilder builder = new StringBuilder();
 		for(Path part : path) {
@@ -717,6 +748,7 @@ public final class Utils {
 	}
 	
 	/** @since 00.02.05 */
+	@Deprecated
 	public static final URI uri(URL url) {
 		return Ignore.defaultValue(() -> url.toURI(), null, (Function<Exception, RuntimeException>) IllegalArgumentException::new);
 	}
