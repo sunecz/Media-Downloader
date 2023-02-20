@@ -32,6 +32,10 @@ public final class Net {
 		return builder.toString();
 	}
 	
+	private static final String afterLast(String string, String what) {
+		int i; return (i = string.lastIndexOf(what)) >= 0 ? string.substring(i + what.length()) : string;
+	}
+	
 	public static final URI uri(String uri) {
 		return URI.create(uri);
 	}
@@ -78,9 +82,8 @@ public final class Net {
 		return URLDecoder.decode(url, Shared.CHARSET);
 	}
 	
-	// Source: https://stackoverflow.com/a/10159309
 	public static final URI baseURI(URI uri) {
-		return uri.getPath().endsWith("/") ? uri.resolve("..") : uri.resolve(".");
+		return uriDirname(uri);
 	}
 	
 	public static final boolean isValidURI(String uri) {
@@ -93,5 +96,25 @@ public final class Net {
 	
 	public static final String uriConcat(String... parts) {
 		return Regex.of("([^:])//+").replaceAll(join("/", parts), "$1/");
+	}
+	
+	public static final String uriFix(String uri) {
+		return uri.startsWith("//") ? "https" + uri : uri;
+	}
+	
+	public static final URI uriBasename(URI uri) {
+		return uri(afterLast(uri.getRawPath(), "/"));
+	}
+	
+	public static final URI uriBasename(String uri) {
+		return uriBasename(uri(uri));
+	}
+	
+	public static final URI uriDirname(URI uri) {
+		return uri.getRawPath().endsWith("/") ? uri.resolve("..") : uri.resolve(".");
+	}
+	
+	public static final URI uriDirname(String uri) {
+		return uriDirname(uri(uri));
 	}
 }
