@@ -55,7 +55,7 @@ public final class PluginUpdater {
 	public static final Version newestVersion(String baseURL, Version versionPlugin) {
 		if((versionPlugin == null)) return Version.UNKNOWN;
 		if((baseURL == null || baseURL.isEmpty())) return versionPlugin;
-		String configURL = Utils.urlFixSlashes(Utils.urlConcat(baseURL, "config"));
+		String configURL = Utils.urlConcat(baseURL, "config");
 		StringResponse response;
 		try {
 			response = Web.request(new GetRequest(Net.url(configURL), Shared.USER_AGENT));
@@ -128,7 +128,7 @@ public final class PluginUpdater {
 	}
 	
 	public static final String versionURL(String baseURL, Version version) {
-		return Utils.urlFixSlashes(Utils.urlConcat(baseURL, pluginVersionString(version)));
+		return Utils.urlConcat(baseURL, pluginVersionString(version));
 	}
 	
 	public static final String versionURL(PluginFile file, Version version) {
