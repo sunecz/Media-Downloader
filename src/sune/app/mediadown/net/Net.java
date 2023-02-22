@@ -5,9 +5,20 @@ import java.net.URL;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.file.Path;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.StringTokenizer;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import sune.app.mediadown.Shared;
 import sune.app.mediadown.util.Regex;
+import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Utils.Ignore;
 
 /** @since 00.02.08 */
@@ -75,11 +86,11 @@ public final class Net {
 	}
 	
 	public static final String encodeURL(String url) {
-		return URLEncoder.encode(url, Shared.CHARSET);
+		return url == null ? null : URLEncoder.encode(url, Shared.CHARSET);
 	}
 	
 	public static final String decodeURL(String url) {
-		return URLDecoder.decode(url, Shared.CHARSET);
+		return url == null ? null : URLDecoder.decode(url, Shared.CHARSET);
 	}
 	
 	public static final URI baseURI(URI uri) {
@@ -116,5 +127,406 @@ public final class Net {
 	
 	public static final URI uriDirname(String uri) {
 		return uriDirname(uri(uri));
+	}
+	
+	private static final void queryConstruct(StringBuilder builder, QueryArgument argument, String namePrefix) {
+		String name = encodeURL(argument.name());
+		
+		if(namePrefix != null) {
+			name = namePrefix + '[' + name + ']';
+		}
+		
+		if(!argument.isArray()) {
+			builder.append(name).append('=').append(encodeURL(argument.value()));
+			return;
+		}
+		
+		if(argument.count() > 0) {
+			for(QueryArgument arg : argument.arguments()) {
+				queryConstruct(builder, arg, name);
+				builder.append('&');
+			}
+			
+			// Remove the last ampersand
+			builder.setLength(builder.length() - 1);
+		}
+	}
+	
+	public static final String queryConstruct(QueryArgument argument) {
+		StringBuilder builder = new StringBuilder();
+		queryConstruct(builder, argument, null);
+		return builder.toString();
+	}
+	
+	public static final String queryConstruct(List<QueryArgument> arguments) {
+		StringBuilder builder = new StringBuilder();
+		
+		if(!arguments.isEmpty()) {
+			for(QueryArgument arg : arguments) {
+				queryConstruct(builder, arg, null);
+				builder.append('&');
+			}
+			
+			// Remove the last ampersand
+			builder.setLength(builder.length() - 1);
+		}
+		
+		return builder.toString();
+	}
+	
+	public static final QueryArgument queryDestruct(URI uri) {
+		return queryDestruct(uri.getRawQuery());
+	}
+	
+	public static final QueryArgument queryDestruct(String uri) {
+		QueryArgument.Builder root = QueryArgument.Builder.ofRoot();
+		String query = afterLast(uri, "?");
+		StringTokenizer tokenizer = new StringTokenizer(query, "&");
+		
+		while(tokenizer.hasMoreTokens()) {
+			String token = tokenizer.nextToken();
+			String[] split = token.split("=");
+			String name = decodeURL(split[0]);
+			String value = decodeURL(split[1]);
+			
+			// Handle an array arguments
+			int start;
+			if((start = name.indexOf('[')) > 0) {
+				String arrayName = name.substring(0, start);
+				String firstName = null;
+				QueryArgument.Builder top = root.valueOf(arrayName);
+				
+				int end;
+				QueryArgument.Builder parent = top;
+				
+				do {
+					if((end = name.indexOf(']', start + 1)) < 0) {
+						break; // Invalid array item, just exit the loop
+					}
+					
+					String itemName = name.substring(start + 1, end);
+					
+					// Remember the first item name so that we can use it to add the root
+					if(firstName == null) {
+						firstName = itemName;
+					}
+					
+					parent = parent.valueOf(itemName);
+				} while((start = name.indexOf('[', end + 1)) > 0);
+				
+				if(end < 0) {
+					// Invalid array item, do not set the value
+					continue;
+				}
+				
+				parent.value(value);
+			}
+			// Handle a simple value
+			else {
+				QueryArgument.Builder arg = QueryArgument.Builder.ofName(name);
+				arg.value(value);
+				root.merge(arg);
+			}
+		}
+		
+		return root.build();
+	}
+	
+	public static final QueryArgument createQuery(Map<String, Object> args) {
+		QueryArgument.Builder root = QueryArgument.Builder.ofRoot();
+		
+		for(Entry<String, Object> entry : args.entrySet()) {
+			String name = entry.getKey();
+			String value = String.valueOf(entry.getValue());
+			QueryArgument.Builder arg = QueryArgument.Builder.ofName(name);
+			arg.value(value);
+			root.merge(arg);
+		}
+		
+		return root.build();
+	}
+	
+	public static final QueryArgument createQuery(Object... args) {
+		return createQuery(Utils.stringKeyMap(args));
+	}
+	
+	public static interface QueryArgument {
+		
+		String name();
+		QueryArgument argument();
+		QueryArgument argumentOf(String name);
+		QueryArgument argumentAt(int index);
+		List<QueryArgument> arguments();
+		Map<String, QueryArgument> argumentsMap();
+		String value();
+		String valueOf(String name);
+		String valueOf(String name, String defaultValue);
+		String valueAt(int index);
+		String valueAt(int index, String defaultValue);
+		List<String> values();
+		int count();
+		boolean isArray();
+		
+		public static QueryArgument ofValue(String name, String value) {
+			return new OfValue(name, value);
+		}
+		
+		static final class OfValue implements QueryArgument {
+			
+			private final String name;
+			private final String value;
+			
+			private OfValue(String name, String value) {
+				this.name = Objects.requireNonNull(name);
+				this.value = Objects.requireNonNull(value);
+			}
+			
+			private static final void notAnArray() {
+				throw new UnsupportedOperationException("Not an array argument");
+			}
+			
+			@Override public String name() { return name; }
+			@Override public QueryArgument argument() { return this; }
+			@Override public QueryArgument argumentOf(String name) { notAnArray(); return null; }
+			@Override public QueryArgument argumentAt(int index) { notAnArray(); return null; }
+			@Override public List<QueryArgument> arguments() { return List.of(this); }
+			@Override public Map<String, QueryArgument> argumentsMap() { return Map.of(name, this); }
+			@Override public String value() { return value; }
+			@Override public String valueOf(String name) { notAnArray(); return null; }
+			@Override public String valueOf(String name, String defaultValue) { return defaultValue; }
+			@Override public String valueAt(int index) { notAnArray(); return null; }
+			@Override public String valueAt(int index, String defaultValue) { return defaultValue; }
+			@Override public List<String> values() { return List.of(value); }
+			@Override public int count() { return 1; }
+			@Override public boolean isArray() { return false; }
+			
+			@Override
+			public int hashCode() {
+				return Objects.hash(name, value);
+			}
+			
+			@Override
+			public boolean equals(Object obj) {
+				if(this == obj)
+					return true;
+				if(obj == null)
+					return false;
+				if(getClass() != obj.getClass())
+					return false;
+				OfValue other = (OfValue) obj;
+				return Objects.equals(name, other.name) && Objects.equals(value, other.value);
+			}
+			
+			@Override
+			public String toString() {
+				return "QueryArgument(name='" + name + "', value='" + value + "')";
+			}
+		}
+		
+		static final class OfArray implements QueryArgument {
+			
+			private final String name;
+			private final Map<String, QueryArgument> values;
+			
+			private OfArray(String name, Map<String, QueryArgument> values) {
+				this.name = name; // May be null for a root argument
+				this.values = Collections.unmodifiableMap(values); // Implicit null check
+			}
+			
+			private final QueryArgument firstArgument() {
+				return values.values().stream().findFirst().get();
+			}
+			
+			private final String firstValue() {
+				return firstArgument().value();
+			}
+			
+			private final QueryArgument get(String name) {
+				return values.get(name);
+			}
+			
+			private final QueryArgument get(int index) {
+				return values.get(Integer.toString(index));
+			}
+			
+			private final List<QueryArgument> listOfArguments() {
+				return List.copyOf(values.values());
+			}
+			
+			private final Map<String, QueryArgument> mapOfArguments() {
+				return values.entrySet().stream().collect(Collectors.toMap(
+					Map.Entry::getKey,
+					Map.Entry::getValue,
+					(a, b) -> a,
+					LinkedHashMap::new
+				));
+			}
+			
+			private final List<String> listOfValues() {
+				return values.values().stream().flatMap((a) -> a.values().stream()).collect(Collectors.toList());
+			}
+			
+			private final <T> String valueOrDefault(Function<T, QueryArgument> function, T input, String defaultValue) {
+				return Optional.ofNullable(function.apply(input)).map(QueryArgument::value).orElse(defaultValue);
+			}
+			
+			@Override public String name() { return name; }
+			@Override public QueryArgument argument() { return firstArgument(); }
+			@Override public QueryArgument argumentOf(String name) { return get(name); }
+			@Override public QueryArgument argumentAt(int index) { return get(index); }
+			@Override public List<QueryArgument> arguments() { return listOfArguments(); }
+			@Override public Map<String, QueryArgument> argumentsMap() { return mapOfArguments(); }
+			@Override public String value() { return firstValue(); }
+			@Override public String valueOf(String name) { return argumentOf(name).value(); }
+			@Override public String valueOf(String name, String defaultValue) { return valueOrDefault(this::argumentOf, name, defaultValue); }
+			@Override public String valueAt(int index) { return argumentAt(index).value(); }
+			@Override public String valueAt(int index, String defaultValue) { return valueOrDefault(this::argumentAt, index, defaultValue); }
+			@Override public List<String> values() { return listOfValues(); }
+			@Override public int count() { return values.size(); }
+			@Override public boolean isArray() { return true; }
+			
+			@Override
+			public int hashCode() {
+				return Objects.hash(name, values);
+			}
+			
+			@Override
+			public boolean equals(Object obj) {
+				if(this == obj)
+					return true;
+				if(obj == null)
+					return false;
+				if(getClass() != obj.getClass())
+					return false;
+				OfArray other = (OfArray) obj;
+				return Objects.equals(name, other.name) && Objects.equals(values, other.values);
+			}
+			
+			@Override
+			public String toString() {
+				return "QueryArgument(name=" + (name == null ? name : "'" + name + "'") + ", values=" + values + ")";
+			}
+		}
+		
+		static final class Builder {
+			
+			private String name;
+			private String value;
+			private Map<String, Builder> values;
+			private int index;
+			
+			private Builder(String name) {
+				this.name = name;
+			}
+			
+			public static final Builder ofRoot() {
+				return new Builder(null);
+			}
+			
+			public static final Builder ofName(String name) {
+				return new Builder(Objects.requireNonNull(name));
+			}
+			
+			private final Map<String, Builder> values() {
+				return values == null ? (values = new LinkedHashMap<>()) : values;
+			}
+			
+			private final boolean isArray() {
+				return values != null || name == null;
+			}
+			
+			private final Builder name(String name) {
+				this.name = Objects.requireNonNull(name);
+				return this;
+			}
+			
+			public QueryArgument build() {
+				if(!isArray()) {
+					return new OfValue(name, value);
+				}
+				
+				Map<String, QueryArgument> args = values.entrySet().stream().collect(Collectors.toMap(
+					Map.Entry::getKey,
+					(e) -> e.getValue().build(),
+					(a, b) -> a,
+					LinkedHashMap::new
+				));
+				
+				return new OfArray(name, args);
+			}
+			
+			public Builder value(String value) {
+				this.value = Objects.requireNonNull(value);
+				return this;
+			}
+			
+			public Builder valueOf(String name) {
+				boolean isArray = isArray();
+				Map<String, Builder> vals = values();
+				
+				if(!isArray && value != null) {
+					// Add the existing value as the first item in the new array
+					Builder arg = ofName(Integer.toString(index++));
+					arg.value(value);
+					vals.put(arg.name, arg);
+					value = null;
+				}
+				
+				if(name.isBlank()) {
+					name = Integer.toString(index++);
+				}
+				
+				return vals.computeIfAbsent(name, Builder::new);
+			}
+			
+			public void merge(Builder argument) {
+				boolean isArray = isArray();
+				String name = argument.name;
+				Map<String, Builder> vals = values();
+				
+				if(!isArray && value != null) {
+					// Add the existing value as the first item in the new array
+					Builder arg = ofName(Integer.toString(index++));
+					arg.value(value);
+					vals.put(arg.name, arg);
+					value = null;
+				}
+				
+				if(name.isBlank()) {
+					name = Integer.toString(index++);
+					argument.name(name);
+					vals.put(name, argument);
+					return;
+				}
+				
+				if(isArray) {
+					Builder item = vals.putIfAbsent(name, argument);
+					
+					if(item == null) {
+						return; // Name was not associated, argument directly added
+					}
+					
+					if(argument.isArray()) {
+						for(Builder arg : argument.values.values()) {
+							item.merge(arg);
+						}
+					} else {
+						item.merge(argument);
+					}
+				} else {
+					if(argument.isArray()) {
+						vals.putAll(argument.values); // May replace the first item
+						index = Math.max(index, argument.index);
+					} else {
+						if(name.equals(this.name)) {
+							name = Integer.toString(index++);
+						}
+						
+						argument.name(name);
+						vals.put(name, argument);
+					}
+				}
+			}
+		}
 	}
 }
