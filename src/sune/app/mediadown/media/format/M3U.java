@@ -415,7 +415,7 @@ public final class M3U {
 		}
 		
 		private final URI resolveURI(String uri) {
-			return Net.isRelativeURI(uri) ? baseURI.resolve(uri) : Net.uri(uri);
+			return Net.isRelativeURI(uri) ? baseURI.resolve(Net.uri(uri)) : Net.uri(uri);
 		}
 		
 		private final List<M3UFile> readStreamInfo(String uri) throws Exception {
