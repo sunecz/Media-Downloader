@@ -27,6 +27,7 @@ import javafx.stage.Stage;
 import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.entity.MediaGetters;
 import sune.app.mediadown.gui.DraggableWindow;
+import sune.app.mediadown.net.HTML;
 import sune.app.mediadown.net.Net;
 import sune.app.mediadown.util.ClipboardWatcher;
 import sune.app.mediadown.util.ClipboardWatcher.ClipboardContents;
@@ -155,7 +156,7 @@ public class ClipboardWatcherWindow extends DraggableWindow<VBox> {
 		String text = (String) value;
 		
 		if(format == DataFormat.HTML) {
-			Document document = Utils.parseDocument((String) value);
+			Document document = HTML.parse((String) value);
 			StringBuilder builder = new StringBuilder();
 			
 			// Edge browser copy links from the URL bar as an HTML anchor tag.

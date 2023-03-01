@@ -10,6 +10,7 @@ import org.jsoup.nodes.Element;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.DataFormat;
+import sune.app.mediadown.net.HTML;
 import sune.app.mediadown.net.Net;
 import sune.app.mediadown.util.Utils.Ignore;
 
@@ -53,7 +54,7 @@ public final class ClipboardUtils {
 		}
 		
 		if((contents = clipboard.getContent(DataFormat.HTML)) != null) {
-			Document document = Utils.parseDocument((String) contents);
+			Document document = HTML.parse((String) contents);
 			
 			// Edge browser copy links from the URL bar as an HTML anchor tag.
 			// Probe the content for anchor tags and extract their hrefs.
