@@ -9,6 +9,7 @@ module sune.app.mediadown {
 	requires javafx.web;
 	requires transitive java.logging;
 	requires java.datatransfer;
+	requires transitive java.net.http;
 	// External modules
 	requires sune.util.load;
 	requires transitive sune.memory;
