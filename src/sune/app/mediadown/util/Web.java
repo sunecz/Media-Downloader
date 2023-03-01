@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 
 import sune.app.mediadown.Shared;
 
+@Deprecated
 public final class Web {
 	
 	private static final String  USER_AGENT = Shared.USER_AGENT;
