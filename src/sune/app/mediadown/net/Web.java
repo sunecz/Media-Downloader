@@ -427,15 +427,20 @@ public final class Web {
 		protected static class POST extends Request {
 			
 			protected final String body;
+			protected final String contentType;
 			
-			protected POST(Builder builder, String body) {
+			protected POST(Builder builder, String body, String contentType) {
 				super("POST", builder);
 				this.body = Objects.requireNonNull(body);
+				this.contentType = Objects.requireNonNull(contentType);
 			}
 			
 			@Override
 			public HttpRequest toHttpRequest() {
-				return httpRequestBuilder().POST(BodyPublishers.ofString(body, CHARSET)).build();
+				return httpRequestBuilder()
+							.header("content-type", contentType)
+							.POST(BodyPublishers.ofString(body, CHARSET))
+							.build();
 			}
 			
 			@Override
@@ -445,12 +450,12 @@ public final class Web {
 			
 			@Override
 			public Request toRanged(Range<Long> range, String identifier) {
-				return builder().range(range).identifier(identifier).POST(body);
+				return builder().range(range).identifier(identifier).POST(body, contentType);
 			}
 			
 			@Override
 			public Request ofURI(URI uri) {
-				return builder().uri(uri).POST(body);
+				return builder().uri(uri).POST(body, contentType);
 			}
 		}
 		
@@ -482,6 +487,8 @@ public final class Web {
 		}
 		
 		public static class Builder {
+			
+			private static final String DEFAULT_CONTENT_TYPE = "application/x-www-form-urlencoded";
 			
 			private URI uri;
 			private String userAgent;
@@ -548,7 +555,11 @@ public final class Web {
 			}
 			
 			public Request POST(String body) {
-				return new Request.POST(ensureValues(), body);
+				return POST(body, DEFAULT_CONTENT_TYPE);
+			}
+			
+			public Request POST(String body, String contentType) {
+				return new Request.POST(ensureValues(), body, contentType);
 			}
 			
 			public Request HEAD() {
