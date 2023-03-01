@@ -273,6 +273,14 @@ public final class Net {
 		return createQuery(Utils.stringKeyMap(args));
 	}
 	
+	public static final String queryString(Map<String, Object> args) {
+		return queryConstruct(createQuery(args));
+	}
+	
+	public static final String queryString(Object... args) {
+		return queryConstruct(createQuery(args));
+	}
+	
 	public static interface QueryArgument {
 		
 		String name();
