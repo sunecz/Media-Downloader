@@ -51,8 +51,12 @@ public final class Net {
 		int i; return (i = string.lastIndexOf(what)) >= 0 ? string.substring(i + what.length()) : string;
 	}
 	
+	private static final String uriSanitize(String uri) {
+		return uri.replace("|", "%7C");
+	}
+	
 	public static final URI uri(String uri) {
-		return URI.create(uri);
+		return URI.create(uriSanitize(uri));
 	}
 	
 	public static final URI uri(URL url) {
