@@ -148,7 +148,24 @@ public final class Web {
 		return doRequest(request, Response.OfStream::new, BodyHandlers.ofInputStream());
 	}
 	
-	// TODO: Add method: peek(Request)
+	private static final Request.HEAD toHEADRequest(Request request) {
+		if(request instanceof Request.HEAD || request.method().equals("HEAD")) {
+			return (Request.HEAD) request;
+		}
+		
+		return (Request.HEAD) Request.Builder.of(request).HEAD();
+	}
+	
+	public static final Response.OfStream peek(Request request) throws Exception {
+		return requestStream(toHEADRequest(request));
+	}
+	
+	public static final void clear() {
+		if(cookieManager.isSet()) {
+			cookieManager.value().getCookieStore().removeAll();
+		}
+	}
+	
 	// TODO: Add method: size(Response)
 	// TODO: Add method: size(HttpHeaders)
 	// TODO: Add class: Cookies (for various cookies-related operations)
@@ -315,9 +332,9 @@ public final class Web {
 			
 			protected final String body;
 			
-			protected POST(Builder builder) {
+			protected POST(Builder builder, String body) {
 				super("POST", builder);
-				this.body = Objects.requireNonNull(builder.body());
+				this.body = Objects.requireNonNull(body);
 			}
 			
 			@Override
@@ -344,7 +361,6 @@ public final class Web {
 			private String userAgent;
 			private final Map<String, List<String>> headers;
 			private final List<HttpCookie> cookies;
-			private String body;
 			private Redirect followRedirects;
 			private String identifier;
 			private Range<Long> range;
@@ -357,9 +373,28 @@ public final class Web {
 				followRedirects = Redirect.NORMAL;
 			}
 			
+			private Builder(Request request) {
+				uri = request.uri();
+				userAgent = request.userAgent();
+				headers = request.headers();
+				cookies = request.cookies();
+				followRedirects = request.followRedirects();
+				identifier = request.identifier();
+				range = request.range();
+				timeout = request.timeout();
+			}
+			
 			protected static final <T> List<T> merge(List<T> list, Collection<T> values) {
 				list.addAll(values);
 				return list;
+			}
+			
+			public static Builder of(URI uri) {
+				return new Builder(uri);
+			}
+			
+			public static Builder of(Request request) {
+				return new Builder(request);
 			}
 			
 			protected Builder ensureValues() {
@@ -382,23 +417,19 @@ public final class Web {
 				return this;
 			}
 			
-			public static Builder of(URI uri) {
-				return new Builder(uri);
-			}
-			
 			public Request GET() {
 				return new Request.GET(ensureValues());
 			}
 			
-			public Request POST() {
-				return new Request.POST(ensureValues());
+			public Request POST(String body) {
+				return new Request.POST(ensureValues(), body);
 			}
 			
 			public Request HEAD() {
 				return new Request.HEAD(ensureValues());
 			}
 			
-			public Builder uri(URI uri) { this.uri = uri; return this; }
+			public Builder uri(URI uri) { this.uri = Objects.requireNonNull(uri); return this; }
 			public Builder userAgent(String userAgent) { this.userAgent = userAgent; return this; }
 			
 			public Builder addHeader(String name, Collection<String> values) {
@@ -414,7 +445,6 @@ public final class Web {
 			public Builder addHeader(String name, String... values) { return addHeader(name, List.of(values)); }
 			public Builder setHeader(String name, String... values) { return setHeader(name, List.of(values)); }
 			public Builder addCookie(HttpCookie cookie) { cookies.add(cookie); return this; }
-			public Builder body(String body) { this.body = body; return this; }
 			public Builder followRedirects(Redirect followRedirects) { this.followRedirects = followRedirects; return this; }
 			public Builder identifier(String identifier) { this.identifier = identifier; return this; }
 			public Builder range(Range<Long> range) { this.range = range; return this; }
@@ -424,7 +454,6 @@ public final class Web {
 			public String userAgent() { return userAgent; }
 			public Map<String, List<String>> headers() { return Collections.unmodifiableMap(headers); }
 			public List<HttpCookie> cookies() { return Collections.unmodifiableList(cookies); }
-			public String body() { return body; }
 			public Redirect followRedirects() { return followRedirects; }
 			public String identifier() { return identifier; }
 			public Range<Long> range() { return range; }

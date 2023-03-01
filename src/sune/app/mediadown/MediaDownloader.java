@@ -6,6 +6,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
@@ -75,6 +76,9 @@ import sune.app.mediadown.logging.Log;
 import sune.app.mediadown.media.MediaFormat;
 import sune.app.mediadown.media.MediaTitleFormat;
 import sune.app.mediadown.net.Net;
+import sune.app.mediadown.net.Web;
+import sune.app.mediadown.net.Web.Request;
+import sune.app.mediadown.net.Web.Response;
 import sune.app.mediadown.plugin.PluginConfiguration;
 import sune.app.mediadown.plugin.PluginFile;
 import sune.app.mediadown.plugin.PluginUpdater;
@@ -114,11 +118,7 @@ import sune.app.mediadown.util.Reflection3;
 import sune.app.mediadown.util.SelfProcess;
 import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Utils.Ignore;
-import sune.app.mediadown.util.Web;
 import sune.app.mediadown.util.Web.GetRequest;
-import sune.app.mediadown.util.Web.HeadRequest;
-import sune.app.mediadown.util.Web.Request;
-import sune.app.mediadown.util.Web.StreamResponse;
 import sune.util.load.ModuleUtils;
 import sune.util.ssdf2.SSDAnnotation;
 import sune.util.ssdf2.SSDCollection;
@@ -780,8 +780,8 @@ public final class MediaDownloader {
 				}
 				
 				ApplicationConfiguration configuration = configuration();
-				Web.setDefaultConnectTimeout(configuration.requestConnectTimeout());
-				Web.setDefaultReadTimeout(configuration.requestReadTimeout());
+				Web.defaultConnectTimeout(Duration.ofMillis(configuration.requestConnectTimeout()));
+				Web.defaultReadTimeout(Duration.ofMillis(configuration.requestReadTimeout()));
 				
 				return new MaybeExitEarly();
 			}
@@ -991,8 +991,8 @@ public final class MediaDownloader {
 			if(newestVersion == null
 					// The version can be obtained again once set, if needed
 					|| forceGet) {
-				Request request = new GetRequest(Net.url(versionFileURI()), Shared.USER_AGENT);
-				newestVersion = Ignore.defaultValue(() -> Version.of(Web.request(request).content), Version.UNKNOWN);
+				Request request = Request.of(Net.uri(versionFileURI())).GET();
+				newestVersion = Ignore.defaultValue(() -> Version.of(Web.request(request).body()), Version.UNKNOWN);
 			}
 			return newestVersion;
 		}
@@ -1066,9 +1066,9 @@ public final class MediaDownloader {
 				
 				// Check whether the remote JAR file exists or not
 				do {
-					try(StreamResponse response = Web.peek(new HeadRequest(Net.url(jarUrl), Shared.USER_AGENT))) {
+					try(Response.OfStream response = Web.peek(Request.of(Net.uri(jarUrl)).HEAD())) {
 						// If the remote file exists, we can continue in the process
-						if(response.code == 200) break;
+						if(response.statusCode() == 200) break;
 						
 						// If pre-release version is not set we cannot do anything else.
 						if(!preRelease) {
@@ -1408,8 +1408,8 @@ public final class MediaDownloader {
 			
 			try {
 				String urlLegacy = URL_BASE_DAT + "plugin/list";
-				try(StreamResponse response = Web.requestStream(new GetRequest(Net.url(urlLegacy), Shared.USER_AGENT));
-					BufferedReader reader = new BufferedReader(new InputStreamReader(response.stream))) {
+				try(Response.OfStream response = Web.requestStream(Request.of(Net.uri(urlLegacy)).GET());
+					BufferedReader reader = new BufferedReader(new InputStreamReader(response.stream()))) {
 					reader.lines().forEach(list::add);
 				}
 			} catch(Exception ex) {
@@ -1932,8 +1932,8 @@ public final class MediaDownloader {
 			String listURL = Net.uriConcat(URL_BASE_VER, version, config.value("plugin_list"));
 			String prefix  = config.value("plugin_prefix");
 			
-			try(StreamResponse response = Web.requestStream(new GetRequest(Net.url(listURL), Shared.USER_AGENT));
-				BufferedReader reader = new BufferedReader(new InputStreamReader(response.stream))) {
+			try(Response.OfStream response = Web.requestStream(Request.of(Net.uri(listURL)).GET());
+				BufferedReader reader = new BufferedReader(new InputStreamReader(response.stream()))) {
 				for(String line; (line = reader.readLine()) != null;) {
 					// Parsing of metadata
 					if(line.startsWith("[")) {
