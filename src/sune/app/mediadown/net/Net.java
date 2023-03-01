@@ -63,22 +63,19 @@ public final class Net {
 			builder.append(root.toString().replace('\\', '/'));
 		}
 		
-		boolean first = true;
-		for(Path part : path) {
-			if(first) {
-				first = false;
-			} else {
-				builder.append('/');
+		if(path.getNameCount() > 0) {
+			for(Path part : path) {
+				builder.append(encodeURL(part.toString()).replace("+", "%20")).append('/');
 			}
 			
-			builder.append(encodeURL(part.toString()).replace("+", "%20"));
+			builder.setLength(builder.length() - 1);
 		}
 		
 		return uri("file:///" + builder.toString());
 	}
 	
 	public static final URL url(String url) {
-		return Ignore.defaultValue(uri(url)::toURL, null);
+		return url(uri(url));
 	}
 	
 	public static final URL url(URI uri) {
