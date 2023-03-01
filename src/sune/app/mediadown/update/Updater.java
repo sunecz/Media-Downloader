@@ -3,6 +3,7 @@ package sune.app.mediadown.update;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.function.BiPredicate;
 
@@ -36,11 +37,11 @@ public abstract class Updater implements EventBindable<CheckEvent> {
 	}
 	
 	private static final InputStream stream(String url, int timeout) throws IOException {
-		return Utils.urlStream(url, timeout); // Forward call
+		return Net.stream(Net.uri(url), Duration.ofMillis(timeout)); // Forward call
 	}
 	
 	private static final String content(String url, int timeout) {
-		return Ignore.defaultValue(() -> Utils.streamToString(Utils.urlStream(url, timeout)), (String) null); // Forward call
+		return Ignore.defaultValue(() -> Utils.streamToString(stream(url, timeout)), (String) null); // Forward call
 	}
 	
 	private static final String urlConcat(String... strings) {

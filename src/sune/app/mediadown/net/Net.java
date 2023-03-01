@@ -1,10 +1,14 @@
 package sune.app.mediadown.net;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.URL;
+import java.net.URLConnection;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -124,6 +128,16 @@ public final class Net {
 	
 	public static final URI uriDirname(String uri) {
 		return uriDirname(uri(uri));
+	}
+	
+	public static final InputStream stream(URI uri, Duration timeout) throws IOException {
+		return stream(url(uri), timeout);
+	}
+	
+	public static final InputStream stream(URL url, Duration timeout) throws IOException {
+		URLConnection connection = url.openConnection();
+		connection.setConnectTimeout((int) timeout.toMillis());
+		return connection.getInputStream();
 	}
 	
 	private static final void queryConstruct(StringBuilder builder, QueryArgument argument, String namePrefix) {

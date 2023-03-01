@@ -1130,7 +1130,7 @@ public final class MediaDownloader {
 		if(remoteConfiguration == null) {
 			try {
 				String configURL = Net.uriConcat(URL_BASE_VER, VERSION.stringRelease(), "config");
-				remoteConfiguration = RemoteConfiguration.from(Utils.urlStream(configURL, TIMEOUT));
+				remoteConfiguration = RemoteConfiguration.from(Net.stream(Net.uri(configURL), Duration.ofMillis(TIMEOUT)));
 			} catch(IOException ex) {
 				error(ex);
 			}
