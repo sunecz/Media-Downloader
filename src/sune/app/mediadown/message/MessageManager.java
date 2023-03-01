@@ -10,14 +10,13 @@ import java.util.Map;
 import java.util.Objects;
 
 import sune.app.mediadown.MediaDownloader;
-import sune.app.mediadown.Shared;
 import sune.app.mediadown.net.Net;
+import sune.app.mediadown.net.Web;
+import sune.app.mediadown.net.Web.Request;
+import sune.app.mediadown.net.Web.Response;
 import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.PathSystem;
 import sune.app.mediadown.util.Utils.Ignore;
-import sune.app.mediadown.util.Web;
-import sune.app.mediadown.util.Web.GetRequest;
-import sune.app.mediadown.util.Web.StreamResponse;
 import sune.util.ssdf2.SSDCollection;
 import sune.util.ssdf2.SSDF;
 
@@ -83,8 +82,8 @@ public final class MessageManager {
 			SSDCollection data = MessageList.emptyData();
 			URI baseURI = versionBaseURI(version);
 			URI uri = baseURI.resolve("list");
-			try(StreamResponse response = Web.requestStream(new GetRequest(Net.url(uri), Shared.USER_AGENT))) {
-				data = SSDF.read(response.stream);
+			try(Response.OfStream response = Web.requestStream(Request.of(uri).GET())) {
+				data = SSDF.read(response.stream());
 			}
 			
 			obtainer = new MessageListObtainer(new MessageList(baseURI, version, data));

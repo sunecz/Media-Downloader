@@ -118,7 +118,6 @@ import sune.app.mediadown.util.Reflection3;
 import sune.app.mediadown.util.SelfProcess;
 import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Utils.Ignore;
-import sune.app.mediadown.util.Web.GetRequest;
 import sune.util.load.ModuleUtils;
 import sune.util.ssdf2.SSDAnnotation;
 import sune.util.ssdf2.SSDCollection;
@@ -1103,7 +1102,7 @@ public final class MediaDownloader {
 				});
 				
 				// Download the new version's JAR file
-				GetRequest request = new GetRequest(Net.url(jarUrl), Shared.USER_AGENT);
+				Request request = Request.of(Net.uri(jarUrl)).GET();
 				downloader.start(request, newJar, DownloadConfiguration.ofDefault());
 				
 				// Get the current run command, so that the application can be run again
@@ -2039,7 +2038,7 @@ public final class MediaDownloader {
 					// Check whether there is a file available for the current application version
 					if(versionUrl != null) {
 						String jarUrl = Net.uriConcat(versionUrl, "plugin.jar");
-						GetRequest request = new GetRequest(Net.url(jarUrl), Shared.USER_AGENT);
+						Request request = Request.of(Net.uri(jarUrl)).GET();
 						
 						NIO.createDir(path.getParent()); // Ensure parent directory
 						downloader.start(request, path, downloadConfiguration);
@@ -2119,7 +2118,7 @@ public final class MediaDownloader {
 								// Check whether there is a newer version of the plugin
 								if(pluginURL != null) {
 									Path file = Path.of(plugin.getPath());
-									GetRequest request = new GetRequest(Net.url(pluginURL), Shared.USER_AGENT);
+									Request request = Request.of(Net.uri(pluginURL)).GET();
 									
 									NIO.createDir(file.getParent()); // Ensure parent directory
 									NIO.deleteFile(file); // Ensure the file does not exist

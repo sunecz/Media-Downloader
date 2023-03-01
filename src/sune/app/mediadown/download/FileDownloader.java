@@ -25,15 +25,11 @@ import sune.app.mediadown.event.Listener;
 import sune.app.mediadown.event.tracker.DownloadTracker;
 import sune.app.mediadown.event.tracker.TrackerManager;
 import sune.app.mediadown.exception.RejectedResponseException;
+import sune.app.mediadown.net.Web;
+import sune.app.mediadown.net.Web.Request;
+import sune.app.mediadown.net.Web.Response;
 import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.Range;
-import sune.app.mediadown.util.Web;
-import sune.app.mediadown.util.Web.GetRequest;
-import sune.app.mediadown.util.Web.HeadRequest;
-import sune.app.mediadown.util.Web.PostRequest;
-import sune.app.mediadown.util.Web.Request;
-import sune.app.mediadown.util.Web.Response;
-import sune.app.mediadown.util.Web.StreamResponse;
 
 /** @since 00.02.08 */
 public class FileDownloader implements InternalDownloader {
@@ -87,7 +83,7 @@ public class FileDownloader implements InternalDownloader {
 	private Range<Long> rangeOutput;
 	
 	private FileChannel channel;
-	private StreamResponse response;
+	private Response.OfStream response;
 	private ByteBuffer buffer;
 	
 	public FileDownloader(TrackerManager trackerManager) {
@@ -138,23 +134,6 @@ public class FileDownloader implements InternalDownloader {
 		return DEFAULT_BUFFER_SIZE;
 	}
 	
-	// Utility method. Will be removed when the Web API is updated and it supports this functionality.
-	private static final Request toRangedRequest(Request request, String identifier, Range<Long> range) {
-		if(request instanceof HeadRequest) {
-			return request;
-		}
-		
-		if(request instanceof GetRequest) {
-			return new GetRequest(request.url, request.userAgent, request.cookies, request.headers,
-				request.followRedirects, identifier, range.from(), range.to() - 1L, request.timeout);
-		} else if(request instanceof PostRequest) {
-			return new PostRequest(request.url, request.userAgent, request.params, request.cookies, request.headers,
-				request.followRedirects, identifier, range.from(), range.to() - 1L, request.timeout);
-		}
-		
-		throw new IllegalStateException("Invalid request type");
-	}
-	
 	private final void openFile(Path output, Range<Long> range) throws IOException {
 		channel = FileChannel.open(output, CREATE, WRITE);
 		channel.position(Math.max(0L, range.from()));
@@ -179,7 +158,7 @@ public class FileDownloader implements InternalDownloader {
 		
 		// Make sure the request range is correct, if required
 		if(isValidRange(range)) {
-			req = toRangedRequest(request, identifier, range);
+			req = request.toRanged(range, identifier);
 		}
 		
 		// Prepare the response
@@ -193,7 +172,7 @@ public class FileDownloader implements InternalDownloader {
 		
 		// Try to obtain the total size, if not set
 		if(size <= 0L) {
-			size = totalBytes = Web.size(response.headers);
+			size = totalBytes = Web.size(response);
 		}
 		
 		// Update the total size of the file, if acquired
@@ -207,13 +186,13 @@ public class FileDownloader implements InternalDownloader {
 		
 		// Also update the identifier, if needed
 		if(identifier == null) {
-			identifier = response.identifier;
+			identifier = response.identifier();
 		}
 		
 		// Finally, convert the response to readable channel
 		ReadableByteChannel channel = null;
 		InternalInputStream iis = null;
-		InputStream stream = response.stream;
+		InputStream stream = response.stream();
 		
 		if(responseChannelFactory != null) {
 			iis = new InternalInputStream(stream);

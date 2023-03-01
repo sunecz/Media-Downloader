@@ -10,7 +10,6 @@ import java.util.Objects;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-import sune.app.mediadown.Shared;
 import sune.app.mediadown.download.DownloadConfiguration;
 import sune.app.mediadown.download.FileDownloader;
 import sune.app.mediadown.download.InputStreamChannelFactory;
@@ -20,6 +19,7 @@ import sune.app.mediadown.event.FileCheckEvent;
 import sune.app.mediadown.event.tracker.DownloadTracker;
 import sune.app.mediadown.event.tracker.TrackerManager;
 import sune.app.mediadown.net.Net;
+import sune.app.mediadown.net.Web.Request;
 import sune.app.mediadown.update.FileChecker;
 import sune.app.mediadown.update.Requirements;
 import sune.app.mediadown.update.Updater;
@@ -27,7 +27,6 @@ import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.OSUtils;
 import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.Property;
-import sune.app.mediadown.util.Web.GetRequest;
 
 public final class Resources {
 	
@@ -83,7 +82,7 @@ public final class Resources {
 			}
 		});
 		
-		GetRequest request = new GetRequest(Net.url(uri), Shared.USER_AGENT);
+		Request request = Request.of(uri).GET();
 		downloader.start(request, destination, DownloadConfiguration.ofDefault());
 		
 		return destination;

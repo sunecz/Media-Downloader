@@ -3,8 +3,8 @@ package sune.app.mediadown.download;
 import java.util.Objects;
 import java.util.function.Predicate;
 
+import sune.app.mediadown.net.Web.Response;
 import sune.app.mediadown.util.Range;
-import sune.app.mediadown.util.Web.Response;
 
 /** @since 00.02.08 */
 public class DownloadConfiguration {

@@ -19,15 +19,13 @@ import sune.app.mediadown.event.EventRegistry;
 import sune.app.mediadown.event.Listener;
 import sune.app.mediadown.event.tracker.DownloadTracker;
 import sune.app.mediadown.event.tracker.TrackerManager;
+import sune.app.mediadown.net.Web;
+import sune.app.mediadown.net.Web.Request;
+import sune.app.mediadown.net.Web.Response;
 import sune.app.mediadown.util.CheckedConsumer;
 import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.Range;
 import sune.app.mediadown.util.Utils.Ignore;
-import sune.app.mediadown.util.Web;
-import sune.app.mediadown.util.Web.GetRequest;
-import sune.app.mediadown.util.Web.HeadRequest;
-import sune.app.mediadown.util.Web.Request;
-import sune.app.mediadown.util.Web.Response;
 
 /** @since 00.02.08 */
 public class AcceleratedFileDownloader implements InternalDownloader {
@@ -41,7 +39,7 @@ public class AcceleratedFileDownloader implements InternalDownloader {
 	
 	private final AtomicBoolean flagBegin = new AtomicBoolean();
 	
-	private GetRequest request;
+	private Request request;
 	private Path output;
 	private DownloadConfiguration configuration;
 	
@@ -99,16 +97,6 @@ public class AcceleratedFileDownloader implements InternalDownloader {
 		}
 		
 		return new Range<>(from, to);
-	}
-	
-	// Utility method. Will be removed when the Web API is updated and it supports this functionality.
-	private static final HeadRequest toHeadRequest(Request request) {
-		if(request instanceof HeadRequest) {
-			return (HeadRequest) request;
-		}
-		
-		return new HeadRequest(request.url, request.userAgent, request.cookies, request.headers,
-			request.followRedirects, request.timeout);
 	}
 	
 	private final void doAction(CheckedConsumer<InternalDownloader> action) throws Exception {
@@ -178,7 +166,7 @@ public class AcceleratedFileDownloader implements InternalDownloader {
 		AtomicLong bytes = new AtomicLong();
 		
 		if(totalBytes < 0L) {
-			totalBytes = Ignore.defaultValue(() -> Web.size(toHeadRequest(request)), -1L);
+			totalBytes = Ignore.defaultValue(() -> Web.size(request), -1L);
 		}
 		
 		// If the total size is still unknown, we cannot split the file into chunks,

@@ -6,7 +6,6 @@ import java.io.StringReader;
 import java.nio.file.Path;
 
 import sune.app.mediadown.MediaDownloader;
-import sune.app.mediadown.Shared;
 import sune.app.mediadown.download.Download;
 import sune.app.mediadown.download.DownloadConfiguration;
 import sune.app.mediadown.download.FileDownloader;
@@ -15,13 +14,13 @@ import sune.app.mediadown.event.Event;
 import sune.app.mediadown.event.Listener;
 import sune.app.mediadown.event.tracker.TrackerManager;
 import sune.app.mediadown.net.Net;
+import sune.app.mediadown.net.Web;
+import sune.app.mediadown.net.Web.Request;
+import sune.app.mediadown.net.Web.Response;
 import sune.app.mediadown.update.Version;
 import sune.app.mediadown.update.VersionType;
 import sune.app.mediadown.util.Regex;
 import sune.app.mediadown.util.Utils.Ignore;
-import sune.app.mediadown.util.Web;
-import sune.app.mediadown.util.Web.GetRequest;
-import sune.app.mediadown.util.Web.StringResponse;
 
 public final class PluginUpdater {
 	
@@ -55,15 +54,17 @@ public final class PluginUpdater {
 		if((versionPlugin == null)) return Version.UNKNOWN;
 		if((baseURL == null || baseURL.isEmpty())) return versionPlugin;
 		String configURL = Net.uriConcat(baseURL, "config");
-		StringResponse response;
-		try {
-			response = Web.request(new GetRequest(Net.url(configURL), Shared.USER_AGENT));
+		
+		String content;
+		try(Response.OfString response = Web.request(Request.of(Net.uri(configURL)).GET())) {
+			content = response.body();
 		} catch(Exception ex) {
 			// Request failed, nothing else to do
 			return versionPlugin;
 		}
+		
 		Version localAppVersion = MediaDownloader.VERSION.release();
-		try(BufferedReader reader = new BufferedReader(new StringReader(response.content))) {
+		try(BufferedReader reader = new BufferedReader(new StringReader(content))) {
 			String line;
 			while((line = reader.readLine()) != null) {
 				if((line.isEmpty())) continue;
@@ -145,8 +146,8 @@ public final class PluginUpdater {
 			
 			@Override
 			public void start() throws Exception {
-				GetRequest request = new GetRequest(Net.url(pluginURL), Shared.USER_AGENT);
-				long size = Ignore.defaultValue(() -> Web.size(request.toHeadRequest()), -1L);
+				Request request = Request.of(Net.uri(pluginURL)).GET();
+				long size = Ignore.defaultValue(() -> Web.size(request), -1L);
 				downloader.start(request, file, DownloadConfiguration.ofTotalBytes(size));
 			}
 			

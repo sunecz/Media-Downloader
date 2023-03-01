@@ -25,15 +25,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
+import java.util.regex.Matcher;
 
 import sune.app.mediadown.Shared;
 import sune.app.mediadown.concurrent.VarLoader;
+import sune.app.mediadown.media.MediaConstants;
 import sune.app.mediadown.util.Range;
+import sune.app.mediadown.util.Regex;
 
 /** @since 00.02.08 */
 public final class Web {
@@ -110,7 +114,7 @@ public final class Web {
 		}
 	}
 	
-	private static final <T, R extends Response<T>> R doRequest(Request request,
+	private static final <T, R extends Response> R doRequest(Request request,
 			BiFunction<Request, HttpResponse<T>, R> constructor, BodyHandler<T> handler) {
 		return constructor.apply(
 			request,
@@ -118,6 +122,11 @@ public final class Web {
 				.sendAsync(request.toHttpRequest(), handler)
 				.join()
 		);
+	}
+	
+	private static final Regex regexContentRange() {
+		// Source: https://httpwg.org/specs/rfc9110.html#field.content-range
+		return Regex.of("^([!#$%&'*+\\-.^_`|~0-9A-Za-z]+) (?:(\\d+)-(\\d+)/(\\d+|\\*)|\\*/(\\d+))$");
 	}
 	
 	public static final Duration defaultConnectTimeout() {
@@ -148,16 +157,48 @@ public final class Web {
 		return doRequest(request, Response.OfStream::new, BodyHandlers.ofInputStream());
 	}
 	
-	private static final Request.HEAD toHEADRequest(Request request) {
-		if(request instanceof Request.HEAD || request.method().equals("HEAD")) {
-			return (Request.HEAD) request;
-		}
-		
-		return (Request.HEAD) Request.Builder.of(request).HEAD();
+	public static final Response.OfStream peek(Request request) throws Exception {
+		return requestStream(request.toHEAD());
 	}
 	
-	public static final Response.OfStream peek(Request request) throws Exception {
-		return requestStream(toHEADRequest(request));
+	public static final long size(Request request) throws Exception {
+		return size(peek(request));
+	}
+	
+	public static final long size(Response response) throws Exception {
+		return response.statusCode() != 200 ? MediaConstants.UNKNOWN_SIZE : size(response.headers());
+	}
+	
+	public static final long size(HttpHeaders headers) {
+		Optional<String> contentRange = headers.firstValue("content-range");
+		
+		if(contentRange.isPresent()) {
+			Matcher matcher = regexContentRange().matcher(contentRange.get());
+			
+			if(matcher.matches()) {
+				String unit = matcher.group(1);
+				
+				switch(unit) {
+					case "bytes": {
+						String strRangeStart = matcher.group(2);
+						
+						if(strRangeStart == null) {
+							return Long.valueOf(matcher.group(5));
+						}
+						
+						long rangeStart = Long.valueOf(strRangeStart);
+						long rangeEnd = Long.valueOf(matcher.group(3));
+						return rangeEnd - rangeStart + 1L;
+					}
+					default: {
+						// Not supported, ignore the header
+						break;
+					}
+				}
+			}
+		}
+		
+		return headers.firstValueAsLong("content-length").orElse(MediaConstants.UNKNOWN_SIZE);
 	}
 	
 	public static final void clear() {
@@ -166,8 +207,6 @@ public final class Web {
 		}
 	}
 	
-	// TODO: Add method: size(Response)
-	// TODO: Add method: size(HttpHeaders)
 	// TODO: Add class: Cookies (for various cookies-related operations)
 	
 	private static final class WebThreadFactory implements ThreadFactory {
@@ -188,24 +227,34 @@ public final class Web {
 		}
 	}
 	
-	public static abstract class Response<T> implements AutoCloseable {
+	public static abstract class Response implements AutoCloseable {
 		
 		protected final Request request;
-		protected final HttpResponse<T> response;
+		protected final HttpResponse<?> response;
 		
-		public Response(Request request, HttpResponse<T> response) {
+		public Response(Request request, HttpResponse<?> response) {
 			this.request = Objects.requireNonNull(request);
 			this.response = Objects.requireNonNull(response);
 		}
 		
 		public Request request() { return request; }
-		public HttpResponse<T> response() { return response; }
-		
+		public HttpResponse<?> response() { return response; }
 		public int statusCode() { return response.statusCode(); }
 		public URI uri() { return response.uri(); }
 		public HttpHeaders headers() { return response.headers(); }
 		
-		public static class OfString extends Response<String> {
+		public String identifier() {
+			HttpHeaders headers = headers();
+			Optional<String> identifier = headers.firstValue("etag");
+			
+			if(identifier.isEmpty()) {
+				identifier = headers.firstValue("last-modified");
+			}
+			
+			return identifier.orElse(null);
+		}
+		
+		public static class OfString extends Response {
 			
 			protected OfString(Request request, HttpResponse<String> response) {
 				super(request, response);
@@ -216,10 +265,13 @@ public final class Web {
 				// Do nothing
 			}
 			
-			public String body() { return response.body(); }
+			@SuppressWarnings("unchecked")
+			public HttpResponse<String> response() { return (HttpResponse<String>) response; }
+			
+			public String body() { return response().body(); }
 		}
 		
-		public static class OfStream extends Response<InputStream> {
+		public static class OfStream extends Response {
 			
 			protected OfStream(Request request, HttpResponse<InputStream> response) {
 				super(request, response);
@@ -230,7 +282,10 @@ public final class Web {
 				stream().close();
 			}
 			
-			public InputStream stream() { return response.body(); }
+			@SuppressWarnings("unchecked")
+			public HttpResponse<InputStream> response() { return (HttpResponse<InputStream>) response; }
+			
+			public InputStream stream() { return response().body(); }
 		}
 	}
 	
@@ -304,7 +359,16 @@ public final class Web {
 			return builder;
 		}
 		
+		protected Builder builder() {
+			return Request.Builder.of(this);
+		}
+		
 		public abstract HttpRequest toHttpRequest();
+		public abstract Request toHEAD();
+		public abstract Request toRanged(Range<Long> range, String identifier);
+		public abstract Request ofURI(URI uri);
+		
+		public Request toRanged(Range<Long> range) { return toRanged(range, null); }
 		
 		public String method() { return method; }
 		public URI uri() { return uri; }
@@ -326,6 +390,21 @@ public final class Web {
 			public HttpRequest toHttpRequest() {
 				return httpRequestBuilder().GET().build();
 			}
+			
+			@Override
+			public Request toHEAD() {
+				return builder().HEAD();
+			}
+			
+			@Override
+			public Request toRanged(Range<Long> range, String identifier) {
+				return builder().range(range).identifier(identifier).GET();
+			}
+			
+			@Override
+			public Request ofURI(URI uri) {
+				return builder().uri(uri).GET();
+			}
 		}
 		
 		protected static class POST extends Request {
@@ -341,6 +420,21 @@ public final class Web {
 			public HttpRequest toHttpRequest() {
 				return httpRequestBuilder().POST(BodyPublishers.ofString(body, CHARSET)).build();
 			}
+			
+			@Override
+			public Request toHEAD() {
+				return builder().HEAD();
+			}
+			
+			@Override
+			public Request toRanged(Range<Long> range, String identifier) {
+				return builder().range(range).identifier(identifier).POST(body);
+			}
+			
+			@Override
+			public Request ofURI(URI uri) {
+				return builder().uri(uri).POST(body);
+			}
 		}
 		
 		protected static class HEAD extends Request {
@@ -352,6 +446,21 @@ public final class Web {
 			@Override
 			public HttpRequest toHttpRequest() {
 				return httpRequestBuilder().method(method(), BodyPublishers.noBody()).build();
+			}
+			
+			@Override
+			public Request toHEAD() {
+				return this;
+			}
+			
+			@Override
+			public Request toRanged(Range<Long> range, String identifier) {
+				return builder().range(range).identifier(identifier).HEAD();
+			}
+			
+			@Override
+			public Request ofURI(URI uri) {
+				return builder().uri(uri).HEAD();
 			}
 		}
 		

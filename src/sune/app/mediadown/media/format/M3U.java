@@ -20,13 +20,12 @@ import sune.app.mediadown.download.segment.RemoteFileSegmentable;
 import sune.app.mediadown.download.segment.RemoteFileSegmentsHolder;
 import sune.app.mediadown.media.MediaResolution;
 import sune.app.mediadown.net.Net;
+import sune.app.mediadown.net.Web;
+import sune.app.mediadown.net.Web.Request;
+import sune.app.mediadown.net.Web.Response;
 import sune.app.mediadown.util.CheckedFunction;
 import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.Regex;
-import sune.app.mediadown.util.Web;
-import sune.app.mediadown.util.Web.GetRequest;
-import sune.app.mediadown.util.Web.Request;
-import sune.app.mediadown.util.Web.StreamResponse;
 
 /** @since 00.02.05 */
 public final class M3U {
@@ -35,24 +34,26 @@ public final class M3U {
 	private M3U() {
 	}
 	
-	private static final CheckedFunction<URI, StreamResponse> streamResolver(Request request) {
-		return ((uri) -> Web.requestStream(request.setURL(Net.url(uri))));
+	private static final CheckedFunction<URI, Response.OfStream> streamResolver(Request request) {
+		return ((uri) -> Web.requestStream(request.ofURI(uri)));
 	}
 	
-	private static final CheckedFunction<URI, StreamResponse> streamResolver() {
-		return ((uri) -> Web.requestStream(new GetRequest(Net.url(uri))));
+	private static final CheckedFunction<URI, Response.OfStream> streamResolver() {
+		return ((uri) -> Web.requestStream(Request.of(uri).GET()));
 	}
 	
 	public static final List<M3UFile> parse(Request request) throws Exception {
-		URI baseURI = Net.baseURI(Net.uri(request.url));
-		try(M3UReader reader = new M3UReader(baseURI, Net.uri(request.url), streamResolver(request), null)) {
+		URI baseURI = Net.baseURI(request.uri());
+		
+		try(M3UReader reader = new M3UReader(baseURI, request.uri(), streamResolver(request), null)) {
 			return reader.read();
 		}
 	}
 	
 	public static final List<M3UFile> parse(String uri, String content) throws Exception {
-		URI baseURI = Net.baseURI(Net.uri(uri));
-		try(M3UReader reader = new M3UReader(baseURI, Net.uri(uri), streamResolver(), content)) {
+		URI uriObj = Net.uri(uri), baseURI = Net.baseURI(uriObj);
+		
+		try(M3UReader reader = new M3UReader(baseURI, uriObj, streamResolver(), content)) {
 			return reader.read();
 		}
 	}
@@ -279,8 +280,8 @@ public final class M3U {
 		
 		private final URI baseURI;
 		private final URI uri;
-		private final CheckedFunction<URI, StreamResponse> streamResolver;
-		private final StreamResponse response;
+		private final CheckedFunction<URI, Response.OfStream> streamResolver;
+		private final Response.OfStream response;
 		private final BufferedReader reader;
 		
 		// M3U meta information
@@ -292,24 +293,24 @@ public final class M3U {
 		private MediaResolution resolution;
 		private M3UKey key;
 		
-		public M3UReader(URI baseURI, URI uri, CheckedFunction<URI, StreamResponse> streamResolver,
+		public M3UReader(URI baseURI, URI uri, CheckedFunction<URI, Response.OfStream> streamResolver,
 				String content) throws Exception {
 			this(Objects.requireNonNull(baseURI), Objects.requireNonNull(uri),
 			     streamResolver, content, MediaResolution.UNKNOWN);
 		}
 		
-		private M3UReader(URI baseURI, URI uri, CheckedFunction<URI, StreamResponse> streamResolver,
+		private M3UReader(URI baseURI, URI uri, CheckedFunction<URI, Response.OfStream> streamResolver,
 				String content, MediaResolution resolution) throws Exception {
 			this.baseURI = Objects.requireNonNull(baseURI);
 			this.uri = Objects.requireNonNull(uri);
 			this.streamResolver = Objects.requireNonNull(streamResolver);
-			StreamResponse sr = null;
+			Response.OfStream sr = null;
 			Reader r = null;
 			if(content != null) {
 				r = new StringReader(content);
 			} else {
 				sr = streamResolver.apply(uri);
-				r = new InputStreamReader(sr.stream);
+				r = new InputStreamReader(sr.stream());
 			}
 			this.response = sr;
 			this.reader = new BufferedReader(r);

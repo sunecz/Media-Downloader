@@ -1,6 +1,7 @@
 package sune.app.mediadown.media;
 
 import java.net.URI;
+import java.net.http.HttpHeaders;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -10,7 +11,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import sune.app.mediadown.MediaDownloader;
-import sune.app.mediadown.Shared;
 import sune.app.mediadown.download.segment.FileSegmentsHolder;
 import sune.app.mediadown.language.Translation;
 import sune.app.mediadown.media.format.M3U;
@@ -18,6 +18,9 @@ import sune.app.mediadown.media.format.M3U.M3UFile;
 import sune.app.mediadown.media.format.MPD;
 import sune.app.mediadown.media.format.MPD.MPDCombinedFile;
 import sune.app.mediadown.media.format.MPD.MPDFile;
+import sune.app.mediadown.net.Web;
+import sune.app.mediadown.net.Web.Request;
+import sune.app.mediadown.net.Web.Response;
 import sune.app.mediadown.util.CheckedFunction;
 import sune.app.mediadown.util.Opt;
 import sune.app.mediadown.util.Opt.OptCondition;
@@ -25,9 +28,6 @@ import sune.app.mediadown.util.Opt.OptMapper;
 import sune.app.mediadown.util.Property;
 import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Utils.Ignore;
-import sune.app.mediadown.util.Web;
-import sune.app.mediadown.util.Web.GetRequest;
-import sune.app.mediadown.util.Web.StreamResponse;
 
 /** @since 00.02.05 */
 public final class MediaUtils {
@@ -221,8 +221,8 @@ public final class MediaUtils {
 			parsers = new HashMap<>();
 		}
 		
-		private static final List<String> contentType(Map<String, List<String>> headers) {
-			return headers.get("Content-Type");
+		private static final List<String> contentType(HttpHeaders headers) {
+			return headers.allValues("content-type");
 		}
 		
 		private static final FormatParser defaultFormatParser(MediaFormat format) {
@@ -231,7 +231,7 @@ public final class MediaUtils {
 			else                           return new DefaultFormatParser();
 		}
 		
-		private final List<Media.Builder<?, ?>> parseFormat(URI uri, MediaFormat format, GetRequest request,
+		private final List<Media.Builder<?, ?>> parseFormat(URI uri, MediaFormat format, Request request,
 				URI sourceURI, Map<String, Object> data, long size) throws Exception {
 			Property<Exception> ex = new Property<>();
 			Exception exception;
@@ -245,13 +245,13 @@ public final class MediaUtils {
 		
 		public final List<Media.Builder<?, ?>> parse(URI uri, URI sourceURI, Map<String, Object> data)
 				throws Exception {
-			GetRequest request = new GetRequest(uri.toURL(), Shared.USER_AGENT);
-			try(StreamResponse response = Web.peek(request.toHeadRequest())) {
-				MediaFormat format = Opt.of(contentType(response.headers))
+			Request request = Request.of(uri).GET();
+			try(Response.OfStream response = Web.peek(request)) {
+				MediaFormat format = Opt.of(contentType(response.headers()))
 					.ifTrue(Objects::nonNull).map(List::stream).orElseGet(Stream::empty)
 					.map(MediaFormat::fromMimeType).filter(Objects::nonNull).findFirst()
 					.orElse(MediaFormat.UNKNOWN);
-				return parseFormat(uri, format, request, sourceURI, data, Web.size(response.headers));
+				return parseFormat(uri, format, request, sourceURI, data, Web.size(response));
 			}
 		}
 		
@@ -263,7 +263,7 @@ public final class MediaUtils {
 		@FunctionalInterface
 		public static interface FormatParser {
 			
-			List<Media.Builder<?, ?>> parse(URI uri, MediaFormat format, GetRequest request, URI sourceURI,
+			List<Media.Builder<?, ?>> parse(URI uri, MediaFormat format, Request request, URI sourceURI,
 					Map<String, Object> data, long size) throws Exception;
 		}
 		
@@ -271,14 +271,14 @@ public final class MediaUtils {
 			
 			private final URI uri;
 			private final MediaFormat format;
-			private final GetRequest request;
+			private final Request request;
 			private final URI sourceURI;
 			private final Map<String, Object> data;
 			private final long size;
 			private T result;
 			private MediaMetadata.Builder mediaData;
 			
-			public FormatParserData(URI uri, MediaFormat format, GetRequest request, URI sourceURI,
+			public FormatParserData(URI uri, MediaFormat format, Request request, URI sourceURI,
 			        Map<String, Object> data, long size) {
 				this.uri = uri;
 				this.format = format;
@@ -306,7 +306,7 @@ public final class MediaUtils {
 				return format;
 			}
 			
-			public GetRequest request() {
+			public Request request() {
 				return request;
 			}
 			
@@ -340,7 +340,7 @@ public final class MediaUtils {
 			}
 			
 			@Override
-			public List<Media.Builder<?, ?>> parse(URI uri, MediaFormat format, GetRequest request, URI sourceURI,
+			public List<Media.Builder<?, ?>> parse(URI uri, MediaFormat format, Request request, URI sourceURI,
 					Map<String, Object> data, long size) throws Exception {
 				FormatParserData<M3UFile> parserData = new FormatParserData<>(uri, format, request, sourceURI, data, size);
 				List<Media.Builder<?, ?>> media = new ArrayList<>();
@@ -363,7 +363,7 @@ public final class MediaUtils {
 			}
 			
 			@Override
-			public List<Media.Builder<?, ?>> parse(URI uri, MediaFormat format, GetRequest request, URI sourceURI,
+			public List<Media.Builder<?, ?>> parse(URI uri, MediaFormat format, Request request, URI sourceURI,
 					Map<String, Object> data, long size) throws Exception {
 				FormatParserData<MPDCombinedFile> parserData = new FormatParserData<>(uri, format, request, sourceURI, data, size);
 				List<Media.Builder<?, ?>> media = new ArrayList<>();
@@ -411,7 +411,7 @@ public final class MediaUtils {
 		private static final class DefaultFormatParser implements FormatParser {
 			
 			@Override
-			public List<Media.Builder<?, ?>> parse(URI uri, MediaFormat format, GetRequest request, URI sourceURI,
+			public List<Media.Builder<?, ?>> parse(URI uri, MediaFormat format, Request request, URI sourceURI,
 					Map<String, Object> data, long size) throws Exception {
 				MediaMetadata.Builder mediaData = MediaMetadata.builder().isProtected(false).sourceURI(sourceURI);
 				return List.of(VideoMedia.simple()

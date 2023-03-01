@@ -15,13 +15,13 @@ import sune.app.mediadown.event.EventBindable;
 import sune.app.mediadown.event.EventRegistry;
 import sune.app.mediadown.event.Listener;
 import sune.app.mediadown.net.Net;
+import sune.app.mediadown.net.Web.Request;
 import sune.app.mediadown.update.FileChecker.FileCheckerEntry;
 import sune.app.mediadown.util.BiCallback;
 import sune.app.mediadown.util.CheckedBiFunction;
 import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Utils.Ignore;
-import sune.app.mediadown.util.Web.GetRequest;
 
 public abstract class Updater implements EventBindable<CheckEvent> {
 	
@@ -84,7 +84,7 @@ public abstract class Updater implements EventBindable<CheckEvent> {
 		return new OfRemoteFiles(cfgRemote, remoteDirURL, NIO.localPath(), timeout, checker,
 			(String webPath, Path entryPath) -> {
 				Path path = localDir.resolve(entryPath);
-				GetRequest request = new GetRequest(Net.url(webPath));
+				Request request = Request.of(Net.uri(webPath)).GET();
 				NIO.createDir(path.getParent()); // Ensure parent directory
 				downloader.start(request, path, DownloadConfiguration.ofDefault());
 				return path;

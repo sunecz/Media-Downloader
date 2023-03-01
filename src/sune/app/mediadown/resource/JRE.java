@@ -11,7 +11,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Predicate;
 
-import sune.app.mediadown.Shared;
 import sune.app.mediadown.download.DownloadConfiguration;
 import sune.app.mediadown.download.FileDownloader;
 import sune.app.mediadown.download.InputStreamChannelFactory;
@@ -25,6 +24,7 @@ import sune.app.mediadown.event.Listener;
 import sune.app.mediadown.event.tracker.DownloadTracker;
 import sune.app.mediadown.event.tracker.TrackerManager;
 import sune.app.mediadown.net.Net;
+import sune.app.mediadown.net.Web.Request;
 import sune.app.mediadown.resource.JRE.JREEvent;
 import sune.app.mediadown.update.FileChecker;
 import sune.app.mediadown.update.Requirements;
@@ -33,7 +33,6 @@ import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.PathSystem;
 import sune.app.mediadown.util.Utils;
-import sune.app.mediadown.util.Web.GetRequest;
 
 /** @since 00.02.02 */
 public final class JRE implements EventBindable<JREEvent> {
@@ -247,7 +246,7 @@ public final class JRE implements EventBindable<JREEvent> {
 				eventRegistry.call(JREEvent.DOWNLOAD_END, context);
 			});
 			
-			GetRequest request = new GetRequest(Net.url(uri), Shared.USER_AGENT);
+			Request request = Request.of(uri).GET();
 			downloader.start(request, destination, DownloadConfiguration.ofDefault());
 			
 			return destination;

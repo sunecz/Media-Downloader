@@ -16,13 +16,13 @@ import sune.app.mediadown.media.MediaFormat;
 import sune.app.mediadown.media.MediaTitleFormat;
 import sune.app.mediadown.media.MediaTitleFormats;
 import sune.app.mediadown.media.MediaTitleFormats.NamedMediaTitleFormat;
+import sune.app.mediadown.net.Web;
 import sune.app.mediadown.resource.ResourceRegistry;
 import sune.app.mediadown.theme.Theme;
 import sune.app.mediadown.update.Version;
 import sune.app.mediadown.update.VersionType;
 import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.Utils.Ignore;
-import sune.app.mediadown.util.Web;
 import sune.util.ssdf2.SSDCollection;
 
 /** @since 00.02.04 */
@@ -120,10 +120,10 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 		builder.addProperty(ConfigurationProperty.ofBoolean(PROPERTY_COMPUTE_STREAM_SIZE).inGroup(GROUP_DOWNLOAD).withDefaultValue(true));
 		builder.addProperty(ConfigurationProperty.ofInteger(PROPERTY_REQUEST_CONNECT_TIMEOUT)
 			.inGroup(GROUP_DOWNLOAD)
-			.withDefaultValue(Web.DEFAULT_CONNECT_TIMEOUT));
+			.withDefaultValue(Web.defaultConnectTimeout().toMillis()));
 		builder.addProperty(ConfigurationProperty.ofInteger(PROPERTY_REQUEST_READ_TIMEOUT)
 			.inGroup(GROUP_DOWNLOAD)
-			.withDefaultValue(Web.DEFAULT_READ_TIMEOUT));
+			.withDefaultValue(Web.defaultReadTimeout().toMillis()));
 		
 		// ----- Conversion
 		builder.addProperty(ConfigurationProperty.ofInteger(PROPERTY_PARALLEL_CONVERSIONS).inGroup(GROUP_CONVERSION).withDefaultValue(1));

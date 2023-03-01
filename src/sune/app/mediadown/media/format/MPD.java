@@ -30,13 +30,13 @@ import sune.app.mediadown.media.MediaFormat;
 import sune.app.mediadown.media.MediaResolution;
 import sune.app.mediadown.media.MediaType;
 import sune.app.mediadown.net.Net;
+import sune.app.mediadown.net.Web;
+import sune.app.mediadown.net.Web.Request;
+import sune.app.mediadown.net.Web.Response;
 import sune.app.mediadown.util.CheckedFunction;
 import sune.app.mediadown.util.Regex;
 import sune.app.mediadown.util.Singleton;
 import sune.app.mediadown.util.Utils;
-import sune.app.mediadown.util.Web;
-import sune.app.mediadown.util.Web.Request;
-import sune.app.mediadown.util.Web.StreamResponse;
 
 /** @since 00.02.05 */
 public final class MPD {
@@ -75,12 +75,12 @@ public final class MPD {
 		return Utils.stream(attributes.iterator()).collect(Collectors.toMap(Attribute::getKey, Attribute::getValue));
 	}
 	
-	private static final CheckedFunction<URI, StreamResponse> streamResolver(Request request) {
-		return ((uri) -> Web.requestStream(request.setURL(Net.url(uri))));
+	private static final CheckedFunction<URI, Response.OfStream> streamResolver(Request request) {
+		return ((uri) -> Web.requestStream(request.ofURI(uri)));
 	}
 	
 	public static final Map<MediaFormat, List<MPDFile>> parse(Request request) throws Exception {
-		return new MPDReader(Net.uri(request.url), streamResolver(request)).read();
+		return new MPDReader(request.uri(), streamResolver(request)).read();
 	}
 	
 	public static final Map<MediaFormat, List<MPDFile>> parse(String uri, String content) throws Exception {
@@ -428,10 +428,10 @@ public final class MPD {
 	private static final class MPDReader {
 		
 		private final URI uri;
-		private final CheckedFunction<URI, StreamResponse> streamResolver;
+		private final CheckedFunction<URI, Response.OfStream> streamResolver;
 		private final String content;
 		
-		private MPDReader(URI uri, CheckedFunction<URI, StreamResponse> streamResolver) throws Exception {
+		private MPDReader(URI uri, CheckedFunction<URI, Response.OfStream> streamResolver) throws Exception {
 			this.uri = Objects.requireNonNull(uri);
 			this.streamResolver = Objects.requireNonNull(streamResolver);
 			this.content = null;
@@ -471,8 +471,8 @@ public final class MPD {
 			URI baseURI = Net.baseURI(uri);
 			Document document = null;
 			if(streamResolver != null) {
-				try(StreamResponse response = streamResolver.apply(uri)) {
-					document = responseDocument(response.stream, baseURI);
+				try(Response.OfStream response = streamResolver.apply(uri)) {
+					document = responseDocument(response.stream(), baseURI);
 				}
 			} else if(content != null) {
 				document = responseDocument(new ByteArrayInputStream(content.getBytes(Shared.CHARSET)), baseURI);

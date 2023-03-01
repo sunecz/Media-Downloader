@@ -66,13 +66,12 @@ import org.jsoup.nodes.Document;
 
 import sune.app.mediadown.Shared;
 import sune.app.mediadown.media.MediaFormat;
-import sune.app.mediadown.util.Web.GetRequest;
-import sune.app.mediadown.util.Web.StreamResponse;
+import sune.app.mediadown.net.Web.Request;
+import sune.app.mediadown.net.Web.Response;
 
 public final class Utils {
 	
-	private static final String  USER_AGENT = Shared.USER_AGENT;
-	private static final Charset CHARSET    = Shared.CHARSET;
+	private static final Charset CHARSET = Shared.CHARSET;
 	private static final char[]  INVALID_FILE_NAME_CHARS = { '<', '>', ':', '"', '/', '\\', '|', '?', '*' };
 	private static final String  REGEX_INVALID_FILE_NAME_CHARS;
 	private static final char    URL_DELIMITER = '/';
@@ -431,8 +430,8 @@ public final class Utils {
 	@Deprecated
 	public static final Document document(URI uri) {
 		uri = uri.normalize();
-		try(StreamResponse response = Web.requestStream(new GetRequest(uri.toURL(), USER_AGENT))) {
-			return Jsoup.parse(response.stream, CHARSET.name(), jsoup_baseUri(uri));
+		try(Response.OfStream response = sune.app.mediadown.net.Web.requestStream(Request.of(uri).GET())) {
+			return Jsoup.parse(response.stream(), CHARSET.name(), jsoup_baseUri(uri));
 		} catch(Exception ex) {
 			// Ignore
 		}
