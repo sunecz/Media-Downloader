@@ -144,6 +144,14 @@ public final class Net {
 		return connection.getInputStream();
 	}
 	
+	public static final URI resolve(URI uri, URI other) {
+		return uri.resolve(other);
+	}
+	
+	public static final URI resolve(URI uri, String other) {
+		return uri.resolve(uri(other));
+	}
+	
 	private static final void queryConstruct(StringBuilder builder, QueryArgument argument, String namePrefix) {
 		String name = encodeURL(argument.name());
 		

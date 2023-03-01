@@ -13,6 +13,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import sune.app.mediadown.net.Net;
 import sune.app.mediadown.util.Utils;
 import sune.util.ssdf2.SSDCollection;
 import sune.util.ssdf2.SSDNode;
@@ -42,7 +43,7 @@ public final class MessageList {
 	
 	// Constructor for the empty list
 	protected MessageList(URI rootURI) throws Exception {
-		this(rootURI.resolve("0000/"), "0000", emptyData());
+		this(Net.resolve(rootURI, "0000/"), "0000", emptyData());
 	}
 	
 	protected MessageList(URI baseURI, String version, SSDCollection data) throws Exception {
@@ -63,7 +64,7 @@ public final class MessageList {
 	/** @since 00.02.05 */
 	private static final Message newMessage(MessageList parent, String list, String file, MessageLanguage language,
 			MessageOS os, int version) {
-		URI uri = parent.baseURI().resolve("../" + list + "/data/" + file);
+		URI uri = Net.resolve(parent.baseURI(), "../" + list + "/data/" + file);
 		return new Message(list, uri, file, language, os, version);
 	}
 	

@@ -71,7 +71,7 @@ public final class MessageManager {
 		}
 		
 		private static final URI versionBaseURI(String version) {
-			return URI_BASE.resolve(version + '/');
+			return Net.resolve(URI_BASE, version + '/');
 		}
 		
 		public static final MessageListObtainer ofVersion(String version) throws Exception {
@@ -81,7 +81,7 @@ public final class MessageManager {
 			
 			SSDCollection data = MessageList.emptyData();
 			URI baseURI = versionBaseURI(version);
-			URI uri = baseURI.resolve("list");
+			URI uri = Net.resolve(baseURI, "list");
 			try(Response.OfStream response = Web.requestStream(Request.of(uri).GET())) {
 				data = SSDF.read(response.stream());
 			}

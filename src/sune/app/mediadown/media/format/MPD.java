@@ -348,7 +348,7 @@ public final class MPD {
 			formatMap.put("Time", String.valueOf(time));
 			formatMap.put("Number", String.valueOf(count));
 			String uri = Regex.of("\\$(.*?)\\$").replaceAll(templateURI, this::format);
-			URI uriObj = baseURI.resolve(uri);
+			URI uriObj = Net.resolve(baseURI, uri);
 			segments.add(new MPDSegment(uriObj, duration * timescaleMult, time * timescaleMult));
 			time += duration;
 			if(!isInitialization) ++count; // For the Number variable
