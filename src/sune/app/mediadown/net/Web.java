@@ -541,18 +541,29 @@ public final class Web {
 			public Builder uri(URI uri) { this.uri = Objects.requireNonNull(uri); return this; }
 			public Builder userAgent(String userAgent) { this.userAgent = userAgent; return this; }
 			
+			public Builder addHeaders(Map<String, List<String>> headers) {
+				headers.forEach((k, v) -> this.headers.compute(k, (a, b) -> b == null ? v : merge(b, v)));
+				return this;
+			}
+			
+			public Builder headers(Map<String, List<String>> headers) {
+				this.headers.clear();
+				this.headers.putAll(headers);
+				return this;
+			}
+			
 			public Builder addHeader(String name, Collection<String> values) {
 				headers.compute(name, (k, v) -> v == null ? List.copyOf(values) : merge(v, values));
 				return this;
 			}
 			
-			public Builder setHeader(String name, Collection<String> values) {
+			public Builder header(String name, Collection<String> values) {
 				headers.put(name, List.copyOf(values));
 				return this;
 			}
 			
 			public Builder addHeader(String name, String... values) { return addHeader(name, List.of(values)); }
-			public Builder setHeader(String name, String... values) { return setHeader(name, List.of(values)); }
+			public Builder header(String name, String... values) { return header(name, List.of(values)); }
 			public Builder addCookie(HttpCookie cookie) { cookies.add(cookie); return this; }
 			public Builder followRedirects(Redirect followRedirects) { this.followRedirects = followRedirects; return this; }
 			public Builder identifier(String identifier) { this.identifier = identifier; return this; }
