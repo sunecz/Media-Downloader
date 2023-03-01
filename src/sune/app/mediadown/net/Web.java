@@ -227,6 +227,23 @@ public final class Web {
 		}
 	}
 	
+	public static final class Headers {
+		
+		// Forbid anyone to create an instance of this class
+		private Headers() {
+		}
+		
+		public static final Map<String, List<String>> ofSingle(Object... values) {
+			Map<String, List<String>> headers = new HashMap<>(values.length / 2);
+			
+			for(int i = 0, l = values.length; i < l; i += 2) {
+				headers.put(String.valueOf(values[i]), List.of(String.valueOf(values[i + 1])));
+			}
+			
+			return headers;
+		}
+	}
+	
 	public static abstract class Response implements AutoCloseable {
 		
 		protected final Request request;
