@@ -26,7 +26,7 @@ public final class ConversionManager implements QueueContext {
 	private static ConversionManager instance;
 	
 	/** @since 00.02.08 */
-	private PositionAwareQueueTaskExecutor<Void> executor;
+	private volatile PositionAwareQueueTaskExecutor<Void> executor;
 	
 	// Forbid anyone to create an instance of this class
 	private ConversionManager() {
@@ -34,14 +34,16 @@ public final class ConversionManager implements QueueContext {
 	
 	/** @since 00.02.08 */
 	private final PositionAwareQueueTaskExecutor<Void> executor() {
-		synchronized(ConversionManager.class) {
-			if(executor == null) {
-				executor = new PositionAwareQueueTaskExecutor<>(MediaDownloader.configuration().parallelConversions());
-				Disposables.add(this::dispose);
+		if(executor == null) {
+			synchronized(this) {
+				if(executor == null) {
+					executor = new PositionAwareQueueTaskExecutor<>(MediaDownloader.configuration().parallelConversions());
+					Disposables.add(this::dispose);
+				}
 			}
-			
-			return executor;
 		}
+		
+		return executor;
 	}
 	
 	/** @since 00.02.08 */
@@ -74,17 +76,17 @@ public final class ConversionManager implements QueueContext {
 	}
 	
 	public final void dispose() throws Exception {
-		synchronized(ConversionManager.class) {
-			if(executor == null) {
-				return;
+		if(executor != null) {
+			synchronized(this) {
+				if(executor != null) {
+					executor.stop();
+				}
 			}
-			
-			executor.stop();
 		}
 	}
 	
 	public final boolean isRunning() {
-		synchronized(ConversionManager.class) {
+		synchronized(this) {
 			return executor != null && executor.isRunning();
 		}
 	}

@@ -27,8 +27,8 @@ public class QueueTaskExecutor<V> {
 	protected final InternalState state = new InternalState(STATE_INITIAL);
 	protected final CounterLock lockTasks;
 	
-	protected Thread thread;
-	protected ExecutorService executor;
+	protected volatile Thread thread;
+	protected volatile ExecutorService executor;
 	
 	public QueueTaskExecutor(int maxTaskCount) {
 		this.maxTaskCount = checkMaxTaskCount(maxTaskCount);

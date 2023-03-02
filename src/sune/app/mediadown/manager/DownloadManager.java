@@ -24,21 +24,23 @@ public final class DownloadManager implements QueueContext {
 	/** @since 00.02.08 */
 	private static DownloadManager instance;
 	
-	private PositionAwareQueueTaskExecutor<Long> executor;
+	private volatile PositionAwareQueueTaskExecutor<Long> executor;
 	
 	// Forbid anyone to create an instance of this class
 	private DownloadManager() {
 	}
 	
 	private final PositionAwareQueueTaskExecutor<Long> executor() {
-		synchronized(DownloadManager.class) {
-			if(executor == null) {
-				executor = new PositionAwareQueueTaskExecutor<>(MediaDownloader.configuration().parallelDownloads());
-				Disposables.add(this::dispose);
+		if(executor == null) {
+			synchronized(this) {
+				if(executor == null) {
+					executor = new PositionAwareQueueTaskExecutor<>(MediaDownloader.configuration().parallelDownloads());
+					Disposables.add(this::dispose);
+				}
 			}
-			
-			return executor;
 		}
+		
+		return executor;
 	}
 	
 	private final DownloadResult createDownloadResult(Media media, Path destination,
@@ -74,17 +76,17 @@ public final class DownloadManager implements QueueContext {
 	}
 	
 	public final void dispose() throws Exception {
-		synchronized(DownloadManager.class) {
-			if(executor == null) {
-				return;
+		if(executor != null) {
+			synchronized(this) {
+				if(executor != null) {
+					executor.stop();
+				}
 			}
-			
-			executor.stop();
 		}
 	}
 	
 	public final boolean isRunning() {
-		synchronized(DownloadManager.class) {
+		synchronized(this) {
 			return executor != null && executor.isRunning();
 		}
 	}

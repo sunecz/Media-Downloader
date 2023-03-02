@@ -38,7 +38,7 @@ class Linux implements OS {
 	/** @since 00.02.08 */
 	private static final class PathHighlighter {
 		
-		private HighlightMethod workingMethod;
+		private volatile HighlightMethod workingMethod;
 		
 		private final HighlightMethod selectWorkingMethod(Path path) throws Exception {
 			for(HighlightMethod method : HighlightMethod.values()) {
