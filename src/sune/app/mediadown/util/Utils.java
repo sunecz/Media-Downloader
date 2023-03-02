@@ -4,7 +4,6 @@ import static java.nio.file.StandardOpenOption.APPEND;
 import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.READ;
 
-import java.awt.Desktop;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -13,13 +12,6 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Array;
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.net.URLConnection;
-import java.net.URLDecoder;
-import java.net.URLEncoder;
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
@@ -61,20 +53,15 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-
 import sune.app.mediadown.Shared;
 import sune.app.mediadown.media.MediaFormat;
-import sune.app.mediadown.net.Web.Request;
-import sune.app.mediadown.net.Web.Response;
+import sune.app.mediadown.net.Net;
 
 public final class Utils {
 	
 	private static final Charset CHARSET = Shared.CHARSET;
 	private static final char[]  INVALID_FILE_NAME_CHARS = { '<', '>', ':', '"', '/', '\\', '|', '?', '*' };
 	private static final String  REGEX_INVALID_FILE_NAME_CHARS;
-	private static final char    URL_DELIMITER = '/';
 	
 	/** @since 00.02.05 */
 	private static final String ALPHABET_ALPHANUM = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -113,7 +100,7 @@ public final class Utils {
 	}
 	
 	public static final String extractName(String url) {
-		if(!isValidURL(url)) return null;
+		if(!Net.isValidURI(url)) return null;
 		if((url.endsWith("/"))) {
 			url = url.substring(0, url.length()-1);
 		}
@@ -219,7 +206,7 @@ public final class Utils {
 	}
 	
 	public static final String fileType(String path) {
-		String name = removeURLData(fileName(path));
+		String name = beforeFirst(fileName(path), "?");
 		int index = name.lastIndexOf('.');
 		return index >= 0 ? name.substring(index+1) : null;
 	}
@@ -407,370 +394,6 @@ public final class Utils {
 	}
 	
 	// ---------------- [END]   Base64 Encode
-	
-	// ---------------- [BEGIN] Net utilities
-	
-	@Deprecated
-	private static final String jsoup_baseUri(URI baseUri) {
-		return baseUri == null ? "" : baseUri.toString();
-	}
-	
-	@Deprecated
-	public static final Document document(String url) {
-		return document(uri(url));
-	}
-	
-	/** @since 00.02.05 */
-	@Deprecated
-	public static final Document document(URL url) {
-		return document(uri(url));
-	}
-	
-	/** @since 00.02.05 */
-	@Deprecated
-	public static final Document document(URI uri) {
-		uri = uri.normalize();
-		try(Response.OfStream response = sune.app.mediadown.net.Web.requestStream(Request.of(uri).GET())) {
-			return Jsoup.parse(response.stream(), CHARSET.name(), jsoup_baseUri(uri));
-		} catch(Exception ex) {
-			// Ignore
-		}
-		return null;
-	}
-	
-	@Deprecated
-	public static final Document parseDocument(String content) {
-		return parseDocument(content, (URI) null);
-	}
-	
-	@Deprecated
-	public static final Document parseDocument(String content, String baseUri) {
-		return parseDocument(content, uri(baseUri));
-	}
-	
-	/** @since 00.02.05 */
-	@Deprecated
-	public static final Document parseDocument(String content, URL baseUri) {
-		return parseDocument(content, uri(baseUri));
-	}
-	
-	/** @since 00.02.05 */
-	@Deprecated
-	public static final Document parseDocument(String content, URI baseUri) {
-		return Jsoup.parse(content, jsoup_baseUri(baseUri));
-	}
-	
-	@Deprecated
-	public static final InputStream urlStream(String url, int timeout) throws IOException {
-		URLConnection con = new URL(url).openConnection();
-		con.setConnectTimeout(timeout);
-		return con.getInputStream();
-	}
-	
-	@Deprecated
-	public static final String urlBasename(String url) {
-		return removeURLData(basename(url));
-	}
-	
-	@Deprecated
-	public static final String urlConcat(String... parts) {
-		StringBuilder sb = new StringBuilder();
-		for(int i = 0, l = parts.length; i < l; ++i) {
-			if(i != 0) sb.append(URL_DELIMITER);
-			sb.append(parts[i]);
-		}
-		return urlFixSlashes(sb.toString());
-	}
-	
-	@Deprecated
-	public static final String urlFixSlashes(String url) {
-		return url.replaceAll("([^:])//+", "$1/");
-	}
-	
-	@Deprecated
-	public static final String urlDirname(String url) {
-		int schema = url.indexOf("://");
-		int index  = -1;
-		if((schema >= 0)) {
-			String subStr = url.substring(schema + 3);
-			index = subStr.lastIndexOf(URL_DELIMITER);
-			if((index >= 0)) {
-				index += url.length() - subStr.length();
-			}
-		} else {
-			index = url.lastIndexOf(URL_DELIMITER);
-		}
-		return index >= 0 ? url.substring(0, index) : url;
-	}
-	
-	@Deprecated
-	public static final String urlFix(String url) {
-		return urlFix(url, false);
-	}
-	
-	@Deprecated
-	public static final String urlFix(String url, boolean useHTTPS) {
-		return url.startsWith("//") ? "http" + (useHTTPS ? "s:" : ":") + url : url;
-	}
-	
-	@Deprecated
-	public static final String removeURLData(String url) {
-		int index = url.lastIndexOf('?');
-		return index >= 0 ? url.substring(0, index) : url;
-	}
-	
-	@Deprecated
-	public static final URI uri(String uri) {
-		return URI.create(uri);
-	}
-	
-	@Deprecated
-	public static final URL url(String url) {
-		try {
-			return new URL(url);
-		} catch(MalformedURLException ex) {
-			// Ignore
-		}
-		return null;
-	}
-	
-	@Deprecated
-	public static final URL url(URI uri) {
-		try {
-			return uri.toURL();
-		} catch(MalformedURLException ex) {
-			// Ignore
-		}
-		return null;
-	}
-	
-	/** @since 00.02.00 */
-	@Deprecated
-	public static final boolean isValidURL(String url) {
-		return url != null && !url.isEmpty() && Ignore.defaultValue(() -> { return new URL(url).toURI(); }, (URI) null) != null;
-	}
-	
-	@Deprecated
-	public static final void visitURL(String url) {
-		try {
-			Desktop.getDesktop().browse(new URI(url));
-		} catch(URISyntaxException | IOException ex) {
-		}
-	}
-	
-	@Deprecated
-	public static final Map<String, String> urlParams(String params) {
-		Map<String, String> map = new LinkedHashMap<>();
-		int queryIndex;
-		if((queryIndex = params.indexOf('?')) >= 0)
-			params = params.substring(queryIndex + 1);
-		for(String part : params.split("&")) {
-			int index;
-			if((index = part.indexOf('=')) > -1) {
-				map.put(part.substring(0, index), decodeURL(part.substring(index+1)));
-			}
-		}
-		return map;
-	}
-	
-	@Deprecated
-	public static final class URLParameter {
-		
-		private final String name;
-		private final Object value;
-		private final boolean isArray;
-		
-		private URLParameter(String name, Object value, boolean isArray) {
-			this.name    = name;
-			this.value   = value;
-			this.isArray = isArray;
-		}
-		
-		public static final URLParameter createString(String name, String value) {
-			return new URLParameter(name, value, false);
-		}
-		
-		public static final URLParameter createArray(String name, Map<String, URLParameter> value) {
-			return new URLParameter(name, value, true);
-		}
-		
-		public static final URLParameter createArray(String name) {
-			return createArray(name, new LinkedHashMap<>());
-		}
-		
-		public String getName() {
-			return name;
-		}
-		
-		public Object getValue() {
-			return value;
-		}
-		
-		public String stringValue() {
-			if((isArray))
-				throw new IllegalStateException("Parameter is an array");
-			return (String) value;
-		}
-		
-		public Map<String, URLParameter> arrayValue() {
-			if(!isArray)
-				throw new IllegalStateException("Parameter is a string");
-			@SuppressWarnings("unchecked")
-			Map<String, URLParameter> map = (Map<String, URLParameter>) value;
-			return map;
-		}
-		
-		public boolean isArray() {
-			return isArray;
-		}
-		
-		@Override
-		public String toString() {
-			return value.toString();
-		}
-	}
-	
-	@Deprecated
-	private static final void insertURLParameter(String name, String value, Map<String, URLParameter> parent) {
-		if((name.indexOf('[')) > 0) {
-			String valName = name;
-			for(int ii = 0, is = 1, ie; is > 0; ii = is + 1) {
-				is = name.indexOf('[', ii);
-				ie = name.indexOf(']', ii);
-				if((is < 0)) {
-					valName = name.substring(ii, ie);
-					break;
-				}
-				String subName = name.substring(ii, Math.min(ie, is));
-				URLParameter newParent = parent.computeIfAbsent(subName, (key) -> URLParameter.createArray(subName));
-				parent = newParent.arrayValue();
-			}
-			name = valName;
-		}
-		parent.put(name, URLParameter.createString(name, value));
-	}
-	
-	@Deprecated
-	private static final void parseURLParameter(String param, Map<String, URLParameter> parent) {
-		int index;
-		if((index = param.indexOf('=')) <= 0)
-			return;
-		String name  = decodeURL(param.substring(0, index));
-		String value = decodeURL(param.substring(index+1));
-		insertURLParameter(name, value, parent);
-	}
-	
-	@Deprecated
-	public static final Map<String, URLParameter> urlParamsExtended(String url) {
-		Map<String, URLParameter> params = new LinkedHashMap<>();
-		int queryIndex;
-		if((queryIndex = url.indexOf('?')) >= 0)
-			url = url.substring(queryIndex + 1);
-		for(String part : url.split("&"))
-			parseURLParameter(part, params);
-		return params;
-	}
-	
-	@Deprecated
-	private static final void convertArrayURLParameterToString(StringBuilder sb, String parentName, URLParameter param) {
-		boolean first = true;
-		for(URLParameter urlp : param.arrayValue().values()) {
-			if((first)) first = false; else sb.append("&");
-			String fullName = parentName + '[' + urlp.getName() + ']';
-			if((urlp.isArray())) {
-				convertArrayURLParameterToString(sb, fullName, urlp);
-			} else {
-				sb.append(fullName)
-				  .append('=')
-				  .append(encodeURL(urlp.stringValue()));
-			}
-		}
-	}
-	
-	@Deprecated
-	public static final String joinURLParamsExtended(Map<String, URLParameter> params) {
-		StringBuilder sb = new StringBuilder();
-		boolean first = true;
-		for(Entry<String, URLParameter> entry : params.entrySet()) {
-			if((first)) first = false; else sb.append("&");
-			URLParameter param = entry.getValue();
-			if((param.isArray())) {
-				convertArrayURLParameterToString(sb, param.getName(), param);
-			} else {
-				sb.append(entry.getKey())
-				  .append('=')
-				  .append(encodeURL(param.stringValue()));
-			}
-		}
-		return sb.toString();
-	}
-	
-	@Deprecated
-	public static final String joinURLParams(Map<String, String> params) {
-		StringBuilder sb = new StringBuilder();
-		boolean first = true;
-		for(Entry<String, String> entry : params.entrySet()) {
-			if((first)) first = false; else sb.append("&");
-			sb.append(entry.getKey())
-			  .append("=")
-			  .append(encodeURL(entry.getValue()));
-		}
-		return sb.toString();
-	}
-	
-	@Deprecated
-	public static final String encodeURL(String url) {
-		try {
-			return URLEncoder.encode(url, CHARSET.name());
-		} catch(Exception ex) {
-		}
-		return null;
-	}
-	
-	@Deprecated
-	public static final String decodeURL(String url) {
-		try {
-			return URLDecoder.decode(url, CHARSET.name());
-		} catch(Exception ex) {
-		}
-		return null;
-	}
-	
-	@Deprecated
-	public static final boolean isRelativeURL(String url) {
-		// this determines the protocol definition
-		int index = url.indexOf("://");
-		// at least one character for the protocol
-		// at least one character for the path
-		return index <= 0 || index >= url.length() - 3;
-	}
-	
-	@Deprecated
-	public static final String baseURL(String url) {
-		String baseURL = Utils.urlDirname(url);
-		if(!baseURL.endsWith("/")) baseURL += '/';
-		return baseURL;
-	}
-	
-	@Deprecated
-	public static final String toURL(Path path) {
-		StringBuilder builder = new StringBuilder();
-		for(Path part : path) {
-			if((builder.length() > 0))
-				builder.append('/');
-			builder.append(encodeURL(part.toString()).replace("+", "%20"));
-		}
-		builder.insert(0, path.getRoot().toString().replace('\\', '/'));
-		return "file:///" + builder.toString();
-	}
-	
-	/** @since 00.02.05 */
-	@Deprecated
-	public static final URI uri(URL url) {
-		return Ignore.defaultValue(() -> url.toURI(), null, (Function<Exception, RuntimeException>) IllegalArgumentException::new);
-	}
-	
-	// ---------------- [END]   Net utilities
 	
 	// ---------------- [BEGIN] String utilities
 	
@@ -997,6 +620,62 @@ public final class Utils {
 		} while(index >= 0 && iter > 0);
 		// when the substring is not found or out of iterations
 		return -1;
+	}
+	
+	/** @since 00.02.08 */
+	public static final String join(String separator, String... strings) {
+		StringBuilder builder = new StringBuilder();
+		
+		for(String string : strings) {
+			builder.append(string).append(separator);
+		}
+		
+		int length;
+		if((length = builder.length()) > 0) {
+			builder.setLength(length - separator.length());
+		}
+		
+		return builder.toString();
+	}
+	
+	/** @since 00.02.08 */
+	public static final String before(String string, int index) {
+		return before(string, index, 0);
+	}
+	
+	/** @since 00.02.08 */
+	public static final String before(String string, int index, int offset) {
+		return index >= 0 ? string.substring(0, index + offset) : string;
+	}
+	
+	/** @since 00.02.08 */
+	public static final String beforeFirst(String string, String what) {
+		return before(string, string.indexOf(what), 0);
+	}
+	
+	/** @since 00.02.08 */
+	public static final String beforeLast(String string, String what) {
+		return before(string, string.lastIndexOf(what), 0);
+	}
+	
+	/** @since 00.02.08 */
+	public static final String after(String string, int index) {
+		return after(string, index, 0);
+	}
+	
+	/** @since 00.02.08 */
+	public static final String after(String string, int index, int offset) {
+		return index >= 0 ? string.substring(index + offset) : string;
+	}
+	
+	/** @since 00.02.08 */
+	public static final String afterFirst(String string, String what) {
+		return after(string, string.indexOf(what), what.length());
+	}
+	
+	/** @since 00.02.08 */
+	public static final String afterLast(String string, String what) {
+		return after(string, string.lastIndexOf(what), what.length());
 	}
 	
 	// ---------------- [END]   String utilities

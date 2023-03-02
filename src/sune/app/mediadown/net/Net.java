@@ -32,25 +32,6 @@ public final class Net {
 	private Net() {
 	}
 	
-	private static final String join(String separator, String... strings) {
-		StringBuilder builder = new StringBuilder();
-		
-		for(String string : strings) {
-			builder.append(string).append(separator);
-		}
-		
-		int length;
-		if((length = builder.length()) > 0) {
-			builder.setLength(length - separator.length());
-		}
-		
-		return builder.toString();
-	}
-	
-	private static final String afterLast(String string, String what) {
-		int i; return (i = string.lastIndexOf(what)) >= 0 ? string.substring(i + what.length()) : string;
-	}
-	
 	private static final String uriSanitize(String uri) {
 		return uri.replace("|", "%7C");
 	}
@@ -134,7 +115,7 @@ public final class Net {
 	}
 	
 	public static final String uriConcat(String... parts) {
-		return Regex.of("([^:])//+").replaceAll(join("/", parts), "$1/");
+		return Regex.of("([^:])//+").replaceAll(Utils.join("/", parts), "$1/");
 	}
 	
 	public static final String uriFix(String uri) {
@@ -142,7 +123,7 @@ public final class Net {
 	}
 	
 	public static final URI uriBasename(URI uri) {
-		return uri(afterLast(uri.getRawPath(), "/"));
+		return uri(Utils.afterLast(uri.getRawPath(), "/"));
 	}
 	
 	public static final URI uriBasename(String uri) {
@@ -203,7 +184,7 @@ public final class Net {
 	
 	public static final QueryArgument queryDestruct(String uri) {
 		QueryArgument.Builder root = QueryArgument.Builder.ofRoot();
-		String query = afterLast(uri, "?");
+		String query = Utils.afterLast(uri, "?");
 		StringTokenizer tokenizer = new StringTokenizer(query, "&");
 		
 		while(tokenizer.hasMoreTokens()) {

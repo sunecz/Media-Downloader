@@ -55,11 +55,6 @@ public final class Version implements Comparable<Version> {
 		return isCompact ? FormatterSettings.ofCompact() : FormatterSettings.ofDefault();
 	}
 	
-	@Deprecated(since="00.02.07", forRemoval=true)
-	public static final Version fromString(String string) {
-		return of(string);
-	}
-	
 	/** @since 00.02.07 */
 	public static final Version of(String string) {
 		return Parser.instance().parse(string);
