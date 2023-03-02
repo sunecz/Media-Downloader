@@ -21,7 +21,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
@@ -32,6 +34,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
+import java.util.function.Predicate;
 import java.util.regex.Matcher;
 
 import sune.app.mediadown.Shared;
@@ -39,6 +42,7 @@ import sune.app.mediadown.concurrent.VarLoader;
 import sune.app.mediadown.media.MediaConstants;
 import sune.app.mediadown.util.Range;
 import sune.app.mediadown.util.Regex;
+import sune.app.mediadown.util.Utils;
 
 /** @since 00.02.08 */
 public final class Web {
@@ -246,6 +250,151 @@ public final class Web {
 			}
 			
 			return headers;
+		}
+		
+		public static final Map<String, List<String>> ofString(String string) {
+			Map<String, List<String>> map = new LinkedHashMap<>();
+			(new Parser(string)).read(map);
+			return map;
+		}
+		
+		private static final class Parser {
+			
+			private static final int CHAR_QUOTES_SINGLE   = '\'';
+			private static final int CHAR_QUOTES_DOUBLE   = '"';
+			private static final int CHAR_ESCAPE_SLASH    = '\\';
+			private static final int CHAR_ITEM_DELIMITER1 = '\r';
+			private static final int CHAR_ITEM_DELIMITER2 = '\n';
+			private static final int CHAR_NAME_DELIMITER  = ':';
+			
+			private final String string;
+			private int cursor;
+			private int c;
+			
+			private Parser(String string) {
+				this.string = Objects.requireNonNull(string);
+			}
+			
+			private static final boolean isWhitespace(int c) {
+				return c != CHAR_ITEM_DELIMITER1 && c != CHAR_ITEM_DELIMITER2 && Character.isWhitespace(c);
+			}
+			
+			private static final boolean isNameDelimiter(int c) {
+				return c == CHAR_ITEM_DELIMITER1 || c == CHAR_ITEM_DELIMITER2 || c == CHAR_NAME_DELIMITER;
+			}
+			
+			private static final boolean isValueDelimiter(int c) {
+				return c == CHAR_ITEM_DELIMITER1 || c == CHAR_ITEM_DELIMITER2;
+			}
+			
+			private static final List<String> merge(String name, String value, List<String> existing) {
+				if(existing == null) {
+					List<String> list = new ArrayList<>();
+					list.add(value);
+					return list;
+				}
+				
+				existing.add(value);
+				return existing;
+			}
+			
+			private static final String lower(String string) {
+				return string.toLowerCase(Locale.ROOT);
+			}
+			
+			private final int next() {
+				if(cursor >= string.length()) {
+					return -1;
+				}
+				
+				int v = string.codePointAt(cursor);
+				cursor += Utils.charCount(v);
+				return v;
+			}
+			
+			private final int skipWhitespaces() {
+				while(isWhitespace(c)) {
+					c = next();
+				}
+				
+				return c;
+			}
+			
+			private final void readString(StringBuilder str, Predicate<Integer> isDelimiter) {
+				boolean escaped = false;
+				boolean qs = false;
+				boolean qd = false;
+				
+				do {
+					if(c == CHAR_ESCAPE_SLASH) {
+						str.appendCodePoint(c);
+						escaped = !escaped;
+					} else if(escaped) {
+						str.appendCodePoint(c);
+						escaped = false;
+					} else if(isDelimiter.test(c)) {
+						break; // String closed
+					} else {
+						if(!qd && c == CHAR_QUOTES_DOUBLE) {
+							qs = !qs;
+						} else if(!qs && c == CHAR_QUOTES_SINGLE) {
+							qd = !qd;
+						}
+						
+						str.appendCodePoint(c);
+					}
+				} while((c = next()) != -1);
+			}
+			
+			private final void readName(StringBuilder str) {
+				readString(str, Parser::isNameDelimiter);
+			}
+			
+			private final void readValue(StringBuilder str) {
+				readString(str, Parser::isValueDelimiter);
+			}
+			
+			private final void reset() {
+				cursor = 0;
+				c = -1;
+			}
+			
+			public void read(Map<String, List<String>> map) {
+				reset();
+				
+				String name = null;
+				StringBuilder tmp = new StringBuilder();
+				
+				c = next(); // Initialize
+				while((c = skipWhitespaces()) != -1) {
+					if(c == CHAR_NAME_DELIMITER) {
+						name = tmp.toString();
+						tmp.setLength(0);
+						c = next();
+					} else if(c == CHAR_ITEM_DELIMITER1) {
+						c = next();
+						
+						if(c == CHAR_ITEM_DELIMITER2) {
+							String value = tmp.toString();
+							map.compute(lower(name), (k, v) -> merge(k, value, v));
+							name = null;
+							tmp.setLength(0);
+							c = next();
+						}
+					} else if(name == null) {
+						readName(tmp);
+					} else {
+						readValue(tmp);
+					}
+				}
+				
+				if(name != null) {
+					String value = tmp.toString();
+					map.compute(lower(name), (k, v) -> merge(k, value, v));
+					name = null;
+					tmp.setLength(0);
+				}
+			}
 		}
 	}
 	
