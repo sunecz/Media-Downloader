@@ -34,8 +34,10 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
+import java.util.stream.Collectors;
 
 import sune.app.mediadown.Shared;
 import sune.app.mediadown.concurrent.VarLoader;
@@ -238,24 +240,45 @@ public final class Web {
 	
 	public static final class Headers {
 		
+		private static final VarLoader<BiPredicate<String, String>> filter = VarLoader.of(Headers::newFilter);
+		
 		// Forbid anyone to create an instance of this class
 		private Headers() {
 		}
 		
-		public static final Map<String, List<String>> ofSingle(Object... values) {
+		private static final BiPredicate<String, String> newFilter() {
+			return (a, b) -> true;
+		}
+		
+		private static final BiPredicate<String, String> noFilter() {
+			return filter.value();
+		}
+		
+		public static final HttpHeaders ofMap(Map<String, List<String>> headers) {
+			return HttpHeaders.of(headers, noFilter());
+		}
+		
+		public static final HttpHeaders ofSingleMap(Map<String, String> headers) {
+			return ofMap(
+				headers.entrySet().stream()
+					.collect(Collectors.toMap(Map.Entry::getKey, (v) -> List.of(v.getValue())))
+			);
+		}
+		
+		public static final HttpHeaders ofSingle(Object... values) {
 			Map<String, List<String>> headers = new HashMap<>(values.length / 2);
 			
 			for(int i = 0, l = values.length; i < l; i += 2) {
 				headers.put(String.valueOf(values[i]), List.of(String.valueOf(values[i + 1])));
 			}
 			
-			return headers;
+			return ofMap(headers);
 		}
 		
-		public static final Map<String, List<String>> ofString(String string) {
+		public static final HttpHeaders ofString(String string) {
 			Map<String, List<String>> map = new LinkedHashMap<>();
 			(new Parser(string)).read(map);
-			return map;
+			return ofMap(map);
 		}
 		
 		private static final class Parser {
@@ -723,9 +746,26 @@ public final class Web {
 			public Builder uri(URI uri) { this.uri = Objects.requireNonNull(uri); return this; }
 			public Builder userAgent(String userAgent) { this.userAgent = userAgent; return this; }
 			
+			public Builder addHeaders(HttpHeaders headers) {
+				return addHeaders(headers.map());
+			}
+			
 			public Builder addHeaders(Map<String, List<String>> headers) {
 				headers.forEach((k, v) -> this.headers.compute(k, (a, b) -> b == null ? v : merge(b, v)));
 				return this;
+			}
+			
+			public Builder addHeaders(Object... values) {
+				return addHeaders(Headers.ofSingle(values));
+			}
+			
+			public Builder addHeader(String name, Collection<String> values) {
+				headers.compute(name, (k, v) -> v == null ? List.copyOf(values) : merge(v, values));
+				return this;
+			}
+			
+			public Builder headers(HttpHeaders headers) {
+				return headers(headers.map());
 			}
 			
 			public Builder headers(Map<String, List<String>> headers) {
@@ -734,9 +774,8 @@ public final class Web {
 				return this;
 			}
 			
-			public Builder addHeader(String name, Collection<String> values) {
-				headers.compute(name, (k, v) -> v == null ? List.copyOf(values) : merge(v, values));
-				return this;
+			public Builder headers(Object... values) {
+				return headers(Headers.ofSingle(values));
 			}
 			
 			public Builder header(String name, Collection<String> values) {
