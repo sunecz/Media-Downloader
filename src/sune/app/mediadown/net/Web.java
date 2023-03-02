@@ -225,7 +225,7 @@ public final class Web {
 		private final String namePrefix;
 		private final AtomicInteger nextId = new AtomicInteger();
 		
-		public WebThreadFactory(int clientId) {
+		private WebThreadFactory(int clientId) {
 			this.namePrefix = "WebClient-" + clientId + "-Thread-";
 		}
 		

@@ -55,6 +55,29 @@ public final class Net {
 		return uri.replace("|", "%7C");
 	}
 	
+	private static final void queryConstruct(StringBuilder builder, QueryArgument argument, String namePrefix) {
+		String name = encodeURL(argument.name());
+		
+		if(namePrefix != null) {
+			name = namePrefix + '[' + name + ']';
+		}
+		
+		if(!argument.isArray()) {
+			builder.append(name).append('=').append(encodeURL(argument.value()));
+			return;
+		}
+		
+		if(argument.count() > 0) {
+			for(QueryArgument arg : argument.arguments()) {
+				queryConstruct(builder, arg, name);
+				builder.append('&');
+			}
+			
+			// Remove the last ampersand
+			builder.setLength(builder.length() - 1);
+		}
+	}
+	
 	public static final URI uri(String uri) {
 		return URI.create(uriSanitize(uri));
 	}
@@ -150,29 +173,6 @@ public final class Net {
 	
 	public static final URI resolve(URI uri, String other) {
 		return uri.resolve(uri(other));
-	}
-	
-	private static final void queryConstruct(StringBuilder builder, QueryArgument argument, String namePrefix) {
-		String name = encodeURL(argument.name());
-		
-		if(namePrefix != null) {
-			name = namePrefix + '[' + name + ']';
-		}
-		
-		if(!argument.isArray()) {
-			builder.append(name).append('=').append(encodeURL(argument.value()));
-			return;
-		}
-		
-		if(argument.count() > 0) {
-			for(QueryArgument arg : argument.arguments()) {
-				queryConstruct(builder, arg, name);
-				builder.append('&');
-			}
-			
-			// Remove the last ampersand
-			builder.setLength(builder.length() - 1);
-		}
 	}
 	
 	public static final String queryConstruct(QueryArgument argument) {
