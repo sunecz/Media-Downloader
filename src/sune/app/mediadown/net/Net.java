@@ -59,6 +59,25 @@ public final class Net {
 		}
 	}
 	
+	private static final void queryMap(Map<String, Object> map, QueryArgument argument, String namePrefix) {
+		String name = argument.name();
+		
+		if(namePrefix != null) {
+			name = namePrefix + '[' + name + ']';
+		}
+		
+		if(!argument.isArray()) {
+			map.put(name, argument.value());
+			return;
+		}
+		
+		if(argument.count() > 0) {
+			for(QueryArgument arg : argument.arguments()) {
+				queryMap(map, arg, name);
+			}
+		}
+	}
+	
 	public static final URI uri(String uri) {
 		return URI.create(uriSanitize(uri));
 	}
@@ -260,6 +279,24 @@ public final class Net {
 	
 	public static final String queryString(Object... args) {
 		return queryConstruct(createQuery(args));
+	}
+	
+	public static final Map<String, Object> queryMap(QueryArgument argument) {
+		Map<String, Object> map = new LinkedHashMap<>();
+		queryMap(map, argument, null);
+		return map;
+	}
+	
+	public static final Map<String, Object> queryMap(List<QueryArgument> arguments) {
+		Map<String, Object> map = new LinkedHashMap<>();
+		
+		if(!arguments.isEmpty()) {
+			for(QueryArgument arg : arguments) {
+				queryMap(map, arg, null);
+			}
+		}
+		
+		return map;
 	}
 	
 	public static interface QueryArgument {
