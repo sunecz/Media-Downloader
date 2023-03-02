@@ -38,10 +38,12 @@ import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import sune.app.mediadown.Shared;
 import sune.app.mediadown.concurrent.VarLoader;
 import sune.app.mediadown.media.MediaConstants;
+import sune.app.mediadown.util.Opt;
 import sune.app.mediadown.util.Range;
 import sune.app.mediadown.util.Regex;
 import sune.app.mediadown.util.Utils;
@@ -217,8 +219,6 @@ public final class Web {
 			cookieManager.value().getCookieStore().removeAll();
 		}
 	}
-	
-	// TODO: Add class: Cookies (for various cookies-related operations)
 	
 	private static final class WebThreadFactory implements ThreadFactory {
 		
@@ -808,6 +808,53 @@ public final class Web {
 					tmp.setLength(0);
 				}
 			}
+		}
+	}
+	
+	public static final class Cookies {
+		
+		// Forbid anyone to create an instance of this class
+		private Cookies() {
+		}
+		
+		public static final void add(URI uri, HttpCookie cookie, HttpCookie... more) {
+			add(uri, more.length > 0 ? Utils.streamToList(Stream.of(List.of(cookie), more)) : List.of(cookie));
+		}
+		
+		public static final void add(URI uri, List<HttpCookie> cookies) {
+			CookieStore store = cookieManager().getCookieStore();
+			cookies.forEach((cookie) -> store.add(uri, cookie));
+		}
+		
+		public static final void set(URI uri, HttpCookie cookie, HttpCookie... more) {
+			clear(uri);
+			add(uri, cookie, more);
+		}
+		
+		public static final void set(URI uri, List<HttpCookie> cookies) {
+			clear(uri);
+			add(uri, cookies);
+		}
+		
+		public static final List<HttpCookie> get(URI uri) {
+			return cookieManager().getCookieStore().get(uri);
+		}
+		
+		public static final HttpCookie stringToCookie(String string) {
+			return Opt.of(HttpCookie.parse(string)).ifFalse(List::isEmpty).map((l) -> l.get(0)).orElse(null);
+		}
+		
+		public static final String cookieToString(HttpCookie cookie) {
+			return cookie.toString();
+		}
+		
+		public static final void clear(URI uri) {
+			CookieStore store = cookieManager().getCookieStore();
+			store.get(uri).forEach((cookie) -> store.remove(uri, cookie));
+		}
+		
+		public static final void clear() {
+			cookieManager().getCookieStore().removeAll();
 		}
 	}
 }
