@@ -241,6 +241,7 @@ public final class Web {
 	public static final class Headers {
 		
 		private static final VarLoader<BiPredicate<String, String>> filter = VarLoader.of(Headers::newFilter);
+		private static final VarLoader<HttpHeaders> empty = VarLoader.of(Headers::newEmpty);
 		
 		// Forbid anyone to create an instance of this class
 		private Headers() {
@@ -252,6 +253,14 @@ public final class Web {
 		
 		private static final BiPredicate<String, String> noFilter() {
 			return filter.value();
+		}
+		
+		private static final HttpHeaders newEmpty() {
+			return HttpHeaders.of(Map.of(), noFilter());
+		}
+		
+		public static final HttpHeaders empty() {
+			return empty.value();
 		}
 		
 		public static final HttpHeaders ofMap(Map<String, List<String>> headers) {
