@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -115,13 +116,17 @@ public final class Web {
 	}
 	
 	private static final <T, R extends Response> R doRequest(Request request,
-			BiFunction<Request, HttpResponse<T>, R> constructor, BodyHandler<T> handler) {
-		return constructor.apply(
-			request,
-			httpClientFor(request)
-				.sendAsync(request.toHttpRequest(), handler)
-				.join()
-		);
+			BiFunction<Request, HttpResponse<T>, R> constructor, BodyHandler<T> handler) throws Exception {
+		try {
+			return constructor.apply(
+				request,
+				httpClientFor(request)
+					.sendAsync(request.toHttpRequest(), handler)
+					.join()
+			);
+		} catch(CompletionException ex) {
+			throw (Exception) ex.getCause(); // Propagate up
+		}
 	}
 	
 	private static final Regex regexContentRange() {

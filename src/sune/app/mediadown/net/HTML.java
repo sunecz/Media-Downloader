@@ -23,14 +23,14 @@ public final class HTML {
 		return baseUri == null ? "" : baseUri.normalize().toString();
 	}
 	
-	public static final Document from(URI uri) {
-		try(Response.OfStream response = Web.requestStream(Request.of(uri).GET())) {
-			return Jsoup.parse(response.stream(), CHARSET.name(), jsoupBaseUri(uri));
-		} catch(Exception ex) {
-			// Ignore
+	public static final Document from(URI uri) throws Exception {
+		return from(Request.of(uri).GET());
+	}
+	
+	public static final Document from(Request request) throws Exception {
+		try(Response.OfStream response = Web.requestStream(request)) {
+			return Jsoup.parse(response.stream(), CHARSET.name(), jsoupBaseUri(request.uri()));
 		}
-		
-		return null;
 	}
 	
 	public static final Document parse(String content) {
