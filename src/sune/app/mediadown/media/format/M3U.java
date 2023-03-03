@@ -326,7 +326,7 @@ public final class M3U {
 		}
 		
 		private final boolean isMetaLine(String line) {
-			return line.charAt(0) == CHAR_META;
+			return !line.isEmpty() && line.charAt(0) == CHAR_META;
 		}
 		
 		private final Pair<String, String> parseMetaLine(String line) {
@@ -450,6 +450,7 @@ public final class M3U {
 						addSegment(segmentBuilder.build());
 					} else if(fileBuilder.isDirty()) {
 						files.addAll(readStreamInfo(line));
+						fileBuilder.reset();
 					}
 				}
 			}
