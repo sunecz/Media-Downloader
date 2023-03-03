@@ -778,10 +778,6 @@ public final class MediaDownloader {
 					saveAllConfigurations();
 				}
 				
-				ApplicationConfiguration configuration = configuration();
-				Web.defaultConnectTimeout(Duration.ofMillis(configuration.requestConnectTimeout()));
-				Web.defaultReadTimeout(Duration.ofMillis(configuration.requestReadTimeout()));
-				
 				return new MaybeExitEarly();
 			}
 		}
@@ -1248,6 +1244,10 @@ public final class MediaDownloader {
 		
 		// Check whether the application was probably updated
 		applicationUpdated = !VERSION.equals(configuration.version());
+		
+		// Set configuration-dependant values early
+		Web.defaultConnectTimeout(Duration.ofMillis(configuration.requestConnectTimeout()));
+		Web.defaultReadTimeout(Duration.ofMillis(configuration.requestReadTimeout()));
 	}
 	
 	private static final class ResourcesManager {
