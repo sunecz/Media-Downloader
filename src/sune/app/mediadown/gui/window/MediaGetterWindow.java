@@ -3,6 +3,7 @@ package sune.app.mediadown.gui.window;
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -73,10 +74,14 @@ public class MediaGetterWindow extends DraggableWindow<VBox> {
 			cmbGetters.setDisable(!isSingle);
 			
 			if(isSingle) {
-				MediaGetter getter = MediaGetters.fromURI(Net.uri(urls.get(0)));
+				URI uri = Ignore.call(() -> Net.uri(urls.get(0)));
 				
-				if(getter != null) {
-					cmbGetters.getSelectionModel().select(getter);
+				if(uri != null && uri.isAbsolute()) {
+					MediaGetter getter = MediaGetters.fromURI(uri);
+					
+					if(getter != null) {
+						cmbGetters.getSelectionModel().select(getter);
+					}
 				}
 			} else {
 				cmbGetters.getSelectionModel().selectFirst();
@@ -203,48 +208,70 @@ public class MediaGetterWindow extends DraggableWindow<VBox> {
 		
 		if(urls.size() == 1) {
 			MediaGetter getter = cmbGetters.getValue();
-			String url = urls.get(0);
-			if(!Net.isValidURI(url)) {
+			URI uri = Ignore.call(() -> Net.uri(urls.get(0)));
+			
+			if(uri == null || !uri.isAbsolute()) {
 				FXUtils.showErrorWindow(this, translation.getSingle("errors.title"), translation.getSingle("errors.url_invalid"));
 				return;
 			}
-			showSelectionWindow(getter, Net.uri(url));
+			
+			showSelectionWindow(getter, uri);
 		} else {
 			showSelectionWindowURLs(urls);
 		}
 	}
 	
+	/** @since 00.02.08 */
+	private final void showSelectionWindow(Window<?> parent, Function<URI, MediaGetter> getterSupplier, URI uri,
+			Consumer<Boolean> onFinish) {
+		if(uri == null || !uri.isAbsolute()) {
+			return;
+		}
+		
+		MediaGetter getter = getterSupplier.apply(uri);
+		if(getter != null) {
+			Threads.execute(() -> doTask(parent, getter, uri, onFinish));
+		}
+	}
+	
 	private final void showSelectionWindow(MediaGetter getter, URI uri) {
-		Threads.execute(() -> {
-			doTask(this, getter, uri, (shouldClose) -> {
-				if(shouldClose) FXUtils.thread(this::close);
-			});
-	    });
+		showSelectionWindow(this, (u) -> getter, uri, (shouldClose) -> {
+			if(shouldClose) FXUtils.thread(this::close);
+		});
 	}
 	
 	private final void showSelectionWindowURLs(List<String> urls) {
-		showSelectionWindow(urls.stream().filter(Net::isValidURI).map(Net::uri).collect(Collectors.toList()));
+		showSelectionWindow(
+			urls.stream()
+				.map((u) -> Ignore.call(() -> Net.uri(u)))
+				.filter(Objects::nonNull)
+				.filter(URI::isAbsolute)
+				.collect(Collectors.toList())
+		);
 	}
 	
 	/** @since 00.02.07 */
 	private final void showSelectionWindow(List<URI> uris) {
-		List<URI> uniqueURIs = Utils.deduplicate(uris);
-		Threads.execute(() -> {
-			doTask(this, uniqueURIs, (shouldClose) -> {
-				if(shouldClose) FXUtils.thread(this::close);
-			});
-	    });
+		showSelectionWindow(this, uris, (shouldClose) -> {
+			if(shouldClose) FXUtils.thread(this::close);
+		});
 	}
 	
 	/** @since 00.02.07 */
 	public final void showSelectionWindow(Window<?> parent, URI uri, Consumer<Boolean> onFinish) {
-		MediaGetter getter = MediaGetters.fromURI(uri);
-		if(getter != null) Threads.execute(() -> doTask(parent, getter, uri, onFinish));
+		showSelectionWindow(parent, MediaGetters::fromURI, uri, onFinish);
 	}
 	
 	/** @since 00.02.07 */
 	public final void showSelectionWindow(Window<?> parent, List<URI> uris, Consumer<Boolean> onFinish) {
-		List<URI> uniqueURIs = Utils.deduplicate(uris);
+		List<URI> uniqueURIs = Utils.deduplicate(uris).stream()
+			.filter(URI::isAbsolute)
+			.collect(Collectors.toList());
+		
+		if(uniqueURIs.isEmpty()) {
+			return;
+		}
+		
 		Threads.execute(() -> doTask(parent, uniqueURIs, onFinish));
 	}
 	

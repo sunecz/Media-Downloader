@@ -42,14 +42,14 @@ public final class ClipboardUtils {
 		if((contents = clipboard.getContent(DataFormat.URL)) != null) {
 			String string = (String) contents;
 			URI uri = Ignore.call(() -> Net.uri(string.strip()));
-			if(uri != null) uris.add(uri);
+			if(uri != null && uri.isAbsolute()) uris.add(uri);
 		}
 		
 		if((contents = clipboard.getContent(DataFormat.PLAIN_TEXT)) != null) {
 			// May have multiple URIs in the contents
 			for(String line : Regex.of("\\r?\\n").split((String) contents)) {
 				URI uri = Ignore.call(() -> Net.uri(line.strip()));
-				if(uri != null) uris.add(uri);
+				if(uri != null && uri.isAbsolute()) uris.add(uri);
 			}
 		}
 		
@@ -61,14 +61,14 @@ public final class ClipboardUtils {
 			for(Element elLink : document.select("a")) {
 				String href = elLink.attr("href");
 				URI uri = Ignore.call(() -> Net.uri(href));
-				if(uri != null) uris.add(uri);
+				if(uri != null && uri.isAbsolute()) uris.add(uri);
 			}
 			
 			// Always add the textual content of the document,
 			// maybe there's an URL.
 			String text = document.text().strip();
 			URI uri = Ignore.call(() -> Net.uri(text));
-			if(uri != null) uris.add(uri);
+			if(uri != null && uri.isAbsolute()) uris.add(uri);
 		}
 		
 		uris = Utils.deduplicate(uris);
