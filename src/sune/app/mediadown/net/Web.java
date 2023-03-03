@@ -385,7 +385,7 @@ public final class Web {
 				}
 			}
 			
-			builder.timeout(timeout);
+			builder.timeout(timeout.plus(defaultConnectTimeout));
 			
 			return builder;
 		}
