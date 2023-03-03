@@ -2,6 +2,7 @@ package sune.app.mediadown.gui.window;
 
 import java.net.URI;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.stream.Collectors;
@@ -34,6 +35,7 @@ import sune.app.mediadown.util.ClipboardWatcher.ClipboardContents;
 import sune.app.mediadown.util.FXUtils;
 import sune.app.mediadown.util.Regex;
 import sune.app.mediadown.util.Utils;
+import sune.app.mediadown.util.Utils.Ignore;
 
 /** @since 00.02.07 */
 public class ClipboardWatcherWindow extends DraggableWindow<VBox> {
@@ -87,7 +89,7 @@ public class ClipboardWatcherWindow extends DraggableWindow<VBox> {
 	}
 	
 	private static final boolean isSupportedURI(URI uri) {
-		return MediaGetters.fromURI(uri) != null;
+		return uri != null && uri.isAbsolute() && MediaGetters.fromURI(uri) != null;
 	}
 	
 	private static final MediaGetterWindow mediaGetterWindow() {
@@ -178,8 +180,9 @@ public class ClipboardWatcherWindow extends DraggableWindow<VBox> {
 		List<URI> uris = text.lines()
 			.map(String::trim)
 			.filter(Predicate.not(String::isEmpty))
-			.filter(Net::isValidURI)
-			.map(Net::uri)
+			.map((u) -> Ignore.call(() -> Net.uri(u)))
+			.filter(Objects::nonNull)
+			.filter(URI::isAbsolute)
 			.collect(Collectors.toList());
 		
 		if(!uris.isEmpty()) {
@@ -242,20 +245,24 @@ public class ClipboardWatcherWindow extends DraggableWindow<VBox> {
 		}
 		
 		if(urls.size() == 1) {
-			String url = urls.get(0);
-			if(!Net.isValidURI(url)) {
+			URI uri = Ignore.call(() -> Net.uri(urls.get(0)));
+			
+			if(uri == null || !uri.isAbsolute()) {
 				FXUtils.showErrorWindow(this, translation.getSingle("error.title"),
 				                              translation.getSingle("error.url_invalid"));
 				return;
 			}
-			mediaGetterWindow().showSelectionWindow(this, Net.uri(url), this::closeIfTrue);
+			
+			mediaGetterWindow().showSelectionWindow(this, uri, this::closeIfTrue);
 		} else {
 			List<URI> uris = Utils.deduplicate(
 				urls.stream()
-					.filter(Net::isValidURI)
-					.map(Net::uri)
+					.map((u) -> Ignore.call(() -> Net.uri(u)))
+					.filter(Objects::nonNull)
+					.filter(URI::isAbsolute)
 					.collect(Collectors.toList())
 			);
+			
 			mediaGetterWindow().showSelectionWindow(this, uris, this::closeIfTrue);
 		}
 	}
