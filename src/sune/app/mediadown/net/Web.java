@@ -1,5 +1,6 @@
 package sune.app.mediadown.net;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.CookieManager;
 import java.net.CookiePolicy;
@@ -28,7 +29,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -54,6 +55,7 @@ public final class Web {
 	
 	private static final String USER_AGENT = Shared.USER_AGENT;
 	private static final Charset CHARSET = Shared.CHARSET;
+	private static final int MAX_RETRY_ATTEMPT = 3;
 	
 	private static Duration defaultConnectTimeout = Duration.ofMillis(5000);
 	private static Duration defaultReadTimeout = Duration.ofMillis(20000);
@@ -125,18 +127,34 @@ public final class Web {
 	}
 	
 	private static final <T, R extends Response> R doRequest(Request request,
+			BiFunction<Request, HttpResponse<T>, R> constructor, BodyHandler<T> handler, int retryAttempt)
+			throws Exception {
+		do {
+			try {
+				return constructor.apply(
+					request,
+					httpClientFor(request)
+						.sendAsync(request.toHttpRequest(), handler)
+						.get(request.timeout().toNanos(), TimeUnit.NANOSECONDS)
+				);
+			} catch(ExecutionException ex) {
+				if(retryAttempt++ >= MAX_RETRY_ATTEMPT) {
+					throw ex; // Propagate
+				}
+				
+				Throwable cause = ex.getCause();
+				
+				if(cause instanceof IOException
+						&& cause.getMessage().contains("GOAWAY received")) {
+					continue; // Retry the request
+				}
+			}
+		} while(true);
+	}
+	
+	private static final <T, R extends Response> R doRequest(Request request,
 			BiFunction<Request, HttpResponse<T>, R> constructor, BodyHandler<T> handler) throws Exception {
-		try {
-			return constructor.apply(
-				request,
-				httpClientFor(request)
-					.sendAsync(request.toHttpRequest(), handler)
-					.orTimeout(request.timeout().toNanos(), TimeUnit.NANOSECONDS)
-					.join()
-			);
-		} catch(CompletionException ex) {
-			throw (Exception) ex.getCause(); // Propagate up
-		}
+		return doRequest(request, constructor, handler, 0);
 	}
 	
 	private static final Regex regexContentRange() {
