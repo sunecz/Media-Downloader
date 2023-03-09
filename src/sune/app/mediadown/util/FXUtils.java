@@ -186,8 +186,6 @@ public final class FXUtils {
 	/** @since 00.02.08 */
 	private static final class ExceptionWindow {
 		
-		// TODO: Add a button to report the shown error(s) automatically
-		
 		private static ExceptionWindow instance;
 		
 		private Alert alert;
