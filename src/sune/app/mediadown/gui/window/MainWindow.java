@@ -130,6 +130,8 @@ public final class MainWindow extends Window<BorderPane> {
 	private MenuItem menuItemInformation;
 	private MenuItem menuItemConfiguration;
 	private MenuItem menuItemMessages;
+	/** @since 00.02.08 */
+	private MenuItem menuItemAbout;
 	private Menu menuTools;
 	private MenuItem menuItemClipboardWatcher;
 	private MenuItem menuItemUpdateResources;
@@ -640,6 +642,11 @@ public final class MainWindow extends Window<BorderPane> {
 		menuItemMessages = new MenuItem(tr("menu_bar.application.item.messages"));
 		menuItemMessages.setOnAction((e) -> resetAndShowMessagesAsync());
 		
+		menuItemAbout = new MenuItem(tr("menu_bar.application.item.about"));
+		menuItemAbout.setOnAction((e) -> {
+			showAboutWindow();
+		});
+		
 		menuItemClipboardWatcher = new MenuItem(tr("menu_bar.tools.item.clipboard_watcher"));
 		menuItemClipboardWatcher.setOnAction((e) -> {
 			MediaDownloader.window(ClipboardWatcherWindow.NAME).show(this);
@@ -658,7 +665,7 @@ public final class MainWindow extends Window<BorderPane> {
 			}
 		});
 		
-		menuApplication.getItems().addAll(menuItemInformation, menuItemConfiguration, menuItemMessages);
+		menuApplication.getItems().addAll(menuItemInformation, menuItemConfiguration, menuItemMessages, menuItemAbout);
 		menuTools.getItems().addAll(menuItemClipboardWatcher, menuItemUpdateResources);
 		menuBar.getMenus().addAll(menuApplication, menuTools);
 		
@@ -842,6 +849,11 @@ public final class MainWindow extends Window<BorderPane> {
 		
 		window.setArgs("tabs", tabs);
 		window.show(this);
+	}
+	
+	/** @since 00.02.08 */
+	private final void showAboutWindow() {
+		MediaDownloader.window(AboutWindow.NAME).show(this);
 	}
 	
 	private final void prepareContextMenuForShowing(ContextMenu contextMenu) {

@@ -1,0 +1,12 @@
+#pane-content {
+	-fx-padding: 20px;
+}
+
+#label-title {
+	-fx-font-size: 2em;
+	-fx-font-weight: bold;
+}
+
+#label-version-value {
+	-fx-font-weight: bold;
+}

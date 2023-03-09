@@ -1,6 +1,6 @@
 {
 	name:    "czech",
-	version: "13",
+	version: "14",
 	title:   "Čeština",
 	code:    "ces",
 	windows: {
@@ -68,7 +68,8 @@
 					item: {
 						information:   "Informace",
 						configuration: "Nastavení",
-						messages:      "Zprávy"
+						messages:      "Zprávy",
+						about:         "O programu"
 					}
 				},
 				tools: {
@@ -420,6 +421,15 @@
 				title:       "Chyba",
 				url_empty:   "Zadejte URL adresu",
 				url_invalid: "Neplatná URL adresa"
+			}
+		},
+		about: {
+			title: "O programu",
+			label: {
+				version:     "%{version}s (%{release_date}s)",
+				author:      "%{name}s <%{email}s>",
+				description: "Jednoduchý program pro stahování seriálů, filmů a médií z různých "
+				           + "webových stránek a serverů."
 			}
 		}
 	},

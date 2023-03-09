@@ -1,6 +1,6 @@
 {
 	name: "light",
-	version: "3",
+	version: "4",
 	title: {
 		eng: "Light",
 		ces: "Světlý"
@@ -10,6 +10,7 @@
 		"window-progress.css",
 		"window-information.css",
 		"window-configuration.css",
-		"window-search.css"
+		"window-search.css",
+		"window-about.css"
 	]
 }

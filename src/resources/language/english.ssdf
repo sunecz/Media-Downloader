@@ -1,6 +1,6 @@
 {
 	name:    "english",
-	version: "13",
+	version: "14",
 	title:   "English",
 	code:    "eng",
 	windows: {
@@ -68,7 +68,8 @@
 					item: {
 						information:   "Information",
 						configuration: "Configuration",
-						messages:      "Messages"
+						messages:      "Messages",
+						about:         "About"
 					}
 				},
 				tools: {
@@ -420,6 +421,15 @@
 				title:       "Error",
 				url_empty:   "Enter URL address",
 				url_invalid: "Invalid URL address"
+			}
+		},
+		about: {
+			title: "About",
+			label: {
+				version:     "%{version}s (%{release_date}s)",
+				author:      "%{name}s <%{email}s>",
+				description: "Simple program for downloading TV shows, movies and media from various "
+				           + "web sites and servers."
 			}
 		}
 	},

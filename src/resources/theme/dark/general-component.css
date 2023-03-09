@@ -68,6 +68,15 @@
 	-fx-control-inner-background: derive(-fx-base, 15%);
 }
 
+.hyperlink,
+.hyperlink:hover,
+.hyperlink:hover:visited,
+.hyperlink:armed,
+.hyperlink:visited,
+.hyperlink:hover:armed {
+    -fx-text-fill: rgb(59, 171, 74);
+}
+
 /* ---------------------- */
 
 .table-view, .tree-table-view, .list-view {
