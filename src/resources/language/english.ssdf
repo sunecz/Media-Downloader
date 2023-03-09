@@ -5,7 +5,7 @@
 	code:    "eng",
 	windows: {
 		main: {
-			title: "Media Downloader %{version} (%{date})",
+			title: "Media Downloader",
 			buttons: {
 				download:          "Download all",
 				download_selected: "Download selected",

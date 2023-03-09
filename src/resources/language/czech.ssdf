@@ -5,7 +5,7 @@
 	code:    "ces",
 	windows: {
 		main: {
-			title: "Media Downloader %{version} (%{date})",
+			title: "Media Downloader",
 			buttons: {
 				download:          "Stáhnout vše",
 				download_selected: "Stáhnout vybrané",

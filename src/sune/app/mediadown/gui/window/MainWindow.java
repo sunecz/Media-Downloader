@@ -1,8 +1,5 @@
 package sune.app.mediadown.gui.window;
 
-import static sune.app.mediadown.MediaDownloader.DATE;
-import static sune.app.mediadown.MediaDownloader.VERSION;
-
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -147,7 +144,6 @@ public final class MainWindow extends Window<BorderPane> {
 		setOnCloseRequest(this::close);
 		setMinWidth(MINIMUM_WIDTH);
 		setMinHeight(MINIMUM_HEIGHT);
-		setTitle(tr("title", "version", VERSION, "date", DATE));
 		setResizable(true);
 		centerOnScreen();
 		
