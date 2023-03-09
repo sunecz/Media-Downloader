@@ -97,8 +97,12 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 			                            .filter((t) -> t.name().equals(s))
 			                            .findFirst().orElse(null))
 			.withDefaultValue(Theme.ofDefault().name()));
-		builder.addProperty(ConfigurationProperty.ofBoolean(PROPERTY_AUTO_UPDATE_CHECK).inGroup(GROUP_GENERAL).withDefaultValue(true));
-		builder.addProperty(ConfigurationProperty.ofBoolean(PROPERTY_CHECK_RESOURCES_INTEGRITY).inGroup(GROUP_GENERAL).withDefaultValue(false));
+		builder.addProperty(ConfigurationProperty.ofBoolean(PROPERTY_AUTO_UPDATE_CHECK)
+			.inGroup(GROUP_GENERAL)
+			.withDefaultValue(true));
+		builder.addProperty(ConfigurationProperty.ofBoolean(PROPERTY_CHECK_RESOURCES_INTEGRITY)
+			.inGroup(GROUP_GENERAL)
+			.withDefaultValue(false));
 		builder.addProperty(ConfigurationProperty.ofType(PROPERTY_USE_PRE_RELEASE_VERSIONS, UsePreReleaseVersions.class)
 			.inGroup(GROUP_GENERAL)
 			.withFactory(() -> Stream.concat(
@@ -115,22 +119,36 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 			                  ).name()));
 		
 		// ----- Download
-		builder.addProperty(ConfigurationProperty.ofInteger(PROPERTY_ACCELERATED_DOWNLOAD).inGroup(GROUP_DOWNLOAD).withDefaultValue(4));
-		builder.addProperty(ConfigurationProperty.ofInteger(PROPERTY_PARALLEL_DOWNLOADS).inGroup(GROUP_DOWNLOAD).withDefaultValue(3));
-		builder.addProperty(ConfigurationProperty.ofBoolean(PROPERTY_COMPUTE_STREAM_SIZE).inGroup(GROUP_DOWNLOAD).withDefaultValue(true));
+		builder.addProperty(ConfigurationProperty.ofInteger(PROPERTY_ACCELERATED_DOWNLOAD)
+			.inGroup(GROUP_DOWNLOAD)
+			.withDefaultValue(4)
+			.withOrder(10));
+		builder.addProperty(ConfigurationProperty.ofInteger(PROPERTY_PARALLEL_DOWNLOADS)
+			.inGroup(GROUP_DOWNLOAD)
+			.withDefaultValue(3)
+			.withOrder(20));
+		builder.addProperty(ConfigurationProperty.ofBoolean(PROPERTY_COMPUTE_STREAM_SIZE)
+			.inGroup(GROUP_DOWNLOAD)
+			.withDefaultValue(true)
+			.withOrder(30));
 		builder.addProperty(ConfigurationProperty.ofInteger(PROPERTY_REQUEST_CONNECT_TIMEOUT)
 			.inGroup(GROUP_DOWNLOAD)
-			.withDefaultValue(Web.defaultConnectTimeout().toMillis()));
+			.withDefaultValue(Web.defaultConnectTimeout().toMillis())
+			.withOrder(40));
 		builder.addProperty(ConfigurationProperty.ofInteger(PROPERTY_REQUEST_READ_TIMEOUT)
 			.inGroup(GROUP_DOWNLOAD)
-			.withDefaultValue(Web.defaultReadTimeout().toMillis()));
+			.withDefaultValue(Web.defaultReadTimeout().toMillis())
+			.withOrder(50));
 		
 		// ----- Conversion
-		builder.addProperty(ConfigurationProperty.ofInteger(PROPERTY_PARALLEL_CONVERSIONS).inGroup(GROUP_CONVERSION).withDefaultValue(1));
+		builder.addProperty(ConfigurationProperty.ofInteger(PROPERTY_PARALLEL_CONVERSIONS)
+			.inGroup(GROUP_CONVERSION)
+			.withDefaultValue(1));
 		
 		// ----- Plugins
 		builder.addProperty(ConfigurationProperty.ofBoolean(PROPERTY_PLUGINS_AUTO_UPDATE_CHECK)
-			.inGroup(GROUP_PLUGINS).withDefaultValue(true));
+			.inGroup(GROUP_PLUGINS)
+			.withDefaultValue(true));
 		
 		// ----- History
 		builder.addProperty(ConfigurationProperty.ofType(PROPERTY_HISTORY_LAST_DIRECTORY, Path.class)

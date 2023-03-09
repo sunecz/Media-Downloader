@@ -253,14 +253,17 @@ public class Configuration implements ConfigurationAccessor {
 		protected final boolean isHidden;
 		/** @since 00.02.07 */
 		protected final String group;
+		/** @since 00.02.08 */
+		protected final int order;
 		
 		protected ConfigurationProperty(String name, ConfigurationPropertyType type, V value, boolean isHidden,
-				String group) {
+				String group, int order) {
 			this.name = Objects.requireNonNull(name);
 			this.type = Objects.requireNonNull(type);
 			this.value = value;
 			this.isHidden = isHidden;
 			this.group = group;
+			this.order = order;
 		}
 		
 		public static final BooleanConfigurationProperty.Builder ofBoolean(String name) {
@@ -321,6 +324,11 @@ public class Configuration implements ConfigurationAccessor {
 			return group;
 		}
 		
+		/** @since 00.02.08 */
+		public int order() {
+			return order;
+		}
+		
 		public abstract SSDNode toNode(Map<String, ConfigurationProperty<?>> builtProperties);
 		
 		public SSDNode toNode() {
@@ -354,12 +362,15 @@ public class Configuration implements ConfigurationAccessor {
 			protected boolean isHidden;
 			/** @since 00.02.07 */
 			protected String group;
+			/** @since 00.02.08 */
+			protected int order;
 			
 			public BuilderBase(String name, ConfigurationPropertyType type) {
 				this.name = Objects.requireNonNull(name);
 				this.type = Objects.requireNonNull(type);
 				this.isHidden = false;
 				this.group = null;
+				this.order = 0;
 			}
 			
 			public BuilderBase<V, T> asHidden(boolean isHidden) {
@@ -370,6 +381,12 @@ public class Configuration implements ConfigurationAccessor {
 			/** @since 00.02.07 */
 			public BuilderBase<V, T> inGroup(String group) {
 				this.group = Objects.requireNonNull(group);
+				return this;
+			}
+			
+			/** @since 00.02.08 */
+			public BuilderBase<V, T> withOrder(int order) {
+				this.order = order;
 				return this;
 			}
 			
@@ -393,6 +410,11 @@ public class Configuration implements ConfigurationAccessor {
 			/** @since 00.02.07 */
 			public String group() {
 				return group;
+			}
+			
+			/** @since 00.02.08 */
+			public int order() {
+				return order;
 			}
 		}
 		
@@ -458,8 +480,8 @@ public class Configuration implements ConfigurationAccessor {
 	/** @since 00.02.04 */
 	public static final class BooleanConfigurationProperty extends ConfigurationProperty<Boolean> {
 		
-		private BooleanConfigurationProperty(String name, Boolean value, boolean isHidden, String group) {
-			super(name, ConfigurationPropertyType.BOOLEAN, value != null && value, isHidden, group);
+		private BooleanConfigurationProperty(String name, Boolean value, boolean isHidden, String group, int order) {
+			super(name, ConfigurationPropertyType.BOOLEAN, value != null && value, isHidden, group, order);
 		}
 		
 		@Override
@@ -497,7 +519,7 @@ public class Configuration implements ConfigurationAccessor {
 			
 			@Override
 			public BooleanConfigurationProperty build() {
-				return new BooleanConfigurationProperty(name, value(), isHidden, group);
+				return new BooleanConfigurationProperty(name, value(), isHidden, group, order);
 			}
 		}
 	}
@@ -505,24 +527,24 @@ public class Configuration implements ConfigurationAccessor {
 	/** @since 00.02.04 */
 	public static final class IntegerConfigurationProperty extends ConfigurationProperty<Long> {
 		
-		private IntegerConfigurationProperty(String name, Long value, boolean isHidden, String group) {
-			super(name, ConfigurationPropertyType.INTEGER, value != null ? value : 0L, isHidden, group);
+		private IntegerConfigurationProperty(String name, Long value, boolean isHidden, String group, int order) {
+			super(name, ConfigurationPropertyType.INTEGER, value != null ? value : 0L, isHidden, group, order);
 		}
 		
-		private IntegerConfigurationProperty(String name, Integer value, boolean isHidden, String group) {
-			this(name, value != null ? Long.valueOf(value) : 0L, isHidden, group);
+		private IntegerConfigurationProperty(String name, Integer value, boolean isHidden, String group, int order) {
+			this(name, value != null ? Long.valueOf(value) : 0L, isHidden, group, order);
 		}
 		
-		private IntegerConfigurationProperty(String name, Short value, boolean isHidden, String group) {
-			this(name, value != null ? Long.valueOf(value) : 0L, isHidden, group);
+		private IntegerConfigurationProperty(String name, Short value, boolean isHidden, String group, int order) {
+			this(name, value != null ? Long.valueOf(value) : 0L, isHidden, group, order);
 		}
 		
-		private IntegerConfigurationProperty(String name, Character value, boolean isHidden, String group) {
-			this(name, value != null ? Long.valueOf(value) : 0L, isHidden, group);
+		private IntegerConfigurationProperty(String name, Character value, boolean isHidden, String group, int order) {
+			this(name, value != null ? Long.valueOf(value) : 0L, isHidden, group, order);
 		}
 		
-		private IntegerConfigurationProperty(String name, Byte value, boolean isHidden, String group) {
-			this(name, value != null ? Long.valueOf(value) : 0L, isHidden, group);
+		private IntegerConfigurationProperty(String name, Byte value, boolean isHidden, String group, int order) {
+			this(name, value != null ? Long.valueOf(value) : 0L, isHidden, group, order);
 		}
 		
 		@Override
@@ -592,7 +614,7 @@ public class Configuration implements ConfigurationAccessor {
 			
 			@Override
 			public IntegerConfigurationProperty build() {
-				return new IntegerConfigurationProperty(name, value(), isHidden, group);
+				return new IntegerConfigurationProperty(name, value(), isHidden, group, order);
 			}
 		}
 	}
@@ -600,12 +622,12 @@ public class Configuration implements ConfigurationAccessor {
 	/** @since 00.02.04 */
 	public static final class DecimalConfigurationProperty extends ConfigurationProperty<Double> {
 		
-		private DecimalConfigurationProperty(String name, Double value, boolean isHidden, String group) {
-			super(name, ConfigurationPropertyType.DECIMAL, value != null ? value : 0.0, isHidden, group);
+		private DecimalConfigurationProperty(String name, Double value, boolean isHidden, String group, int order) {
+			super(name, ConfigurationPropertyType.DECIMAL, value != null ? value : 0.0, isHidden, group, order);
 		}
 		
-		private DecimalConfigurationProperty(String name, Float value, boolean isHidden, String group) {
-			this(name, value != null ? Double.valueOf(value) : 0.0, isHidden, group);
+		private DecimalConfigurationProperty(String name, Float value, boolean isHidden, String group, int order) {
+			this(name, value != null ? Double.valueOf(value) : 0.0, isHidden, group, order);
 		}
 		
 		@Override
@@ -651,7 +673,7 @@ public class Configuration implements ConfigurationAccessor {
 			
 			@Override
 			public DecimalConfigurationProperty build() {
-				return new DecimalConfigurationProperty(name, value(), isHidden, group);
+				return new DecimalConfigurationProperty(name, value(), isHidden, group, order);
 			}
 		}
 	}
@@ -659,8 +681,8 @@ public class Configuration implements ConfigurationAccessor {
 	/** @since 00.02.04 */
 	public static final class StringConfigurationProperty extends ConfigurationProperty<String> {
 		
-		private StringConfigurationProperty(String name, String value, boolean isHidden, String group) {
-			super(name, ConfigurationPropertyType.STRING, value, isHidden, group);
+		private StringConfigurationProperty(String name, String value, boolean isHidden, String group, int order) {
+			super(name, ConfigurationPropertyType.STRING, value, isHidden, group, order);
 		}
 		
 		@Override
@@ -699,7 +721,7 @@ public class Configuration implements ConfigurationAccessor {
 			
 			@Override
 			public StringConfigurationProperty build() {
-				return new StringConfigurationProperty(name, value(), isHidden, group);
+				return new StringConfigurationProperty(name, value(), isHidden, group, order);
 			}
 		}
 	}
@@ -713,8 +735,8 @@ public class Configuration implements ConfigurationAccessor {
 		
 		private TypeConfigurationPropertyBase(String name, Class<? extends T> typeClass, String value,
 				boolean isHidden, Supplier<Collection<String>> factory, Function<T, String> transformer,
-				Function<String, T> inverseTransformer, String group) {
-			super(name, ConfigurationPropertyType.STRING, value, isHidden, group);
+				Function<String, T> inverseTransformer, String group, int order) {
+			super(name, ConfigurationPropertyType.STRING, value, isHidden, group, order);
 			this.typeClass = Objects.requireNonNull(typeClass);
 			this.factory = factory;
 			this.transformer = transformer;
@@ -812,8 +834,8 @@ public class Configuration implements ConfigurationAccessor {
 		
 		private TypeConfigurationProperty(String name, Class<? extends T> typeClass, String value,
 				boolean isHidden, Supplier<Collection<String>> factory, Function<T, String> transformer,
-				Function<String, T> inverseTransformer, String group) {
-			super(name, typeClass, value, isHidden, factory, transformer, inverseTransformer, group);
+				Function<String, T> inverseTransformer, String group, int order) {
+			super(name, typeClass, value, isHidden, factory, transformer, inverseTransformer, group, order);
 		}
 		
 		@Override
@@ -864,8 +886,8 @@ public class Configuration implements ConfigurationAccessor {
 				
 				return factory == null || values().contains(transformedValue)
 							? new TypeConfigurationProperty<T>(name, typeClass, transformedValue, isHidden,
-									factory, transformer, inverseTransformer, group)
-							: new NullTypeConfigurationProperty<>(name, typeClass, isHidden, group);
+									factory, transformer, inverseTransformer, group, order)
+							: new NullTypeConfigurationProperty<>(name, typeClass, isHidden, group, order);
 			}
 		}
 	}
@@ -874,8 +896,8 @@ public class Configuration implements ConfigurationAccessor {
 	public static final class NullTypeConfigurationProperty<T> extends TypeConfigurationPropertyBase<T> {
 		
 		private NullTypeConfigurationProperty(String name, Class<? extends T> typeClass, boolean isHidden,
-				String group) {
-			super(name, typeClass, null, isHidden, null, null, null, group);
+				String group, int order) {
+			super(name, typeClass, null, isHidden, null, null, null, group, order);
 		}
 		
 		@Override
@@ -891,8 +913,8 @@ public class Configuration implements ConfigurationAccessor {
 			extends ConfigurationProperty<Map<String, Object>> {
 		
 		private ObjectConfigurationPropertyBase(String name, ConfigurationPropertyType type,
-				Map<String, Object> value, boolean isHidden, String group) {
-			super(name, type, value, isHidden, group);
+				Map<String, Object> value, boolean isHidden, String group, int order) {
+			super(name, type, value, isHidden, group, order);
 		}
 		
 		/** @since 00.02.07 */
@@ -971,8 +993,9 @@ public class Configuration implements ConfigurationAccessor {
 	/** @since 00.02.04 */
 	public static final class ArrayConfigurationProperty extends ObjectConfigurationPropertyBase {
 		
-		private ArrayConfigurationProperty(String name, Map<String, Object> value, boolean isHidden, String group) {
-			super(name, ConfigurationPropertyType.ARRAY, value, isHidden, group);
+		private ArrayConfigurationProperty(String name, Map<String, Object> value, boolean isHidden, String group,
+				int order) {
+			super(name, ConfigurationPropertyType.ARRAY, value, isHidden, group, order);
 		}
 		
 		/** @since 00.02.07 */
@@ -1015,7 +1038,7 @@ public class Configuration implements ConfigurationAccessor {
 			
 			@Override
 			public ArrayConfigurationProperty build() {
-				return new ArrayConfigurationProperty(name, value(), isHidden, group);
+				return new ArrayConfigurationProperty(name, value(), isHidden, group, order);
 			}
 			
 			/** @since 00.02.07 */
@@ -1173,8 +1196,9 @@ public class Configuration implements ConfigurationAccessor {
 	/** @since 00.02.04 */
 	public static final class ObjectConfigurationProperty extends ObjectConfigurationPropertyBase {
 		
-		private ObjectConfigurationProperty(String name, Map<String, Object> value, boolean isHidden, String group) {
-			super(name, ConfigurationPropertyType.OBJECT, value, isHidden, group);
+		private ObjectConfigurationProperty(String name, Map<String, Object> value, boolean isHidden, String group,
+				int order) {
+			super(name, ConfigurationPropertyType.OBJECT, value, isHidden, group, order);
 		}
 		
 		/** @since 00.02.07 */
@@ -1212,7 +1236,7 @@ public class Configuration implements ConfigurationAccessor {
 			
 			@Override
 			public ObjectConfigurationProperty build() {
-				return new ObjectConfigurationProperty(name, value(), isHidden, group);
+				return new ObjectConfigurationProperty(name, value(), isHidden, group, order);
 			}
 			
 			/** @since 00.02.07 */
@@ -1255,8 +1279,8 @@ public class Configuration implements ConfigurationAccessor {
 	/** @since 00.02.04 */
 	public static final class NullConfigurationProperty extends ConfigurationProperty<Object> {
 		
-		private NullConfigurationProperty(String name, boolean isHidden, String group) {
-			super(name, ConfigurationPropertyType.NULL, null, isHidden, group);
+		private NullConfigurationProperty(String name, boolean isHidden, String group, int order) {
+			super(name, ConfigurationPropertyType.NULL, null, isHidden, group, order);
 		}
 		
 		@Override
@@ -1293,7 +1317,7 @@ public class Configuration implements ConfigurationAccessor {
 			
 			@Override
 			public NullConfigurationProperty build() {
-				return new NullConfigurationProperty(name, isHidden, group);
+				return new NullConfigurationProperty(name, isHidden, group, order);
 			}
 		}
 	}

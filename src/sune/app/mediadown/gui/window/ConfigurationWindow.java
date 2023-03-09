@@ -117,6 +117,9 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 		));
 	}
 	
+	/** @since 00.02.08 */
+	private final List<ConfigurationEntry> configurationEntries = new ArrayList<>();
+	
 	private final TabPane tabPane;
 	private final Button btnSave;
 	private final Button btnClose;
@@ -310,6 +313,9 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 		// Add configurations of loaded plugins
 		Plugins.allLoaded().forEach(this::addPluginConfiguration);
 		
+		// Finally, build forms of all added configurations
+		buildConfigurationForms();
+		
 		tabPane.getTabs().addAll(
 			formBuilders.entrySet().stream()
 				.map((entry) -> addFormAndCreateTab(entry.getKey(), entry.getValue()))
@@ -337,31 +343,27 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 		return formBuilders.computeIfAbsent(group, (k) -> new FormBuilder());
 	}
 	
+	/** @since 00.02.08 */
+	private final void buildConfigurationForms() {
+		configurationEntries.stream()
+			.flatMap((c) -> c.properties().stream())
+			.sorted()
+			.forEachOrdered((p) -> formBuilder(p.property()).addField(propertyField(p)));
+	}
+	
+	/** @since 00.02.08 */
+	private final FormField<ConfigurationFormFieldProperty> propertyField(ConfigurationPropertyEntry entry) {
+		SSDObject object = (SSDObject) entry.property().toNode();
+		FormField<ConfigurationFormFieldProperty> field = getFormField(
+			entry.configuration(), entry.property(), entry.name(), entry.title()
+		);
+		field.value(object.getFormattedValue(), object.getType());
+		return field;
+	}
+	
 	/** @since 00.02.04 */
 	private final void addConfiguration(Configuration configuration, Translation translation) {
-		String configName = configuration.name();
-		boolean isAppConfig = configName.equals(MediaDownloader.configuration().name());
-		String formName = isAppConfig ? null : configName;
-		String regexConfigName = '^' + Regex.quote(configName + '.');
-		
-		for(Entry<String, ConfigurationProperty<?>> entry : configuration.properties().entrySet()) {
-			ConfigurationProperty<?> property = entry.getValue();
-			if(property.isHidden()) continue;
-			
-			// Currently objects and arrays are not supported
-			ConfigurationPropertyType type = property.type();
-			if(type == ConfigurationPropertyType.ARRAY
-					|| type == ConfigurationPropertyType.OBJECT)
-				continue;
-			
-			String name = (formName != null ? formName + '.' : "") + entry.getKey();
-			String title = translation.getSingle("fields." + name.replaceFirst(regexConfigName, ""));
-			SSDObject object = (SSDObject) property.toNode();
-			
-			FormField<ConfigurationFormFieldProperty> field = getFormField(configuration, property, name, title);
-			field.value(object.getFormattedValue(), object.getType());
-			formBuilder(property).addField(field);
-		}
+		configurationEntries.add(new ConfigurationEntry(configuration, translation));
 	}
 	
 	private final FormField<ConfigurationFormFieldProperty> getFormField(Configuration configuration,
@@ -481,6 +483,73 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 	
 	private final void actionClose() {
 		close();
+	}
+	
+	/** @since 00.02.08 */
+	private static final class ConfigurationPropertyEntry implements Comparable<ConfigurationPropertyEntry> {
+		
+		private final Configuration configuration;
+		private final ConfigurationProperty<?> property;
+		private final String name;
+		private final String title;
+		
+		public ConfigurationPropertyEntry(Configuration configuration, ConfigurationProperty<?> property, String name,
+		        String title) {
+			this.configuration = configuration;
+			this.property = property;
+			this.name = name;
+			this.title = title;
+		}
+		
+		@Override
+		public int compareTo(ConfigurationPropertyEntry o) {
+			return Integer.compare(property.order(), o.property.order());
+		}
+		
+		public Configuration configuration() { return configuration; }
+		public ConfigurationProperty<?> property() { return property; }
+		public String name() { return name; }
+		public String title() { return title; }
+	}
+	
+	/** @since 00.02.08 */
+	private static final class ConfigurationEntry {
+		
+		private final Configuration configuration;
+		private final Translation translation;
+		
+		public ConfigurationEntry(Configuration configuration, Translation translation) {
+			this.configuration = Objects.requireNonNull(configuration);
+			this.translation = Objects.requireNonNull(translation);
+		}
+		
+		public List<ConfigurationPropertyEntry> properties() {
+			Map<String, ConfigurationProperty<?>> properties = configuration.properties();
+			List<ConfigurationPropertyEntry> entries = new ArrayList<>(properties.size());
+			
+			String configName = configuration.name();
+			boolean isAppConfig = configName.equals(MediaDownloader.configuration().name());
+			String formName = isAppConfig ? null : configName;
+			String regexConfigName = '^' + Regex.quote(configName + '.');
+			
+			for(Entry<String, ConfigurationProperty<?>> entry : properties.entrySet()) {
+				ConfigurationProperty<?> property = entry.getValue();
+				if(property.isHidden()) continue;
+				
+				// Currently objects and arrays are not supported
+				ConfigurationPropertyType type = property.type();
+				if(type == ConfigurationPropertyType.ARRAY
+						|| type == ConfigurationPropertyType.OBJECT) {
+					continue;
+				}
+				
+				String name = (formName != null ? formName + '.' : "") + entry.getKey();
+				String title = translation.getSingle("fields." + name.replaceFirst(regexConfigName, ""));
+				entries.add(new ConfigurationPropertyEntry(configuration, property, name, title));
+			}
+			
+			return entries;
+		}
 	}
 	
 	/** @since 00.02.07 */
