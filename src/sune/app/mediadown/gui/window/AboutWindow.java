@@ -40,7 +40,7 @@ public class AboutWindow extends DraggableWindow<VBox> {
 		lblTitle = new Label(MediaDownloader.TITLE);
 		lblVersion = makeText(
 			tr("label.version"),
-			"version", MediaDownloader.version().compactString(),
+			"version", MediaDownloader.version().string(),
 			"release_date", formatDate(MediaDownloader.DATE)
 		);
 		lblAuthor = makeText(
