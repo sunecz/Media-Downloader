@@ -20,6 +20,7 @@ import sune.app.mediadown.event.Listener;
 import sune.app.mediadown.event.tracker.ConversionTracker;
 import sune.app.mediadown.event.tracker.TrackerEvent;
 import sune.app.mediadown.event.tracker.TrackerManager;
+import sune.app.mediadown.ffmpeg.FFmpeg.Options;
 import sune.app.mediadown.logging.Log;
 import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.Pair;
@@ -92,8 +93,9 @@ public final class FFmpegConverter implements Converter {
 		
 		double duration = command.metadata().get("duration");
 		FFmpeg.Command altered = alterOutputs(command);
+		boolean isMerge = altered.outputs().stream().allMatch((o) -> o.options().contains(Options.codecCopy()));
 		
-		tracker = new ConversionTracker(duration);
+		tracker = new ConversionTracker(duration, isMerge);
 		trackerManager.addEventListener(TrackerEvent.UPDATE, (t) -> eventRegistry.call(ConversionEvent.UPDATE, new Pair<>(this, trackerManager)));
 		trackerManager.tracker(tracker);
 		

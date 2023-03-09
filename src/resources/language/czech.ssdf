@@ -93,6 +93,7 @@
 				initialization: "Inicializace",
 				download:       "Stahování",
 				conversion:     "Konverze",
+				merge:          "Sloučení",
 				stopped:        "Zrušeno",
 				done:           "Hotovo",
 				error:          "Chyba",

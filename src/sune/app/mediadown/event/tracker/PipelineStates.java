@@ -8,6 +8,7 @@ public final class PipelineStates {
 	public static final String INITIALIZATION = "tr(md, windows.main.states.initialization)";
 	public static final String DOWNLOAD       = "tr(md, windows.main.states.download)";
 	public static final String CONVERSION     = "tr(md, windows.main.states.conversion)";
+	public static final String MERGE          = "tr(md, windows.main.states.merge)";
 	public static final String STOPPED        = "tr(md, windows.main.states.stopped)";
 	public static final String DONE           = "tr(md, windows.main.states.done)";
 	public static final String ERROR          = "tr(md, windows.main.states.error)";

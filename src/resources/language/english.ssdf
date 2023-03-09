@@ -93,6 +93,7 @@
 				initialization: "Initialization",
 				download:       "Download",
 				conversion:     "Conversion",
+				merge:          "Merge",
 				stopped:        "Stopped",
 				done:           "Done",
 				error:          "Error",

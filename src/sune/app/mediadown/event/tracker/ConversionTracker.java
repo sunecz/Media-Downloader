@@ -4,9 +4,17 @@ public class ConversionTracker extends SimpleTracker {
 	
 	private double currentTime;
 	private double totalTime;
+	/** @since 00.02.08 */
+	private final boolean isMerge;
 	
 	public ConversionTracker(double totalTime) {
+		this(totalTime, false);
+	}
+	
+	/** @since 00.02.08 */
+	public ConversionTracker(double totalTime, boolean isMerge) {
 		this.totalTime = totalTime;
+		this.isMerge = isMerge;
 	}
 	
 	public void update(double currentTime) {
@@ -21,7 +29,7 @@ public class ConversionTracker extends SimpleTracker {
 	
 	@Override
 	public String state() {
-		return PipelineStates.CONVERSION;
+		return isMerge ? PipelineStates.MERGE : PipelineStates.CONVERSION;
 	}
 	
 	/** @since 00.02.08 */
