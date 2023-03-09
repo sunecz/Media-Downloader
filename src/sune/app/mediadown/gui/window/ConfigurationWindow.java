@@ -42,6 +42,7 @@ import sune.app.mediadown.configuration.Configuration.ConfigurationProperty;
 import sune.app.mediadown.configuration.Configuration.ConfigurationPropertyType;
 import sune.app.mediadown.configuration.Configuration.NullTypeConfigurationProperty;
 import sune.app.mediadown.configuration.Configuration.TypeConfigurationProperty;
+import sune.app.mediadown.configuration.ConfigurationReloadable;
 import sune.app.mediadown.gui.Dialog;
 import sune.app.mediadown.gui.DraggableWindow;
 import sune.app.mediadown.gui.form.Form;
@@ -428,8 +429,11 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 			}
 		}
 		
-		// Reload the application configuration to reflect changes immediately
-		appConfiguration.reload();
+		// Reload all configurations to reflect changes immediately
+		configurations.stream()
+			.filter((c) -> c instanceof ConfigurationReloadable)
+			.map(Utils::<ConfigurationReloadable>cast)
+			.forEach(ConfigurationReloadable::reload);
 		
 		if(errorContentBuilder == null) {
 			Dialog.showInfo(dialogTitle, translation.getSingle("dialog.save_success"));

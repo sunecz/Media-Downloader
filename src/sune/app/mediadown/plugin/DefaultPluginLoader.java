@@ -143,6 +143,7 @@ final class DefaultPluginLoader implements PluginLoader {
 		Path configPath = NIO.localPath("resources/config/" + file.getPlugin().instance().name() + ".ssdf");
 		if(NIO.exists(configPath)) {
 			configuration.loadData(SSDF.read(configPath.toFile()));
+			configuration.path(configPath);
 		}
 		
 		file.setConfiguration(configuration.build());

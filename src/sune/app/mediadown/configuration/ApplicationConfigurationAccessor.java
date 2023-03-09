@@ -12,7 +12,7 @@ import sune.app.mediadown.update.Version;
 import sune.util.ssdf2.SSDCollection;
 
 /** @since 00.02.04 */
-public interface ApplicationConfigurationAccessor {
+public interface ApplicationConfigurationAccessor extends ConfigurationLocatable, ConfigurationReloadable {
 	
 	// ----- Names of configuration groups
 	/** @since 00.02.07 */
@@ -90,10 +90,6 @@ public interface ApplicationConfigurationAccessor {
 	boolean autoEnableClipboardWatcher();
 	
 	SSDCollection data();
-	/** @since 00.02.07 */
-	boolean reload();
-	/** @since 00.02.07 */
-	Path path();
 	
 	/** @since 00.02.07 */
 	public static enum UsePreReleaseVersions {
