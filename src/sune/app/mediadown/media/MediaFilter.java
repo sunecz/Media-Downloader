@@ -21,8 +21,6 @@ import sune.app.mediadown.util.Utils;
 /** @since 00.02.05 */
 public class MediaFilter {
 	
-	// TODO: Specify MediaType for which the filter is created
-	
 	private static final Predicate<Media> ALWAYS_TRUE = ((t) -> true);
 	private static MediaFilter NONE;
 	
@@ -72,6 +70,8 @@ public class MediaFilter {
 		private boolean bestQuality;
 		private PriorityHolder<MediaQuality> qualityPriority;
 		private MediaLanguage audioLanguage;
+		/** @since 00.02.08 */
+		private Predicate<Media> filter;
 		
 		public Builder() {
 			comparisonOrder = ComparisonOrder.defaultOrder();
@@ -79,6 +79,7 @@ public class MediaFilter {
 			bestQuality = false;
 			qualityPriority = new PriorityHolder<>();
 			audioLanguage = MediaLanguage.UNKNOWN;
+			filter = null;
 		}
 		
 		private final List<ComparisonOrder> mergedComparisonOrder() {
@@ -89,7 +90,7 @@ public class MediaFilter {
 		
 		public MediaFilter build() {
 			ComparatorCombiner<Media> comparator = ComparatorCombiner.empty();
-			OptCondition<Media> predicate = OptCondition.ofTrue();
+			OptCondition<Media> predicate = filter != null ? OptCondition.of(filter) : OptCondition.ofTrue();
 			
 			for(ComparisonOrder order : mergedComparisonOrder()) {
 				switch(order) {
@@ -166,6 +167,11 @@ public class MediaFilter {
 		public Builder audioLanguage(MediaLanguage audioLanguage) {
 			this.audioLanguage = Objects.requireNonNull(audioLanguage);
 			return this;
+		}
+		
+		/** @since 00.02.08 */
+		public void filter(Predicate<Media> filter) {
+			this.filter = filter;
 		}
 		
 		public static enum ComparisonOrder {
