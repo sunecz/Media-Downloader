@@ -1,17 +1,22 @@
 package sune.app.mediadown.media;
 
-import java.util.Collection;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Stream;
+
+import sune.app.mediadown.concurrent.ValidableValue;
 
 /** @since 00.02.05 */
 public final class MediaType {
 	
 	private static final Map<String, MediaType> registered = new LinkedHashMap<>();
-	private static boolean valuesInvalidated;
-	private static MediaType[] values;
+	private static final ValidableValue<MediaType[]> values;
+	
+	static {
+		values = ValidableValue.of(MediaType::newValues);
+	}
 	
 	// Special media types
 	public static final MediaType UNKNOWN;
@@ -41,22 +46,31 @@ public final class MediaType {
 	}
 	
 	private static final void register(MediaType type) {
-		if(registered.putIfAbsent(type.name.toLowerCase(), type) != null)
-			throw new IllegalStateException("Media type \"" + type.name + "\" already registered.");
-		valuesInvalidated = true;
-	}
-	
-	private static final void ensureValidStaticMembers() {
-		if(values == null || valuesInvalidated) {
-			Collection<MediaType> types = registered.values();
-			values = types.toArray(MediaType[]::new);
-			valuesInvalidated = false;
+		synchronized(registered) {
+			if(registered.putIfAbsent(type.name.toLowerCase(), type) != null) {
+				throw new IllegalStateException("Media type \"" + type.name + "\" already registered.");
+			}
+			
+			values.invalidate();
 		}
 	}
 	
+	private static final Stream<MediaType> allTypes() {
+		List<MediaType> types;
+		
+		synchronized(registered) {
+			types = List.copyOf(registered.values());
+		}
+		
+		return types.stream();
+	}
+	
+	private static final MediaType[] newValues() {
+		return allTypes().toArray(MediaType[]::new);
+	}
+	
 	public static final MediaType[] values() {
-		ensureValidStaticMembers();
-		return values;
+		return values.value();
 	}
 	
 	public static final MediaType ofName(String name) {

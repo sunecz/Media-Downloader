@@ -1,7 +1,6 @@
 package sune.app.mediadown.media;
 
 import java.nio.file.Path;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -10,15 +9,20 @@ import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.stream.Stream;
 
+import sune.app.mediadown.concurrent.ValidableValue;
 import sune.app.mediadown.util.Utils;
 
 /** @since 00.02.05 */
 public final class MediaFormat {
 	
 	private static final Map<String, MediaFormat> registered = new LinkedHashMap<>();
-	private static boolean valuesInvalidated;
-	private static MediaFormat[] values;
-	private static MediaFormat[] outputFormats;
+	private static final ValidableValue<MediaFormat[]> values;
+	private static final ValidableValue<MediaFormat[]> outputFormats;
+	
+	static {
+		values = ValidableValue.of(MediaFormat::newValues);
+		outputFormats = ValidableValue.of(MediaFormat::newOutputFormats);
+	}
 	
 	private static final BiFunction<MediaFormat, String, Boolean> PREDICATE_EXTENSIONS
 		= ((format, type) -> format.fileExtensions().contains(type));
@@ -124,18 +128,32 @@ public final class MediaFormat {
 	}
 	
 	private static final void register(MediaFormat format) {
-		if(registered.putIfAbsent(format.name.toLowerCase(), format) != null)
-			throw new IllegalStateException("Media format \"" + format.name + "\" already registered.");
-		valuesInvalidated = true;
+		synchronized(registered) {
+			if(registered.putIfAbsent(format.name.toLowerCase(), format) != null) {
+				throw new IllegalStateException("Media format \"" + format.name + "\" already registered.");
+			}
+			
+			values.invalidate();
+			outputFormats.invalidate();
+		}
 	}
 	
-	private static final void ensureValidStaticMembers() {
-		if(values == null || valuesInvalidated) {
-			Collection<MediaFormat> formats = registered.values();
-			values = formats.toArray(MediaFormat[]::new);
-			outputFormats = formats.stream().filter(MediaFormat::isOutputFormat).toArray(MediaFormat[]::new);
-			valuesInvalidated = false;
+	private static final Stream<MediaFormat> allFormats() {
+		List<MediaFormat> formats;
+		
+		synchronized(registered) {
+			formats = List.copyOf(registered.values());
 		}
+		
+		return formats.stream();
+	}
+	
+	private static final MediaFormat[] newValues() {
+		return allFormats().toArray(MediaFormat[]::new);
+	}
+	
+	private static final MediaFormat[] newOutputFormats() {
+		return allFormats().filter(MediaFormat::isOutputFormat).toArray(MediaFormat[]::new);
 	}
 	
 	private static final <T> MediaFormat filter(BiFunction<MediaFormat, T, Boolean> predicate, T value) {
@@ -143,8 +161,7 @@ public final class MediaFormat {
 	}
 	
 	public static final MediaFormat[] values() {
-		ensureValidStaticMembers();
-		return values;
+		return values.value();
 	}
 	
 	public static final MediaFormat ofName(String name) {
@@ -176,8 +193,7 @@ public final class MediaFormat {
 	}
 	
 	public static final MediaFormat[] outputFormats() {
-		ensureValidStaticMembers();
-		return outputFormats;
+		return outputFormats.value();
 	}
 	
 	public String name() {

@@ -8,9 +8,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Matcher;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import sune.app.mediadown.concurrent.ValidableValue;
 import sune.app.mediadown.util.ComparatorCombiner;
 import sune.app.mediadown.util.Regex;
 import sune.app.mediadown.util.Utils;
@@ -19,9 +19,13 @@ import sune.app.mediadown.util.Utils;
 public final class MediaQuality implements Comparable<MediaQuality> {
 	
 	private static final Map<String, MediaQuality> registered = new LinkedHashMap<>();
-	private static boolean valuesInvalidated;
-	private static MediaQuality[] values;
-	private static MediaQuality[] validQualities;
+	private static final ValidableValue<MediaQuality[]> values;
+	private static final ValidableValue<MediaQuality[]> validQualities;
+	
+	static {
+		values = ValidableValue.of(MediaQuality::newValues);
+		validQualities = ValidableValue.of(MediaQuality::newValidQualities);
+	}
 	
 	private static final List<MediaQualityParser> parsers = new ArrayList<>();
 	
@@ -98,18 +102,32 @@ public final class MediaQuality implements Comparable<MediaQuality> {
 	}
 	
 	private static final void register(MediaQuality quality) {
-		if(registered.putIfAbsent(quality.name.toLowerCase(), quality) != null)
-			throw new IllegalStateException("Media quality \"" + quality.name + "\" already registered.");
-		valuesInvalidated = true;
+		synchronized(registered) {
+			if(registered.putIfAbsent(quality.name.toLowerCase(), quality) != null) {
+				throw new IllegalStateException("Media quality \"" + quality.name + "\" already registered.");
+			}
+			
+			values.invalidate();
+			validQualities.invalidate();
+		}
 	}
 	
-	private static final void ensureValidStaticMembers() {
-		if(values == null || valuesInvalidated) {
-			List<MediaQuality> qualities = registered.values().stream().filter((q) -> !isModified(q)).collect(Collectors.toList());
-			values = qualities.toArray(MediaQuality[]::new);
-			validQualities = qualities.stream().filter((q) -> !q.is(UNKNOWN)).toArray(MediaQuality[]::new);
-			valuesInvalidated = false;
+	private static final Stream<MediaQuality> unmodifiedQualities() {
+		List<MediaQuality> qualities;
+		
+		synchronized(registered) {
+			qualities = List.copyOf(registered.values());
 		}
+		
+		return qualities.stream().filter((q) -> !isModified(q));
+	}
+	
+	private static final MediaQuality[] newValues() {
+		return unmodifiedQualities().toArray(MediaQuality[]::new);
+	}
+	
+	private static final MediaQuality[] newValidQualities() {
+		return unmodifiedQualities().filter((q) -> !q.is(UNKNOWN)).toArray(MediaQuality[]::new);
 	}
 	
 	// Shortcut for constructing a video quality
@@ -169,8 +187,7 @@ public final class MediaQuality implements Comparable<MediaQuality> {
 	}
 	
 	public static final MediaQuality[] values() {
-		ensureValidStaticMembers();
-		return values;
+		return values.value();
 	}
 	
 	public static final MediaQuality ofName(String name) {
@@ -213,8 +230,7 @@ public final class MediaQuality implements Comparable<MediaQuality> {
 	}
 	
 	public static final MediaQuality[] validQualities() {
-		ensureValidStaticMembers();
-		return validQualities;
+		return validQualities.value();
 	}
 	
 	public static final void addStringParser(MediaQualityParser parser) {

@@ -1,6 +1,5 @@
 package sune.app.mediadown.media;
 
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -10,15 +9,20 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Stream;
 
+import sune.app.mediadown.concurrent.ValidableValue;
 import sune.app.mediadown.util.Utils;
 
 /** @since 00.02.05 */
 public final class MediaLanguage {
 	
 	private static final Map<String, MediaLanguage> registered = new LinkedHashMap<>();
-	private static boolean valuesInvalidated;
-	private static MediaLanguage[] values;
-	private static MediaLanguage[] determinedLanguages;
+	private static final ValidableValue<MediaLanguage[]> values;
+	private static final ValidableValue<MediaLanguage[]> determinedLanguages;
+	
+	static {
+		values = ValidableValue.of(MediaLanguage::newValues);
+		determinedLanguages = ValidableValue.of(MediaLanguage::newDeterminedLanguages);
+	}
 	
 	// Special media languages
 	public static final MediaLanguage UNKNOWN;
@@ -148,30 +152,42 @@ public final class MediaLanguage {
 	}
 	
 	private static final void register(MediaLanguage language) {
-		if(registered.putIfAbsent(language.name.toLowerCase(), language) != null)
-			throw new IllegalStateException("Media language \"" + language.name + "\" already registered.");
-		valuesInvalidated = true;
-	}
-	
-	private static final void ensureValidStaticMembers() {
-		if(values == null || valuesInvalidated) {
-			Collection<MediaLanguage> languages = registered.values();
-			values = languages.toArray(MediaLanguage[]::new);
-			determinedLanguages = languages.stream()
-					.filter((l) -> !l.isAnyOf(MediaLanguage.UNKNOWN, MediaLanguage.UNDETERMINED))
-					.toArray(MediaLanguage[]::new);
-			valuesInvalidated = false;
+		synchronized(registered) {
+			if(registered.putIfAbsent(language.name.toLowerCase(), language) != null) {
+				throw new IllegalStateException("Media language \"" + language.name + "\" already registered.");
+			}
+			
+			values.invalidate();
+			determinedLanguages.invalidate();
 		}
 	}
 	
+	private static final Stream<MediaLanguage> allLanguages() {
+		List<MediaLanguage> languages;
+		
+		synchronized(registered) {
+			languages = List.copyOf(registered.values());
+		}
+		
+		return languages.stream();
+	}
+	
+	private static final MediaLanguage[] newValues() {
+		return allLanguages().toArray(MediaLanguage[]::new);
+	}
+	
+	private static final MediaLanguage[] newDeterminedLanguages() {
+		return allLanguages()
+					.filter((l) -> !l.isAnyOf(MediaLanguage.UNKNOWN, MediaLanguage.UNDETERMINED))
+					.toArray(MediaLanguage[]::new);
+	}
+	
 	public static final MediaLanguage[] values() {
-		ensureValidStaticMembers();
-		return values;
+		return values.value();
 	}
 	
 	public static final MediaLanguage[] determinedLanguages() {
-		ensureValidStaticMembers();
-		return determinedLanguages;
+		return determinedLanguages.value();
 	}
 	
 	public static final MediaLanguage ofName(String name) {
