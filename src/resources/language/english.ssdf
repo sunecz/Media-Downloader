@@ -480,10 +480,11 @@
 		},
 		language: {
 			UNKNOWN:      "Unknown",
+			UNDETERMINED: "Undetermined",
+			MULTIPLE:     "Multilanguage",
 			ENGLISH:      "English",
 			CZECH:        "Czech",
-			SLOVAK:       "Slovak",
-			UNDETERMINED: "Undetermined"
+			SLOVAK:       "Slovak"
 		},
 		format: {
 			UNKNOWN: "Unknown"

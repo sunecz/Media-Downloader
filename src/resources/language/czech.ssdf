@@ -480,10 +480,11 @@
 		},
 		language: {
 			UNKNOWN:      "Neznámý",
+			UNDETERMINED: "Neurčeno",
+			MULTIPLE:     "Vícejazyčný",
 			ENGLISH:      "Angličtina",
 			CZECH:        "Čeština",
-			SLOVAK:       "Slovenština",
-			UNDETERMINED: "Neurčeno"
+			SLOVAK:       "Slovenština"
 		},
 		format: {
 			UNKNOWN: "Neznámý"

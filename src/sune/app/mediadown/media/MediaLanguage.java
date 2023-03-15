@@ -27,6 +27,7 @@ public final class MediaLanguage {
 	// Special media languages
 	public static final MediaLanguage UNKNOWN;
 	public static final MediaLanguage UNDETERMINED;
+	public static final MediaLanguage MULTIPLE;
 	// Common media languages (see: https://www.loc.gov/standards/iso639-2/php/code_list.php)
 	public static final MediaLanguage ENGLISH;
 	public static final MediaLanguage CZECH;
@@ -83,6 +84,7 @@ public final class MediaLanguage {
 	static {
 		UNKNOWN      = new Builder().name("UNKNOWN").build();
 		UNDETERMINED = new Builder().name("UNDETERMINED").codes("und").build();
+		MULTIPLE     = new Builder().name("MULTIPLE").codes("mul").build();
 		ENGLISH      = new Builder().name("ENGLISH").codes("eng", "en").build();
 		CZECH        = new Builder().name("CZECH").codes("cze", "ces", "cs").build();
 		SLOVAK       = new Builder().name("SLOVAK").codes("slo", "slk", "sk").build();
