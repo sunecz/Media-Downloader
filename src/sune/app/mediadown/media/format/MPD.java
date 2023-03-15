@@ -79,22 +79,20 @@ public final class MPD {
 		return ((uri) -> Web.requestStream(request.ofURI(uri)));
 	}
 	
-	public static final Map<MediaFormat, List<MPDFile>> parse(Request request) throws Exception {
+	public static final List<MPDFile> parse(Request request) throws Exception {
 		return new MPDReader(request.uri(), streamResolver(request)).read();
 	}
 	
-	public static final Map<MediaFormat, List<MPDFile>> parse(String uri, String content) throws Exception {
+	public static final List<MPDFile> parse(String uri, String content) throws Exception {
 		return new MPDReader(Net.uri(uri), content).read();
 	}
 	
-	public static final List<MPDCombinedFile> reduce(Map<MediaFormat, List<MPDFile>> result) {
-		List<MPDFile> videos = result.entrySet().stream()
-				.filter((e) -> e.getKey().mediaType().is(MediaType.VIDEO))
-				.flatMap((e) -> e.getValue().stream())
+	public static final List<MPDCombinedFile> reduce(List<MPDFile> files) {
+		List<MPDFile> videos = files.stream()
+				.filter((f) -> f.format().mediaType().is(MediaType.VIDEO))
 				.collect(Collectors.toList());
-		List<MPDFile> audios = result.entrySet().stream()
-				.filter((e) -> e.getKey().mediaType().is(MediaType.AUDIO))
-				.flatMap((e) -> e.getValue().stream())
+		List<MPDFile> audios = files.stream()
+				.filter((f) -> f.format().mediaType().is(MediaType.AUDIO))
 				.collect(Collectors.toList());
 		return videos.stream()
 				     .flatMap((v) -> audios.stream().map((a) -> new MPDCombinedFile(v, a)))
@@ -419,10 +417,6 @@ public final class MPD {
 			}
 			return files;
 		}
-		
-		public final MediaFormat format() {
-			return format;
-		}
 	}
 	
 	private static final class MPDReader {
@@ -452,22 +446,25 @@ public final class MPD {
 			return Jsoup.parse(stream, Shared.CHARSET.name(), baseURI.toString());
 		}
 		
-		private final Map<MediaFormat, List<MPDFile>> read(URI baseURI, Document document) throws Exception {
+		private final List<MPDFile> read(URI baseURI, Document document) throws Exception {
+			List<MPDFile> files = new ArrayList<>();
+			
 			// Check if the MPD file has BaseURI tag defined
 			Element elBaseURI;
 			if((elBaseURI = document.selectFirst("MPD > BaseURL")) != null) {
 				// Replace the presumed base URI by the new one
 				baseURI = Net.uri(elBaseURI.html());
 			}
-			Map<MediaFormat, List<MPDFile>> map = new LinkedHashMap<>();
+			
 			for(Element elementAdaptationSet : document.getElementsByTag(AdaptationSet.NODE_NAME)) {
 				AdaptationSet adaptationSet = AdaptationSet.parse(elementAdaptationSet);
-				map.put(adaptationSet.format(), adaptationSet.process(baseURI));
+				files.addAll(adaptationSet.process(baseURI));
 			}
-			return map;
+			
+			return files;
 		}
 		
-		public final Map<MediaFormat, List<MPDFile>> read() throws Exception {
+		public final List<MPDFile> read() throws Exception {
 			URI baseURI = Net.baseURI(uri);
 			Document document = null;
 			if(streamResolver != null) {
