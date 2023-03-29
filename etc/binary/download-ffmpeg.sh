@@ -92,14 +92,14 @@ for url in ${urls[@]} ; do
 		rm -rf "$dir_extract"
 	fi
 
-	paths+=(
-		"$dir_download/ffmpeg$ext"
-		"$dir_download/ffprobe$ext"
-	)
-
 	echo "Remove: $filename"
 	rm "$filename"
 done
+
+paths+=(
+	"$dir_download/ffmpeg$ext"
+	"$dir_download/ffprobe$ext"
+)
 
 # Print final files paths to stdout
 for ((i = 0; i < ${#paths[@]}; i++)) ; do
