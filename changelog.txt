@@ -1,3 +1,92 @@
+# 00.02.08 (2023-03-31)
+
+CORE
+* Added an application argument (no-update) to skip updating JRE, plugins, etc. at the application startup.
+* Added TrackerVisitor to better handle various Trackers.
+* Added parent property to Media.
+* Added utility class Utils::OfPath for extracting information, such as base name and extension, from a path.
+* Added an application argument (only-init) for only-init mode.
+* Added AppArguments class.
+* Added Utils::Ignore and Utils::Suppress classes to remove ambiguity method calls when compiling using the OpenJDK Java compiler.
+* Added new Task API for handling task-related work, such as obtaining programs or episodes.
+* Added new Net API for handling HTTP requests and responses and also other net-related things.
+* Added the ability to order configuration properties.
+* Added a new classes: Regex, VarLoader.
+* Added a new media language: Multiple languages (mul).
+* Added a lot of utility methods.
+* Updated the Download API, adding new classes: FileDownloader, AcceleratedFileDownloader.
+* Updated the Conversion API, updating related classes, such as FFmpeg.
+* Ensure parent directory when downloading resoruces.
+* Updated plugin versions handling to support the new format.
+* Capture the selected format directly from the FileChooser, not from the selected path.
+* The default location of the log file has been changed to resources/log/application.log.
+* Log the output of the process when an error occurs while trying to convert a file.
+* Do not delete non-empty log files upon the application exit.
+* Made the connect timeout and read timeout for HTTP requests configurable.
+* Ensure that the selected extension is present as a file name suffix when selecting the output path.
+* Updated library sune-utils-load to the official version 1.0.0.
+* Skip the BOM character when reading JSON files.
+* Close the input reader when reading JSON files.
+* Throw an error if an invalid JSON string is encountered when reading it using the JSON class.
+* Lazy load the plugin classes.
+* When updating the JRE make sure the new executable is actually executable before running it.
+* Use basic URI sanitization when reading M3U8 files.
+* Made registration of MediaFormat, MediaLanguage, MediaQuality and MediaType thread-safe.
+* Made PluginConfiguration locatable and reloadable.
+* Reorganized many classes, adding new packages: concurrent, task.
+* Fixed parsing of RELEASE versions with an additional value present in the string.
+* Fixed SFX file for Linux 64-bit systems.
+* Fixed issues with checking libraries and resources.
+* Fixed issues with pausing/resuming downloads causing file corruption.
+* Fixed issue with updating plugins.
+* Fixed issues with wrong states being set at FFmpegConverter and FileDownloader, as well as the END event not being called.
+* Fixed stopping of Pipeline, FFmpegConverter and FileDownloader.
+* Fixed NPE when closing the application.
+* Fixed issues with stopping/pausing/resuming task-related classes.
+* Fixed issue with waiting for an already stopped Pipeline.
+* Fixed issue with not disposing Workers upon exit.
+* Fixed issue with FileDownloader rewriting bytes from the start of a file when the remote size is not known.
+* Fixed signatures of methods EventRegistry::bind and EventRegistry::bindAll.
+* Fixed loading of classes using the RootClassLoader.
+* Fixed issue with loading some library JAR files containing more complex enum classes.
+* Fixed issue with selecting a file in a file explorer on some Linux distributions and Mac OS.
+* Fixed an issue with downloading some segmented files incorrectly, resulting in incomplete files.
+* Fixed issue with not loading some plugin classes when the plugin uses bootstrap class.
+* Fixed issue with not being able to update JRE on Linux.
+* Fixed accessing some properties concurrently throughout the code.
+* Fixed issue with parsing some M3U8 files.
+* Fixed missing combinations of video and audio sources when reading an MPD file.
+* Fixed issues with calling Pipeline events.
+* Fixed many other smaller issues.
+* Removed old Download API classes: SingleFileDownloader, IInternalDownloader, etc.
+* Removed Listener-related classes: FileDownloadListener, PluginLoadListener, NativeLibraryLoadListener, CheckListener, FileCheckListener.
+* Removed the obsolete Search API.
+* Removed deprecated and redundant classes and methods.
+* Removed the Report issue window.
+
+GUI
+* Added a new window: About window.
+* Fixed some graphical issues with displaying errors when the application is initializing.
+* Main window:
+	* Added new items to the task table context menu in the Main window: Add, Start, Copy URL, Copy source URL, Display information about the Media, Move items up, Move items down, Move items to the beginning and Move items to the end.
+	* Redesigned the main table.
+	* Do not display Completed/Stopped text when an error occurred, since it replaces the information that an error occurred.
+	* Start items in the table in the correct order.
+	* Do not display the exact version and date in the title.
+	* Updated formatting of time, such as in the task table.
+	* Use a different text when only merging video and audio to a single file in the conversion step.
+	* Fixed issue with stopping queued tasks in the task table.
+* Draggable window:
+	* Updated the calculation of minimum height.
+* Media Getter window:
+	* Check whether URIs are non-null and absolute.
+* Clipboard Watcher window:
+	* Check whether URIs are non-null and absolute.
+* Table window:
+	* Fixed issue with the order of items when reloading or going back.
+* Configuration window:
+	* Fixed missing controls at the custom media title format field.
+
 # 00.02.07 (2022-08-27)
 
 CORE
