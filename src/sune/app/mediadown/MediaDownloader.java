@@ -129,8 +129,8 @@ import sune.util.ssdf2.SSDObject;
 public final class MediaDownloader {
 	
 	public static final String  TITLE   = "Media Downloader";
-	public static final Version VERSION = Version.of("00.02.08-dev.13");
-	public static final String  DATE    = "2023-03-16";
+	public static final Version VERSION = Version.of("00.02.08");
+	public static final String  DATE    = "2023-03-31";
 	public static final String  AUTHOR  = "Sune";
 	public static final Image   ICON    = icon("app.png");
 	
