@@ -50,9 +50,7 @@ Temporary Items
 .settings/
 /bin/
 /etc/binary/
-/etc/jre/**/*
-!/etc/jre/*
-/etc/jre/*.jar
+/etc/jre/
 /etc/*.txt
 /dist/
 /build/
