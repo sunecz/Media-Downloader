@@ -30,4 +30,10 @@ echo "Remove: $filename"
 rm "$filename"
 
 path="$dir_download/pssuspend.exe"
-printf '%s\n' "$path"
+
+if [[ -z "$OUTPUT" ]] ; then
+	# Print final files paths to stdout
+	printf '%s\n' "$path"
+else
+	printf '%s\n' "$path" >> "$OUTPUT"
+fi

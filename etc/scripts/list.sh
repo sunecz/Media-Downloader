@@ -21,16 +21,15 @@ if [[ -z "$HASH_EXE" ]] ; then
 	HASH_EXE=sha1sum
 fi
 
-output_file="$1"
-directory="$2"
-os_name="$3"
-os_arch="$4"
-version="$5"
-root_directory="$6"
+directory="$1"
+os_name="$2"
+os_arch="$3"
+version="$4"
+root_directory="$5"
 
 usage() {
 	NAME=$(basename "$0")
-	echo "Usage: $NAME output_file directory os_name os_arch version [root_directory]"
+	echo "Usage: $NAME directory os_name os_arch version [root_directory]"
 	echo "Arguments:"
 	echo "    os_name        = win, unx, mac"
 	echo "    os_arch        = 64, 32"
@@ -39,7 +38,7 @@ usage() {
 	return 0
 }
 
-if [[ -z "$output_file" ]] || [[ -z "$directory" ]] || [[ -z "$os_name" ]] || [[ -z "$os_arch" ]] || [[ -z "$version" ]] ; then
+if [[ -z "$directory" ]] || [[ -z "$os_name" ]] || [[ -z "$os_arch" ]] || [[ -z "$version" ]] ; then
 	usage "$0"
 	exit 255
 fi
@@ -52,5 +51,5 @@ find "$directory" -type f -print0 |
 while IFS= read -r -d '' f; do
 	hash=$("$HASH_EXE" "$f" | cut -d ' ' -f 1)
 	relative_path=$(realpath --relative-to="$root_directory" "$f")
-	printf '%s|%s;%s|%s|%s\n' "$hash" "$os_name" "$os_arch" "$version" "$relative_path" >> "$output_file"
+	printf '%s|%s;%s|%s|%s\n' "$hash" "$os_name" "$os_arch" "$version" "$relative_path"
 done

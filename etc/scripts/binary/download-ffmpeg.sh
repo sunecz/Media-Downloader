@@ -101,7 +101,13 @@ paths+=(
 	"$dir_download/ffprobe$ext"
 )
 
-# Print final files paths to stdout
-for ((i = 0; i < ${#paths[@]}; i++)) ; do
-    printf '%s\n' "${paths[$i]}"
-done
+if [[ -z "$OUTPUT" ]] ; then
+	# Print final files paths to stdout
+	for ((i = 0; i < ${#paths[@]}; i++)) ; do
+	    printf '%s\n' "${paths[$i]}"
+	done
+else
+	for ((i = 0; i < ${#paths[@]}; i++)) ; do
+	    printf '%s\n' "${paths[$i]}" >> "$OUTPUT"
+	done
+fi
