@@ -49,8 +49,7 @@ Temporary Items
 # Ignore folders
 .settings/
 /bin/
-/etc/binary/**/*
-!/etc/binary/*
+/etc/binary/
 /etc/jre/**/*
 !/etc/jre/*
 /etc/jre/*.jar
