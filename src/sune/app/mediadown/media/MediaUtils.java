@@ -14,6 +14,7 @@ import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.download.segment.FileSegmentsHolder;
 import sune.app.mediadown.language.Translation;
 import sune.app.mediadown.media.format.M3U;
+import sune.app.mediadown.media.format.M3U.M3UCombinedFile;
 import sune.app.mediadown.media.format.M3U.M3UFile;
 import sune.app.mediadown.media.format.MPD;
 import sune.app.mediadown.media.format.MPD.MPDCombinedFile;
@@ -57,33 +58,64 @@ public final class MediaUtils {
 	public static final List<Media.Builder<?, ?>> createMediaBuilders(MediaSource source, URI uri, URI sourceURI,
 			String title, MediaLanguage language, MediaMetadata data) throws Exception {
 		MediaUtils.Parser parser = MediaUtils.parser();
+		
 		parser.format(MediaFormat.M3U8, new MediaUtils.Parser.M3U8FormatParser((parserData) -> {
-			M3UFile result = parserData.result();
+			M3UCombinedFile result = parserData.result();
+			M3UFile video = result.video();
 			MediaMetadata metadata = parserData.mediaData().add(parserData.data()).title(title).build();
+			
+			if(result.hasSeparateAudio()) {
+				M3UFile audio = result.audio();
+				MediaLanguage extractedLanguage = MediaLanguage.ofCode(audio.attributes().getOrDefault("language", ""));
+				MediaLanguage audioLanguage = Opt.of(extractedLanguage)
+					.ifFalse((l) -> l.is(MediaLanguage.UNKNOWN))
+					.orElse(language);
+				
+				return VideoMediaContainer.separated().format(MediaFormat.M3U8).media(
+					VideoMedia.segmented().source(source)
+						.uri(video.uri()).format(MediaFormat.MP4)
+						.quality(MediaQuality.fromResolution(video.resolution()))
+						.segments(Utils.<List<FileSegmentsHolder<?>>>cast(video.segmentsHolders()))
+						.resolution(video.resolution()).duration(video.duration())
+						.metadata(metadata),
+					AudioMedia.segmented().source(source)
+						.uri(audio.uri()).format(MediaFormat.M4A)
+						.quality(MediaQuality.UNKNOWN)
+						.segments(Utils.<List<FileSegmentsHolder<?>>>cast(audio.segmentsHolders()))
+						.language(audioLanguage).duration(audio.duration())
+						.metadata(metadata)
+				);
+			}
+			
 			return VideoMediaContainer.combined().format(MediaFormat.M3U8).media(
 				VideoMedia.segmented().source(source)
-					.uri(result.uri()).format(MediaFormat.MP4)
-					.quality(MediaQuality.fromResolution(result.resolution()))
-					.segments(Utils.<List<FileSegmentsHolder<?>>>cast(result.segmentsHolders()))
-					.resolution(result.resolution()).duration(result.duration())
+					.uri(video.uri()).format(MediaFormat.MP4)
+					.quality(MediaQuality.fromResolution(video.resolution()))
+					.segments(Utils.<List<FileSegmentsHolder<?>>>cast(video.segmentsHolders()))
+					.resolution(video.resolution()).duration(video.duration())
 					.metadata(metadata),
 				AudioMedia.simple().source(source)
-					.uri(result.uri()).format(MediaFormat.M4A)
+					.uri(video.uri()).format(MediaFormat.M4A)
 					.quality(MediaQuality.UNKNOWN)
-					.language(language).duration(result.duration())
+					.language(language).duration(video.duration())
 					.metadata(metadata)
 			);
 		}));
+		
 		parser.format(MediaFormat.DASH, new MediaUtils.Parser.DASHFormatParser((parserData) -> {
 			MPDCombinedFile result = parserData.result();
 			MPDFile video = result.video();
 			MPDFile audio = result.audio();
+			MediaMetadata metadata = parserData.mediaData().add(parserData.data()).title(title).build();
+			
 			double frameRate = Double.valueOf(video.attributes().getOrDefault("framerate", "0.0"));
 			int sampleRate = Integer.valueOf(audio.attributes().getOrDefault("audiosamplingrate", "0"));
 			MediaQuality.AudioQualityValue audioValue = new MediaQuality.AudioQualityValue(audio.bandwidth(), sampleRate, 0);
-			MediaLanguage audioLanguage = Opt.of(language).ifFalse((l) -> l.is(MediaLanguage.UNKNOWN))
-					.orElseGet(() -> MediaLanguage.ofCode(audio.attributes().getOrDefault("lang", "")));
-			MediaMetadata metadata = parserData.mediaData().add(parserData.data()).title(title).build();
+			MediaLanguage extractedLanguage = MediaLanguage.ofCode(audio.attributes().getOrDefault("lang", ""));
+			MediaLanguage audioLanguage = Opt.of(extractedLanguage)
+				.ifFalse((l) -> l.is(MediaLanguage.UNKNOWN))
+				.orElse(language);
+			
 			return VideoMediaContainer.separated().format(MediaFormat.DASH).media(
 				VideoMedia.segmented().source(source)
 					.uri(parserData.uri()).format(video.format())
@@ -101,6 +133,7 @@ public final class MediaUtils {
 					.metadata(metadata)
 			);
 		}));
+		
 		return parser.parse(uri, sourceURI, data.data());
 	}
 	
@@ -333,19 +366,19 @@ public final class MediaUtils {
 		
 		public static class M3U8FormatParser implements FormatParser {
 			
-			private final CheckedFunction<FormatParserData<M3UFile>, Media.Builder<?, ?>> mapper;
+			private final CheckedFunction<FormatParserData<M3UCombinedFile>, Media.Builder<?, ?>> mapper;
 			
-			public M3U8FormatParser(CheckedFunction<FormatParserData<M3UFile>, Media.Builder<?, ?>> mapper) {
+			public M3U8FormatParser(CheckedFunction<FormatParserData<M3UCombinedFile>, Media.Builder<?, ?>> mapper) {
 				this.mapper = Objects.requireNonNull(mapper);
 			}
 			
 			@Override
 			public List<Media.Builder<?, ?>> parse(URI uri, MediaFormat format, Request request, URI sourceURI,
 					Map<String, Object> data, long size) throws Exception {
-				FormatParserData<M3UFile> parserData = new FormatParserData<>(uri, format, request, sourceURI, data, size);
+				FormatParserData<M3UCombinedFile> parserData = new FormatParserData<>(uri, format, request, sourceURI, data, size);
 				List<Media.Builder<?, ?>> media = new ArrayList<>();
-				for(M3UFile result : M3U.parse(request)) {
-					boolean isProtected = result.getKey().isPresent();
+				for(M3UCombinedFile result : M3U.parse(request)) {
+					boolean isProtected = result.video().key().isPresent();
 					MediaMetadata.Builder mediaData = MediaMetadata.builder().isProtected(isProtected).sourceURI(sourceURI);
 					Media.Builder<?, ?> m = mapper.apply(parserData.result(result).mediaData(mediaData));
 					if(m != null) media.add(m);
@@ -383,11 +416,11 @@ public final class MediaUtils {
 				super(DefaultM3U8FormatParser::mapper);
 			}
 			
-			private static final Media.Builder<?, ?> mapper(FormatParserData<M3UFile> parserData) {
+			private static final Media.Builder<?, ?> mapper(FormatParserData<M3UCombinedFile> parserData) {
 				return VideoMedia.segmented()
 							.uri(parserData.uri()).format(parserData.format())
-							.quality(MediaQuality.fromResolution(parserData.result().resolution()))
-							.segments(Utils.<List<FileSegmentsHolder<?>>>cast(parserData.result().segmentsHolders()))
+							.quality(MediaQuality.fromResolution(parserData.result().video().resolution()))
+							.segments(Utils.<List<FileSegmentsHolder<?>>>cast(parserData.result().video().segmentsHolders()))
 							.metadata(parserData.mediaData().add(parserData.data()).build());
 			}
 		}
