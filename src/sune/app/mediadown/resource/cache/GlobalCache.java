@@ -1,8 +1,8 @@
 package sune.app.mediadown.resource.cache;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 
 /** @since 00.02.07 */
 public final class GlobalCache {
@@ -12,14 +12,14 @@ public final class GlobalCache {
 	private static final String NAME_MEDIA    = "media";
 	private static final String NAME_URIS     = "uri";
 	
-	private static final Map<String, Cache> caches = new HashMap<>();
+	private static final Map<String, Cache> caches = new ConcurrentHashMap<>();
 	
 	// Forbid anyone to create an instance of this class
 	private GlobalCache() {
 	}
 	
 	public static final Cache of(String name) {
-		return caches.computeIfAbsent(Objects.requireNonNull(name), (k) -> new NoNullCache());
+		return caches.computeIfAbsent(Objects.requireNonNull(name), (k) -> new NoNullCache(true));
 	}
 	
 	public static final Cache ofPrograms() {
