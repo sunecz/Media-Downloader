@@ -15,7 +15,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import java.util.stream.Stream;
 
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
@@ -83,23 +82,19 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 	public static final String NAME = "configuration";
 	
 	/** @since 00.02.07 */
-	private static final List<Form> forms = new ArrayList<>();
-	/** @since 00.02.07 */
 	private static final List<FormFieldSupplierFactory> formFieldSupplierFactories = new LinkedList<>();
-	/** @since 00.02.07 */
-	private static final Map<String, FormBuilder> formBuilders = new LinkedHashMap<>();
-	/** @since 00.02.07 */
-	private static final Map<String, String> groupTitles = new HashMap<>();
+	/** @since 00.02.09 */
+	private static final List<String> groups;
 	
 	static {
 		// Ensure that main groups are in a specific order
-		Stream.of(
+		groups = List.of(
 			ApplicationConfigurationAccessor.GROUP_GENERAL,
 			ApplicationConfigurationAccessor.GROUP_DOWNLOAD,
 			ApplicationConfigurationAccessor.GROUP_CONVERSION,
 			ApplicationConfigurationAccessor.GROUP_NAMING,
 			ApplicationConfigurationAccessor.GROUP_PLUGINS
-		).forEach((s) -> formBuilders.put(s, new FormBuilder()));
+		);
 		
 		// Built-in form fields
 		registerFormField(isOfTypeClass(Password.class, PasswordField::new));
@@ -117,6 +112,12 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 		));
 	}
 	
+	/** @since 00.02.07 */
+	private final Map<String, FormBuilder> formBuilders = new LinkedHashMap<>();
+	/** @since 00.02.07 */
+	private final List<Form> forms = new ArrayList<>();
+	/** @since 00.02.07 */
+	private final Map<String, String> groupTitles = new HashMap<>();
 	/** @since 00.02.08 */
 	private final List<ConfigurationEntry> configurationEntries = new ArrayList<>();
 	
@@ -308,6 +309,9 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 	
 	/** @since 00.02.04 */
 	private final void loadConfigurations() {
+		// Prepare the form builders to ensure the correct order of groups
+		groups.forEach((s) -> formBuilders.put(s, new FormBuilder()));
+		
 		// Add the application configuratin
 		addConfiguration(MediaDownloader.configuration(), translation);
 		// Add configurations of loaded plugins
