@@ -110,6 +110,13 @@ public class ProgressWindow extends Window<StackPane> {
 		return instance;
 	}
 	
+	private final void doClose() {
+		// Remove the reference to the parent, to "free" some memory
+		parent = null;
+		// Forward the closing
+		close();
+	}
+	
 	private final void runningAction_add(InternalAction action) {
 		reset(); // When it is needed to implement parallel actions, this has to be removed
 		
@@ -133,7 +140,7 @@ public class ProgressWindow extends Window<StackPane> {
 		FXUtils.thread(() -> {
 			if(running.isEmpty()) {
 				// Ensure the window is closed
-				close();
+				doClose();
 			}
 		});
 	}
@@ -176,7 +183,7 @@ public class ProgressWindow extends Window<StackPane> {
 		
 		if(isEmpty) {
 			// If no actions are running, close the window
-			close();
+			doClose();
 		}
 	}
 	

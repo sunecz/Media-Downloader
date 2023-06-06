@@ -53,8 +53,6 @@ import sune.app.mediadown.event.PluginLoaderEvent;
 import sune.app.mediadown.event.tracker.DownloadTracker;
 import sune.app.mediadown.event.tracker.TrackerManager;
 import sune.app.mediadown.gui.Dialog;
-import sune.app.mediadown.gui.DialogWindow;
-import sune.app.mediadown.gui.Menu;
 import sune.app.mediadown.gui.Window;
 import sune.app.mediadown.gui.window.AboutWindow;
 import sune.app.mediadown.gui.window.ClipboardWatcherWindow;
@@ -84,10 +82,8 @@ import sune.app.mediadown.plugin.PluginConfiguration;
 import sune.app.mediadown.plugin.PluginFile;
 import sune.app.mediadown.plugin.PluginUpdater;
 import sune.app.mediadown.plugin.Plugins;
-import sune.app.mediadown.registry.NamedRegistry;
 import sune.app.mediadown.registry.ResourceNamedRegistry;
 import sune.app.mediadown.registry.ResourceNamedRegistry.ResourceRegistryEntry;
-import sune.app.mediadown.registry.SimpleNamedRegistry;
 import sune.app.mediadown.resource.ExternalResources;
 import sune.app.mediadown.resource.Extractable;
 import sune.app.mediadown.resource.InputStreamResolver;
@@ -679,34 +675,10 @@ public final class MediaDownloader {
 			public InitializationState run(Arguments args) {
 				if(FXUtils.isInitialized())
 					GUI.registerWindows();
-				return new RegisterDialogs();
-			}
-			
-			@Override public String getTitle() { return "Registering windows..."; }
-		}
-		
-		private static final class RegisterDialogs implements InitializationState {
-			
-			@Override
-			public InitializationState run(Arguments args) {
-				if(FXUtils.isInitialized())
-					GUI.registerDialogs();
-				return new RegisterMenus();
-			}
-			
-			@Override public String getTitle() { return "Registering dialogs..."; }
-		}
-		
-		private static final class RegisterMenus implements InitializationState {
-			
-			@Override
-			public InitializationState run(Arguments args) {
-				if(FXUtils.isInitialized())
-					GUI.registerMenus();
 				return new InitializeDefaultPlugins();
 			}
 			
-			@Override public String getTitle() { return "Registering menus..."; }
+			@Override public String getTitle() { return "Registering windows..."; }
 		}
 		
 		private static final class InitializeDefaultPlugins implements InitializationState {
@@ -1895,28 +1867,104 @@ public final class MediaDownloader {
 	
 	private static final class GUI {
 		
-		private static final NamedRegistry<Menu>               menus   = new SimpleNamedRegistry<>();
-		private static final NamedRegistry<Window<?>>          windows = new SimpleNamedRegistry<>();
-		private static final NamedRegistry<DialogWindow<?, ?>> dialogs = new SimpleNamedRegistry<>();
+		private static final GUIRegistry<Window<?>> windows = new GUIRegistry<>(true);
 		
-		private static final void registerMenus() {
+		/** @since 00.02.09 */
+		private static final <T> Initializator<T> initializator(Callable<T> callable) {
+			return () -> FXUtils.fxTaskValue(callable);
 		}
 		
 		private static final void registerWindows() {
-			windows.register(MainWindow.NAME, FXUtils.fxTaskValue(MainWindow::new));
-			windows.register(InformationWindow.NAME, FXUtils.fxTaskValue(InformationWindow::new));
-			windows.register(MediaGetterWindow.NAME, FXUtils.fxTaskValue(MediaGetterWindow::new));
-			windows.register(DownloadConfigurationWindow.NAME, FXUtils.fxTaskValue(DownloadConfigurationWindow::new));
-			windows.register(ConfigurationWindow.NAME, FXUtils.fxTaskValue(ConfigurationWindow::new));
-			windows.register(TableWindow.NAME, FXUtils.fxTaskValue(TableWindow::new));
-			windows.register(MessageWindow.NAME, FXUtils.fxTaskValue(MessageWindow::new));
-			windows.register(MediaInfoWindow.NAME, FXUtils.fxTaskValue(MediaInfoWindow::new));
-			windows.register(PreviewWindow.NAME, FXUtils.fxTaskValue(PreviewWindow::new));
-			windows.register(ClipboardWatcherWindow.NAME, FXUtils.fxTaskValue(ClipboardWatcherWindow::new));
-			windows.register(AboutWindow.NAME, FXUtils.fxTaskValue(AboutWindow::new));
+			windows.register(MainWindow.NAME, initializator(MainWindow::new));
+			windows.register(InformationWindow.NAME, initializator(InformationWindow::new));
+			windows.register(MediaGetterWindow.NAME, initializator(MediaGetterWindow::new));
+			windows.register(DownloadConfigurationWindow.NAME, initializator(DownloadConfigurationWindow::new));
+			windows.register(ConfigurationWindow.NAME, initializator(ConfigurationWindow::new));
+			windows.register(TableWindow.NAME, initializator(TableWindow::new));
+			windows.register(MessageWindow.NAME, initializator(MessageWindow::new));
+			windows.register(MediaInfoWindow.NAME, initializator(MediaInfoWindow::new));
+			windows.register(PreviewWindow.NAME, initializator(PreviewWindow::new));
+			windows.register(ClipboardWatcherWindow.NAME, initializator(ClipboardWatcherWindow::new));
+			windows.register(AboutWindow.NAME, initializator(AboutWindow::new));
 		}
 		
-		private static final void registerDialogs() {
+		/** @since 00.02.09 */
+		private static interface Initializator<T> {
+			
+			T initialize() throws Exception;
+		}
+		
+		/** @since 00.02.09 */
+		private static final class GUIRegistry<T> {
+			
+			private final Map<String, RegistryEntry<T>> values = new HashMap<>();
+			private final boolean isResetting;
+			
+			public GUIRegistry(boolean isResetting) {
+				this.isResetting = isResetting;
+			}
+			
+			private final RegistryEntry<T> newEntry(Initializator<T> initializator) {
+				return isResetting
+							? new RegistryEntry.OfResetting<>(initializator)
+							: new RegistryEntry.OfCached<>(initializator);
+			}
+			
+			public void register(String name, Initializator<T> initializator) {
+				values.computeIfAbsent(name, (k) -> newEntry(initializator));
+			}
+			
+			@SuppressWarnings("unused")
+			public void unregister(String name) {
+				values.remove(name);
+			}
+			
+			public T get(String name) throws Exception {
+				RegistryEntry<T> entry;
+				return (entry = values.get(name)) != null ? entry.value() : null;
+			}
+			
+			private static interface RegistryEntry<T> {
+				
+				static final Object NULL = new Object();
+				
+				public T value() throws Exception;
+				
+				static class OfResetting<T> implements RegistryEntry<T> {
+					
+					private final Initializator<T> initializator;
+					
+					public OfResetting(Initializator<T> initializator) {
+						this.initializator = Objects.requireNonNull(initializator);
+					}
+					
+					@Override
+					public T value() throws Exception {
+						return initializator.initialize();
+					}
+				}
+				
+				static class OfCached<T> implements RegistryEntry<T> {
+					
+					private final Initializator<T> initializator;
+					private Object value = NULL;
+					
+					public OfCached(Initializator<T> initializator) {
+						this.initializator = Objects.requireNonNull(initializator);
+					}
+					
+					@Override
+					public T value() throws Exception {
+						if(value == NULL) {
+							value = initializator.initialize();
+						}
+						
+						@SuppressWarnings("unchecked")
+						T casted = (T) value;
+						return casted;
+					}
+				}
+			}
 		}
 	}
 	
@@ -2255,18 +2303,10 @@ public final class MediaDownloader {
 		return VERSION;
 	}
 	
-	public static final Menu menu(String name) {
-		return GUI.menus.get(name);
-	}
-	
-	@SuppressWarnings("unchecked")
 	public static final <W extends Window<?>> W window(String name) {
-		return (W) GUI.windows.get(name);
-	}
-	
-	@SuppressWarnings("unchecked")
-	public static final <D extends DialogWindow<?, ?>> D dialog(String name) {
-		return (D) GUI.dialogs.get(name);
+		@SuppressWarnings("unchecked")
+		W casted = Ignore.call(() -> (W) GUI.windows.get(name));
+		return casted;
 	}
 	
 	// Forbid anyone to create an instance of this class
