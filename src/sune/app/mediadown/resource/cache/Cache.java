@@ -4,6 +4,7 @@ import java.lang.ref.ReferenceQueue;
 import java.lang.ref.SoftReference;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
@@ -46,7 +47,7 @@ public class Cache {
 	/** @since 00.02.05 */
 	private final <T> T setAndGetChecked(Object key, CheckedSupplier<T> creator) throws Exception {
 		CacheObject<T> object = setAndGetObjectChecked(key, creator);
-		return object != null ? object.object() : null;
+		return object != null ? object.value() : null;
 	}
 	
 	protected <T> boolean canAddValue(T instance) { return true; /* Always add all values by default */ }
@@ -92,7 +93,7 @@ public class Cache {
 			return null;
 		}
 		
-		Object instance = object.object();
+		Object instance = object.value();
 		
 		if(instance == null) {
 			CheckedSupplier<?> creator = object.creator();
@@ -127,12 +128,12 @@ public class Cache {
 		}
 		
 		@SuppressWarnings("unchecked")
-		T casted = (T) object.object();
+		T casted = (T) object.value();
 		return casted;
 	}
 	
 	public boolean has(Object key) {
-		CacheObject<?> object; return (object = objects.get(key)) != null && object.object() != null;
+		CacheObject<?> object; return (object = objects.get(key)) != null && object.value() != null;
 	}
 	
 	public void remove(Object key) {
@@ -148,7 +149,6 @@ public class Cache {
 	private static final class Cleaner {
 		
 		private static final ReferenceQueue<Object> queue = new ReferenceQueue<>();
-		private static final Map<SoftReference<?>, CacheObject<?>> objects = new ConcurrentHashMap<>();
 		
 		private static Thread thread;
 		
@@ -161,47 +161,47 @@ public class Cache {
 		private static final void run() {
 			try {
 				while(true) {
-					SoftReference<?> ref = (SoftReference<?>) queue.remove();
-					CacheObject<?> object = objects.get(ref);
-					object.cache().remove(object.key());
+					Ref<?> ref = (Ref<?>) queue.remove();
+					ref.cache().remove(ref.key());
 				}
 			} catch(InterruptedException ex) {
 				// Ignore
 			}
 		}
 		
-		public static final <T> SoftReference<T> newReference(CacheObject<T> key, T value) {
-			SoftReference<T> ref = new SoftReference<T>(value, queue);
-			objects.put(ref, key);
-			return ref;
+		public static class Ref<T> extends SoftReference<T> {
+			
+			private final Cache cache;
+			private final Object key;
+			
+			public Ref(Cache cache, Object key, T value) {
+				super(value, queue);
+				this.cache = Objects.requireNonNull(cache);
+				this.key = key;
+			}
+			
+			public Cache cache() {
+				return cache;
+			}
+			
+			public Object key() {
+				return key;
+			}
+			
+			public T value() {
+				return get();
+			}
 		}
 	}
 	
 	/** @since 00.02.09 */
-	private static final class CacheObject<T> {
+	private static final class CacheObject<T> extends Cleaner.Ref<T> {
 		
-		private final Cache cache;
-		private final Object key;
-		private final SoftReference<T> object;
 		private final CheckedSupplier<T> creator;
 		
-		public CacheObject(Cache cache, Object key, T object, CheckedSupplier<T> creator) {
-			this.cache = cache;
-			this.key = key;
-			this.object = Cleaner.newReference(this, object);
+		public CacheObject(Cache cache, Object key, T value, CheckedSupplier<T> creator) {
+			super(cache, key, value);
 			this.creator = creator;
-		}
-		
-		public Cache cache() {
-			return cache;
-		}
-		
-		public Object key() {
-			return key;
-		}
-		
-		public T object() {
-			return object.get();
 		}
 		
 		public CheckedSupplier<T> creator() {
