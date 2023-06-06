@@ -33,14 +33,22 @@ public class Metadata extends SimpleDataStorable {
 	}
 	
 	public void setAll(Metadata metadata) {
-		data.putAll(metadata.data);
+		ensureOwnData().putAll(metadata.data);
 	}
 	
 	public void removeAll(Metadata metadata) {
+		if(isEmptyData()) {
+			return;
+		}
+		
 		data.keySet().removeAll(metadata.data.keySet());
 	}
 	
 	public void clear() {
+		if(isEmptyData()) {
+			return;
+		}
+		
 		data.clear();
 	}
 	

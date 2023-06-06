@@ -14,29 +14,56 @@ public class SimpleDataStorable implements DataStorable {
 	 * the hash codes will be the same.
 	 */
 	
-	protected final Map<String, Object> data;
+	private static final Map<String, Object> EMPTY_DATA = new TreeMap<>(Comparator.naturalOrder());
+	
+	protected Map<String, Object> data;
 	
 	public SimpleDataStorable() {
-		this.data = new TreeMap<>(Comparator.naturalOrder());
+		data = EMPTY_DATA;
 	}
 	
 	public SimpleDataStorable(Map<String, Object> values) {
-		this.data = new TreeMap<>(Comparator.naturalOrder());
-		this.data.putAll(values);
+		// Only initialize the data field if really needed
+		if(values != null && !values.isEmpty()) {
+			data = new TreeMap<>(Comparator.naturalOrder());
+			data.putAll(values);
+		} else {
+			data = EMPTY_DATA;
+		}
+	}
+	
+	protected final boolean isEmptyData() {
+		return data == EMPTY_DATA;
+	}
+	
+	protected final Map<String, Object> ensureOwnData() {
+		if(isEmptyData()) {
+			data = new TreeMap<>(Comparator.naturalOrder());
+		}
+		
+		return data;
 	}
 	
 	@Override
 	public boolean has(String name) {
+		if(isEmptyData()) {
+			return false;
+		}
+		
 		return data.containsKey(name);
 	}
 	
 	@Override
 	public void set(String name, Object value) {
-		data.put(name, value);
+		ensureOwnData().put(name, value);
 	}
 	
 	@Override
 	public <T> T get(String name) {
+		if(isEmptyData()) {
+			return null;
+		}
+		
 		@SuppressWarnings("unchecked")
 		T value = (T) data.get(name);
 		return value;
@@ -44,6 +71,10 @@ public class SimpleDataStorable implements DataStorable {
 	
 	@Override
 	public void remove(String name) {
+		if(isEmptyData()) {
+			return;
+		}
+		
 		data.remove(name);
 	}
 	
