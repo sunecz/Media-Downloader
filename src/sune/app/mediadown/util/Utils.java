@@ -1406,6 +1406,96 @@ public final class Utils {
 		return Ignore.callAndCheck(() -> Double.parseDouble(string));
 	}
 	
+	/** @since 00.02.09 */
+	public static final int compareNatural(String a, String b) {
+		int lenA = a.length();
+		int lenB = b.length();
+		
+		for(int idxA = 0, idxB = 0, len = Math.min(lenA, lenB), cpA, cpB, result;
+				idxA < len && idxB < len;
+				idxA += Character.charCount(cpA),
+				idxB += Character.charCount(cpB)) {
+			cpA = a.codePointAt(idxA);
+			cpB = b.codePointAt(idxB);
+			
+			boolean isDigitA = Character.isDigit(cpA);
+			boolean isDigitB = Character.isDigit(cpB);
+			
+			// Start of a new digits sequence
+			if(isDigitA && isDigitB) {
+				int startA = idxA;
+				int startB = idxB;
+				
+				// Find the end of the digits sequence
+				for(idxA += Character.charCount(cpA),
+					idxB += Character.charCount(cpB);
+						idxA < len && idxB < len;
+						idxA += Character.charCount(cpA),
+						idxB += Character.charCount(cpB)) {
+					cpA = a.codePointAt(idxA);
+					cpB = b.codePointAt(idxB);
+					
+					isDigitA = Character.isDigit(cpA);
+					isDigitB = Character.isDigit(cpB);
+					
+					if(!isDigitA || !isDigitB) {
+						break;
+					}
+				}
+				
+				// Reached the end of the smaller strings
+				if(idxA == len || idxB == len) {
+					if(lenA == lenB) {
+						// Compare the digits sequences as numbers
+						int valA = Integer.parseInt(a, startA, idxA, 10);
+						int valB = Integer.parseInt(b, startB, idxB, 10);
+						return Integer.compare(valA, valB);
+					}
+					
+					if(lenB > lenA) {
+						int cpNext = b.codePointAt(idxB);
+						
+						if(Character.isDigit(cpNext)) {
+							return -1; // a < b, since b holds larger number
+						}
+					} else {
+						int cpNext = a.codePointAt(idxA);
+						
+						if(Character.isDigit(cpNext)) {
+							return +1; // a > b, since a holds larger number
+						}
+					}
+				}
+				// Both strings have a digits sequence of the same length
+				else if(isDigitA == isDigitB) {
+					// Decide on the next character after the sequence
+					result = Integer.compare(cpA, cpB);
+					
+					if(result != 0) {
+						return result;
+					}
+				}
+				else if(!isDigitA) return -1; // a < b, since b holds larger number
+				else if(!isDigitB) return +1; // a > b, since a holds larger number
+				
+				// Compare the digits sequences as numbers
+				int valA = Integer.parseInt(a, startA, idxA, 10);
+				int valB = Integer.parseInt(b, startB, idxB, 10);
+				result = Integer.compare(valA, valB);
+			} else {
+				// Simply compare the code points
+				result = Integer.compare(cpA, cpB);
+			}
+			
+			if(result != 0) {
+				return result;
+			}
+		}
+		
+		// Reached the end of the smaller strings with them being equal up to this point
+		return Integer.compare(lenA, lenB);
+	}
+	
 	/** @since 00.02.05 */
 	private static final class EqualityWrapper<T> {
 		
