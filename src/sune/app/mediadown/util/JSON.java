@@ -198,10 +198,27 @@ public final class JSON {
 			return new JSONReader(Files.newByteChannel(path, StandardOpenOption.READ), charset);
 		}
 		
+		// Temporary direct optimization until we use Java 17 to reduce the memory footprint.
+		// See: https://bugs.openjdk.org/browse/JDK-4926314 and https://bugs.openjdk.org/browse/JDK-8266014
+		private final int fillBuf() throws IOException {
+			// Since we use CharBuffer::allocate, there will be a backing array.
+			char[] cbuf = buf.array();
+			int pos = buf.position();
+			int rem = Math.max(buf.limit() - pos, 0);
+			int off = buf.arrayOffset() + pos;
+			int num = input.read(cbuf, off, rem);
+			
+			if(num > 0) {
+				buf.position(pos + num);
+			}
+			
+			return num;
+		}
+		
 		private final int fill() throws IOException {
 			buf.position(pos);
 			buf.compact();
-			int read = input.read(buf);
+			int read = fillBuf();
 			buf.flip();
 			pos = 0;
 			lim = buf.limit();
