@@ -47,6 +47,7 @@ public final class ProgramPipelineTask extends MediaEnginePipelineTaskBase<Progr
 		TableColumn<Episode, String> columnTitle = new TableColumn<>(titleTitle);
 		columnTitle.setCellValueFactory((c) -> new SimpleObjectProperty<>(c.getValue().title()));
 		columnTitle.setPrefWidth(530);
+		columnTitle.setComparator(Utils::compareNatural);
 		table.getColumns().add(columnTitle);
 		table.setPlaceholder(new Label(translation.getSingle("tables.episodes.placeholder")));
 		table.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);

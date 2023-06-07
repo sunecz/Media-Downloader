@@ -50,6 +50,7 @@ public final class MediaEnginePipelineTask extends TableWindowPipelineTaskBase<P
 		TableColumn<Program, String> columnTitle = new TableColumn<>(titleTitle);
 		columnTitle.setCellValueFactory((c) -> new SimpleObjectProperty<>(c.getValue().title()));
 		columnTitle.setPrefWidth(530);
+		columnTitle.setComparator(Utils::compareNatural);
 		table.getColumns().add(columnTitle);
 		table.setPlaceholder(new Label(translation.getSingle("tables.engines.placeholder")));
 		table.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
