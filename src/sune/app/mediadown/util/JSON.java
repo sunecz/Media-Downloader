@@ -92,6 +92,8 @@ public final class JSON {
 		private static final MethodHandle mh_SSDValue;
 		private static final MethodHandle mh_SSDObject;
 		
+		private static final Regex regexUnslash = Regex.of("\\\\(.)");
+		
 		static {
 			MethodHandles.Lookup lookup = MethodHandles.lookup();
 			try {
@@ -176,7 +178,7 @@ public final class JSON {
 				SSDValue fixValue, frmValue;
 				if(type == SSDType.STRING) {
 					fixValue = createValue('\"' + rawValue + '\"');
-					frmValue = createValue(Utils.replaceUnicodeEscapeSequences(rawValue).replaceAll("\\\\(.)", "$1"));
+					frmValue = createValue(regexUnslash.replaceAll(Utils.replaceUnicodeEscapeSequences(rawValue), "$1"));
 				} else {
 					fixValue = frmValue = createValue(rawValue); // Optimization
 				}
