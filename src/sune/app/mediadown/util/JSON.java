@@ -5,9 +5,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
 import java.io.UncheckedIOException;
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
-import java.lang.reflect.Constructor;
 import java.nio.CharBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
@@ -29,13 +26,6 @@ import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.function.Function;
-
-import sune.util.ssdf2.SSDCollection;
-import sune.util.ssdf2.SSDCollectionType;
-import sune.util.ssdf2.SSDNode;
-import sune.util.ssdf2.SSDObject;
-import sune.util.ssdf2.SSDType;
-import sune.util.ssdf2.SSDValue;
 
 /**
  * Contains utilities for JSON strings, input streams and files.
@@ -59,11 +49,11 @@ public final class JSON {
 	private JSON() {
 	}
 	
-	public static final SSDCollection read(String string) {
+	public static final JSONCollection read(String string) {
 		return read(string, DEFAULT_CHARSET);
 	}
 	
-	public static final SSDCollection read(String string, Charset charset) {
+	public static final JSONCollection read(String string, Charset charset) {
 		try {
 			return JSONReader.create(string, charset).read();
 		} catch(IOException ex) {
@@ -72,19 +62,19 @@ public final class JSON {
 		}
 	}
 	
-	public static final SSDCollection read(InputStream stream) throws IOException {
+	public static final JSONCollection read(InputStream stream) throws IOException {
 		return read(stream, DEFAULT_CHARSET);
 	}
 	
-	public static final SSDCollection read(InputStream stream, Charset charset) throws IOException {
+	public static final JSONCollection read(InputStream stream, Charset charset) throws IOException {
 		return JSONReader.create(stream, charset).read();
 	}
 	
-	public static final SSDCollection read(Path path) throws IOException {
+	public static final JSONCollection read(Path path) throws IOException {
 		return read(path, DEFAULT_CHARSET);
 	}
 	
-	public static final SSDCollection read(Path path, Charset charset) throws IOException {
+	public static final JSONCollection read(Path path, Charset charset) throws IOException {
 		return JSONReader.create(path, charset).read();
 	}
 	
@@ -98,60 +88,16 @@ public final class JSON {
 		private static final int BUFFER_SIZE = 8192;
 		private static final int CHAR_BYTE_ORDER_MARK = 65279;
 		
-		private static final MethodHandle mh_SSDCollection;
-		private static final MethodHandle mh_SSDValue;
-		private static final MethodHandle mh_SSDObject;
-		
-		private static final Regex regexUnslash = Regex.of("\\\\(.)");
-		
-		static {
-			MethodHandles.Lookup lookup = MethodHandles.lookup();
-			try {
-				Constructor<?> c_SSDCollection = SSDCollection.class.getDeclaredConstructor(SSDNode.class, boolean.class);
-				Reflection.setAccessible(c_SSDCollection, true);
-				mh_SSDCollection = lookup.unreflectConstructor(c_SSDCollection);
-			} catch(NoSuchMethodException
-						| IllegalAccessException
-						| IllegalArgumentException
-						| NoSuchFieldException
-						| SecurityException ex) {
-				throw new IllegalStateException("Unable to obtain SSDCollection constructor");
-			}
-			try {
-				Constructor<?> c_SSDValue = SSDValue.class.getDeclaredConstructor(Object.class);
-				Reflection.setAccessible(c_SSDValue, true);
-				mh_SSDValue = lookup.unreflectConstructor(c_SSDValue);
-			} catch(NoSuchMethodException
-						| IllegalAccessException
-						| IllegalArgumentException
-						| NoSuchFieldException
-						| SecurityException ex) {
-				throw new IllegalStateException("Unable to obtain SSDValue constructor");
-			}
-			try {
-				Constructor<?> c_SSDObject = SSDObject.class.getDeclaredConstructor(SSDNode.class, String.class,
-					SSDType.class, SSDValue.class, SSDValue.class);
-				Reflection.setAccessible(c_SSDObject, true);
-				mh_SSDObject = lookup.unreflectConstructor(c_SSDObject);
-			} catch(NoSuchMethodException
-						| IllegalAccessException
-						| IllegalArgumentException
-						| NoSuchFieldException
-						| SecurityException ex) {
-				throw new IllegalStateException("Unable to obtain SSDObject constructor");
-			}
-		}
-		
 		private final Reader input;
 		private final CharBuffer buf;
 		private int pos;
 		private int lim;
 		
-		private final Deque<Pair<String, SSDCollection>> parents;
+		private final Deque<Pair<String, JSONCollection>> parents;
 		private final StringBuilder str;
 		private String lastStr;
-		private SSDType lastType = SSDType.UNKNOWN;
-		private Pair<String, SSDCollection> lastParent;
+		private JSONType lastType = JSONType.UNKNOWN;
+		private Pair<String, JSONCollection> lastParent;
 		private int c;
 		
 		private JSONReader(ReadableByteChannel input, Charset charset) {
@@ -159,43 +105,6 @@ public final class JSON {
 			this.buf = CharBuffer.allocate(BUFFER_SIZE).flip();
 			this.parents = new ArrayDeque<>();
 			this.str = new StringBuilder();
-		}
-		
-		private static final String fixObjectName(String name) {
-			// Since SSDF supports Annotations that use colon (:) as the control (access) character,
-			// we must escape it beforehand.
-			return name.replace(":", "_");
-		}
-		
-		private static final SSDCollection createRoot(boolean isArray) {
-			try {
-				return (SSDCollection) mh_SSDCollection.invoke(null, isArray);
-			} catch(Throwable ex) {
-				throw new IllegalStateException("Unable to create root", ex);
-			}
-		}
-		
-		private static final SSDValue createValue(String value) {
-			try {
-				return (SSDValue) mh_SSDValue.invoke(value);
-			} catch(Throwable ex) {
-				throw new IllegalStateException("Unable to create value", ex);
-			}
-		}
-		
-		private static final SSDObject createObject(SSDType type, String name, String rawValue) {
-			try {
-				SSDValue fixValue, frmValue;
-				if(type == SSDType.STRING) {
-					fixValue = createValue('\"' + rawValue + '\"');
-					frmValue = createValue(regexUnslash.replaceAll(Utils.replaceUnicodeEscapeSequences(rawValue), "$1"));
-				} else {
-					fixValue = frmValue = createValue(rawValue); // Optimization
-				}
-				return (SSDObject) mh_SSDObject.invoke(null, name, type, fixValue, frmValue);
-			} catch(Throwable ex) {
-				throw new IllegalStateException("Unable to create object", ex);
-			}
 		}
 		
 		public static final JSONReader create(String string, Charset charset) {
@@ -265,8 +174,8 @@ public final class JSON {
 		private final void addPendingObject() {
 			if(str.length() <= 0) return;
 			
-			Pair<String, SSDCollection> pair = parents.peekFirst();
-			SSDCollectionType parentType = pair.b.getType();
+			Pair<String, JSONCollection> pair = parents.peekFirst();
+			JSONType parentType = pair.b.type();
 			
 			if(lastStr == null || lastStr.isEmpty()) {
 				switch(parentType) {
@@ -275,15 +184,19 @@ public final class JSON {
 					case ARRAY:
 						lastStr = "";
 						break;
+					default:
+						/* Collections, should not happen */
+						break;
 				}
 			}
 			
-			SSDObject object = createObject(lastType, lastStr, str.toString());
+			JSONObject object = JSONObject.ofType(lastType, str.toString());
 			str.setLength(0);
 			
 			switch(parentType) {
-				case OBJECT: pair.b.setDirect(lastStr, object); break;
-				case ARRAY:  pair.b.add               (object); break;
+				case OBJECT: pair.b.set(lastStr, object);         break;
+				case ARRAY:  pair.b.add         (object);         break;
+				default:     /* Collections, should not happen */ break;
 			}
 		}
 		
@@ -322,35 +235,35 @@ public final class JSON {
 		private final void readObject() throws IOException {
 			if(parents.size() > 1 && (lastStr == null || lastStr.isEmpty()))
 				throw new IllegalStateException("Invalid name");
-			if(parents.isEmpty()) parents.push(new Pair<>(null,    createRoot(false)));
-			else                  parents.push(new Pair<>(lastStr, SSDCollection.empty()));
+			if(parents.isEmpty()) parents.push(new Pair<>(null,    JSONCollection.empty()));
+			else                  parents.push(new Pair<>(lastStr, JSONCollection.empty()));
 			c = next();
 		}
 		
 		private final void readArray() throws IOException {
 			if(parents.size() > 1 && (lastStr == null || lastStr.isEmpty()))
 				throw new IllegalStateException("Invalid name");
-			if(parents.isEmpty()) parents.push(new Pair<>(null,    createRoot(true)));
-			else                  parents.push(new Pair<>(lastStr, SSDCollection.emptyArray()));
+			if(parents.isEmpty()) parents.push(new Pair<>(null,    JSONCollection.emptyArray()));
+			else                  parents.push(new Pair<>(lastStr, JSONCollection.emptyArray()));
 			c = next();
 		}
 		
 		private final void readTrue() throws IOException {
 			readAndMatchSequence("true");
 			checkEndOfElementAfterSequence();
-			lastType = SSDType.BOOLEAN;
+			lastType = JSONType.BOOLEAN;
 		}
 		
 		private final void readFalse() throws IOException {
 			readAndMatchSequence("false");
 			checkEndOfElementAfterSequence();
-			lastType = SSDType.BOOLEAN;
+			lastType = JSONType.BOOLEAN;
 		}
 		
 		private final void readNull() throws IOException {
 			readAndMatchSequence("null");
 			checkEndOfElementAfterSequence();
-			lastType = SSDType.NULL;
+			lastType = JSONType.NULL;
 		}
 		
 	    private final void readNumber() throws IOException {
@@ -399,7 +312,7 @@ public final class JSON {
 					}
 				}
 			} while((c = next()) != -1);
-			lastType = fraction ? SSDType.DECIMAL : SSDType.INTEGER;
+			lastType = fraction ? JSONType.DECIMAL : JSONType.INTEGER;
 	    }
 	    
 	    private final void readString() throws IOException {
@@ -419,7 +332,7 @@ public final class JSON {
 					if(escaped) escaped = false;
 				}
 			}
-			lastType = SSDType.STRING;
+			lastType = JSONType.STRING;
 	    }
 		
 		private final void readNext() throws IOException {
@@ -428,7 +341,7 @@ public final class JSON {
 					case CHAR_STRING_QUOTES: readString(); break;
 					case CHAR_SEPARATOR_PROPERTY:
 						c = next();
-						lastStr = fixObjectName(str.toString());
+						lastStr = str.toString();
 						str.setLength(0);
 						break;
 					case CHAR_OBJECT_OPEN: readObject(); break;
@@ -437,13 +350,14 @@ public final class JSON {
 					case CHAR_ARRAY_CLOSE:
 						c = next();
 						addPendingObject();
-						Pair<String, SSDCollection> pair = parents.pop();
+						Pair<String, JSONCollection> pair = parents.pop();
 						lastParent = pair;
 						if(!parents.isEmpty()) {
 							pair = parents.peekFirst();
-							switch(pair.b.getType()) {
+							switch(pair.b.type()) {
 								case OBJECT: pair.b.set(lastParent.a, lastParent.b); break;
 								case ARRAY:  pair.b.add(lastParent.b);               break;
+								default:     /* Collections, should not happen */    break;
 							}
 						}
 						break;
@@ -466,7 +380,7 @@ public final class JSON {
 			}
 		}
 		
-		public final SSDCollection read() throws IOException {
+		public final JSONCollection read() throws IOException {
 			try(input) {
 				c = next(); // Bootstrap
 				
@@ -566,6 +480,17 @@ public final class JSON {
 			this.value = value;
 		}
 		
+		public static final JSONObject ofType(JSONType type, String value) {
+			switch(type) {
+				case NULL: return ofNull();
+				case BOOLEAN: return ofBoolean(Boolean.valueOf(value));
+				case INTEGER: return ofLong(Long.valueOf(value));
+				case DECIMAL: return ofDouble(Double.valueOf(value));
+				case STRING: return ofString(value);
+				default: throw new IllegalArgumentException("Invalid type");
+			}
+		}
+		
 		public static final JSONObject ofNull() { return new JSONObject(JSONType.NULL, null); }
 		public static final JSONObject ofBoolean(boolean value) { return new JSONObject(JSONType.BOOLEAN, value); }
 		public static final JSONObject ofByte(byte value) { return new JSONObject(JSONType.INTEGER, (long) value); }
@@ -628,7 +553,7 @@ public final class JSON {
 		}
 	}
 	
-	public static final class JSONCollection extends JSONNode {
+	public static final class JSONCollection extends JSONNode implements Iterable<JSONNode> {
 		
 		private static final int CHAR_NAME_SEPARATOR = '.';
 		
@@ -1076,45 +1001,18 @@ public final class JSON {
 		@Override public boolean isObject() { return false; }
 		@Override public boolean isCollection() { return true; }
 		
-		public int length() {
-			return nodes.size();
-		}
+		public int length() { return nodes.size(); }
 		
-		public Iterator<JSONNode> nodesIterator() {
-			return new Iterators.Nodes(this);
-		}
-		
-		public Iterator<JSONObject> objectsIterator() {
-			return new Iterators.Objects(this);
-		}
-		
-		public Iterator<JSONCollection> collectionsIterator() {
-			return new Iterators.Collections(this);
-		}
-		
-		public Iterable<JSONNode> nodesIterable() {
-			return () -> nodesIterator();
-		}
-		
-		public Iterable<JSONObject> objectsIterable() {
-			return () -> objectsIterator();
-		}
-		
-		public Iterable<JSONCollection> collectionsIterable() {
-			return () -> collectionsIterator();
-		}
-		
-		public List<JSONNode> nodes() {
-			return Collections.unmodifiableList(iterableToList(nodesIterable()));
-		}
-		
-		public List<JSONObject> objects() {
-			return Collections.unmodifiableList(iterableToList(objectsIterable()));
-		}
-		
-		public List<JSONCollection> collections() {
-			return Collections.unmodifiableList(iterableToList(collectionsIterable()));
-		}
+		@Override public Iterator<JSONNode> iterator() { return nodesIterator(); }
+		public Iterator<JSONNode> nodesIterator() { return new Iterators.Nodes(this); }
+		public Iterator<JSONObject> objectsIterator() { return new Iterators.Objects(this); }
+		public Iterator<JSONCollection> collectionsIterator() { return new Iterators.Collections(this); }
+		public Iterable<JSONNode> nodesIterable() { return () -> nodesIterator(); }
+		public Iterable<JSONObject> objectsIterable() { return () -> objectsIterator(); }
+		public Iterable<JSONCollection> collectionsIterable() { return () -> collectionsIterator(); }
+		public List<JSONNode> nodes() { return Collections.unmodifiableList(iterableToList(nodesIterable())); }
+		public List<JSONObject> objects() { return Collections.unmodifiableList(iterableToList(objectsIterable())); }
+		public List<JSONCollection> collections() { return Collections.unmodifiableList(iterableToList(collectionsIterable())); }
 		
 		@Override
 		public void toString(StringBuilder builder, int depth, boolean compress) {
