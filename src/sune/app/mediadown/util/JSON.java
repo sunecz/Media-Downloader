@@ -49,13 +49,43 @@ public final class JSON {
 	private JSON() {
 	}
 	
+	/** @since 00.02.09 */
+	public static final JSONReader newReader(String string) {
+		return newReader(string, DEFAULT_CHARSET);
+	}
+	
+	/** @since 00.02.09 */
+	public static final JSONReader newReader(String string, Charset charset) {
+		return JSONReader.create(string, charset);
+	}
+	
+	/** @since 00.02.09 */
+	public static final JSONReader newReader(InputStream stream) {
+		return newReader(stream, DEFAULT_CHARSET);
+	}
+	
+	/** @since 00.02.09 */
+	public static final JSONReader newReader(InputStream stream, Charset charset) {
+		return JSONReader.create(stream, charset);
+	}
+	
+	/** @since 00.02.09 */
+	public static final JSONReader newReader(Path path) throws IOException {
+		return newReader(path, DEFAULT_CHARSET);
+	}
+	
+	/** @since 00.02.09 */
+	public static final JSONReader newReader(Path path, Charset charset) throws IOException {
+		return JSONReader.create(path, charset);
+	}
+	
 	public static final JSONCollection read(String string) {
 		return read(string, DEFAULT_CHARSET);
 	}
 	
 	public static final JSONCollection read(String string, Charset charset) {
 		try {
-			return JSONReader.create(string, charset).read();
+			return newReader(string, charset).read();
 		} catch(IOException ex) {
 			// Should not happen, but still throw it as unchecked
 			throw new UncheckedIOException(ex);
@@ -67,7 +97,7 @@ public final class JSON {
 	}
 	
 	public static final JSONCollection read(InputStream stream, Charset charset) throws IOException {
-		return JSONReader.create(stream, charset).read();
+		return newReader(stream, charset).read();
 	}
 	
 	public static final JSONCollection read(Path path) throws IOException {
@@ -75,10 +105,10 @@ public final class JSON {
 	}
 	
 	public static final JSONCollection read(Path path, Charset charset) throws IOException {
-		return JSONReader.create(path, charset).read();
+		return newReader(path, charset).read();
 	}
 	
-	private static final class JSONReader {
+	public static final class JSONReader {
 		
 		/* Implementation note:
 		 * Use absolute CharBuffer::get(int) method for better performance, since Java allegedly generates
@@ -100,11 +130,15 @@ public final class JSON {
 		private Pair<String, JSONCollection> lastParent;
 		private int c;
 		
+		/** @since 00.02.09 */
+		private boolean allowUnquotedNames;
+		
 		private JSONReader(ReadableByteChannel input, Charset charset) {
 			this.input = Channels.newReader(Objects.requireNonNull(input), charset);
 			this.buf = CharBuffer.allocate(BUFFER_SIZE).flip();
 			this.parents = new ArrayDeque<>();
 			this.str = new StringBuilder();
+			this.allowUnquotedNames = false;
 		}
 		
 		public static final JSONReader create(String string, Charset charset) {
@@ -121,6 +155,7 @@ public final class JSON {
 		
 		// Temporary direct optimization until we use Java 17 to reduce the memory footprint.
 		// See: https://bugs.openjdk.org/browse/JDK-4926314 and https://bugs.openjdk.org/browse/JDK-8266014
+		/** @since 00.02.09 */
 		private final int fillBuf() throws IOException {
 			// Since we use CharBuffer::allocate, there will be a backing array.
 			char[] cbuf = buf.array();
@@ -190,7 +225,8 @@ public final class JSON {
 				}
 			}
 			
-			JSONObject object = JSONObject.ofType(lastType, str.toString());
+			String value = Utils.unslash(Utils.replaceUnicodeEscapeSequences(str.toString()));
+			JSONObject object = JSONObject.ofType(lastType, value);
 			str.setLength(0);
 			
 			switch(parentType) {
@@ -334,6 +370,25 @@ public final class JSON {
 			}
 			lastType = JSONType.STRING;
 	    }
+	    
+	    private final void readStringUnquoted() throws IOException {
+			str.ensureCapacity(lim - pos); // Optimization
+			boolean escaped = false;
+			while((c = next()) != -1) {
+				if((c == CHAR_SEPARATOR_PROPERTY || c == CHAR_SEPARATOR_ELEMENT)
+						&& !escaped) {
+					c = next();
+					break; // String closed
+				} else if(c == CHAR_ESCAPE_SLASH) {
+					str.appendCodePoint(c);
+					escaped = !escaped;
+				} else {
+					str.appendCodePoint(c);
+					if(escaped) escaped = false;
+				}
+			}
+			lastType = JSONType.STRING;
+	    }
 		
 		private final void readNext() throws IOException {
 			while((c = skipWhitespaces()) != -1) {
@@ -374,6 +429,11 @@ public final class JSON {
 							break;
 						}
 						
+						if(allowUnquotedNames) {
+							readStringUnquoted();
+							break;
+						}
+						
 						throw new IOException("Invalid JSON");
 					}
 				}
@@ -393,8 +453,15 @@ public final class JSON {
 				return lastParent.b;
 			}
 		}
+		
+		/** @since 00.02.09 */
+		public final JSONReader allowUnquotedNames(boolean value) {
+			allowUnquotedNames = value;
+			return this;
+		}
 	}
 	
+	/** @since 00.02.09 */
 	public static enum JSONType {
 		
 		NULL,
@@ -407,6 +474,7 @@ public final class JSON {
 		UNKNOWN;
 	}
 	
+	/** @since 00.02.09 */
 	public static abstract class JSONNode {
 		
 		protected JSONCollection parent;
@@ -467,6 +535,7 @@ public final class JSON {
 		}
 	}
 	
+	/** @since 00.02.09 */
 	public static final class JSONObject extends JSONNode {
 		
 		private Object value;
@@ -478,6 +547,24 @@ public final class JSON {
 		private JSONObject(JSONCollection parent, String name, JSONType type, Object value) {
 			super(parent, name, type);
 			this.value = value;
+		}
+		
+		public static final JSONObject of(Object value) {
+			if(value == null) {
+				return ofNull();
+			}
+			
+			Class<?> clazz = value.getClass();
+			
+			if(clazz == Boolean.class) return ofBoolean((Boolean) value);
+			if(clazz == Byte.class) return ofByte((Byte) value);
+			if(clazz == Short.class) return ofShort((Short) value);
+			if(clazz == Integer.class) return ofInt((Integer) value);
+			if(clazz == Long.class) return ofLong((Long) value);
+			if(clazz == Float.class) return ofFloat((Float) value);
+			if(clazz == Double.class) return ofDouble((Double) value);
+			
+			return ofString(String.valueOf(value));
 		}
 		
 		public static final JSONObject ofType(JSONType type, String value) {
@@ -553,6 +640,7 @@ public final class JSON {
 		}
 	}
 	
+	/** @since 00.02.09 */
 	public static final class JSONCollection extends JSONNode implements Iterable<JSONNode> {
 		
 		private static final int CHAR_NAME_SEPARATOR = '.';
@@ -676,7 +764,7 @@ public final class JSON {
 		}
 		
 		private final int nextIndex() {
-			return nodes.size();
+			return nodes != null ? nodes.size() : 0;
 		}
 		
 		private final void reindex() {
@@ -1016,7 +1104,7 @@ public final class JSON {
 		
 		@Override
 		public void toString(StringBuilder builder, int depth, boolean compress) {
-			if(nodes.isEmpty()) {
+			if(nodes == null || nodes.isEmpty()) {
 				builder.append(type == JSONType.ARRAY ? "[]" : "{}");
 				return;
 			}
@@ -1104,6 +1192,10 @@ public final class JSON {
 		
 		private static final class Iterators {
 			
+			private static final Iterator<JSONNode> maybeEmptyIterator(JSONCollection collection) {
+				return collection.nodes != null ? collection.nodes.values().iterator() : Empty.instance();
+			}
+			
 			private static abstract class GenericBiTypeIterator<A, B> implements Iterator<B> {
 				
 				private final Iterator<A> iterator;
@@ -1146,11 +1238,27 @@ public final class JSON {
 				}
 			}
 			
+			public static final class Empty<T> implements Iterator<T> {
+				
+				private static final Empty<?> EMPTY = new Empty<>();
+				
+				private Empty() {}
+				
+				public static final <T> Empty<T> instance() {
+					@SuppressWarnings("unchecked")
+					Empty<T> empty = (Empty<T>) EMPTY;
+					return empty;
+				}
+				
+				@Override public boolean hasNext() { return false; }
+				@Override public T next() { throw new NoSuchElementException(); }
+			}
+			
 			public static final class Nodes implements Iterator<JSONNode> {
 				
 				private final Iterator<JSONNode> it;
 				
-				protected Nodes(JSONCollection collection) { it = collection.nodes.values().iterator(); }
+				protected Nodes(JSONCollection collection) { it = maybeEmptyIterator(collection); }
 				
 				@Override public boolean hasNext() { return it.hasNext(); }
 				@Override public JSONNode next() { return it.next(); }
@@ -1158,7 +1266,7 @@ public final class JSON {
 			
 			public static final class Objects extends GenericBiTypeIterator<JSONNode, JSONObject> {
 				
-				protected Objects(JSONCollection collection) { super(collection.nodes.values().iterator()); }
+				protected Objects(JSONCollection collection) { super(maybeEmptyIterator(collection)); }
 				
 				@Override protected boolean isOfCorrectType(JSONNode node) { return node.isObject(); }
 				@Override protected JSONObject castToCorrectType(JSONNode node) { return (JSONObject) node; }
@@ -1166,7 +1274,7 @@ public final class JSON {
 			
 			public static final class Collections extends GenericBiTypeIterator<JSONNode, JSONCollection> {
 				
-				protected Collections(JSONCollection collection) { super(collection.nodes.values().iterator()); }
+				protected Collections(JSONCollection collection) { super(maybeEmptyIterator(collection)); }
 				
 				@Override protected boolean isOfCorrectType(JSONNode node) { return node.isCollection(); }
 				@Override protected JSONCollection castToCorrectType(JSONNode node) { return (JSONCollection) node; }

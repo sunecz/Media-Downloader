@@ -11,8 +11,9 @@ import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
 
-import sune.util.ssdf2.SSDCollection;
-import sune.util.ssdf2.SSDF;
+import org.jsoup.UncheckedIOException;
+
+import sune.app.mediadown.util.JSON.JSONCollection;
 
 /**
  * Class containing some useful JavaScript-related functions.
@@ -271,8 +272,14 @@ public final class JavaScript {
 	}
 	
 	/** @since 00.02.08 */
-	public static final SSDCollection readObject(String string) {
-		return SSDF.readJSON(Utils.prefixUnicodeEscapeSequences(string, "\\"));
+	public static final JSONCollection readObject(String string) {
+		try {
+			return JSON.newReader(Utils.prefixUnicodeEscapeSequences(string, "\\"))
+					   .allowUnquotedNames(true).read();
+		} catch(IOException ex) {
+			// Should not happen, but still throw it as unchecked
+			throw new UncheckedIOException(ex);
+		}
 	}
 	
 	/** @since 00.02.08 */

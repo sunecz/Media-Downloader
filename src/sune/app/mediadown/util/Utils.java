@@ -515,6 +515,34 @@ public final class Utils {
 		return UnicodeEscapeSequence.prefix(string, prefix);
 	}
 	
+	/** @since 00.02.09 */
+	public static final String unslash(String string) {
+		final int len = string.length();
+		StringBuilder builder = new StringBuilder(len);
+		
+		int end = 0;
+		boolean escaped = false;
+		
+		for(int i = 0, c, n; i < len; i += n) {
+			c = string.codePointAt(i);
+			n = Character.charCount(c);
+			
+			if(escaped) {
+				escaped = false;
+			} else if(c == '\\') {
+				builder.append(string, end, i);
+				end = i + 1;
+				escaped = true;
+			}
+		}
+		
+		if(end < len) {
+			builder.append(string, end, len);
+		}
+		
+		return builder.toString();
+	}
+	
 	public static final int backTill(String string, int ch, int from) {
 		return backTill(string, ch, from, 1);
 	}
