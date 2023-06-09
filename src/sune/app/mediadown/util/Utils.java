@@ -44,6 +44,7 @@ import java.util.Spliterators;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -506,26 +507,12 @@ public final class Utils {
 		return index >= 0 ? string.substring(0, index) : string;
 	}
 	
-	private static Regex REGEX_UNICODE_ESCAPE;
-	
-	private static final Regex regexUnicodeEscape() {
-		if(REGEX_UNICODE_ESCAPE == null) {
-			REGEX_UNICODE_ESCAPE = Regex.of("\\\\u+(\\p{XDigit}{4})");
-		}
-		
-		return REGEX_UNICODE_ESCAPE;
-	}
-	
 	public static final String replaceUnicodeEscapeSequences(String string) {
-		return regexUnicodeEscape().replaceAll(string, (match) -> {
-			return Character.toString(Integer.parseInt(match.group(1), 16));
-		});
+		return UnicodeEscapeSequence.replace(string);
 	}
 	
 	public static final String prefixUnicodeEscapeSequences(String string, String prefix) {
-		return regexUnicodeEscape().replaceAll(string, (match) -> {
-			return prefix + match.group(0);
-		});
+		return UnicodeEscapeSequence.prefix(string, prefix);
 	}
 	
 	public static final int backTill(String string, int ch, int from) {
@@ -1552,6 +1539,194 @@ public final class Utils {
 			if((runtimeException = exceptionMapper.apply(exception)) != null) {
 				throw runtimeException;
 			}
+		}
+	}
+	
+	/** @since 00.02.09 */
+	private static final class UnicodeEscapeSequence {
+		
+		/* Implementation notes
+		 * 
+		 * The searching of Unicode escape sequences is done using a simple DFA
+		 * (Deterministic Finite Automaton) with the following graph:
+		 * 
+		 * (0)----+-[x]->(1)-[y]->(2)-------+-[z]->(3)-[z]->(4)-[z]->(5)-[z]->(6)
+		 *  ^     |       |        |^       |       |        |        |        |
+		 *  |     |       |        | \      |       |        |        |        |
+		 *  +-[A]-+       |        |  +-[y]-+       |        |        |        |
+		 *  |             |        |                |        |        |        |
+		 *  +-----[B]-----+        |                |        |        |        |
+		 *  |                      |                |        |        |        |
+		 *  +----------[C]---------+                |        |        |        |
+		 *  |                                       |        |        |        |
+		 *  +--------------[D]----------------------+        |        |        |
+		 *  |                                                |        |        |
+		 *  +-------------------[D]--------------------------+        |        |
+		 *  |                                                         |        |
+		 *  +-----------------------[D]-------------------------------+        |
+		 *  |                                                                  |
+		 *  +---------------------------[e]------------------------------------+
+		 * 
+		 * Where:
+		 *     - (.) is a state (0 - 6)
+		 *     - [.] is a transition symbols (x, y, z, A, B, C, D, e)
+		 *     - E = the whole alphabet
+		 * 
+		 * Transition symbols:
+		 *     - x = { '\' }
+		 *     - y = { 'u' }
+		 *     - z = { A-F, a-f, 0-9 }
+		 *     - A = E \ x
+		 *     - B = E \ y
+		 *     - C = E \ y \ z
+		 *     - D = E \ z
+		 *     - e = automatic transition 6 -> 0, executing the desired operation
+		 * 
+		 * The DFA implements the following regular expression:
+		 *     \\u+([A-Fa-f0-9]{4})
+		 * where the matching group is then forwarded as an argument to the desired
+		 * operation, such as replace or prefix.
+		 * 
+		 * The run of the DFA is done branchless using only arithmetic operations
+		 * with the exception of checking for few states to simulate the capturing
+		 * of an Unicode espace sequence.
+		 */
+		
+		private static final int CHAR_BWSLASH = '\\';
+		private static final int CHAR_U = 'u';
+		private static final int INTERVAL_LO_AF = 'A';
+		private static final int INTERVAL_HI_AF = 'F';
+		private static final int INTERVAL_LO_af = 'a';
+		private static final int INTERVAL_HI_af = 'f';
+		private static final int INTERVAL_LO_09 = '0';
+		private static final int INTERVAL_HI_09 = '9';
+		
+		// Returns 1, if c == r, otherwise 0.
+		private static final int eq(int c, int r) {
+			// c > r: (c - r) >>> 31 = 0, (r - c) >>> 31 = 1, xor = 1, 1 - xor = 0
+			// c < r: (c - r) >>> 31 = 1, (r - c) >>> 31 = 0, xor = 1, 1 - xor = 0
+			// c = r: (c - r) >>> 31 = 0, (r - c) >>> 31 = 0, xor = 0, 1 - xor = 1
+			return 1 - (((c - r) >>> 31) ^ ((r - c) >>> 31));
+		}
+		
+		// Returns 1, if c > r, otherwise 0.
+		private static final int gt(int c, int r) {
+			// c >  r, (r - c) >>> 31 = 1
+			// c <= r, (r - c) >>> 31 = 0
+			return ((r - c) >>> 31);
+		}
+		
+		// Returns 1, if c is in the interval [a, b] (inclusive), where a <= b, otherwise 0.
+		private static final int in(int c, int a, int b) {
+			// c <  a, c <  b, (c - a) >>> 31 = 1, (b - c) >>> 31 = 0, xor = 1, 1 - xor = 0
+			// c >= a, c <  b, (c - a) >>> 31 = 0, (b - c) >>> 31 = 0, xor = 0, 1 - xor = 1
+			// c >= a, c >= b, (c - a) >>> 31 = 0, (b - c) >>> 31 = 1, xor = 1, 1 - xor = 0
+			return 1 - (((c - a) >>> 31) ^ ((b - c) >>> 31));
+		}
+		
+		// Returns 1, if c is in [A-Fa-f0-9], otherwise 0.
+		private static final int isHex(int c) {
+			// Individually check intervals A-F, a-f, 0-9 and combine results using the OR operation.
+			return (
+				in(c, INTERVAL_LO_AF, INTERVAL_HI_AF) |
+				in(c, INTERVAL_LO_af, INTERVAL_HI_af) |
+				in(c, INTERVAL_LO_09, INTERVAL_HI_09)
+			);
+		}
+		
+		// x = c == '\'
+		// y = c == 'u'
+		// z = c is hex
+		private static final int[] dfaTable = {
+		//  x, y, z
+			1, 0, 0,
+			0, 2, 0,
+			0, 2, 3,
+			0, 0, 4,
+			0, 0, 5,
+			0, 0, 6
+		};
+		
+		// Works only for 0 <= r <= 4.
+		// Assume that f(i) = i with only the lowest one bit set, then
+		// this returns:
+		//     0, if f(i) == 0,
+		//     1, if f(i) == 1,
+		//     2, if f(i) == 2,
+		//     3, if f(i) == 4,
+		private static final int dfaIdx(int r) {
+			return Integer.lowestOneBit(r) - gt(r, 3);
+		}
+		
+		private static final int transition(int s, int c) {
+			/* f(s, c) = {
+			 *     c == '\\'                                  -> 0,
+			 *     c == 'u'                                   -> 1,
+			 *     c in [A-Fa-f0-9]                           -> 2,
+			 *     c != '\\'                        && s == 0 -> 3,
+			 *     c != 'u'                         && s == 1 -> 4,
+			 *     c not in [A-Fa-f0-9]             && s  > 2 -> 5,
+			 *     c not in [A-Fa-f0-9] && c != 'u' && s == 2 -> 6,
+			 * }
+			 */
+			final int idx = dfaIdx(
+				(isHex(c)            << 2) |
+				(eq(c, CHAR_U)       << 1) |
+				(eq(c, CHAR_BWSLASH) << 0)
+			), gt0 = gt(idx, 0);
+			
+			return gt0 * dfaTable[s * 3 + (idx - gt0 * 1)];
+		}
+		
+		private static final String doOperation(String string, BiConsumer<StringBuilder, String> operation) {
+			final int len = string.length();
+			StringBuilder builder = new StringBuilder(len);
+			int end = 0;
+			
+			for(int i = 0, c, n, state = 0, next, start = -1; i < len; i += n, state = next) {
+				c = string.codePointAt(i);
+				n = Character.charCount(c);
+				next = transition(state, c);
+				
+				switch(next) {
+					case 1: {
+						start = i;
+						break;
+					}
+					case 6: {
+						builder.append(string, end, start);
+						
+						end = i + n;
+						operation.accept(builder, string.substring(start, end));
+						
+						next = 0;
+						start = -1;
+						break;
+					}
+				}
+			}
+			
+			if(end < len) {
+				builder.append(string, end, len);
+			}
+			
+			return builder.toString();
+		}
+		
+		private static final void opReplace(StringBuilder builder, String seq) {
+			builder.appendCodePoint(Integer.parseInt(seq, 2, seq.length(), 16));
+		}
+		
+		private static final void opPrefix(StringBuilder builder, String seq, String prefix) {
+			builder.append(prefix).append(seq);
+		}
+		
+		public static final String replace(String string) {
+			return doOperation(string, UnicodeEscapeSequence::opReplace);
+		}
+		
+		public static final String prefix(String string, String prefix) {
+			return doOperation(string, (builder, seq) -> opPrefix(builder, seq, prefix));
 		}
 	}
 	
