@@ -236,27 +236,31 @@ public final class JSON {
 			}
 		}
 		
-		private final void readAndMatchSequence(String sequence) throws IOException {
-			boolean success = true;
-			for(int i = 0, l = sequence.length(), p, n; i < l; i += n) {
+		private final int readAndMatchSequence(String sequence) throws IOException {
+			int i = 0, l = sequence.length();
+			
+			for(int p, n; i < l; i += n) {
 				p = sequence.codePointAt(i);
 				n = Character.charCount(p);
 				
 				if(c != p) {
-					success = false;
 					break;
 				}
 				
 				c = next();
 			}
-			if(success) {
+			
+			if(i == l) {
 				str.append(sequence);
+				return -1;
 			}
+			
+			return i;
 		}
 		
 		private final void checkEndOfElementAfterSequence() throws IOException {
-			if(Character.isWhitespace(c))
-				c = skipWhitespaces();
+			c = skipWhitespaces();
+			
 			switch(c) {
 				case CHAR_OBJECT_CLOSE:
 				case CHAR_ARRAY_CLOSE:
@@ -284,22 +288,35 @@ public final class JSON {
 			c = next();
 		}
 		
-		private final void readTrue() throws IOException {
-			readAndMatchSequence("true");
-			checkEndOfElementAfterSequence();
-			lastType = JSONType.BOOLEAN;
+		private final boolean readSequence(String word, JSONType type) throws IOException {
+			int end = readAndMatchSequence(word);
+			
+			if(allowUnquotedNames) {
+				// The sequence was not fully read
+				if(end > 0) {
+					str.append(word, 0, end);
+					return false;
+				} else {
+					lastType = type;
+				}
+			} else {
+				checkEndOfElementAfterSequence();
+				lastType = type;
+			}
+			
+			return true;
 		}
 		
-		private final void readFalse() throws IOException {
-			readAndMatchSequence("false");
-			checkEndOfElementAfterSequence();
-			lastType = JSONType.BOOLEAN;
+		private final boolean readTrue() throws IOException {
+			return readSequence("true", JSONType.BOOLEAN);
 		}
 		
-		private final void readNull() throws IOException {
-			readAndMatchSequence("null");
-			checkEndOfElementAfterSequence();
-			lastType = JSONType.NULL;
+		private final boolean readFalse() throws IOException {
+			return readSequence("false", JSONType.BOOLEAN);
+		}
+		
+		private final boolean readNull() throws IOException {
+			return readSequence("null", JSONType.NULL);
 		}
 		
 	    private final void readNumber() throws IOException {
@@ -373,11 +390,14 @@ public final class JSON {
 	    
 	    private final void readStringUnquoted() throws IOException {
 			str.ensureCapacity(lim - pos); // Optimization
+			
 			boolean escaped = false;
-			while((c = next()) != -1) {
-				if((c == CHAR_SEPARATOR_PROPERTY || c == CHAR_SEPARATOR_ELEMENT)
-						&& !escaped) {
-					c = next();
+			do {
+				if(!escaped
+						&& (c == CHAR_SEPARATOR_PROPERTY
+								|| c == CHAR_SEPARATOR_ELEMENT
+								|| c == CHAR_OBJECT_CLOSE
+								|| c == CHAR_ARRAY_CLOSE)) {
 					break; // String closed
 				} else if(c == CHAR_ESCAPE_SLASH) {
 					str.appendCodePoint(c);
@@ -386,8 +406,9 @@ public final class JSON {
 					str.appendCodePoint(c);
 					if(escaped) escaped = false;
 				}
-			}
-			lastType = JSONType.STRING;
+			} while((c = next()) != -1);
+			
+			lastType = JSONType.STRING_UNQUOTED;
 	    }
 		
 		private final void readNext() throws IOException {
@@ -420,9 +441,9 @@ public final class JSON {
 						c = next();
 						addPendingObject();
 						break;
-					case 't': readTrue(); break;
-					case 'f': readFalse(); break;
-					case 'n': readNull(); break;
+					case 't': if(readTrue()) break;
+					case 'f': if(readFalse()) break;
+					case 'n': if(readNull()) break;
 					default: {
 						if(c == '-' || Character.isDigit(c)) {
 							readNumber();
@@ -469,6 +490,7 @@ public final class JSON {
 		INTEGER,
 		DECIMAL,
 		STRING,
+		STRING_UNQUOTED,
 		ARRAY,
 		OBJECT,
 		UNKNOWN;
@@ -574,6 +596,7 @@ public final class JSON {
 				case INTEGER: return ofLong(Long.valueOf(value));
 				case DECIMAL: return ofDouble(Double.valueOf(value));
 				case STRING: return ofString(value);
+				case STRING_UNQUOTED: return ofStringUnquoted(value);
 				default: throw new IllegalArgumentException("Invalid type");
 			}
 		}
@@ -587,6 +610,9 @@ public final class JSON {
 		public static final JSONObject ofFloat(float value) { return new JSONObject(JSONType.DECIMAL, (double) value); }
 		public static final JSONObject ofDouble(double value) { return new JSONObject(JSONType.DECIMAL, value); }
 		public static final JSONObject ofString(String value) { return new JSONObject(JSONType.STRING, value); }
+		
+		// Do not expose to the public interface
+		private static final JSONObject ofStringUnquoted(String value) { return new JSONObject(JSONType.STRING_UNQUOTED, value); }
 		
 		@Override public JSONObject copy() { return new JSONObject(parent, name, type, value); }
 		@Override public boolean isObject() { return true; }
@@ -614,8 +640,9 @@ public final class JSON {
 				case BOOLEAN: { builder.append((boolean) value); break; }
 				case INTEGER: { builder.append((long) value); break; }
 				case DECIMAL: { builder.append((double) value); break; }
-				case STRING:  { builder.append('"').append(String.valueOf(value)).append('"'); break; }
-				default:      { builder.append((Object) null); break; }
+				case STRING: { builder.append('"').append(String.valueOf(value)).append('"'); break; }
+				case STRING_UNQUOTED: { builder.append(String.valueOf(value)); break; }
+				default: { builder.append((Object) null); break; }
 			}
 		}
 		
