@@ -518,7 +518,7 @@ public final class Utils {
 	/** @since 00.02.09 */
 	public static final String unslash(String string) {
 		final int len = string.length();
-		StringBuilder builder = new StringBuilder(len);
+		StringBuilder builder = utf16StringBuilder(len);
 		
 		int end = 0;
 		boolean escaped = false;
@@ -1469,6 +1469,16 @@ public final class Utils {
 		return Integer.compare(lenA, lenB);
 	}
 	
+	/** @since 00.02.09 */
+	public static final StringBuilder utf16StringBuilder() {
+		return OfStringBuilder.newUTF16();
+	}
+	
+	/** @since 00.02.09 */
+	public static final StringBuilder utf16StringBuilder(int capacity) {
+		return OfStringBuilder.newUTF16(capacity);
+	}
+	
 	/** @since 00.02.05 */
 	private static final class EqualityWrapper<T> {
 		
@@ -1525,6 +1535,48 @@ public final class Utils {
 			if((runtimeException = exceptionMapper.apply(exception)) != null) {
 				throw runtimeException;
 			}
+		}
+	}
+	
+	/** @since 00.02.09 */
+	private static final class OfStringBuilder {
+		
+		private static final int DEFAULT_CAPACITY = 16;
+		private static final StringBuilder UTF16 = newInternalBuilder();
+		
+		private static final StringBuilder newInternalBuilder() {
+			// Create a new builder to accommodate 1 Latin1 character.
+			// Assume that compact strings are turned on, therefore this
+			// builder will have the Latin1 coder.
+			StringBuilder builder = new StringBuilder(1);
+			// Append a character that cannot be encoded in Latin1,
+			// thus changing the coder to UTF16. The character must fulfill
+			// (c >>> 8) == 1 to force this change.
+			builder.appendCodePoint(1 << 8);
+			// The builder has UTF16 coder with byte array of length 2 now.
+			// To be able to reuse this buffer, clear it.
+			builder.setLength(0);
+			// Now, we have an empty builder with the UTF16 coder, with
+			// the minimal possible internal capacity of 2.
+			return builder;
+		}
+		
+		public static final StringBuilder newUTF16() {
+			return newUTF16(DEFAULT_CAPACITY);
+		}
+		
+		public static final StringBuilder newUTF16(int capacity) {
+			// Create a new builder with no capacity to minimize the memory
+			// footprint. Assume that this builder has the Latin1 coder.
+			StringBuilder builder = new StringBuilder(0);
+			// Force the new builder to use the UTF16 coder using the pre-built
+			// internal builder.
+			builder.append(UTF16);
+			// Resize the builder to the desired capacity.
+			builder.ensureCapacity(capacity);
+			// Now the builder is using the UTF16 coder and has the desired
+			// capacity.
+			return builder;
 		}
 	}
 	
@@ -1666,7 +1718,7 @@ public final class Utils {
 		
 		private static final String doOperation(String string, BiConsumer<StringBuilder, String> operation) {
 			final int len = string.length();
-			StringBuilder builder = new StringBuilder(len);
+			StringBuilder builder = utf16StringBuilder(len);
 			int end = 0;
 			
 			for(int i = 0, c, n, state = 0, next, start = -1; i < len; i += n, state = next) {
