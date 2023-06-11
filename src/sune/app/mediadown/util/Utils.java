@@ -1422,7 +1422,35 @@ public final class Utils {
 	}
 	
 	/** @since 00.02.09 */
+	public static final int compareCodePoint(int a, int b) {
+		return Integer.compare(a, b);
+	}
+	
+	/** @since 00.02.09 */
+	public static final int compareCodePointIgnoreCase(int a, int b) {
+		if(a == b) return 0;
+		
+		a = Character.toUpperCase(a);
+		b = Character.toUpperCase(b);
+		if(a == b) return 0;
+		
+		a = Character.toLowerCase(a);
+		b = Character.toLowerCase(b);
+		return a - b;
+	}
+	
+	/** @since 00.02.09 */
 	public static final int compareNatural(String a, String b) {
+		return compareNatural(a, b, false);
+	}
+	
+	/** @since 00.02.09 */
+	public static final int compareNaturalIgnoreCase(String a, String b) {
+		return compareNatural(a, b, true);
+	}
+	
+	/** @since 00.02.09 */
+	private static final int compareNatural(String a, String b, boolean ignoreCase) {
 		final int lenA = a.length();
 		final int lenB = b.length();
 		
@@ -1457,7 +1485,9 @@ public final class Utils {
 				result = Integer.compare(valA, valB);
 			} else {
 				// Simply compare the code points
-				result = Integer.compare(cpA, cpB);
+				result = ignoreCase
+					? compareCodePointIgnoreCase(cpA, cpB)
+					: compareCodePoint(cpA, cpB);
 			}
 			
 			if(result != 0) {
