@@ -140,7 +140,7 @@ public final class JSON {
 			this.input = Channels.newReader(Objects.requireNonNull(input), charset);
 			this.buf = CharBuffer.allocate(BUFFER_SIZE).flip();
 			this.parents = new ArrayDeque<>();
-			this.str = new StringBuilder();
+			this.str = Utils.utf16StringBuilder();
 			this.ops = new StringOps(str);
 			this.allowUnquotedNames = false;
 		}
