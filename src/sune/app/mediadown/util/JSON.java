@@ -27,6 +27,8 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.function.Function;
 
+import sune.app.mediadown.util.Utils.StringOps;
+
 /**
  * Contains utilities for JSON strings, input streams and files.
  * @author Sune
@@ -125,6 +127,7 @@ public final class JSON {
 		
 		private final Deque<Pair<String, JSONCollection>> parents;
 		private final StringBuilder str;
+		private final StringOps ops;
 		private String lastStr;
 		private JSONType lastType = JSONType.UNKNOWN;
 		private Pair<String, JSONCollection> lastParent;
@@ -138,6 +141,7 @@ public final class JSON {
 			this.buf = CharBuffer.allocate(BUFFER_SIZE).flip();
 			this.parents = new ArrayDeque<>();
 			this.str = new StringBuilder();
+			this.ops = new StringOps(str);
 			this.allowUnquotedNames = false;
 		}
 		
@@ -225,7 +229,7 @@ public final class JSON {
 				}
 			}
 			
-			String value = Utils.unslash(Utils.replaceUnicodeEscapeSequences(str.toString()));
+			String value = ops.replaceUnicodeEscapeSequences().unslash().toStringAndReset();
 			JSONObject object = JSONObject.ofType(lastType, value);
 			str.setLength(0);
 			

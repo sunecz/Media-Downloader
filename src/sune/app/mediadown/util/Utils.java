@@ -44,7 +44,6 @@ import java.util.Spliterators;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.TimeUnit;
-import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -516,30 +515,64 @@ public final class Utils {
 	}
 	
 	/** @since 00.02.09 */
-	public static final String unslash(String string) {
-		final int len = string.length();
-		StringBuilder builder = utf16StringBuilder(len);
-		
+	public static final void unslash(StringBuilder input, StringBuilder output) {
+		final int len = input.length();
+		unslash(input, output, len);
+	}
+	
+	/** @since 00.02.09 */
+	public static final void unslash(StringBuilder input, StringBuilder output, final int len) {
 		int end = 0;
 		boolean escaped = false;
 		
 		for(int i = 0, c, n; i < len; i += n) {
-			c = string.codePointAt(i);
+			c = input.codePointAt(i);
 			n = Character.charCount(c);
 			
 			if(escaped) {
 				escaped = false;
 			} else if(c == '\\') {
-				builder.append(string, end, i);
+				output.append(input, end, i);
 				end = i + 1;
 				escaped = true;
 			}
 		}
 		
 		if(end < len) {
-			builder.append(string, end, len);
+			output.append(input, end, len);
+		}
+	}
+	
+	/** @since 00.02.09 */
+	// Since CharSequence does not have codePointAt method, we must copy the method above
+	// with the only exception of using a String instead of a StringBuilder as an input.
+	public static final void unslash(String input, StringBuilder output, final int len) {
+		int end = 0;
+		boolean escaped = false;
+		
+		for(int i = 0, c, n; i < len; i += n) {
+			c = input.codePointAt(i);
+			n = Character.charCount(c);
+			
+			if(escaped) {
+				escaped = false;
+			} else if(c == '\\') {
+				output.append(input, end, i);
+				end = i + 1;
+				escaped = true;
+			}
 		}
 		
+		if(end < len) {
+			output.append(input, end, len);
+		}
+	}
+	
+	/** @since 00.02.09 */
+	public static final String unslash(String string) {
+		final int len = string.length();
+		StringBuilder builder = utf16StringBuilder(len);
+		unslash(string, builder, len);
 		return builder.toString();
 	}
 	
@@ -1611,7 +1644,86 @@ public final class Utils {
 	}
 	
 	/** @since 00.02.09 */
-	private static final class UnicodeEscapeSequence {
+	public static final class StringOps {
+		
+		private StringBuilder input;
+		private StringBuilder output;
+		private boolean swapped;
+		
+		public StringOps(StringBuilder input) {
+			this.input = Objects.requireNonNull(input);
+			this.output = null;
+		}
+		
+		private final void ensureOutput() {
+			if(output == null) {
+				output = utf16StringBuilder(input.length());
+			}
+		}
+		
+		private final void swap() {
+			StringBuilder temp = input;
+			input = output;
+			output = temp;
+			swapped = !swapped;
+		}
+		
+		private final void clearOutput() {
+			if(output != null) {
+				output.setLength(0);
+				output.ensureCapacity(input.length());
+			}
+		}
+		
+		private final void swapAndClear() {
+			swap();
+			clearOutput();
+		}
+		
+		public StringOps replaceUnicodeEscapeSequences() {
+			ensureOutput();
+			UnicodeEscapeSequence.replace(input, output);
+			swapAndClear();
+			return this;
+		}
+		
+		public StringOps prefixUnicodeEscapeSequences(String prefix) {
+			ensureOutput();
+			UnicodeEscapeSequence.prefix(input, output, prefix);
+			swapAndClear();
+			return this;
+		}
+		
+		public StringOps unslash() {
+			ensureOutput();
+			Utils.unslash(input, output);
+			swapAndClear();
+			return this;
+		}
+		
+		public StringOps reset() {
+			if(swapped) {
+				swap();
+			}
+			
+			clearOutput();
+			return this;
+		}
+		
+		public String toStringAndReset() {
+			String string = input.toString();
+			reset();
+			return string;
+		}
+		
+		@Override
+		public String toString() {
+			return input.toString();
+		}
+	}
+	
+	/** @since 00.02.09 */
+	public static final class UnicodeEscapeSequence {
 		
 		/* Implementation notes
 		 * 
@@ -1746,13 +1858,12 @@ public final class Utils {
 			return gt0 * dfaTable[s * 3 + (idx - gt0 * 1)];
 		}
 		
-		private static final String doOperation(String string, BiConsumer<StringBuilder, String> operation) {
-			final int len = string.length();
-			StringBuilder builder = utf16StringBuilder(len);
+		private static final void doOperation(StringBuilder input, StringBuilder output, final int len,
+				OperationStringBuilder operation) {
 			int end = 0;
 			
 			for(int i = 0, c, n, state = 0, next, start = -1; i < len; i += n, state = next) {
-				c = string.codePointAt(i);
+				c = input.codePointAt(i);
 				n = Character.charCount(c);
 				next = transition(state, c);
 				
@@ -1762,10 +1873,10 @@ public final class Utils {
 						break;
 					}
 					case 6: {
-						builder.append(string, end, start);
+						output.append(input, end, start);
 						
 						end = i + n;
-						operation.accept(builder, string.substring(start, end));
+						operation.execute(output, input, start, end);
 						
 						next = 0;
 						start = -1;
@@ -1775,26 +1886,91 @@ public final class Utils {
 			}
 			
 			if(end < len) {
-				builder.append(string, end, len);
+				output.append(input, end, len);
+			}
+		}
+		
+		// Since CharSequence does not have codePointAt method, we must copy the method above
+		// with the only exception of using a String instead of a StringBuilder as an input.
+		private static final void doOperation(String input, StringBuilder output, int len, OperationString operation) {
+			int end = 0;
+			
+			for(int i = 0, c, n, state = 0, next, start = -1; i < len; i += n, state = next) {
+				c = input.codePointAt(i);
+				n = Character.charCount(c);
+				next = transition(state, c);
+				
+				switch(next) {
+					case 1: {
+						start = i;
+						break;
+					}
+					case 6: {
+						output.append(input, end, start);
+						
+						end = i + n;
+						operation.execute(output, input, start, end);
+						
+						next = 0;
+						start = -1;
+						break;
+					}
+				}
 			}
 			
-			return builder.toString();
+			if(end < len) {
+				output.append(input, end, len);
+			}
 		}
 		
-		private static final void opReplace(StringBuilder builder, String seq) {
-			builder.appendCodePoint(Integer.parseInt(seq, 2, seq.length(), 16));
+		private static final void opReplace(StringBuilder output, StringBuilder input, int start, int end) {
+			output.appendCodePoint(Integer.parseInt(input, start + 2, end, 16));
 		}
 		
-		private static final void opPrefix(StringBuilder builder, String seq, String prefix) {
-			builder.append(prefix).append(seq);
+		private static final void opPrefix(StringBuilder output, StringBuilder input, int start, int end, String prefix) {
+			output.append(prefix).append(input, start, end);
+		}
+		
+		private static final void opReplace(StringBuilder output, String input, int start, int end) {
+			output.appendCodePoint(Integer.parseInt(input, start + 2, end, 16));
+		}
+		
+		private static final void opPrefix(StringBuilder output, String input, int start, int end, String prefix) {
+			output.append(prefix).append(input, start, end);
+		}
+		
+		public static final void replace(StringBuilder input, StringBuilder output) {
+			final int len = input.length();
+			doOperation(input, output, len, UnicodeEscapeSequence::opReplace);
+		}
+		
+		public static final void prefix(StringBuilder input, StringBuilder output, String prefix) {
+			final int len = input.length();
+			doOperation(input, output, len, (out, in, start, end) -> opPrefix(out, in, start, end, prefix));
 		}
 		
 		public static final String replace(String string) {
-			return doOperation(string, UnicodeEscapeSequence::opReplace);
+			final int len = string.length();
+			StringBuilder builder = utf16StringBuilder(len);
+			doOperation(string, builder, len, UnicodeEscapeSequence::opReplace);
+			return builder.toString();
 		}
 		
 		public static final String prefix(String string, String prefix) {
-			return doOperation(string, (builder, seq) -> opPrefix(builder, seq, prefix));
+			final int len = string.length();
+			StringBuilder builder = utf16StringBuilder(len);
+			doOperation(string, builder, len, (out, in, start, end) -> opPrefix(out, in, start, end, prefix));
+			return builder.toString();
+		}
+		
+		private static interface OperationStringBuilder {
+			
+			void execute(StringBuilder output, StringBuilder input, int start, int end);
+		}
+		
+		private static interface OperationString {
+			
+			void execute(StringBuilder output, String input, int start, int end);
 		}
 	}
 	
