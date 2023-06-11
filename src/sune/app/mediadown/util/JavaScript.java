@@ -1,6 +1,7 @@
 package sune.app.mediadown.util;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
@@ -10,8 +11,6 @@ import java.util.regex.Matcher;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
-
-import org.jsoup.UncheckedIOException;
 
 import sune.app.mediadown.util.JSON.JSONCollection;
 
