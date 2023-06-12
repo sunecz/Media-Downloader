@@ -220,11 +220,8 @@ public final class JSON {
 				switch(parentType) {
 					case OBJECT:
 						throw new IllegalStateException("Object's item name cannot be null or empty");
-					case ARRAY:
-						lastStr = "";
-						break;
 					default:
-						/* Collections, should not happen */
+						// All is OK
 						break;
 				}
 			}
@@ -293,6 +290,7 @@ public final class JSON {
 		}
 		
 		private final boolean readSequence(String word, JSONType type) throws IOException {
+			str.ensureCapacity(word.length()); // Optimization
 			int end = readAndMatchSequence(word);
 			
 			if(allowUnquotedNames) {
@@ -323,7 +321,8 @@ public final class JSON {
 			return readSequence("null", JSONType.NULL);
 		}
 		
-	    private final void readNumber() throws IOException {
+		private final void readNumber() throws IOException {
+			str.ensureCapacity(lim - pos); // Optimization
 			if(c == '-') {
 				str.appendCodePoint(c);
 				c = next();
@@ -370,9 +369,9 @@ public final class JSON {
 				}
 			} while((c = next()) != -1);
 			lastType = fraction ? JSONType.DECIMAL : JSONType.INTEGER;
-	    }
-	    
-	    private final void readString() throws IOException {
+		}
+		
+		private final void readString() throws IOException {
 			if(c != CHAR_STRING_QUOTES)
 				throw new IllegalStateException("Not a string");
 			str.ensureCapacity(lim - pos); // Optimization
@@ -390,9 +389,9 @@ public final class JSON {
 				}
 			}
 			lastType = JSONType.STRING;
-	    }
-	    
-	    private final void readStringUnquoted() throws IOException {
+		}
+		
+		private final void readStringUnquoted() throws IOException {
 			str.ensureCapacity(lim - pos); // Optimization
 			
 			boolean escaped = false;
@@ -413,7 +412,7 @@ public final class JSON {
 			} while((c = next()) != -1);
 			
 			lastType = JSONType.STRING_UNQUOTED;
-	    }
+		}
 		
 		private final void readNext() throws IOException {
 			while((c = skipWhitespaces()) != -1) {
@@ -445,12 +444,20 @@ public final class JSON {
 						c = next();
 						addPendingObject();
 						break;
-					case 't': if(readTrue()) break;
-					case 'f': if(readFalse()) break;
-					case 'n': if(readNull()) break;
 					default: {
 						if(c == '-' || Character.isDigit(c)) {
 							readNumber();
+							break;
+						}
+						
+						boolean success = false;
+						switch(c) {
+							case 't': success = readTrue(); break;
+							case 'f': success = readFalse(); break;
+							case 'n': success = readNull(); break;
+						}
+						
+						if(success) {
 							break;
 						}
 						
