@@ -1127,7 +1127,7 @@ public final class JSON {
 		@Override public boolean isObject() { return false; }
 		@Override public boolean isCollection() { return true; }
 		
-		public int length() { return nodes.size(); }
+		public int length() { return nodes == null ? 0 : nodes.size(); }
 		
 		@Override public Iterator<JSONNode> iterator() { return nodesIterator(); }
 		public Iterator<JSONNode> nodesIterator() { return new Iterators.Nodes(this); }
