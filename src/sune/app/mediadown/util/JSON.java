@@ -211,7 +211,11 @@ public final class JSON {
 		}
 		
 		private final void addPendingObject() {
-			if(str.length() <= 0) return;
+			if(str.length() <= 0
+					// Allow empty strings, but only quoted ones
+					&& lastType != JSONType.STRING) {
+				return;
+			}
 			
 			Pair<String, JSONCollection> pair = parents.peekFirst();
 			JSONType parentType = pair.b.type();
