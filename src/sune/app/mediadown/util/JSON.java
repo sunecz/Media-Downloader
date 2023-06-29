@@ -1182,10 +1182,10 @@ public final class JSON {
 				
 				if(!isArray) {
 					builder.append('"').append(node.name()).append('"').append(':');
-				}
-				
-				if(!compress) {
-					builder.append(' ');
+					
+					if(!compress) {
+						builder.append(' ');
+					}
 				}
 				
 				node.toString(builder, depth + 1, compress);
