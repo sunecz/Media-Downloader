@@ -286,6 +286,63 @@ public final class JavaScript {
 		return Utils.replaceUnicodeEscapeSequences(string);
 	}
 	
+	/**
+	 * @return 0 if an opening bracket, 1 if a closing bracket, -1 if neither.
+	 * @since 00.02.09
+	 */
+	private static final int isBracketChar(int c) {
+		return c <= ')' ? ((c = c - '(') >= 0           ? 0b000 | (c)      : -1) :
+			   c <= ']' ? ((c = c - '[') >= 0 && c != 1 ? 0b010 | (c >> 1) : -1) :
+			   c <= '}' ? ((c = c - '{') >= 0 && c != 1 ? 0b100 | (c >> 1) : -1) :
+			   -1;
+	}
+	
+	/** @since 00.02.09 */
+	private static final boolean isVarContentClosingChar(int c) {
+		return c == ';' || c == '<'; // '<' for HTML script tag
+	}
+	
+	/** @since 00.02.09 */
+	public static final int varContentEndIndex(String string, int start) {
+		int end = string.length();
+		
+		int[] brackets = new int[3];
+		boolean escaped = false;
+		boolean sq = false;
+		boolean dq = false;
+		
+		loop:
+		for(int i = start, l = string.length(), c, v; i < l; ++i) {
+			c = string.codePointAt(i);
+			
+			if(escaped) {
+				escaped = false;
+			} else {
+				switch(c) {
+					case '\\': escaped = true; break;
+					case '\"': if(!sq) dq = !dq; break;
+					case '\'': if(!dq) sq = !sq; break;
+					default:
+						if(!sq && !dq) {
+							if((v = isBracketChar(c)) >= 0) {
+								// Adds either 1 (opening) or -1 (closing) to the bracket counter
+								brackets[v >> 1] += ((2 - ((v & 0b1) + 1)) << 1) - 1;
+							} else if(isVarContentClosingChar(c)
+											&& brackets[0] == 0
+											&& brackets[1] == 0
+											&& brackets[2] == 0) {
+								end = i;
+								break loop;
+							}
+						}
+						break;
+				}
+			}
+		}
+		
+		return end;
+	}
+	
 	// forbid anyone to create an instance of this class
 	private JavaScript() {
 	}
