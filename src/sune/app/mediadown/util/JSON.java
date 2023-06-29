@@ -214,6 +214,8 @@ public final class JSON {
 			if(str.length() <= 0
 					// Allow empty strings, but only quoted ones
 					&& lastType != JSONType.STRING) {
+				// Always reset the last type
+				lastType = JSONType.UNKNOWN;
 				return;
 			}
 			
@@ -239,6 +241,9 @@ public final class JSON {
 				case ARRAY:  pair.b.add         (object);         break;
 				default:     /* Collections, should not happen */ break;
 			}
+			
+			// Always reset the last type
+			lastType = JSONType.UNKNOWN;
 		}
 		
 		private final int readAndMatchSequence(String sequence) throws IOException {
