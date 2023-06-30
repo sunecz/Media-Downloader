@@ -11,7 +11,7 @@ import sune.app.mediadown.util.Utils;
 /** @since 00.02.05 */
 public class SegmentedMedia extends SimpleMedia {
 	
-	protected final List<FileSegmentsHolder<?>> segments;
+	protected final transient List<FileSegmentsHolder<?>> segments;
 	
 	public SegmentedMedia(MediaSource source, URI uri, MediaType type, MediaFormat format, MediaQuality quality,
 			long size, MediaMetadata metadata, Media parent, List<FileSegmentsHolder<?>> segments) {
