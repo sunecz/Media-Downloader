@@ -98,7 +98,7 @@
 	
 	<target name="compile-java" depends="init-compile">
 		<echo message="Compiling Java files..." />
-		<javac debug="true" debuglevel="${debuglevel}" destdir="${md.path.bin}" deprecation="false" includeantruntime="false" source="${source}" target="${target}" modulepathref="modulepath.mediadownloader">
+		<javac debug="true" debuglevel="${debuglevel}" encoding="UTF-8" destdir="${md.path.bin}" deprecation="false" includeantruntime="false" source="${source}" target="${target}" modulepathref="modulepath.mediadownloader">
 			<src path="${md.path.src}" />
 			<classpath refid="classpath.mediadownloader" />
 			<compilerarg line="--add-modules ${modules}" />
