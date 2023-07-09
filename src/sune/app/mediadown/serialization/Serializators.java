@@ -37,8 +37,6 @@ import sune.app.mediadown.util.Reflection;
 /** @since 00.02.09 */
 public final class Serializators {
 	
-	// TODO: Fix empty metadata
-	
 	// Forbid anyone to create an instance of this class
 	private Serializators() {
 	}
@@ -1265,7 +1263,6 @@ public final class Serializators {
 		private static final Pair<String, Class<?>[]>[] METHODS_TO_FIND = (Pair<String, Class<?>[]>[]) new Pair[] {
 			methodPair("writeObject", ObjectOutputStream.class),
 			methodPair("readObject", ObjectInputStream.class),
-			methodPair("readObjectNoData"),
 			methodPair("writeReplace"),
 			methodPair("readResolve"),
 		};
@@ -1298,21 +1295,22 @@ public final class Serializators {
 			return handles;
 		}
 		
-		private static final Handles findHandles(Object instance) throws Exception {
-			if(instance == null) {
-				return null;
+		private static final Handles findHandlesCached(Class<?> clazz) throws Exception {
+			return HANDLES.getChecked(clazz, () -> findHandles(clazz));
+		}
+		
+		private static final Deque<Class<?>> inheritanceStack(Class<?> clazz) {
+			Deque<Class<?>> stack = new ArrayDeque<>();
+			
+			for(Class<?> cls = clazz; includeInSerialization(cls); cls = cls.getSuperclass()) {
+				stack.addLast(cls);
 			}
 			
-			boolean first = true;
-			Handles h = null;
-			
-			for(Class<?> cls = instance.getClass(); cls != null && cls != Object.class; cls = cls.getSuperclass()) {
-				final Class<?> clazz = cls;
-				Handles fh = HANDLES.getChecked(cls, () -> findHandles(clazz));
-				if(first) { h = fh; first = false; }
-			}
-			
-			return h;
+			return stack;
+		}
+		
+		private static final boolean includeInSerialization(Class<?> clazz) {
+			return clazz != null && clazz != Object.class && clazz != Enum.class;
 		}
 		
 		public static final Handles getHandles(Object instance) throws IOException {
@@ -1321,7 +1319,8 @@ public final class Serializators {
 			}
 			
 			try {
-				return HANDLES.getChecked(instance.getClass(), () -> findHandles(instance));
+				final Class<?> clazz = instance.getClass();
+				return HANDLES.getChecked(clazz, () -> findHandlesCached(clazz));
 			} catch(Exception ex) {
 				throw new IOException(ex);
 			}
@@ -1348,19 +1347,6 @@ public final class Serializators {
 			
 			try {
 				handle.invoke(instance, stream);
-			} catch(Throwable ex) {
-				throw new IOException(ex);
-			}
-		}
-		
-		public static final void readObjectNoData(Handles handles, Object instance) throws IOException {
-			MethodHandle handle;
-			if((handle = handles.readObjectNoData()) == null) {
-				return;
-			}
-			
-			try {
-				handle.invoke(instance);
 			} catch(Throwable ex) {
 				throw new IOException(ex);
 			}
@@ -1393,55 +1379,43 @@ public final class Serializators {
 		}
 		
 		public static final void writeObject(Object instance, ObjectOutputStream stream) throws IOException {
-			Handles handles;
-			if((handles = getHandles(instance)) == null) {
+			if(instance == null) {
 				return;
 			}
 			
-			writeObject(handles, instance, stream);
+			Deque<Class<?>> stack = inheritanceStack(instance.getClass());
+			
+			try {
+				for(Class<?> cls; (cls = stack.pollLast()) != null;) {
+					Handles handles = findHandlesCached(cls);
+					writeObject(handles, instance, stream);
+				}
+			} catch(Exception ex) {
+				throw new IOException(ex);
+			}
 		}
 		
 		public static final void readObject(Object instance, ObjectInputStream stream) throws IOException {
-			Handles handles;
-			if((handles = getHandles(instance)) == null) {
+			if(instance == null) {
 				return;
 			}
 			
-			readObject(handles, instance, stream);
-		}
-		
-		public static final void readObjectNoData(Object instance) throws IOException {
-			Handles handles;
-			if((handles = getHandles(instance)) == null) {
-				return;
-			}
+			Deque<Class<?>> stack = inheritanceStack(instance.getClass());
 			
-			readObjectNoData(handles, instance);
-		}
-		
-		public static final Object writeReplace(Object instance) throws IOException {
-			Handles handles;
-			if((handles = getHandles(instance)) == null) {
-				return null;
+			try {
+				for(Class<?> cls; (cls = stack.pollLast()) != null;) {
+					Handles handles = findHandlesCached(cls);
+					readObject(handles, instance, stream);
+				}
+			} catch(Exception ex) {
+				throw new IOException(ex);
 			}
-			
-			return writeReplace(handles, instance);
-		}
-		
-		public static final Object readResolve(Object instance) throws IOException {
-			Handles handles;
-			if((handles = getHandles(instance)) == null) {
-				return null;
-			}
-			
-			return readResolve(handles, instance);
 		}
 		
 		public static final class Handles {
 			
 			private MethodHandle writeObject;
 			private MethodHandle readObject;
-			private MethodHandle readObjectNoData;
 			private MethodHandle writeReplace;
 			private MethodHandle readResolve;
 			
@@ -1449,7 +1423,6 @@ public final class Serializators {
 				switch(methodName) {
 					case "writeObject": writeObject = handle; break;
 					case "readObject": readObject = handle; break;
-					case "readObjectNoData": readObjectNoData = handle; break;
 					case "writeReplace": writeReplace = handle; break;
 					case "readResolve": readResolve = handle; break;
 					default: throw new IllegalArgumentException("Unsupported method name");
@@ -1458,7 +1431,6 @@ public final class Serializators {
 			
 			public MethodHandle writeObject() { return writeObject; }
 			public MethodHandle readObject() { return readObject; }
-			public MethodHandle readObjectNoData() { return readObjectNoData; }
 			public MethodHandle writeReplace() { return writeReplace; }
 			public MethodHandle readResolve() { return readResolve; }
 		}
