@@ -8,6 +8,7 @@ import sune.app.mediadown.util.UnsafeInstance;
 /** @since 00.02.09 */
 public final class SchemaDataLoader {
 	
+	private static final SchemaDataLoader instance = new SchemaDataLoader();
 	private static final Unsafe unsafe = UnsafeInstance.get();
 	
 	private final void staticInitializeClass(Class<?> clazz) {
@@ -76,14 +77,16 @@ public final class SchemaDataLoader {
 		}
 	}
 	
+	public static final SchemaDataLoader instance() {
+		return instance;
+	}
+	
 	public <T> T allocateNew(Class<T> clazz) throws IOException {
 		return newInstance(clazz);
 	}
 	
 	public void load(SerializationReader reader, Schema schema, Object instance) throws IOException {
-		System.out.println("Load class: " + schema.clazz());
 		for(SchemaField field : schema.fields()) {
-			System.out.println("Load field: " + field.name());
 			load(reader, field, instance);
 		}
 	}

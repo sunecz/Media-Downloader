@@ -70,6 +70,7 @@ public final class Serializators {
 			private InputStream stream;
 			
 			public FileReader(Path path) {
+				super(SchemaDataLoader.instance());
 				this.path = Objects.requireNonNull(path);
 			}
 			
@@ -97,6 +98,7 @@ public final class Serializators {
 			private OutputStream stream;
 			
 			public FileWriter(Path path) {
+				super(SchemaDataSaver.instance());
 				this.path = Objects.requireNonNull(path);
 			}
 			
@@ -134,8 +136,7 @@ public final class Serializators {
 			protected int pos;
 			protected int lim;
 			
-			// TODO: Do not create instance every time
-			protected final SchemaDataLoader dataLoader = new SchemaDataLoader();
+			protected final SchemaDataLoader dataLoader;
 			protected final Map<Integer, Object> objects = new HashMap<>();
 			protected int nextObjectId = NO_REFERENCE + 1;
 			
@@ -149,7 +150,8 @@ public final class Serializators {
 				}
 			}
 			
-			protected ReaderBase() {
+			protected ReaderBase(SchemaDataLoader dataLoader) {
+				this.dataLoader = Objects.requireNonNull(dataLoader);
 				buf = new byte[BUFFER_SIZE];
 				cap = buf.length;
 			}
@@ -375,8 +377,6 @@ public final class Serializators {
 					addObject(objectId, readObject);
 				}
 				
-				System.out.println("readObject (n): " + readObject);
-				
 				return readObject;
 			}
 			
@@ -406,18 +406,14 @@ public final class Serializators {
 					addObject(objectId, readObject);
 				}
 				
-				System.out.println("readObject (s): " + readObject);
-				
 				return readObject;
 			}
 			
 			protected final void addObject(int reference, Object object) {
-				System.out.println("Add reference: " + reference + " (clazz=" + object.getClass() + ")");
 				objects.put(reference, object);
 			}
 			
 			protected final Object getObject(int reference) {
-				System.out.println("Read reference: " + reference);
 				Object object = objects.get(reference);
 				
 				if(object == null) {
@@ -656,9 +652,16 @@ public final class Serializators {
 				return stream;
 			}
 			
-			// TODO: Make public
-			protected final long skip(long n) throws IOException {
+			@Override
+			public long skip(long n) throws IOException {
+				// TODO: Implement
 				throw new UnsupportedOperationException("Cannot skip");
+			}
+			
+			@Override
+			public int available() throws IOException {
+				// TODO: Implement
+				return -1;
 			}
 			
 			protected final int readUnsignedByte() throws IOException {
@@ -669,11 +672,8 @@ public final class Serializators {
 				return readShort() & 0xffff;
 			}
 			
-			protected final int available() throws IOException {
-				return -1;
-			}
-			
 			protected final String readLine() throws IOException {
+				// TODO: Implement
 				throw new UnsupportedOperationException("Cannot read lines");
 			}
 			
@@ -725,15 +725,15 @@ public final class Serializators {
 			protected final int cap;
 			protected int pos;
 			
-			// TODO: Do not create instance every time
-			protected SchemaDataSaver dataSaver = new SchemaDataSaver();
+			protected SchemaDataSaver dataSaver;
 			protected final Map<Object, Integer> objects = new IdentityHashMap<>();
 			protected int nextObjectId = NO_REFERENCE + 1;
 			protected Deque<ObjectArray> arrays;
 			
 			private ObjectStream objectStream;
 			
-			protected WriterBase() {
+			protected WriterBase(SchemaDataSaver dataSaver) {
+				this.dataSaver = Objects.requireNonNull(dataSaver);
 				buf = new byte[BUFFER_SIZE];
 				cap = buf.length;
 			}
@@ -1156,11 +1156,11 @@ public final class Serializators {
 					arrays = new ArrayDeque<>();
 				}
 				
-				arrays.push(new ObjectArray(clazz));
+				arrays.addLast(new ObjectArray(clazz));
 			}
 			
 			@Override
-			public void writeArrayItem(Object item) throws IOException {
+			public void writeObjectArrayItem(Object item) throws IOException {
 				arrays.getLast().add(item);
 			}
 			
@@ -1168,7 +1168,7 @@ public final class Serializators {
 			public void endObjectArray() throws IOException {
 				writeType(SchemaFieldType.ARRAY | SchemaFieldType.OBJECT);
 				
-				ObjectArray array = arrays.pop();
+				ObjectArray array = arrays.pollLast();
 				List<Object> items = array.items();
 				final String className = array.clazz().getName();
 				final int length = items.size();
@@ -1180,8 +1180,8 @@ public final class Serializators {
 				}
 			}
 			
-			// TODO: Make public
-			private final void flush() throws IOException {
+			@Override
+			public void flush() throws IOException {
 				flushBuffer();
 			}
 			

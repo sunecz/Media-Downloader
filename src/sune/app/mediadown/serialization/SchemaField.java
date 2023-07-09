@@ -3,16 +3,12 @@ package sune.app.mediadown.serialization;
 /** @since 00.02.09 */
 public final class SchemaField {
 	
-	// TODO: Remove the name field
-	
 	private final int type;
 	private final long offset;
-	private final String name;
 	
-	public SchemaField(int type, long offset, String name) {
+	public SchemaField(int type, long offset) {
 		this.type = type;
 		this.offset = offset;
-		this.name = name;
 	}
 	
 	public int type() {
@@ -21,9 +17,5 @@ public final class SchemaField {
 	
 	public long offset() {
 		return offset;
-	}
-	
-	public String name() {
-		return name;
 	}
 }

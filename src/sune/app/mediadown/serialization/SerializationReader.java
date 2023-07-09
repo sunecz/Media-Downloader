@@ -31,4 +31,7 @@ public interface SerializationReader extends AutoCloseable {
 	double[] readDoubleArray() throws IOException;
 	String[] readStringArray() throws IOException;
 	Object[] readObjectArray() throws IOException;
+	
+	long skip(long n) throws IOException;
+	int available() throws IOException;
 }

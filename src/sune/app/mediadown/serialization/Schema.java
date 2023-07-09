@@ -71,7 +71,7 @@ public final class Schema {
 			
 			int type = fieldType(field.getType());
 			long offset = unsafe.objectFieldOffset(field);
-			schemaFields.add(new SchemaField(type, offset, field.getName()));
+			schemaFields.add(new SchemaField(type, offset));
 		}
 		
 		return new Schema(clazz, schemaFields.toArray(SchemaField[]::new));

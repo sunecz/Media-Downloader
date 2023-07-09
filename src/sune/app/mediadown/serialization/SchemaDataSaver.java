@@ -8,6 +8,7 @@ import sune.app.mediadown.util.UnsafeInstance;
 /** @since 00.02.09 */
 public final class SchemaDataSaver {
 	
+	private static final SchemaDataSaver instance = new SchemaDataSaver();
 	private static final Unsafe unsafe = UnsafeInstance.get();
 	
 	private final void saveValue(SerializationWriter writer, int type, long offset, Object instance)
@@ -52,10 +53,12 @@ public final class SchemaDataSaver {
 		}
 	}
 	
+	public static final SchemaDataSaver instance() {
+		return instance;
+	}
+	
 	public void save(SerializationWriter writer, Schema schema, Object instance) throws IOException {
-		System.out.println("Save class: " + schema.clazz());
 		for(SchemaField field : schema.fields()) {
-			System.out.println("Save field: " + field.name());
 			save(writer, field, instance);
 		}
 	}

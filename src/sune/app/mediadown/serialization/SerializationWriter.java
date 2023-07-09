@@ -7,6 +7,7 @@ public interface SerializationWriter extends AutoCloseable {
 	
 	void open() throws IOException;
 	void close() throws IOException;
+	void flush() throws IOException;
 	
 	int write(byte[] buf, int off, int len) throws IOException;
 	
@@ -33,6 +34,6 @@ public interface SerializationWriter extends AutoCloseable {
 	void write(Object[] array) throws IOException;
 	
 	void beginObjectArray(Class<?> clazz) throws IOException;
-	void writeArrayItem(Object item) throws IOException;
+	void writeObjectArrayItem(Object item) throws IOException;
 	void endObjectArray() throws IOException;
 }
