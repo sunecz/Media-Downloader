@@ -57,73 +57,142 @@ public final class Serializators {
 		}
 		
 		public static final SerializationReader newReader(Path path) {
-			return new FileReader(path);
+			return new FileReader(SchemaDataLoader.instance(), path);
 		}
 		
 		public static final SerializationWriter newWriter(Path path) {
-			return new FileWriter(path);
+			return new FileWriter(SchemaDataSaver.instance(), path);
 		}
 		
-		private static final class FileReader extends ReaderBase {
+		private static final class FileReader extends StreamReader {
 			
 			private final Path path;
-			private InputStream stream;
 			
-			public FileReader(Path path) {
-				super(SchemaDataLoader.instance());
+			public FileReader(SchemaDataLoader dataLoader, Path path) {
+				super(dataLoader);
 				this.path = Objects.requireNonNull(path);
 			}
 			
 			@Override
+			protected InputStream createStream() throws IOException {
+				return Files.newInputStream(path, READ);
+			}
+			
+			@Override
+			public int available() throws IOException {
+				return stream().available();
+			}
+		}
+		
+		private static final class FileWriter extends StreamWriter {
+			
+			private final Path path;
+			
+			public FileWriter(SchemaDataSaver dataSaver, Path path) {
+				super(dataSaver);
+				this.path = Objects.requireNonNull(path);
+			}
+			
+			@Override
+			protected OutputStream createStream() throws IOException {
+				return Files.newOutputStream(path, WRITE, CREATE, TRUNCATE_EXISTING);
+			}
+		}
+		
+		private static abstract class StreamReader extends ReaderBase {
+			
+			private InputStream stream;
+			
+			protected StreamReader(SchemaDataLoader dataLoader) {
+				super(dataLoader);
+			}
+			
+			protected abstract InputStream createStream() throws IOException;
+			
+			protected final InputStream stream() {
+				if(stream == null) {
+					throw new IllegalStateException("Not open");
+				}
+				
+				return stream;
+			}
+			
+			@Override
 			public void open() throws IOException {
-				stream = Files.newInputStream(path, READ);
+				stream = createStream();
+				
+				if(stream == null) {
+					throw new IllegalStateException("Stream is null");
+				}
+				
 				pos = lim = 0;
 				readHeader();
 			}
 			
 			@Override
 			public int read(byte[] buf, int off, int len) throws IOException {
-				return stream.read(buf, off, len);
+				return stream().read(buf, off, len);
 			}
 			
 			@Override
 			public void close() throws IOException {
+				if(stream == null) {
+					return;
+				}
+				
 				stream.close();
 			}
 		}
 		
-		private static final class FileWriter extends WriterBase {
+		private static abstract class StreamWriter extends WriterBase {
 			
-			private final Path path;
 			private OutputStream stream;
 			
-			public FileWriter(Path path) {
-				super(SchemaDataSaver.instance());
-				this.path = Objects.requireNonNull(path);
+			protected StreamWriter(SchemaDataSaver dataSaver) {
+				super(dataSaver);
+			}
+			
+			protected abstract OutputStream createStream() throws IOException;
+			
+			protected final OutputStream stream() {
+				if(stream == null) {
+					throw new IllegalStateException("Not open");
+				}
+				
+				return stream;
 			}
 			
 			@Override
 			protected int flushBuffer() throws IOException {
 				int flushed = super.flushBuffer();
-				stream.flush();
+				stream().flush();
 				return flushed;
 			}
 			
 			@Override
 			public void open() throws IOException {
-				stream = Files.newOutputStream(path, WRITE, CREATE, TRUNCATE_EXISTING);
+				stream = createStream();
+				
+				if(stream == null) {
+					throw new IllegalStateException("Stream is null");
+				}
+				
 				pos = 0;
 				writeHeader();
 			}
 			
 			@Override
 			public int write(byte[] buf, int off, int len) throws IOException {
-				stream.write(buf, off, len);
+				stream().write(buf, off, len);
 				return len;
 			}
 			
 			@Override
 			public void close() throws IOException {
+				if(stream == null) {
+					return;
+				}
+				
 				flushBuffer();
 				stream.close();
 			}
@@ -660,8 +729,8 @@ public final class Serializators {
 			
 			@Override
 			public int available() throws IOException {
-				// TODO: Implement
-				return -1;
+				// By default the number of available bytes is unknown
+				return 0;
 			}
 			
 			protected final int readUnsignedByte() throws IOException {
