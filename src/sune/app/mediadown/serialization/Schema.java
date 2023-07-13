@@ -17,28 +17,12 @@ public final class Schema {
 	private static final Unsafe unsafe = UnsafeInstance.get();
 	private static final Cache cache = new NoNullCache();
 	
-	// TODO: Hold information about the Serializable and the writeObject/readObject methods directly in the Scheme
-	
 	private final Class<?> clazz;
 	private final SchemaField[] fields;
 	
 	private Schema(Class<?> clazz, SchemaField[] fields) {
 		this.clazz = Objects.requireNonNull(clazz);
 		this.fields = Objects.requireNonNull(fields);
-	}
-	
-	// TODO: Move elsewhere
-	private static final int typeOf(Class<?> clazz) {
-		if(clazz == boolean.class) return SchemaFieldType.BOOLEAN;
-		if(clazz == byte.class) return SchemaFieldType.BYTE;
-		if(clazz == char.class) return SchemaFieldType.CHAR;
-		if(clazz == short.class) return SchemaFieldType.SHORT;
-		if(clazz == int.class) return SchemaFieldType.INT;
-		if(clazz == long.class) return SchemaFieldType.LONG;
-		if(clazz == float.class) return SchemaFieldType.FLOAT;
-		if(clazz == double.class) return SchemaFieldType.DOUBLE;
-		if(clazz == String.class) return SchemaFieldType.STRING;
-		return SchemaFieldType.OBJECT;
 	}
 	
 	private static final int fieldType(Class<?> clazz) {
@@ -49,7 +33,7 @@ public final class Schema {
 			type = SchemaFieldType.ARRAY;
 		}
 		
-		return type | typeOf(clazz);
+		return type | SerializationUtils.typeOf(clazz);
 	}
 	
 	private static final Schema create(Class<?> clazz) {

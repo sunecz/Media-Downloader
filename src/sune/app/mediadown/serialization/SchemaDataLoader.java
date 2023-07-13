@@ -6,12 +6,12 @@ import sun.misc.Unsafe;
 import sune.app.mediadown.util.UnsafeInstance;
 
 /** @since 00.02.09 */
-public final class SchemaDataLoader {
+public class SchemaDataLoader {
 	
 	private static final SchemaDataLoader instance = new SchemaDataLoader();
 	private static final Unsafe unsafe = UnsafeInstance.get();
 	
-	private final void staticInitializeClass(Class<?> clazz) {
+	protected void staticInitializeClass(Class<?> clazz) {
 		if(clazz.getSuperclass() != null) {
 			staticInitializeClass(clazz.getSuperclass());
 		}
@@ -23,7 +23,7 @@ public final class SchemaDataLoader {
 		unsafe.ensureClassInitialized(clazz);
 	}
 	
-	private final <T> T newInstance(Class<T> clazz) throws IOException {
+	protected <T> T newInstance(Class<T> clazz) throws IOException {
 		staticInitializeClass(clazz);
 		
 		try {
@@ -35,7 +35,7 @@ public final class SchemaDataLoader {
 		}
 	}
 	
-	private final void loadValue(SerializationReader reader, int type, long offset, Object instance)
+	protected void loadValue(SerializationReader reader, int type, long offset, Object instance)
 			throws IOException {
 		switch(type) {
 			case SchemaFieldType.BOOLEAN: unsafe.putBoolean(instance, offset, reader.readBoolean()); break;
@@ -51,7 +51,7 @@ public final class SchemaDataLoader {
 		}
 	}
 	
-	private final void loadArray(SerializationReader reader, int type, long offset, Object instance)
+	protected void loadArray(SerializationReader reader, int type, long offset, Object instance)
 			throws IOException {
 		switch(type) {
 			case SchemaFieldType.BOOLEAN: unsafe.putObject(instance, offset, reader.readBooleanArray()); break;
@@ -67,7 +67,7 @@ public final class SchemaDataLoader {
 		}
 	}
 	
-	private final void load(SerializationReader reader, SchemaField field, Object instance) throws IOException {
+	protected void load(SerializationReader reader, SchemaField field, Object instance) throws IOException {
 		final int type = field.type();
 		final long offset = field.offset();
 		

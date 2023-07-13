@@ -6,12 +6,12 @@ import sun.misc.Unsafe;
 import sune.app.mediadown.util.UnsafeInstance;
 
 /** @since 00.02.09 */
-public final class SchemaDataSaver {
+public class SchemaDataSaver {
 	
 	private static final SchemaDataSaver instance = new SchemaDataSaver();
 	private static final Unsafe unsafe = UnsafeInstance.get();
 	
-	private final void saveValue(SerializationWriter writer, int type, long offset, Object instance)
+	protected void saveValue(SerializationWriter writer, int type, long offset, Object instance)
 			throws IOException {
 		switch(type) {
 			case SchemaFieldType.BOOLEAN: writer.write(unsafe.getBoolean(instance, offset)); break;
@@ -27,7 +27,7 @@ public final class SchemaDataSaver {
 		}
 	}
 	
-	private final void saveArray(SerializationWriter writer, int type, long offset, Object instance)
+	protected void saveArray(SerializationWriter writer, int type, long offset, Object instance)
 			throws IOException {
 		switch(type) {
 			case SchemaFieldType.BOOLEAN: writer.write((boolean[]) unsafe.getObject(instance, offset)); break;
@@ -43,7 +43,7 @@ public final class SchemaDataSaver {
 		}
 	}
 	
-	private final void save(SerializationWriter writer, SchemaField field, Object instance) throws IOException {
+	protected void save(SerializationWriter writer, SchemaField field, Object instance) throws IOException {
 		final int type = field.type();
 		final long offset = field.offset();
 		
@@ -63,20 +63,6 @@ public final class SchemaDataSaver {
 		}
 	}
 	
-	// TODO: Move elsewhere
-	private static final int typeOf(Class<?> clazz) {
-		if(clazz == boolean.class) return SchemaFieldType.BOOLEAN;
-		if(clazz == byte.class) return SchemaFieldType.BYTE;
-		if(clazz == char.class) return SchemaFieldType.CHAR;
-		if(clazz == short.class) return SchemaFieldType.SHORT;
-		if(clazz == int.class) return SchemaFieldType.INT;
-		if(clazz == long.class) return SchemaFieldType.LONG;
-		if(clazz == float.class) return SchemaFieldType.FLOAT;
-		if(clazz == double.class) return SchemaFieldType.DOUBLE;
-		if(clazz == String.class) return SchemaFieldType.STRING;
-		return SchemaFieldType.OBJECT;
-	}
-	
 	public void saveNew(SerializationWriter writer, Object object) throws IOException {
 		if(object == null) {
 			return; // Null object
@@ -85,7 +71,7 @@ public final class SchemaDataSaver {
 		Class<?> objectClass = object.getClass();
 		
 		if(objectClass.isArray()) {
-			final int type = typeOf(objectClass.getComponentType());
+			final int type = SerializationUtils.typeOf(objectClass.getComponentType());
 			
 			switch(type) {
 				case SchemaFieldType.BOOLEAN: writer.write((boolean[]) object); break;

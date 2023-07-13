@@ -274,14 +274,6 @@ public final class Serializators {
 			private ObjectStream stream;
 			private Utf8LineReader lineReader;
 			
-			private static final Class<?> classOf(String className) throws IOException {
-				try {
-					return Class.forName(className);
-				} catch(ClassNotFoundException ex) {
-					throw new IOException(ex); // Rethrow
-				}
-			}
-			
 			protected ReaderBase(SchemaDataLoader dataLoader) {
 				this.dataLoader = Objects.requireNonNull(dataLoader);
 				buf = new byte[BUFFER_SIZE];
@@ -449,7 +441,7 @@ public final class Serializators {
 					return null;
 				}
 				
-				return classOf(readUncheckedString());
+				return SerializationUtils.classOf(readUncheckedString());
 			}
 			
 			protected final Pair<Integer, Boolean> readUncheckedObjectReference() throws IOException {
@@ -799,7 +791,7 @@ public final class Serializators {
 			public Object[] readObjectArray() throws IOException {
 				checkType(SchemaFieldType.ARRAY | SchemaFieldType.OBJECT);
 				
-				final Class<?> clazz = classOf(readUncheckedString());
+				final Class<?> clazz = SerializationUtils.classOf(readUncheckedString());
 				final int length = readUncheckedInt();
 				Object[] array = (Object[]) Array.newInstance(clazz, length);
 				
