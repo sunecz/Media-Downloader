@@ -5,6 +5,8 @@ import static java.nio.file.StandardOpenOption.READ;
 import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
 import static java.nio.file.StandardOpenOption.WRITE;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
@@ -56,12 +58,66 @@ public final class Serializators {
 		private OfBinary() {
 		}
 		
-		public static final SerializationReader newReader(Path path) {
+		public static final SerializationBinaryReader newInMemoryReader(byte[] array) {
+			return new InMemoryReader(SchemaDataLoader.instance(), array);
+		}
+		
+		public static final SerializationBinaryWriter newInMemoryWriter() {
+			return new InMemoryWriter(SchemaDataSaver.instance());
+		}
+		
+		public static final SerializationBinaryReader newFileReader(Path path) {
 			return new FileReader(SchemaDataLoader.instance(), path);
 		}
 		
-		public static final SerializationWriter newWriter(Path path) {
+		public static final SerializationBinaryWriter newFileWriter(Path path) {
 			return new FileWriter(SchemaDataSaver.instance(), path);
+		}
+		
+		public static interface SerializationBinaryReader extends SerializationReader {
+		}
+		
+		public static interface SerializationBinaryWriter extends SerializationWriter {
+			
+			@Override byte[] representation() throws IOException; // Type-specific override
+		}
+		
+		private static final class InMemoryReader extends StreamReader {
+			
+			private final byte[] array;
+			
+			public InMemoryReader(SchemaDataLoader dataLoader, byte[] array) {
+				super(dataLoader);
+				this.array = Objects.requireNonNull(array);
+			}
+			
+			@Override
+			protected InputStream createStream() throws IOException {
+				return new ByteArrayInputStream(array);
+			}
+			
+			@Override
+			public int available() throws IOException {
+				return stream().available();
+			}
+		}
+		
+		private static final class InMemoryWriter extends StreamWriter {
+			
+			public InMemoryWriter(SchemaDataSaver dataSaver) {
+				super(dataSaver);
+			}
+			
+			@Override
+			protected OutputStream createStream() throws IOException {
+				return new ByteArrayOutputStream();
+			}
+			
+			@Override
+			public byte[] representation() throws IOException {
+				flush();
+				return ((ByteArrayOutputStream) stream()).toByteArray();
+			}
 		}
 		
 		private static final class FileReader extends StreamReader {
@@ -96,6 +152,12 @@ public final class Serializators {
 			@Override
 			protected OutputStream createStream() throws IOException {
 				return Files.newOutputStream(path, WRITE, CREATE, TRUNCATE_EXISTING);
+			}
+			
+			@Override
+			public byte[] representation() throws IOException {
+				flush();
+				return Files.readAllBytes(path);
 			}
 		}
 		
@@ -198,7 +260,7 @@ public final class Serializators {
 			}
 		}
 		
-		private static abstract class ReaderBase implements SerializationReader {
+		private static abstract class ReaderBase implements SerializationBinaryReader {
 			
 			protected final byte[] buf;
 			protected final int cap;
@@ -210,6 +272,7 @@ public final class Serializators {
 			protected int nextObjectId = NO_REFERENCE + 1;
 			
 			private ObjectStream stream;
+			private Utf8LineReader lineReader;
 			
 			private static final Class<?> classOf(String className) throws IOException {
 				try {
@@ -505,6 +568,14 @@ public final class Serializators {
 				return readUncheckedByte() & 0xff;
 			}
 			
+			protected final int readUnsignedByte() throws IOException {
+				return readByte() & 0xff;
+			}
+			
+			protected final int readUnsignedShort() throws IOException {
+				return readShort() & 0xffff;
+			}
+			
 			protected final int readDirect(byte[] b, int off, int len) throws IOException {
 				int start = off, available = 0;
 				
@@ -516,6 +587,22 @@ public final class Serializators {
 				}
 				
 				return off == start && available < 0 ? available : off - start;
+			}
+			
+			protected final ObjectStream objectStream() throws IOException {
+				if(stream == null) {
+					stream = new ObjectStream(this);
+				}
+				
+				return stream;
+			}
+			
+			protected final Utf8LineReader lineReader() {
+				if(lineReader == null) {
+					lineReader = new Utf8LineReader();
+				}
+				
+				return lineReader;
 			}
 			
 			@Override
@@ -723,14 +810,6 @@ public final class Serializators {
 				return array;
 			}
 			
-			protected final ObjectStream objectStream() throws IOException {
-				if(stream == null) {
-					stream = new ObjectStream(this);
-				}
-				
-				return stream;
-			}
-			
 			@Override
 			public long skip(long n) throws IOException {
 				for(long remaining = n; remaining > 0L;) {
@@ -758,15 +837,12 @@ public final class Serializators {
 				return 0;
 			}
 			
-			protected final int readUnsignedByte() throws IOException {
-				return readByte() & 0xff;
+			@Override
+			public String readLine() throws IOException {
+				return lineReader().readLine();
 			}
 			
-			protected final int readUnsignedShort() throws IOException {
-				return readShort() & 0xffff;
-			}
-			
-			private final class Utf8LineReader {
+			protected final class Utf8LineReader {
 				
 				/* UTF-8 encoding overview:
 				 * 1 byte:  0xxxxxxx
@@ -874,12 +950,14 @@ public final class Serializators {
 							} else if(c == '\r') {
 								newLine = 1;
 								
-								// Must also check for \r\n
-								if((c = nextCodePoint()) == '\n') {
-									newLine = 2;
-									--rem;
-								} else {
-									pos -= bytesCount(c); // Go back
+								// Must also check for \r\n, but only if there is enough data
+								if(ensureAvailable(1) >= 0) {
+									if((c = nextCodePoint()) == '\n') {
+										newLine = 2;
+										--rem;
+									} else {
+										pos -= bytesCount(c); // Go back
+									}
 								}
 								
 								break;
@@ -964,22 +1042,7 @@ public final class Serializators {
 				}
 			}
 			
-			private Utf8LineReader lineReader;
-			
-			protected final Utf8LineReader lineReader() {
-				if(lineReader == null) {
-					lineReader = new Utf8LineReader();
-				}
-				
-				return lineReader;
-			}
-			
-			@Override
-			public String readLine() throws IOException {
-				return lineReader().readLine();
-			}
-			
-			private static final class ObjectStream extends ObjectInputStream {
+			protected static final class ObjectStream extends ObjectInputStream {
 				
 				private final ReaderBase reader;
 				
@@ -1021,7 +1084,7 @@ public final class Serializators {
 			}
 		}
 		
-		private static abstract class WriterBase implements SerializationWriter {
+		private static abstract class WriterBase implements SerializationBinaryWriter {
 			
 			protected final byte[] buf;
 			protected final int cap;
@@ -1267,6 +1330,14 @@ public final class Serializators {
 				}
 			}
 			
+			protected final ObjectStream objectStream() throws IOException {
+				if(objectStream == null) {
+					objectStream = new ObjectStream(this);
+				}
+				
+				return objectStream;
+			}
+			
 			@Override
 			public void write(boolean value) throws IOException {
 				writeType(SchemaFieldType.VALUE | SchemaFieldType.BOOLEAN);
@@ -1487,15 +1558,30 @@ public final class Serializators {
 				flushBuffer();
 			}
 			
-			protected final ObjectStream objectStream() throws IOException {
-				if(objectStream == null) {
-					objectStream = new ObjectStream(this);
+			protected static final class ObjectArray {
+				
+				private final Class<?> clazz;
+				private final List<Object> items;
+				
+				public ObjectArray(Class<?> clazz) {
+					this.clazz = Objects.requireNonNull(clazz);
+					this.items = new ArrayList<>();
 				}
 				
-				return objectStream;
+				public void add(Object item) {
+					items.add(item);
+				}
+				
+				public Class<?> clazz() {
+					return clazz;
+				}
+				
+				public List<Object> items() {
+					return items;
+				}
 			}
 			
-			private static final class ObjectStream extends ObjectOutputStream {
+			protected static final class ObjectStream extends ObjectOutputStream {
 				
 				private final WriterBase writer;
 				
@@ -1528,29 +1614,6 @@ public final class Serializators {
 				@Override
 				public void defaultWriteObject() throws IOException {
 					// Object's non-static and non-transient fields are always written automatically
-				}
-			}
-			
-			private static final class ObjectArray {
-				
-				private final Class<?> clazz;
-				private final List<Object> items;
-				
-				public ObjectArray(Class<?> clazz) {
-					this.clazz = Objects.requireNonNull(clazz);
-					this.items = new ArrayList<>();
-				}
-				
-				public void add(Object item) {
-					items.add(item);
-				}
-				
-				public Class<?> clazz() {
-					return clazz;
-				}
-				
-				public List<Object> items() {
-					return items;
 				}
 			}
 		}

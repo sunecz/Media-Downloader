@@ -36,4 +36,6 @@ public interface SerializationWriter extends AutoCloseable {
 	void beginObjectArray(Class<?> clazz) throws IOException;
 	void writeObjectArrayItem(Object item) throws IOException;
 	void endObjectArray() throws IOException;
+	
+	Object representation() throws IOException;
 }
