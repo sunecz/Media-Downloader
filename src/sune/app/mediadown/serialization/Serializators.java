@@ -225,6 +225,13 @@ public final class Serializators {
 				cap = buf.length;
 			}
 			
+			protected void compactBuffer(int len) {
+				len = Math.min(len, lim - pos);
+				System.arraycopy(buf, pos, buf, 0, len);
+				pos = 0;
+				lim = len;
+			}
+			
 			protected int ensureAvailable(int count) throws IOException {
 				final int limit = Math.min(count, cap);
 				final int available = lim - pos;
@@ -234,29 +241,31 @@ public final class Serializators {
 				}
 				
 				if(available > 0) {
-					// Compact the buffer
-					System.arraycopy(buf, pos, buf, 0, available);
-					pos = available;
+					compactBuffer(available);
 				}
 				
 				final int filled = fillBuffer();
 				return Math.min(filled, limit);
 			}
 			
+			// Returns the number of available (unread) bytes or -1 if EOF and all bytes
+			// has already been read.
 			protected int fillBuffer() throws IOException {
-				int free = cap - pos;
+				int free = cap - lim;
 				
 				if(free <= 0) {
 					return lim - pos; // Already filled
 				}
 				
-				int off = pos, read = 0;
+				int off = lim, read = 0;
 				for(; off < cap && (read = read(buf, off, cap - off)) >= 0; off += read);
-				
 				lim = off;
-				pos = 0;
 				
-				return read < 0 ? read : off;
+				if(lim - pos == 0 && read < 0) {
+					return -1; // EOF
+				}
+				
+				return lim - pos;
 			}
 			
 			protected final int readType() throws IOException {
@@ -497,15 +506,16 @@ public final class Serializators {
 			}
 			
 			protected final int readDirect(byte[] b, int off, int len) throws IOException {
-				for(int remaining = len, available;
-						remaining > 0 && (available = ensureAvailable(remaining)) >= 0;
-						remaining -= available) {
+				int start = off, available = 0;
+				
+				for(int end = off + len;
+						off < end && (available = ensureAvailable(end - off)) >= 0;
+						off += available,
+						pos += available) {
 					System.arraycopy(buf, pos, b, off, available);
-					off += available;
-					pos += available;
 				}
 				
-				return len;
+				return off == start && available < 0 ? available : off - start;
 			}
 			
 			@Override
@@ -723,8 +733,23 @@ public final class Serializators {
 			
 			@Override
 			public long skip(long n) throws IOException {
-				// TODO: Implement
-				throw new UnsupportedOperationException("Cannot skip");
+				for(long remaining = n; remaining > 0L;) {
+					int lim = (int) Math.min(remaining, buf.length);
+					int rem = lim;
+					
+					for(int available;
+							rem > 0 && (available = ensureAvailable(rem)) >= 0;
+							rem -= available,
+							pos += available);
+					
+					if(rem > 0) { // EOF
+						return n - remaining;
+					}
+					
+					remaining -= lim;
+				}
+				
+				return n;
 			}
 			
 			@Override
@@ -741,9 +766,217 @@ public final class Serializators {
 				return readShort() & 0xffff;
 			}
 			
-			protected final String readLine() throws IOException {
-				// TODO: Implement
-				throw new UnsupportedOperationException("Cannot read lines");
+			private final class Utf8LineReader {
+				
+				/* UTF-8 encoding overview:
+				 * 1 byte:  0xxxxxxx
+				 * 2 bytes: 110xxxxx 10xxxxxx
+				 * 3 bytes: 1110xxxx 10xxxxxx 10xxxxxx
+				 * 4 bytes: 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
+				 */
+				
+				private static final int READ_LINE_NONE = -2;
+				private static final int READ_LINE_ZERO = -1;
+				
+				private int remaining = READ_LINE_NONE;
+				
+				protected final int encodedBytesCount(int a) {
+					if(a < 0b11100000) return 1;
+					if(a < 0b11110000) return 2;
+					return 3;
+				}
+				
+				protected final int bytesCount(int c) {
+					if(c <= 0x7f)  return 1;
+					if(c <= 0x7ff) return 2;
+					if(c <= 0xfff) return 3;
+					return 4;
+				}
+				
+				protected final int decodeMoreBytes(int a, int p, int n) {
+					final int mask = 0b00111111;
+					
+					switch(n) {
+						case 3:  return ((a & 0b00011111) << 24) | ((buf[p+1] & mask) << 16) | ((buf[p+2] & mask) << 8) | (buf[p+3] & mask);
+						case 2:  return ((a & 0b00001111) << 16) | ((buf[p+1] & mask) <<  8) |  (buf[p+2] & mask);
+						default: return ((a & 0b00000111) <<  8) |  (buf[p+1] & mask);
+					}
+				}
+				
+				protected final int nextCodePoint() throws IOException {
+					int r = lim - pos;
+					
+					// There should always be at least 1 byte available, this truth
+					// must be ensured before calling this method.
+					if(r < 1) {
+						throw new IllegalStateException("Not enough data");
+					}
+					
+					int a = buf[pos] & 0xff;
+					
+					// Check whether it is a single byte character
+					if((a >>> 7) == 0) {
+						++pos;
+						return a & 0xff;
+					}
+					
+					int n = encodedBytesCount(a);
+					
+					// Check the zero bit in the leading byte
+					if(((a >> (6 - n)) & 0b1) != 0) {
+						throw new IllegalStateException("Invalid UTF-8 byte");
+					}
+					
+					if(ensureAvailable(n) < n) {
+						throw new IllegalStateException("Not enough data");
+					}
+					
+					int c = decodeMoreBytes(a, pos, n);
+					pos += n;
+					
+					return c;
+				}
+				
+				// Delimiters: \n, \r, \r\n or EOF.
+				public String readLine() throws IOException {
+					// Since all Strings are always written with a header, when in the line mode
+					// we must first read the String header.
+					if(remaining == READ_LINE_NONE) {
+						checkType(SchemaFieldType.VALUE | SchemaFieldType.STRING);
+						remaining = readUncheckedInt();
+					} else if(remaining == READ_LINE_ZERO) {
+						remaining = READ_LINE_NONE;
+						return null;
+					} else if(remaining == 0) { // Handle trailing empty lines
+						remaining = READ_LINE_ZERO;
+						return "";
+					}
+					
+					final int len = cap;
+					int off = 0;
+					byte[] tmp = null;
+					List<byte[]> bufs = null;
+					int rem = remaining;
+					
+					outer:
+					for(int available; rem > 0 && (available = ensureAvailable(len)) >= 0;) {
+						final int start = pos;
+						int newLine = 0;
+						
+						// Simply check the bytes, since all delimiters can be represented by a single byte,
+						// but correctly skip any character that cannot be represented by a single byte.
+						for(int end = start + available, c; rem > 0 && pos < end; --rem) {
+							c = nextCodePoint();
+							
+							if(c == '\n') {
+								newLine = 1;
+								break;
+							} else if(c == '\r') {
+								newLine = 1;
+								
+								// Must also check for \r\n
+								if((c = nextCodePoint()) == '\n') {
+									newLine = 2;
+									--rem;
+								} else {
+									pos -= bytesCount(c); // Go back
+								}
+								
+								break;
+							}
+						}
+						
+						// All bytes in the buffer were read, add them
+						int read = pos - start;
+						remaining -= read;
+						read -= newLine;
+						
+						// All read, not ending with a new line
+						if(newLine == 0 && remaining == 0) {
+							remaining = READ_LINE_ZERO;
+						}
+						
+						if(read == 0) {
+							break outer;
+						}
+						
+						if(tmp == null) {
+							tmp = new byte[BUFFER_SIZE];
+						}
+						
+						// Read bytes fit into the current buffer
+						if(off + read <= BUFFER_SIZE) {
+							System.arraycopy(buf, start, tmp, off, read);
+							off += read;
+						}
+						// Read bytes do not fit into the current buffer
+						else {
+							int num = BUFFER_SIZE - off;
+							System.arraycopy(buf, start, tmp, off, num);
+							
+							if(bufs == null) {
+								bufs = new ArrayList<>();
+							}
+							
+							bufs.add(tmp);
+							
+							tmp = new byte[BUFFER_SIZE];
+							num = read - num;
+							System.arraycopy(buf, start, tmp, 0, num);
+							off = num;
+						}
+						
+						// New line encountered, we're done
+						if(newLine > 0) {
+							break;
+						}
+					}
+					
+					// No characters not being a new line has been read
+					if(off == 0) {
+						// Read an empty line
+						if(remaining >= 0) {
+							return "";
+						}
+						
+						return null;
+					}
+					
+					// No need to combine multiple buffers
+					if(bufs == null) {
+						return new String(tmp, 0, off);
+					}
+					
+					// Combine all buffers to a single one
+					byte[] acc = new byte[bufs.size() * BUFFER_SIZE + off];
+					int cur = 0;
+					
+					for(byte[] b : bufs) {
+						System.arraycopy(b, 0, acc, cur, BUFFER_SIZE);
+						cur += BUFFER_SIZE;
+					}
+					
+					if(off > 0) {
+						System.arraycopy(tmp, 0, acc, cur, off);
+					}
+					
+					return new String(acc);
+				}
+			}
+			
+			private Utf8LineReader lineReader;
+			
+			protected final Utf8LineReader lineReader() {
+				if(lineReader == null) {
+					lineReader = new Utf8LineReader();
+				}
+				
+				return lineReader;
+			}
+			
+			@Override
+			public String readLine() throws IOException {
+				return lineReader().readLine();
 			}
 			
 			private static final class ObjectStream extends ObjectInputStream {
