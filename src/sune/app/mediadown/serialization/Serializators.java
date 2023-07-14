@@ -53,6 +53,8 @@ public final class Serializators {
 		private static final Charset UTF8 = StandardCharsets.UTF_8;
 		
 		private static final int NO_REFERENCE = 0;
+		private static final byte IS_NULL = 0;
+		private static final byte IS_NOT_NULL = 1;
 		
 		// Forbid anyone to create an instance of this class
 		private OfBinary() {
@@ -287,6 +289,8 @@ public final class Serializators {
 				lim = len;
 			}
 			
+			// Returns the number of available (unread) bytes, or the count, whichever is the minimum,
+			// or -1 if EOF and all bytes has already been read.
 			protected int ensureAvailable(int count) throws IOException {
 				final int limit = Math.min(count, cap);
 				final int available = lim - pos;
@@ -300,6 +304,11 @@ public final class Serializators {
 				}
 				
 				final int filled = fillBuffer();
+				
+				if(filled < 0) {
+					return filled; // Error
+				}
+				
 				return Math.min(filled, limit);
 			}
 			
@@ -423,12 +432,17 @@ public final class Serializators {
 				}
 				
 				byte[] bytes = new byte[length];
+				final int start = pos;
 				
 				for(int dst = 0, read;
 						dst < length && (read = ensureAvailable(length - dst)) >= 0;
-						dst += read) {
+						dst += read,
+						pos += read) {
 					System.arraycopy(buf, pos, bytes, dst, read);
-					pos += read;
+				}
+				
+				if(pos - start != length) {
+					throw new IOException("EOF"); // Not fully read
 				}
 				
 				return new String(bytes, UTF8);
@@ -437,7 +451,7 @@ public final class Serializators {
 			protected final Class<?> readUncheckedObjectHeader() throws IOException {
 				final byte isNull = readUncheckedByte();
 				
-				if(isNull == 1) {
+				if(isNull == IS_NULL) {
 					return null;
 				}
 				
@@ -677,13 +691,18 @@ public final class Serializators {
 				
 				final int length = readUncheckedInt();
 				byte[] array = new byte[length];
+				final int start = pos;
 				
 				// Use direct batch-copy instead of per-element loop
 				for(int dst = 0, read;
 						dst < length && (read = ensureAvailable(length - dst)) >= 0;
-						dst += read) {
+						dst += read,
+						pos += read) {
 					System.arraycopy(buf, pos, array, dst, read);
-					pos += read;
+				}
+				
+				if(pos - start != length) {
+					throw new IOException("EOF"); // Not fully read
 				}
 				
 				return array;
@@ -1095,6 +1114,8 @@ public final class Serializators {
 				cap = buf.length;
 			}
 			
+			// Returns the number of available bytes, i.e. the number of bytes that can be written
+			// to the buffer, or the count, whichever is the minimum, or -1 if an error occurred.
 			protected int ensureAvailable(int count) throws IOException {
 				final int limit = Math.min(count, cap);
 				final int available = cap - pos;
@@ -1104,9 +1125,15 @@ public final class Serializators {
 				}
 				
 				final int flushed = flushBuffer();
-				return Math.min(cap - flushed, limit);
+				
+				if(flushed < 0) {
+					return flushed; // Error
+				}
+				
+				return Math.min(flushed, limit);
 			}
 			
+			// Returns the number of flushed bytes or -1 if an error occurred.
 			protected int flushBuffer() throws IOException {
 				final int available = pos;
 				
@@ -1117,9 +1144,12 @@ public final class Serializators {
 				int off = 0, written = 0;
 				for(; off < pos && (written = write(buf, off, pos - off)) >= 0; off += written);
 				
-				pos = 0;
+				if(off == 0 && written < 0) {
+					return -1; // Error
+				}
 				
-				return written < 0 ? written : off;
+				pos = 0;
+				return off;
 			}
 			
 			protected final void writeType(int type) throws IOException {
@@ -1199,21 +1229,21 @@ public final class Serializators {
 				final int length = bytes.length;
 				writeUntyped(length);
 				
-				for(int src = 0, written;
-						src < length && (written = ensureAvailable(length - src)) >= 0;
-						src += written) {
-					System.arraycopy(bytes, src, buf, pos, written);
-					pos += written;
+				for(int src = 0, available;
+						src < length && (available = ensureAvailable(length - src)) >= 0;
+						src += available,
+						pos += available) {
+					System.arraycopy(bytes, src, buf, pos, available);
 				}
 			}
 			
 			protected final boolean writeUntypedObjectHeader(Object value) throws IOException {
 				if(value == null) {
-					writeUntyped((byte) 1);
+					writeUntyped(IS_NULL);
 					return false;
 				}
 				
-				writeUntyped((byte) 0);
+				writeUntyped(IS_NOT_NULL);
 				
 				String className;
 				if((className = value.getClass().getName()) == null) {
@@ -1313,12 +1343,11 @@ public final class Serializators {
 			}
 			
 			protected final void writeDirect(byte[] b, int off, int len) throws IOException {
-				for(int remaining = len, available;
-						remaining > 0 && (available = ensureAvailable(remaining)) >= 0;
-						remaining -= available) {
+				for(int end = off + len, available;
+						off < end && (available = ensureAvailable(end - off)) >= 0;
+						off += available,
+						pos += available) {
 					System.arraycopy(b, off, buf, pos, available);
-					off += available;
-					pos += available;
 				}
 			}
 			
@@ -1410,11 +1439,11 @@ public final class Serializators {
 				writeUntyped(length);
 				
 				// Use direct batch-copy instead of per-element loop
-				for(int src = 0, written;
-						src < length && (written = ensureAvailable(length - src)) >= 0;
-						src += written) {
-					System.arraycopy(array, src, buf, pos, written);
-					pos += written;
+				for(int src = 0, available;
+						src < length && (available = ensureAvailable(length - src)) >= 0;
+						src += available,
+						pos += available) {
+					System.arraycopy(array, src, buf, pos, available);
 				}
 			}
 			
