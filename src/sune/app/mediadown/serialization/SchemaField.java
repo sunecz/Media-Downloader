@@ -5,10 +5,12 @@ public final class SchemaField {
 	
 	private final int type;
 	private final long offset;
+	private final String name;
 	
-	public SchemaField(int type, long offset) {
+	public SchemaField(int type, long offset, String name) {
 		this.type = type;
 		this.offset = offset;
+		this.name = name;
 	}
 	
 	public int type() {
@@ -17,5 +19,9 @@ public final class SchemaField {
 	
 	public long offset() {
 		return offset;
+	}
+	
+	public String name() {
+		return name;
 	}
 }

@@ -481,7 +481,10 @@ public final class Serializators {
 				Object object = dataLoader.loadAll(this, instance);
 				
 				// Call the readObject method to load the custom contents
-				SerializableCaller.readObject(object, objectStream());
+				ObjectStream stream = objectStream();
+				stream.enterContext(object);
+				SerializableCaller.readObject(object, stream);
+				stream.leaveContext();
 				
 				SerializableCaller.Handles handles = SerializableCaller.getHandles(object);
 				Object serializable = object;
@@ -853,6 +856,18 @@ public final class Serializators {
 				return lineReader().readLine();
 			}
 			
+			protected final Deque<SchemaField> fieldContexts = new ArrayDeque<>();
+			
+			@Override
+			public void enterFieldContext(SchemaField field) {
+				fieldContexts.addLast(field);
+			}
+			
+			@Override
+			public SchemaField leaveFieldContext() {
+				return fieldContexts.pollLast();
+			}
+			
 			protected final class Utf8LineReader {
 				
 				/* UTF-8 encoding overview:
@@ -1056,6 +1071,7 @@ public final class Serializators {
 			protected static final class ObjectStream extends ObjectInputStream {
 				
 				private final ReaderBase reader;
+				private final Deque<Object> contexts = new ArrayDeque<>();
 				
 				public ObjectStream(ReaderBase reader) throws IOException {
 					this.reader = reader;
@@ -1091,6 +1107,23 @@ public final class Serializators {
 				@Override
 				public void defaultReadObject() throws IOException, ClassNotFoundException {
 					// Object's non-static and non-transient fields are always read automatically
+				}
+				
+				@Override
+				public GetField readFields() throws IOException, ClassNotFoundException {
+					return reader.dataLoader.fieldMap(currentContext());
+				}
+				
+				public void enterContext(Object object) {
+					contexts.addLast(object);
+				}
+				
+				public Object leaveContext() {
+					return contexts.pollLast();
+				}
+				
+				public Object currentContext() {
+					return contexts.peekLast();
 				}
 			}
 		}

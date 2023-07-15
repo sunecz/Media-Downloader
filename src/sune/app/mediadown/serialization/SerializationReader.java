@@ -35,4 +35,7 @@ public interface SerializationReader extends AutoCloseable {
 	long skip(long n) throws IOException;
 	int available() throws IOException;
 	String readLine() throws IOException;
+	
+	void enterFieldContext(SchemaField field);
+	SchemaField leaveFieldContext();
 }
