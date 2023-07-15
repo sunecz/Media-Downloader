@@ -13,10 +13,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Array;
-import java.lang.reflect.Method;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -31,10 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import sune.app.mediadown.resource.cache.Cache;
-import sune.app.mediadown.resource.cache.NoNullCache;
 import sune.app.mediadown.util.Pair;
-import sune.app.mediadown.util.Reflection;
 
 /** @since 00.02.09 */
 public final class Serializators {
@@ -272,6 +266,7 @@ public final class Serializators {
 			protected final SchemaDataLoader dataLoader;
 			protected final Map<Integer, Object> objects = new HashMap<>();
 			protected int nextObjectId = NO_REFERENCE + 1;
+			protected final Deque<SchemaField> fieldContexts = new ArrayDeque<>();
 			
 			private ObjectStream stream;
 			private Utf8LineReader lineReader;
@@ -855,8 +850,6 @@ public final class Serializators {
 			public String readLine() throws IOException {
 				return lineReader().readLine();
 			}
-			
-			protected final Deque<SchemaField> fieldContexts = new ArrayDeque<>();
 			
 			@Override
 			public void enterFieldContext(SchemaField field) {
@@ -1670,188 +1663,6 @@ public final class Serializators {
 					// Object's non-static and non-transient fields are always written automatically
 				}
 			}
-		}
-	}
-	
-	private static final class SerializableCaller {
-		
-		private static final MethodHandles.Lookup LOOKUP = MethodHandles.lookup();
-		private static final Cache HANDLES = new NoNullCache();
-		
-		@SuppressWarnings("unchecked")
-		private static final Pair<String, Class<?>[]>[] METHODS_TO_FIND = (Pair<String, Class<?>[]>[]) new Pair[] {
-			methodPair("writeObject", ObjectOutputStream.class),
-			methodPair("readObject", ObjectInputStream.class),
-			methodPair("writeReplace"),
-			methodPair("readResolve"),
-		};
-		
-		private SerializableCaller() {
-		}
-		
-		private static final Pair<String, Class<?>[]> methodPair(String methodName, Class<?>... argTypes) {
-			return new Pair<>(methodName, argTypes);
-		}
-		
-		private static final Handles findHandles(Class<?> clazz) {
-			Handles handles = new Handles();
-			
-			for(Pair<String, Class<?>[]> pair : METHODS_TO_FIND) {
-				try {
-					Method method = clazz.getDeclaredMethod(pair.a, pair.b);
-					Reflection.setAccessible(method, true);
-					MethodHandle handle = LOOKUP.unreflect(method);
-					handles.set(pair.a, handle);
-				} catch(NoSuchMethodException
-							| IllegalAccessException
-							| IllegalArgumentException
-							| SecurityException
-							| NoSuchFieldException ex) {
-					// Not found or cannot be found, ignore it
-				}
-			}
-			
-			return handles;
-		}
-		
-		private static final Handles findHandlesCached(Class<?> clazz) throws Exception {
-			return HANDLES.getChecked(clazz, () -> findHandles(clazz));
-		}
-		
-		private static final Deque<Class<?>> inheritanceStack(Class<?> clazz) {
-			Deque<Class<?>> stack = new ArrayDeque<>();
-			
-			for(Class<?> cls = clazz; includeInSerialization(cls); cls = cls.getSuperclass()) {
-				stack.addLast(cls);
-			}
-			
-			return stack;
-		}
-		
-		private static final boolean includeInSerialization(Class<?> clazz) {
-			return clazz != null && clazz != Object.class && clazz != Enum.class;
-		}
-		
-		public static final Handles getHandles(Object instance) throws IOException {
-			if(instance == null) {
-				return null;
-			}
-			
-			try {
-				final Class<?> clazz = instance.getClass();
-				return HANDLES.getChecked(clazz, () -> findHandlesCached(clazz));
-			} catch(Exception ex) {
-				throw new IOException(ex);
-			}
-		}
-		
-		public static final void writeObject(Handles handles, Object instance, ObjectOutputStream stream) throws IOException {
-			MethodHandle handle;
-			if((handle = handles.writeObject()) == null) {
-				return;
-			}
-			
-			try {
-				handle.invoke(instance, stream);
-			} catch(Throwable ex) {
-				throw new IOException(ex);
-			}
-		}
-		
-		public static final void readObject(Handles handles, Object instance, ObjectInputStream stream) throws IOException {
-			MethodHandle handle;
-			if((handle = handles.readObject()) == null) {
-				return;
-			}
-			
-			try {
-				handle.invoke(instance, stream);
-			} catch(Throwable ex) {
-				throw new IOException(ex);
-			}
-		}
-		
-		public static final Object writeReplace(Handles handles, Object instance) throws IOException {
-			MethodHandle handle;
-			if((handle = handles.writeReplace()) == null) {
-				return null;
-			}
-			
-			try {
-				return handle.invoke(instance);
-			} catch(Throwable ex) {
-				throw new IOException(ex);
-			}
-		}
-		
-		public static final Object readResolve(Handles handles, Object instance) throws IOException {
-			MethodHandle handle;
-			if((handle = handles.readResolve()) == null) {
-				return null;
-			}
-			
-			try {
-				return handle.invoke(instance);
-			} catch(Throwable ex) {
-				throw new IOException(ex);
-			}
-		}
-		
-		public static final void writeObject(Object instance, ObjectOutputStream stream) throws IOException {
-			if(instance == null) {
-				return;
-			}
-			
-			Deque<Class<?>> stack = inheritanceStack(instance.getClass());
-			
-			try {
-				for(Class<?> cls; (cls = stack.pollLast()) != null;) {
-					Handles handles = findHandlesCached(cls);
-					writeObject(handles, instance, stream);
-				}
-			} catch(Exception ex) {
-				throw new IOException(ex);
-			}
-		}
-		
-		public static final void readObject(Object instance, ObjectInputStream stream) throws IOException {
-			if(instance == null) {
-				return;
-			}
-			
-			Deque<Class<?>> stack = inheritanceStack(instance.getClass());
-			
-			try {
-				for(Class<?> cls; (cls = stack.pollLast()) != null;) {
-					Handles handles = findHandlesCached(cls);
-					readObject(handles, instance, stream);
-				}
-			} catch(Exception ex) {
-				throw new IOException(ex);
-			}
-		}
-		
-		public static final class Handles {
-			
-			private MethodHandle writeObject;
-			private MethodHandle readObject;
-			private MethodHandle writeReplace;
-			private MethodHandle readResolve;
-			
-			public void set(String methodName, MethodHandle handle) {
-				switch(methodName) {
-					case "writeObject": writeObject = handle; break;
-					case "readObject": readObject = handle; break;
-					case "writeReplace": writeReplace = handle; break;
-					case "readResolve": readResolve = handle; break;
-					default: throw new IllegalArgumentException("Unsupported method name");
-				}
-			}
-			
-			public MethodHandle writeObject() { return writeObject; }
-			public MethodHandle readObject() { return readObject; }
-			public MethodHandle writeReplace() { return writeReplace; }
-			public MethodHandle readResolve() { return readResolve; }
 		}
 	}
 }

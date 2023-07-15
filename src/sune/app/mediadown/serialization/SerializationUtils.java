@@ -12,14 +12,14 @@ final class SerializationUtils {
 	
 	public static final int typeOf(Class<?> clazz) {
 		if(clazz == boolean.class) return SchemaFieldType.BOOLEAN;
-		if(clazz == byte.class)    return SchemaFieldType.BYTE;
-		if(clazz == char.class)    return SchemaFieldType.CHAR;
-		if(clazz == short.class)   return SchemaFieldType.SHORT;
-		if(clazz == int.class)     return SchemaFieldType.INT;
-		if(clazz == long.class)    return SchemaFieldType.LONG;
-		if(clazz == float.class)   return SchemaFieldType.FLOAT;
-		if(clazz == double.class)  return SchemaFieldType.DOUBLE;
-		if(clazz == String.class)  return SchemaFieldType.STRING;
+		if(clazz == byte.class) return SchemaFieldType.BYTE;
+		if(clazz == char.class) return SchemaFieldType.CHAR;
+		if(clazz == short.class) return SchemaFieldType.SHORT;
+		if(clazz == int.class) return SchemaFieldType.INT;
+		if(clazz == long.class) return SchemaFieldType.LONG;
+		if(clazz == float.class) return SchemaFieldType.FLOAT;
+		if(clazz == double.class) return SchemaFieldType.DOUBLE;
+		if(clazz == String.class) return SchemaFieldType.STRING;
 		return SchemaFieldType.OBJECT;
 	}
 	
