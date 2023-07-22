@@ -58,6 +58,9 @@ Temporary Items
 /resources/
 /jre/
 /lib/drm/
+/docker/**
+!/docker/Dockerfile
+!/docker/apache-ant-1.10.11-r0.tar
 # Ignore files
 .classpath
 .project
