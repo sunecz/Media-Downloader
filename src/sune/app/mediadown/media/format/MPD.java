@@ -7,7 +7,6 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -27,6 +26,8 @@ import sune.app.mediadown.download.segment.RemoteFileSegment;
 import sune.app.mediadown.download.segment.RemoteFileSegmentable;
 import sune.app.mediadown.download.segment.RemoteFileSegmentsHolder;
 import sune.app.mediadown.media.MediaFormat;
+import sune.app.mediadown.media.MediaProtection;
+import sune.app.mediadown.media.MediaProtectionType;
 import sune.app.mediadown.media.MediaResolution;
 import sune.app.mediadown.media.MediaType;
 import sune.app.mediadown.net.Net;
@@ -485,65 +486,68 @@ public final class MPD {
 		
 		protected static final String NODE_NAME = "ContentProtection";
 		
-		private final String scheme;
-		private final Map<String, String> keys;
+		/** @since 00.02.09 */
+		private final List<MediaProtection> protections;
 		
-		public ContentProtection(String scheme, Map<String, String> keys) {
-			this.scheme = scheme;
-			this.keys = keys;
+		private ContentProtection(List<MediaProtection> protections) {
+			this.protections = protections;
 		}
 		
 		public static final ContentProtection parse(Elements elements) {
-			String scheme = null;
-			Map<String, String> keys = new LinkedHashMap<>();
+			List<MediaProtection> protections = new ArrayList<>();
+			
 			for(Element element : elements) {
 				Elements children = element.children();
-				String attrValue = element.attr("value");
-				// Element with the scheme information (e.g. cenc) has no children
+				
+				// Ignore empty tags for now
 				if(children.isEmpty()) {
-					// Check for value attribute indicating element for specifying the scheme
-					if(!attrValue.isEmpty()) {
-						scheme = attrValue.toLowerCase();
+					continue;
+				}
+				
+				// Assume Widevine by default
+				MediaProtectionType type = MediaProtectionType.DRM_WIDEVINE;
+				String schemeIdUri = element.attr("schemeIdUri");
+				
+				if(schemeIdUri != null && !schemeIdUri.isEmpty()) {
+					// Schemes (ref.: https://dashif.org/identifiers/content_protection/)
+					// - edef8ba9-79d6-4ace-a3c8-27dcd51d21ed (Widevine)
+					// - 9a04f079-9840-4286-ab92-e65be0885f95 (Microsoft PlayReady)
+					// - 94ce86fb-07ff-4f43-adb8-93d2fa968ca2 (Apple FairPlay)
+					if(schemeIdUri.equalsIgnoreCase("urn:uuid:9a04f079-9840-4286-ab92-e65be0885f95")) {
+						type = MediaProtectionType.DRM_PLAYREADY;
 					}
-				} else {
-					// Loop through children and find the key content
-					for(Element child : children) {
-						String tagName = child.tagName().toLowerCase();
-						// Check only for scheme properties specifying tags
-						if(tagName.startsWith(scheme)) {
-							int index = tagName.indexOf(':');
-							if(index > 0) {
-								String propName = tagName.substring(index + 1);
-								switch(propName) {
-									// Tag specifying the content key
-									case "pssh":
-										keys.put(attrValue, child.html());
-										break;
-									// Ignore other tags
-								}
-							}
-						}
+				}
+				
+				for(Element child : children) {
+					String tagName = child.tagName().toLowerCase();
+					int index = tagName.indexOf(':');
+					
+					if(index > 0) {
+						String scheme = tagName.substring(0, index);
+						String contentType = tagName.substring(index + 1);
+						String content = child.html();
+						protections.add(
+							MediaProtection.of(type).scheme(scheme).contentType(contentType).content(content).build()
+						);
 					}
 				}
 			}
-			// Normalize, so that all variables are null or neither
-			if(scheme == null || keys.isEmpty()) {
-				scheme = null;
-				keys = null;
+			
+			// Normalize the values
+			if(protections.isEmpty()) {
+				protections = null;
 			}
-			return new ContentProtection(scheme, keys);
+			
+			return new ContentProtection(protections);
 		}
 		
-		public String scheme() {
-			return scheme;
-		}
-		
-		public Map<String, String> keys() {
-			return keys;
+		/** @since 00.02.09 */
+		public List<MediaProtection> protections() {
+			return protections;
 		}
 		
 		public boolean isPresent() {
-			return scheme != null && keys != null;
+			return protections != null;
 		}
 	}
 	

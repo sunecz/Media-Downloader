@@ -2,6 +2,7 @@ package sune.app.mediadown.media;
 
 import java.net.URI;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -85,6 +86,11 @@ public final class MediaMetadata {
 		return get(Properties.isProtected, false);
 	}
 	
+	/** @since 00.02.09 */
+	public final List<MediaProtection> protections() {
+		return get(Properties.protections, List.of());
+	}
+	
 	@Override
 	public int hashCode() {
 		return Objects.hash(data);
@@ -112,6 +118,8 @@ public final class MediaMetadata {
 		public static final String sourceURI = "sourceURI";
 		public static final String title = "title";
 		public static final String isProtected = "isProtected";
+		/** @since 00.02.09 */
+		public static final String protections = "protection";
 	}
 	
 	public static final class Builder {
@@ -167,6 +175,38 @@ public final class MediaMetadata {
 			return this;
 		}
 		
+		/** @since 00.02.09 */
+		public final Builder addProtections(MediaProtection... protections) {
+			return addProtections(List.of(protections));
+		}
+		
+		/** @since 00.02.09 */
+		public final Builder addProtections(List<MediaProtection> protections) {
+			this.data.compute(Properties.protections, (key, list) -> {
+				if(list == null) {
+					list = new ArrayList<>();
+				}
+				
+				Utils.<List<MediaProtection>>cast(list).addAll(protections);
+				return list;
+			});
+			return this;
+		}
+		
+		/** @since 00.02.09 */
+		public final Builder removeProtections(MediaProtection... protections) {
+			return removeProtections(List.of(protections));
+		}
+		
+		/** @since 00.02.09 */
+		public final Builder removeProtections(List<MediaProtection> protections) {
+			this.data.computeIfPresent(Properties.protections, (key, list) -> {
+				Utils.<List<MediaProtection>>cast(list).removeAll(protections);
+				return list;
+			});
+			return this;
+		}
+		
 		public final <T> T get(String name) {
 			@SuppressWarnings("unchecked")
 			T value = (T) this.data.get(name);
@@ -183,6 +223,11 @@ public final class MediaMetadata {
 		
 		public final boolean isProtected() {
 			return get(Properties.isProtected);
+		}
+		
+		/** @since 00.02.09 */
+		public final List<MediaProtection> protections() {
+			return get(Properties.protections);
 		}
 	}
 }

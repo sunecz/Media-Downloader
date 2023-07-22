@@ -17,6 +17,7 @@ import sune.app.mediadown.media.format.M3U;
 import sune.app.mediadown.media.format.M3U.M3UCombinedFile;
 import sune.app.mediadown.media.format.M3U.M3UFile;
 import sune.app.mediadown.media.format.MPD;
+import sune.app.mediadown.media.format.MPD.ContentProtection;
 import sune.app.mediadown.media.format.MPD.MPDCombinedFile;
 import sune.app.mediadown.media.format.MPD.MPDFile;
 import sune.app.mediadown.net.Web;
@@ -106,7 +107,21 @@ public final class MediaUtils {
 			MPDCombinedFile result = parserData.result();
 			MPDFile video = result.video();
 			MPDFile audio = result.audio();
-			MediaMetadata metadata = parserData.mediaData().add(parserData.data()).title(title).build();
+			
+			MediaMetadata.Builder metadataBuilder = parserData.mediaData().add(parserData.data()).title(title);
+			MediaMetadata metadataVideo;
+			MediaMetadata metadataAudio;
+			
+			if(metadataBuilder.isProtected()) {
+				ContentProtection protectionVideo = video.protection();
+				ContentProtection protectionAudio = audio.protection();
+				metadataVideo = metadataBuilder.addProtections(protectionVideo.protections()).build();
+				metadataAudio = metadataBuilder.addProtections(protectionAudio.protections()).build();
+			} else {
+				MediaMetadata metadata = metadataBuilder.build();
+				metadataVideo = metadata;
+				metadataAudio = metadata;
+			}
 			
 			double frameRate = Double.valueOf(video.attributes().getOrDefault("framerate", "0.0"));
 			int sampleRate = Integer.valueOf(audio.attributes().getOrDefault("audiosamplingrate", "0"));
@@ -123,14 +138,14 @@ public final class MediaUtils {
 					.segments(Utils.<List<FileSegmentsHolder<?>>>cast(video.segmentsHolders()))
 					.resolution(video.resolution()).duration(video.duration())
 					.codecs(video.codecs()).bandwidth(video.bandwidth()).frameRate(frameRate)
-					.metadata(metadata),
+					.metadata(metadataVideo),
 				AudioMedia.segmented().source(source)
 					.uri(parserData.uri()).format(audio.format())
 					.quality(MediaQuality.fromSampleRate(sampleRate).withValue(audioValue))
 					.segments(Utils.<List<FileSegmentsHolder<?>>>cast(audio.segmentsHolders()))
 					.language(audioLanguage).duration(audio.duration())
 					.codecs(audio.codecs()).bandwidth(audio.bandwidth()).sampleRate(sampleRate)
-					.metadata(metadata)
+					.metadata(metadataAudio)
 			);
 		}));
 		
