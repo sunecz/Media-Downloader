@@ -1557,6 +1557,21 @@ public class Configuration implements ConfigurationAccessor {
 			return builder.value();
 		}
 		
+		/** @since 00.02.09 */
+		private static final boolean checkValueAgainstProperty(ConfigurationProperty<?> property, Object value) {
+			switch(property.type()) {
+				case NULL: return value == null;
+				case BOOLEAN: return value instanceof Boolean;
+				case INTEGER: return value instanceof Integer || value instanceof Long;
+				case DECIMAL: return value instanceof Float || value instanceof Double;
+				case STRING: return value instanceof String;
+				case ARRAY: return value instanceof Map;
+				case OBJECT: return value instanceof Map;
+			}
+			
+			return false;
+		}
+		
 		/** @since 00.02.07 */
 		private static final Object checkValue(Object value) {
 			if(value == null) {
@@ -1630,6 +1645,10 @@ public class Configuration implements ConfigurationAccessor {
 				// First, check whether the value is of a supported/compatible type,
 				// i.e. not Integer but Long, not Float but Double, etc.
 				Object checked = checkValue(value);
+				
+				if(!checkValueAgainstProperty(existing, checked)) {
+					return this;
+				}
 				
 				setValue(existing, checked); // Must be called first
 				setData(refData, name, ssdValue(existing));
