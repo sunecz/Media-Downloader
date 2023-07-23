@@ -1,4 +1,4 @@
-# Media-Downloader
+# Media Downloader
 Simple application for downloading media from various websites.
 
 ## How to build
@@ -44,7 +44,7 @@ To remove the built Docker image:
 docker image rm md:build
 ```
 
-### Ant targets
+## Ant targets
 | Target name  | Description                                                                                             |
 | ------------ | ------------------------------------------------------------------------------------------------------- |
 | compile      | Copies all resources from the `src` directory and compiles all Java files to the `bin` directory.       |
