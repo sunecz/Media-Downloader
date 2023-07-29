@@ -122,24 +122,30 @@ public class DownloadConfigurationWindow extends DraggableWindow<BorderPane> {
 		mediaFilter.bestQuality(bestQuality);
 		
 		MediaQuality preferredQuality;
-		if((preferredQuality = featureResult(Feature.PREFERRED_QUALITY)) != null)
-			mediaFilter.qualityPriority(preferredQuality);
+		if((preferredQuality = featureResult(Feature.PREFERRED_QUALITY)) != null) {
+			mediaFilter.preferredQuality(preferredQuality)
+			           .qualityPriorityReversed(false, true);
+		}
 		
 		List<MediaFormat> formatsPriority;
-		if((formatsPriority = featureResult(Feature.FORMATS_PRIORITY)) != null)
+		if((formatsPriority = featureResult(Feature.FORMATS_PRIORITY)) != null) {
 			mediaFilter.formatPriority(formatsPriority);
+		}
 		
 		MediaLanguage audioLanguage;
-		if((audioLanguage = featureResult(Feature.AUDIO_LANGUAGE)) != null)
+		if((audioLanguage = featureResult(Feature.AUDIO_LANGUAGE)) != null) {
 			mediaFilter.audioLanguage(audioLanguage);
+		}
 		
 		List<MediaLanguage> subtitlesLanguages;
-		if((subtitlesLanguages = featureResult(Feature.SUBTITLES_LANGUAGE)) == null)
+		if((subtitlesLanguages = featureResult(Feature.SUBTITLES_LANGUAGE)) == null) {
 			subtitlesLanguages = List.of();
+		}
 		
 		MediaFormat outputFormat;
-		if((outputFormat = featureResult(Feature.OUTPUT_FORMAT)) == null)
+		if((outputFormat = featureResult(Feature.OUTPUT_FORMAT)) == null) {
 			outputFormat = MediaFormat.outputFormats()[0];
+		}
 		
 		result = new DownloadConfiguration(mediaFilter.build(), outputFormat, subtitlesLanguages);
 	}
@@ -263,6 +269,7 @@ public class DownloadConfigurationWindow extends DraggableWindow<BorderPane> {
 			protected int addTo(DownloadConfigurationWindow window, int row, Object value) {
 				Translation translation = window.getTranslation();
 				CheckBox chbSelect = new CheckBox(translation.getSingle("label.best_quality"));
+				chbSelect.setId("checkbox-best-quality");
 				
 				chbSelect.selectedProperty().addListener((o, ov, isSelected) -> {
 					window.featureResult(this, isSelected);
@@ -305,6 +312,13 @@ public class DownloadConfigurationWindow extends DraggableWindow<BorderPane> {
 				cmbPreferredQuality.getItems().setAll(sorted);
 				cmbPreferredQuality.setConverter(new MediaQualityStringConverter(qualities, translation));
 				cmbPreferredQuality.getSelectionModel().selectedItemProperty().addListener((o, ov, quality) -> {
+					CheckBox chbBestQuality = (CheckBox) window.grid().lookup("#checkbox-best-quality");
+					
+					if(chbBestQuality != null) {
+						boolean shouldBeSelected = quality.is(MediaQuality.UNKNOWN);
+						chbBestQuality.setSelected(shouldBeSelected);
+					}
+					
 					window.featureResult(this, quality);
 				});
 				cmbPreferredQuality.getSelectionModel().select(0);

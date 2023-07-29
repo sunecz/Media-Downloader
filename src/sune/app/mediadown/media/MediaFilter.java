@@ -12,6 +12,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import sune.app.mediadown.util.ComparatorCombiner;
 import sune.app.mediadown.util.Opt.OptCondition;
@@ -19,7 +20,7 @@ import sune.app.mediadown.util.Opt.OptPredicate;
 import sune.app.mediadown.util.Utils;
 
 /** @since 00.02.05 */
-public class MediaFilter {
+public final class MediaFilter {
 	
 	private static final Predicate<Media> ALWAYS_TRUE = ((t) -> true);
 	private static MediaFilter NONE;
@@ -50,9 +51,13 @@ public class MediaFilter {
 	
 	public List<Media> sort(List<Media> media) {
 		Objects.requireNonNull(media);
-		return comparator != null
-					? media.stream().filter(filter).sorted(comparator).collect(Collectors.toList())
-					: List.copyOf(media);
+		Stream<Media> stream = media.stream().filter(filter);
+		
+		if(comparator != null) {
+			stream = stream.sorted(comparator);
+		}
+		
+		return stream.collect(Collectors.toList());
 	}
 	
 	public Media filter(List<Media> media, Function<List<Media>, Media> filter) {
@@ -73,7 +78,7 @@ public class MediaFilter {
 		/** @since 00.02.08 */
 		private Predicate<Media> filter;
 		
-		public Builder() {
+		private Builder() {
 			comparisonOrder = ComparisonOrder.defaultOrder();
 			formatPriority = new PriorityHolder<>();
 			bestQuality = false;
@@ -84,7 +89,7 @@ public class MediaFilter {
 		
 		private final List<ComparisonOrder> mergedComparisonOrder() {
 			LinkedHashSet<ComparisonOrder> merged = new LinkedHashSet<>(comparisonOrder);
-			merged.addAll(new LinkedHashSet<>(ComparisonOrder.defaultOrder()));
+			merged.addAll(ComparisonOrder.defaultOrder());
 			return merged.stream().collect(Collectors.toList());
 		}
 		
@@ -96,9 +101,7 @@ public class MediaFilter {
 				switch(order) {
 					case FORMAT:
 						if(!formatPriority.isEmpty())
-							comparator.combine(MediaFormatComparator.ofPriority(formatPriority.priority(),
-							                                                    formatPriority.priorityReversed(),
-							                                                    formatPriority.naturalReversed()));
+							comparator.combine(MediaFormatComparator.ofPriority(formatPriority));
 						break;
 					case BEST_QUALITY:
 						if(bestQuality)
@@ -106,9 +109,7 @@ public class MediaFilter {
 						break;
 					case QUALITY:
 						if(!qualityPriority.isEmpty())
-							comparator.combine(MediaQualityComparator.ofPriority(qualityPriority.priority(),
-							                                                     qualityPriority.priorityReversed(),
-							                                                     qualityPriority.naturalReversed()));
+							comparator.combine(MediaQualityComparator.ofPriority(qualityPriority));
 						break;
 					case AUDIO_LANGUAGE:
 						if(!audioLanguage.is(MediaLanguage.UNKNOWN))
@@ -164,6 +165,12 @@ public class MediaFilter {
 			return this;
 		}
 		
+		/** @since 00.02.09 */
+		public Builder preferredQuality(MediaQuality preferredQuality) {
+			this.qualityPriority.preferred(preferredQuality);
+			return this;
+		}
+		
 		public Builder audioLanguage(MediaLanguage audioLanguage) {
 			this.audioLanguage = Objects.requireNonNull(audioLanguage);
 			return this;
@@ -190,6 +197,8 @@ public class MediaFilter {
 			private List<T> priority = List.of();
 			private boolean priorityReversed = false;
 			private boolean naturalReversed = false;
+			/** @since 00.02.09 */
+			private T preferred = null;
 			
 			public PriorityHolder<T> priority(List<T> priority) {
 				this.priority = priority;
@@ -206,6 +215,12 @@ public class MediaFilter {
 				return this;
 			}
 			
+			/** @since 00.02.09 */
+			public PriorityHolder<T> preferred(T preferred) {
+				this.preferred = preferred;
+				return this;
+			}
+			
 			public List<T> priority() {
 				return priority;
 			}
@@ -218,8 +233,13 @@ public class MediaFilter {
 				return naturalReversed;
 			}
 			
+			/** @since 00.02.09 */
+			public T preferred() {
+				return preferred;
+			}
+			
 			public boolean isEmpty() {
-				return priority.isEmpty();
+				return priority.isEmpty() && preferred == null;
 			}
 		}
 	}
@@ -234,26 +254,28 @@ public class MediaFilter {
 			super(priority, priorityReversed, Media::format, naturalReversed, naturalComparator);
 		}
 		
-		public static final MediaFormatComparator ofPriority(List<MediaFormat> priority, boolean priorityReversed,
-				boolean naturalReversed) {
-			return new MediaFormatComparator(priority, priorityReversed, naturalReversed);
+		public static final MediaFormatComparator ofPriority(Builder.PriorityHolder<MediaFormat> holder) {
+			return new MediaFormatComparator(
+				holder.priority(), holder.priorityReversed(), holder.naturalReversed()
+			);
 		}
 	}
 	
-	private static final class MediaQualityComparator extends PriorityComparator<Media, MediaQuality> {
+	private static final class MediaQualityComparator extends PriorityComparatorOfComparable<Media, MediaQuality> {
 		
 		private MediaQualityComparator(List<MediaQuality> priority, boolean priorityReversed,
-				boolean naturalReversed) {
-			super(priority, priorityReversed, Media::quality, naturalReversed, MediaQuality::compareTo);
+				boolean naturalReversed, MediaQuality preferred) {
+			super(priority, priorityReversed, Media::quality, naturalReversed, MediaQuality::compareTo, preferred);
 		}
 		
-		public static final MediaQualityComparator ofPriority(List<MediaQuality> priority, boolean priorityReversed,
-				boolean naturalReversed) {
-			return new MediaQualityComparator(priority, priorityReversed, naturalReversed);
+		public static final MediaQualityComparator ofPriority(Builder.PriorityHolder<MediaQuality> holder) {
+			return new MediaQualityComparator(
+				holder.priority(), holder.priorityReversed(), holder.naturalReversed(), holder.preferred()
+			);
 		}
 		
 		public static final MediaQualityComparator naturalReversed() {
-			return new MediaQualityComparator(List.of(), false, true);
+			return new MediaQualityComparator(List.of(), false, true, null);
 		}
 	}
 	
@@ -274,11 +296,11 @@ public class MediaFilter {
 	
 	private static class PriorityComparator<T, V> implements Comparator<T> {
 		
-		private final Map<V, Integer> priority;
-		private final boolean priorityReversed;
-		private final Function<T, V> mapper;
-		private final boolean naturalReversed;
-		private final BiFunction<V, V, Integer> naturalComparator;
+		protected final Map<V, Integer> priority;
+		protected final boolean priorityReversed;
+		protected final Function<T, V> mapper;
+		protected final boolean naturalReversed;
+		protected final BiFunction<V, V, Integer> naturalComparator;
 		
 		protected PriorityComparator(List<V> priority, boolean priorityReversed, Function<T, V> mapper,
 				boolean naturalReversed, BiFunction<V, V, Integer> naturalComparator) {
@@ -289,18 +311,18 @@ public class MediaFilter {
 			this.naturalComparator = Objects.requireNonNull(naturalComparator);
 		}
 		
-		private static final <T> Map<T, Integer> priorityMap(List<T> priority) {
+		protected static final <T> Map<T, Integer> priorityMap(List<T> priority) {
 			Map<T, Integer> map = new HashMap<>();
 			for(int i = 0, l = priority.size(); i < l; ++i)
 				map.put(priority.get(i), i);
 			return map;
 		}
 		
-		private final V map(T t) {
+		protected V map(T t) {
 			return mapper.apply(t);
 		}
 		
-		private final int cmp(V a, V b) {
+		protected int cmp(V a, V b) {
 			int pa = priority.getOrDefault(a, Integer.MAX_VALUE);
 			int pb = priority.getOrDefault(b, Integer.MAX_VALUE);
 			return pa == pb
@@ -315,6 +337,43 @@ public class MediaFilter {
 		@Override
 		public int compare(T a, T b) {
 			return a == b ? 0 : (a == null ? 1 : (b == null ? -1 : cmp(map(a), map(b))));
+		}
+	}
+	
+	/** @since 00.02.09 */
+	private static class PriorityComparatorOfComparable<T, V extends Comparable<V>> extends PriorityComparator<T, V> {
+		
+		protected final V preferred;
+		
+		protected PriorityComparatorOfComparable(List<V> priority, boolean priorityReversed, Function<T, V> mapper,
+				boolean naturalReversed, BiFunction<V, V, Integer> naturalComparator, V preferred) {
+			super(priority, priorityReversed, mapper, naturalReversed, naturalComparator);
+			this.preferred = preferred;
+		}
+		
+		protected static final int normalize(int cmp) {
+			return cmp == 0 ? 0 : cmp > 0 ? +1 : -1;
+		}
+		
+		@Override
+		protected int cmp(V a, V b) {
+			if(preferred == null) {
+				return super.cmp(a, b);
+			}
+			
+			// The final list after all comparisons will look like this:
+			// [ ( PREFERRED ), ( < PREFERRED ), ( > PREFERRED ) ]
+			// where ( G ) is a group G of items, where for each pair U, V from G
+			// cmp(U, P) == cmp(V, P) is true and items in each group G are sorted
+			// using whichever comparison is specified in the super class.
+			int ca = normalize(a.compareTo(preferred));
+			int cb = normalize(b.compareTo(preferred));
+			
+			if(ca == cb) return super.cmp(a, b);
+			if(ca ==  0) return -1; // b is not preferred, but a is
+			if(cb ==  0) return +1; // a is not preferred, but b is
+			if(ca  <  0) return -1; // a is lower than preferred, b is not
+			else         return +1; // b is lower than preferred, a is not
 		}
 	}
 	
