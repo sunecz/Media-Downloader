@@ -113,7 +113,11 @@ public class MediaGetterWindow extends DraggableWindow<VBox> {
 			// Must be added here since Media Getters are not available yet when creating this window
 			cmbGetters.getItems().clear();
 			cmbGetters.getItems().add(AutomaticMediaGetter.instance());
-			cmbGetters.getItems().addAll(MediaGetters.all());
+			cmbGetters.getItems().addAll(
+				MediaGetters.all().stream()
+					.sorted(Utils.OfString.comparingNormalized(MediaGetter::title))
+					.collect(Collectors.toList())
+			);
 			cmbGetters.getSelectionModel().selectFirst();
 			txtURLs.setText("");
 			txtURLs.requestFocus();

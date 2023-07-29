@@ -36,6 +36,7 @@ import sune.app.mediadown.plugin.PluginUpdater;
 import sune.app.mediadown.plugin.Plugins;
 import sune.app.mediadown.update.Version;
 import sune.app.mediadown.util.FXUtils;
+import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Utils.Ignore;
 
 public final class InformationItems {
@@ -142,7 +143,12 @@ public final class InformationItems {
 		}
 		
 		public static final List<ItemMediaEngine> items() {
-			return createItemsList(MediaEngines.all(), ItemMediaEngine::new);
+			return createItemsList(
+				MediaEngines.all().stream()
+					.sorted(Utils.OfString.comparingNormalized(MediaEngine::title))
+					.collect(Collectors.toList()),
+				ItemMediaEngine::new
+			);
 		}
 		
 		@Override
@@ -172,7 +178,12 @@ public final class InformationItems {
 		}
 		
 		public static final List<ItemDownloader> items() {
-			return createItemsList(Downloaders.all(), ItemDownloader::new);
+			return createItemsList(
+				Downloaders.all().stream()
+					.sorted(Utils.OfString.comparingNormalized(Downloader::title))
+					.collect(Collectors.toList()),
+				ItemDownloader::new
+			);
 		}
 		
 		@Override
@@ -200,7 +211,12 @@ public final class InformationItems {
 		}
 		
 		public static final List<ItemServer> items() {
-			return createItemsList(Servers.all(), ItemServer::new);
+			return createItemsList(
+				Servers.all().stream()
+					.sorted(Utils.OfString.comparingNormalized(Server::title))
+					.collect(Collectors.toList()),
+				ItemServer::new
+			);
 		}
 		
 		@Override
@@ -232,8 +248,18 @@ public final class InformationItems {
 			this.plugin = plugin;
 		}
 		
+		/** @since 00.02.09 */
+		private static final String pluginTitle(PluginFile file) {
+			return MediaDownloader.translation().getSingle(file.getPlugin().instance().title());
+		}
+		
 		public static final List<ItemPlugin> items() {
-			return createItemsList(Plugins.allLoaded(), ItemPlugin::new);
+			return createItemsList(
+				Plugins.allLoaded().stream()
+					.sorted(Utils.OfString.comparingNormalized(ItemPlugin::pluginTitle))
+					.collect(Collectors.toList()),
+				ItemPlugin::new
+			);
 		}
 		
 		private static final String getPluginName(Plugin plugin) {
@@ -278,7 +304,7 @@ public final class InformationItems {
 		
 		@Override
 		public String toString() {
-			return getPluginTitle(plugin.getPlugin().instance());
+			return pluginTitle(plugin);
 		}
 	}
 }

@@ -413,6 +413,7 @@ public final class MainWindow extends Window<BorderPane> {
 		menuAdd = new ContextMenu();
 		
 		List<MenuItem> menuItems = MediaEngines.all().stream()
+			.sorted(Utils.OfString.comparingNormalized(MediaEngine::title))
 			.map(this::createMediaEngineMenuItem)
 			.collect(Collectors.toList());
 		

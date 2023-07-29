@@ -16,6 +16,7 @@ import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.text.Collator;
 import java.text.Normalizer;
 import java.time.Clock;
 import java.time.Instant;
@@ -26,6 +27,7 @@ import java.util.Base64;
 import java.util.Base64.Decoder;
 import java.util.Base64.Encoder;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -54,6 +56,7 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import sune.app.mediadown.Shared;
+import sune.app.mediadown.concurrent.VarLoader;
 import sune.app.mediadown.media.MediaFormat;
 import sune.app.mediadown.net.Net;
 
@@ -1640,6 +1643,35 @@ public final class Utils {
 			// Now the builder is using the UTF16 coder and has the desired
 			// capacity.
 			return builder;
+		}
+	}
+	
+	/** @since 00.02.09 */
+	public static final class OfString {
+		
+		private static final VarLoader<Collator> collatorNormalized = VarLoader.of(OfString::newCollatorNormalized);
+		
+		// Forbid anyone to create an instance of this class
+		private OfString() {
+		}
+		
+		private static final Collator newCollatorNormalized() {
+			Collator collator = Collator.getInstance();
+			collator.setDecomposition(Collator.CANONICAL_DECOMPOSITION);
+			return collator;
+		}
+		
+		public static final int compareNormalized(String a, String b) {
+			return collatorNormalized.value().compare(a, b);
+		}
+		
+		public static final Comparator<String> comparingNormalized() {
+			return OfString::compareNormalized;
+		}
+		
+		public static final <T> Comparator<T> comparingNormalized(Function<T, String> extractor) {
+			Objects.requireNonNull(extractor);
+			return (a, b) -> compareNormalized(extractor.apply(a), extractor.apply(b));
 		}
 	}
 	
