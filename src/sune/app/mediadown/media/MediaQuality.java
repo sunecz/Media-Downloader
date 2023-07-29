@@ -317,6 +317,11 @@ public final class MediaQuality implements Comparable<MediaQuality> {
 	
 	@Override
 	public int hashCode() {
+		return Objects.hash(mediaType, value);
+	}
+	
+	/** @since 00.02.09 */
+	public int hashCodeStrict() {
 		return Objects.hash(mediaType, name, synonyms, value);
 	}
 	
@@ -330,7 +335,20 @@ public final class MediaQuality implements Comparable<MediaQuality> {
 			return false;
 		MediaQuality other = (MediaQuality) obj;
 		return Objects.equals(mediaType, other.mediaType)
-		        && Objects.equals(removeNameSuffix(name), removeNameSuffix(other.name))
+		        && Objects.equals(value, other.value);
+	}
+	
+	/** @since 00.02.09 */
+	public boolean equalsStrict(Object obj) {
+		if(this == obj)
+			return true;
+		if(obj == null)
+			return false;
+		if(getClass() != obj.getClass())
+			return false;
+		MediaQuality other = (MediaQuality) obj;
+		return Objects.equals(mediaType, other.mediaType)
+		        && Objects.equals(name, other.name)
 		        && Objects.equals(synonyms, other.synonyms)
 		        && Objects.equals(value, other.value);
 	}
