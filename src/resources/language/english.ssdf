@@ -1,6 +1,6 @@
 {
 	name:    "english",
-	version: "14",
+	version: "15",
 	title:   "English",
 	code:    "eng",
 	windows: {
@@ -36,6 +36,7 @@
 						terminate_cancel:   "Cancel",
 						terminate_combined: "Cancel/Remove",
 						terminate_remove:   "Remove",
+						retry:              "Retry",
 						show_file:          "Show file",
 						pause:              "Pause",
 						resume:             "Resume",

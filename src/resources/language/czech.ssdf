@@ -1,6 +1,6 @@
 {
 	name:    "czech",
-	version: "14",
+	version: "15",
 	title:   "Čeština",
 	code:    "ces",
 	windows: {
@@ -36,6 +36,7 @@
 						terminate_cancel:   "Přerušit",
 						terminate_combined: "Přerušit/Odebrat",
 						terminate_remove:   "Odebrat",
+						retry:              "Opakovat",
 						show_file:          "Zobrazit soubor",
 						pause:              "Pozastavit",
 						resume:             "Pokračovat",

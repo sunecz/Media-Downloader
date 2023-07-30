@@ -123,6 +123,12 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 					.anyMatch((p) -> p.isStarted() && (p.isRunning() || p.isPaused()));
 	}
 	
+	/** @since 00.02.09 */
+	private static final boolean anyRetryable(List<PipelineInfo> infos) {
+		return infos.stream().map(PipelineInfo::pipeline)
+					.anyMatch((p) -> p.isDone() || p.isStopped() || p.isError());
+	}
+	
 	private static final void showFile(PipelineInfo info) {
 		Ignore.callVoid(() -> OS.current().highlight(info.resolvedMedia().path()), MediaDownloader::error);
 	}
@@ -237,6 +243,11 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 	
 	public void resumeSelected() {
 		resume(selectedPipelines());
+	}
+	
+	/** @since 00.02.09 */
+	public void retry(List<PipelineInfo> infos) {
+		infos.stream().forEachOrdered(PipelineInfo::retry);
 	}
 	
 	public ObjectProperty<PipelineInfo> onItemDoubleClicked() {
@@ -376,6 +387,34 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 				int count = stats.count();
 				
 				item.setDisable(count == 0);
+			});
+			
+			return menuItem;
+		}
+		
+		/** @since 00.02.09 */
+		@Override
+		public ContextMenuItem createRetry(String title) {
+			ContextMenuItem menuItem = new ContextMenuItem(title);
+			
+			menuItem.setOnAction((e) -> {
+				List<PipelineInfo> infos = table.selectedPipelines();
+				
+				if(infos.isEmpty()) {
+					return; // Nothing to retry
+				}
+				
+				if(anyRetryable(infos)) {
+					table.retry(infos);
+				}
+			});
+			
+			menuItem.addOnContextMenuShowing((o, ov, pair) -> {
+				ContextMenuItem item = pair.a;
+				Stats stats = pair.b;
+				
+				boolean anyRetryable = stats.done() > 0 || stats.stopped() > 0 || stats.error() > 0;
+				item.setDisable(!anyRetryable);
 			});
 			
 			return menuItem;
@@ -687,6 +726,8 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 		ContextMenuItem createStart(String title);
 		ContextMenuItem createPause(String title);
 		ContextMenuItem createTerminate(String title);
+		/** @since 00.02.09 */
+		ContextMenuItem createRetry(String title);
 		ContextMenuItem createShowFile(String title);
 		ContextMenuItem create(String title);
 		SeparatorContextMenuItem createSeparator();
@@ -850,13 +891,16 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 		private final int started;
 		private final int done;
 		private final int stopped;
+		/** @since 00.02.09 */
+		private final int error;
 		
-		protected Stats(List<PipelineInfo> infos, int count, int started, int done, int stopped) {
+		protected Stats(List<PipelineInfo> infos, int count, int started, int done, int stopped, int error) {
 			this.infos = infos;
 			this.count = count;
 			this.started = started;
 			this.done = done;
 			this.stopped = stopped;
+			this.error = error;
 		}
 		
 		public static final Stats from(List<PipelineInfo> infos) {
@@ -864,8 +908,9 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 			int started = (int) infos.stream().map(PipelineInfo::pipeline).filter(Pipeline::isStarted).count();
 			int done = (int) infos.stream().map(PipelineInfo::pipeline).filter(Pipeline::isDone).count();
 			int stopped = (int) infos.stream().map(PipelineInfo::pipeline).filter(Pipeline::isStopped).count();
+			int error = (int) infos.stream().map(PipelineInfo::pipeline).filter(Pipeline::isError).count();
 			
-			return new Stats(infos, count, started, done, stopped);
+			return new Stats(infos, count, started, done, stopped, error);
 		}
 		
 		public boolean anyNonPaused() {
@@ -890,6 +935,11 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 		
 		public int stopped() {
 			return stopped;
+		}
+		
+		/** @since 00.02.09 */
+		public int error() {
+			return error;
 		}
 	}
 	
@@ -1038,6 +1088,24 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 			
 			try {
 				pipeline.resume();
+			} catch(Exception ex) {
+				MediaDownloader.error(ex);
+			}
+		}
+		
+		/** @since 00.02.09 */
+		public void retry() {
+			Pipeline pipeline = pipeline();
+			
+			if(!pipeline.isDone() && !pipeline.isStopped() && !pipeline.isError()) {
+				return;
+			}
+			
+			try {
+				pipeline.waitFor();
+				pipeline.reset();
+				isQueued(false);
+				start();
 			} catch(Exception ex) {
 				MediaDownloader.error(ex);
 			}

@@ -127,6 +127,16 @@ public final class History<T> {
 		return position < size - 1;
 	}
 	
+	/** @since 00.02.09 */
+	public final T first() {
+		return data.get(0);
+	}
+	
+	/** @since 00.02.09 */
+	public final T last() {
+		return data.get(size - 1);
+	}
+	
 	public final void clear() {
 		data.clear();
 		size = 0;

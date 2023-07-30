@@ -516,6 +516,7 @@ public final class MainWindow extends Window<BorderPane> {
 							: tr("context_menus.table.items.terminate_remove")
 					);
 				}),
+			contextMenuItemFactory.createRetry(tr("context_menus.table.items.retry")),
 			contextMenuItemFactory.createSeparator(),
 			contextMenuItemFactory.create(tr("context_menus.table.items.move_up"))
 				.setOnActivated((e) -> {

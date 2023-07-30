@@ -205,6 +205,35 @@ public final class Pipeline implements EventBindable<EventType>, HasTaskState {
 		resetTask.set(Objects.requireNonNull(task));
 	}
 	
+	/** @since 00.02.09 */
+	public final void reset() throws Exception {
+		synchronized(lockPause) {
+			lockPause.notifyAll();
+		}
+		
+		synchronized(lockDone) {
+			lockDone.notifyAll();
+		}
+		
+		if(thread != null) {
+			thread.interrupt();
+			thread.join();
+		}
+		
+		state.clear(TaskStates.INITIAL);
+		tasks.clear();
+		task.set(null);
+		exception.set(null);
+		
+		thread = null;
+		input = null;
+		
+		resetInput.set(null);
+		resetTask.set(null);
+		historyInputs.clear();
+		historyTasks.clear();
+	}
+	
 	public final void start() throws Exception {
 		state.clear(TaskStates.STARTED);
 		state.set(TaskStates.RUNNING);
