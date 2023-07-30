@@ -71,7 +71,6 @@ public class MediaGetterWindow extends DraggableWindow<VBox> {
 		txtURLs.textProperty().addListener((o, ov, nv) -> {
 			List<String> urls = nonEmptyURLs();
 			boolean isSingle = urls.size() == 1;
-			cmbGetters.setDisable(!isSingle);
 			
 			if(isSingle) {
 				URI uri = Ignore.call(() -> Net.uri(urls.get(0)));
