@@ -26,6 +26,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -1604,8 +1605,18 @@ public final class MediaDownloader {
 		}
 	}
 	
+	/** @since 00.02.09 */
+	private static final Throwable maybeUnwrapThrowableForView(Throwable throwable) {
+		if(throwable instanceof ExecutionException) {
+			throwable = ((ExecutionException) throwable).getCause();
+		}
+		
+		return throwable;
+	}
+	
 	public static final void error(Throwable throwable) {
 		if(throwable == null) return; // Do nothing
+		throwable = maybeUnwrapThrowableForView(throwable);
 		Log.error(throwable, "An error occurred");
 		if(FXUtils.isInitialized()) FXUtils.showExceptionWindow(throwable);
 		else throwable.printStackTrace(); // FX not available, print to stderr

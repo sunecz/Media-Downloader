@@ -1584,22 +1584,35 @@ public final class Utils {
 		private Internal() {
 		}
 		
-		public static final Function<Exception, RuntimeException>
+		public static final Function<Exception, Exception>
 				exceptionMapper(Consumer<Exception> exceptionHandler) {
 			return exceptionHandler != null
 						? ((ex) -> { exceptionHandler.accept(ex); return null; })
 						: null;
 		}
 		
-		public static final void throwRuntimeException(Exception exception,
-				Function<Exception, RuntimeException> exceptionMapper) throws RuntimeException {
+		/** @since 00.02.09 */
+		public static final void throwException(Exception exception,
+				Function<Exception, Exception> exceptionMapper) throws Exception {
 			if(exceptionMapper == null) {
 				return;
 			}
 			
-			RuntimeException runtimeException;
-			if((runtimeException = exceptionMapper.apply(exception)) != null) {
-				throw runtimeException;
+			Exception ex;
+			if((ex = exceptionMapper.apply(exception)) != null) {
+				throw ex;
+			}
+		}
+		
+		public static final void throwRuntimeException(Exception exception,
+				Function<Exception, Exception> exceptionMapper) throws RuntimeException {
+			if(exceptionMapper == null) {
+				return;
+			}
+			
+			Exception ex;
+			if((ex = exceptionMapper.apply(exception)) != null) {
+				throw new RuntimeException(ex);
 			}
 		}
 	}
@@ -2014,7 +2027,7 @@ public final class Utils {
 		}
 		
 		public static final <T> Consumer<T> consumer(CheckedConsumer<T> consumer) {
-			return consumer(consumer, (Function<Exception, RuntimeException>) null);
+			return consumer(consumer, (Function<Exception, Exception>) null);
 		}
 		
 		public static final <T> Consumer<T> consumer(CheckedConsumer<T> consumer,
@@ -2023,7 +2036,7 @@ public final class Utils {
 		}
 		
 		public static final <T> Consumer<T> consumer(CheckedConsumer<T> consumer,
-				Function<Exception, RuntimeException> exceptionMapper) {
+				Function<Exception, Exception> exceptionMapper) {
 			return ((t) -> {
 				try {
 					consumer.accept(t);
@@ -2034,7 +2047,7 @@ public final class Utils {
 		}
 		
 		public static final <T> Runnable runnable(CheckedRunnable runnable) {
-			return runnable(runnable, (Function<Exception, RuntimeException>) null);
+			return runnable(runnable, (Function<Exception, Exception>) null);
 		}
 		
 		public static final <T> Runnable runnable(CheckedRunnable runnable,
@@ -2043,12 +2056,12 @@ public final class Utils {
 		}
 		
 		public static final <T> Runnable runnable(CheckedRunnable runnable,
-				Function<Exception, RuntimeException> exceptionMapper) {
+				Function<Exception, Exception> exceptionMapper) {
 			return (() -> supplier(runnable, exceptionMapper).get());
 		}
 		
 		public static final <T> Supplier<Boolean> supplier(CheckedRunnable runnable) {
-			return supplier(runnable, (Function<Exception, RuntimeException>) null);
+			return supplier(runnable, (Function<Exception, Exception>) null);
 		}
 		
 		public static final <T> Supplier<Boolean> supplier(CheckedRunnable runnable,
@@ -2057,7 +2070,7 @@ public final class Utils {
 		}
 		
 		public static final <T> Supplier<Boolean> supplier(CheckedRunnable runnable,
-				Function<Exception, RuntimeException> exceptionMapper) {
+				Function<Exception, Exception> exceptionMapper) {
 			return (() -> {
 				try {
 					runnable.run();
@@ -2077,8 +2090,22 @@ public final class Utils {
 		private Ignore() {
 		}
 		
+		/** @since 00.02.09 */
+		private static final <T> T throwingIgnore(Callable<T> callable, Supplier<T> defaultValueSupplier,
+				Function<Exception, Exception> exceptionMapper) throws Exception {
+			try {
+				return callable.call();
+			} catch(Exception ex) {
+				Internal.throwException(ex, exceptionMapper);
+			}
+			
+			return defaultValueSupplier != null
+						? defaultValueSupplier.get()
+						: null;
+		}
+		
 		private static final <T> T ignore(Callable<T> callable, Supplier<T> defaultValueSupplier,
-				Function<Exception, RuntimeException> exceptionMapper) {
+				Function<Exception, Exception> exceptionMapper) {
 			try {
 				return callable.call();
 			} catch(Exception ex) {
@@ -2091,19 +2118,19 @@ public final class Utils {
 		}
 		
 		public static final <T> T call(Callable<T> callable) {
-			return call(callable, (Function<Exception, RuntimeException>) null);
+			return call(callable, (Function<Exception, Exception>) null);
 		}
 		
 		public static final <T> T call(Callable<T> callable, Consumer<Exception> exceptionHandler) {
 			return call(callable, Internal.exceptionMapper(exceptionHandler));
 		}
 		
-		public static final <T> T call(Callable<T> callable, Function<Exception, RuntimeException> exceptionMapper) {
+		public static final <T> T call(Callable<T> callable, Function<Exception, Exception> exceptionMapper) {
 			return defaultValue(callable, null, exceptionMapper);
 		}
 		
 		public static final <T> void callVoid(CheckedRunnable runnable) {
-			callVoid(runnable, (Function<Exception, RuntimeException>) null);
+			callVoid(runnable, (Function<Exception, Exception>) null);
 		}
 		
 		public static final <T> void callVoid(CheckedRunnable runnable, Consumer<Exception> exceptionHandler) {
@@ -2111,12 +2138,12 @@ public final class Utils {
 		}
 		
 		public static final <T> void callVoid(CheckedRunnable runnable,
-				Function<Exception, RuntimeException> exceptionMapper) {
+				Function<Exception, Exception> exceptionMapper) {
 			Suppress.runnable(runnable, exceptionMapper).run();
 		}
 		
 		public static final <T> boolean callAndCheck(CheckedRunnable runnable) {
-			return callAndCheck(runnable, (Function<Exception, RuntimeException>) null);
+			return callAndCheck(runnable, (Function<Exception, Exception>) null);
 		}
 		
 		public static final <T> boolean callAndCheck(CheckedRunnable runnable, Consumer<Exception> exceptionHandler) {
@@ -2124,12 +2151,12 @@ public final class Utils {
 		}
 		
 		public static final <T> boolean callAndCheck(CheckedRunnable runnable,
-				Function<Exception, RuntimeException> exceptionMapper) {
+				Function<Exception, Exception> exceptionMapper) {
 			return Suppress.supplier(runnable, exceptionMapper).get();
 		}
 		
 		public static final <T> T defaultValue(Callable<T> callable, T defaultValue) {
-			return defaultValue(callable, defaultValue, (Function<Exception, RuntimeException>) null);
+			return defaultValue(callable, defaultValue, (Function<Exception, Exception>) null);
 		}
 		
 		public static final <T> T defaultValue(Callable<T> callable, T defaultValue,
@@ -2138,12 +2165,12 @@ public final class Utils {
 		}
 		
 		public static final <T> T defaultValue(Callable<T> callable, T defaultValue,
-				Function<Exception, RuntimeException> exceptionMapper) {
+				Function<Exception, Exception> exceptionMapper) {
 			return supplier(callable, () -> defaultValue, exceptionMapper);
 		}
 		
 		public static final <T> T supplier(Callable<T> callable, Supplier<T> defaultValueSupplier) {
-			return supplier(callable, defaultValueSupplier, (Function<Exception, RuntimeException>) null);
+			return supplier(callable, defaultValueSupplier, (Function<Exception, Exception>) null);
 		}
 		
 		public static final <T> T supplier(Callable<T> callable, Supplier<T> defaultValueSupplier,
@@ -2152,7 +2179,7 @@ public final class Utils {
 		}
 		
 		public static final <T> T supplier(Callable<T> callable, Supplier<T> defaultValueSupplier,
-				Function<Exception, RuntimeException> exceptionMapper) {
+				Function<Exception, Exception> exceptionMapper) {
 			return ignore(callable, defaultValueSupplier, exceptionMapper);
 		}
 		
@@ -2162,8 +2189,26 @@ public final class Utils {
 			private Cancellation() {
 			}
 			
-			private static final Function<Exception, RuntimeException> exceptionMapper(
-					Function<Exception, RuntimeException> exceptionMapper) {
+			/** @since 00.02.09 */
+			private static final Function<Exception, Exception> exceptionMapper(
+					Consumer<Exception> exceptionHandler) {
+				if(exceptionHandler == null) {
+					return null;
+				}
+				
+				return ((exception) -> {
+					if(exception instanceof CancellationException
+							|| exception instanceof InterruptedException) {
+						return null;
+					}
+					
+					exceptionHandler.accept(exception);
+					return null;
+				});
+			}
+			
+			private static final Function<Exception, Exception> exceptionMapper(
+					Function<Exception, Exception> exceptionMapper) {
 				return ((exception) -> {
 					if(exception instanceof CancellationException
 							|| exception instanceof InterruptedException) {
@@ -2172,74 +2217,78 @@ public final class Utils {
 					
 					return exceptionMapper != null
 								? exceptionMapper.apply(exception)
-								: null;
+								: exception;
 				});
 			}
 			
-			public static final <T> T call(Callable<T> callable) {
-				return call(callable, (Function<Exception, RuntimeException>) null);
+			public static final <T> T call(Callable<T> callable) throws Exception {
+				return call(callable, (Function<Exception, Exception>) null);
 			}
 			
-			public static final <T> T call(Callable<T> callable, Consumer<Exception> exceptionHandler) {
-				return call(callable, Internal.exceptionMapper(exceptionHandler));
+			public static final <T> T call(Callable<T> callable, Consumer<Exception> exceptionHandler) throws Exception {
+				return call(callable, exceptionMapper(exceptionHandler));
 			}
 			
-			public static final <T> T call(Callable<T> callable, Function<Exception, RuntimeException> exceptionMapper) {
+			public static final <T> T call(Callable<T> callable, Function<Exception, Exception> exceptionMapper)
+					throws Exception {
 				return defaultValue(callable, null, exceptionMapper);
 			}
 			
-			public static final <T> void callVoid(CheckedRunnable runnable) {
-				callVoid(runnable, (Function<Exception, RuntimeException>) null);
+			public static final <T> void callVoid(CheckedRunnable runnable) throws Exception {
+				callVoid(runnable, (Function<Exception, Exception>) null);
 			}
 			
-			public static final <T> void callVoid(CheckedRunnable runnable, Consumer<Exception> exceptionHandler) {
-				callVoid(runnable, Internal.exceptionMapper(exceptionHandler));
+			public static final <T> void callVoid(CheckedRunnable runnable, Consumer<Exception> exceptionHandler)
+					throws Exception {
+				callVoid(runnable, exceptionMapper(exceptionHandler));
 			}
 			
 			public static final <T> void callVoid(CheckedRunnable runnable,
-					Function<Exception, RuntimeException> exceptionMapper) {
+					Function<Exception, Exception> exceptionMapper) throws Exception {
 				Suppress.runnable(runnable, exceptionMapper(exceptionMapper)).run();
 			}
 			
-			public static final <T> boolean callAndCheck(CheckedRunnable runnable) {
-				return callAndCheck(runnable, (Function<Exception, RuntimeException>) null);
+			public static final <T> boolean callAndCheck(CheckedRunnable runnable) throws Exception {
+				return callAndCheck(runnable, (Function<Exception, Exception>) null);
 			}
 			
-			public static final <T> boolean callAndCheck(CheckedRunnable runnable, Consumer<Exception> exceptionHandler) {
-				return callAndCheck(runnable, Internal.exceptionMapper(exceptionHandler));
+			public static final <T> boolean callAndCheck(CheckedRunnable runnable, Consumer<Exception> exceptionHandler)
+					throws Exception {
+				return callAndCheck(runnable, exceptionMapper(exceptionHandler));
 			}
 			
 			public static final <T> boolean callAndCheck(CheckedRunnable runnable,
-					Function<Exception, RuntimeException> exceptionMapper) {
+					Function<Exception, Exception> exceptionMapper) throws Exception {
 				return Suppress.supplier(runnable, exceptionMapper(exceptionMapper)).get();
 			}
 			
-			public static final <T> T defaultValue(Callable<T> callable, T defaultValue) {
-				return defaultValue(callable, defaultValue, (Function<Exception, RuntimeException>) null);
+			public static final <T> T defaultValue(Callable<T> callable, T defaultValue) throws Exception {
+				return defaultValue(callable, defaultValue, (Function<Exception, Exception>) null);
 			}
 			
 			public static final <T> T defaultValue(Callable<T> callable, T defaultValue,
-					Consumer<Exception> exceptionHandler) {
+					Consumer<Exception> exceptionHandler) throws Exception {
 				return supplier(callable, () -> defaultValue, exceptionHandler);
 			}
 			
 			public static final <T> T defaultValue(Callable<T> callable, T defaultValue,
-					Function<Exception, RuntimeException> exceptionMapper) {
+					Function<Exception, Exception> exceptionMapper) throws Exception {
 				return supplier(callable, () -> defaultValue, exceptionMapper);
 			}
 			
-			public static final <T> T supplier(Callable<T> callable, Supplier<T> defaultValueSupplier) {
-				return supplier(callable, defaultValueSupplier, (Function<Exception, RuntimeException>) null);
+			public static final <T> T supplier(Callable<T> callable, Supplier<T> defaultValueSupplier)
+					throws Exception {
+				return supplier(callable, defaultValueSupplier, (Function<Exception, Exception>) null);
 			}
 			
 			public static final <T> T supplier(Callable<T> callable, Supplier<T> defaultValueSupplier,
-					Consumer<Exception> exceptionHandler) {
-				return supplier(callable, defaultValueSupplier, Internal.exceptionMapper(exceptionHandler));
+					Consumer<Exception> exceptionHandler) throws Exception {
+				return supplier(callable, defaultValueSupplier, exceptionMapper(exceptionHandler));
 			}
 			
 			public static final <T> T supplier(Callable<T> callable, Supplier<T> defaultValueSupplier,
-					Function<Exception, RuntimeException> exceptionMapper) {
-				return ignore(callable, defaultValueSupplier, exceptionMapper(exceptionMapper));
+					Function<Exception, Exception> exceptionMapper) throws Exception {
+				return throwingIgnore(callable, defaultValueSupplier, exceptionMapper(exceptionMapper));
 			}
 		}
 	}
