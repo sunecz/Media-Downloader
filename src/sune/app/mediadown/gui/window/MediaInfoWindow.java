@@ -24,6 +24,7 @@ import sune.app.mediadown.gui.DraggableWindow;
 import sune.app.mediadown.media.AudioMediaBase;
 import sune.app.mediadown.media.Media;
 import sune.app.mediadown.media.MediaContainer;
+import sune.app.mediadown.media.MediaProtection;
 import sune.app.mediadown.media.MediaQuality;
 import sune.app.mediadown.media.MediaType;
 import sune.app.mediadown.media.SubtitlesMedia;
@@ -315,6 +316,33 @@ public class MediaInfoWindow extends DraggableWindow<StackPane> {
 		}
 		
 		/** @since 00.02.09 */
+		protected void loadMediaProtections(Media media, TreeItem<MediaInfoRow> root) {
+			List<MediaProtection> protections = media.metadata().protections();
+			
+			if(protections.isEmpty()) {
+				return;
+			}
+			
+			TreeItem<MediaInfoRow> rootProtection = newParent("protection");
+			
+			for(int i = 0, l = protections.size(); i < l; ++i) {
+				MediaProtection protection = protections.get(i);
+				TreeItem<MediaInfoRow> rootItem = newParent(String.valueOf(i));
+				
+				addChildren(rootItem,
+					newChild("type", protection.type()),
+					newChild("scheme", protection.scheme()),
+					newChild("contentType", protection.contentType()),
+					newChild("content", protection.content())
+				);
+				
+				addChildren(rootProtection, rootItem);
+			}
+			
+			addChildren(root, rootProtection);
+		}
+		
+		/** @since 00.02.09 */
 		protected String textOfQuality(MediaQuality quality) {
 			return MediaQuality.removeNameSuffix(quality.name());
 		}
@@ -342,14 +370,17 @@ public class MediaInfoWindow extends DraggableWindow<StackPane> {
 			
 			loadBeforeMetadata(media, root);
 			
-			TreeItem<MediaInfoRow> metadataRoot = newParent("metadata");
+			TreeItem<MediaInfoRow> rootMetadata = newParent("metadata");
 			addChildren(
-				metadataRoot,
+				rootMetadata,
 				media.metadata().data().entrySet().stream()
+					// Handle media protections separately
+					.filter((e) -> !e.getKey().equals("protection"))
 					.map((e) -> newChildOfAny(e.getKey(), e.getValue()))
 					.collect(Collectors.toList())
 			);
-			addChildren(root, metadataRoot);
+			loadMediaProtections(media, rootMetadata);
+			addChildren(root, rootMetadata);
 			
 			return root;
 		}
