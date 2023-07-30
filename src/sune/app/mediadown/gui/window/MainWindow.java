@@ -29,6 +29,7 @@ import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SelectionMode;
+import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TableView.TableViewSelectionModel;
 import javafx.scene.image.ImageView;
@@ -419,6 +420,7 @@ public final class MainWindow extends Window<BorderPane> {
 		itemMediaGetter.setOnAction((e) -> {
 			MediaDownloader.window(MediaGetterWindow.NAME).show(this);
 		});
+		menuItems.add(new SeparatorMenuItem());
 		menuItems.add(itemMediaGetter);
 		
 		menuAdd.getItems().addAll(menuItems);
