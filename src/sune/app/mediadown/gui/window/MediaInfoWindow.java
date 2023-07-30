@@ -24,6 +24,7 @@ import sune.app.mediadown.gui.DraggableWindow;
 import sune.app.mediadown.media.AudioMediaBase;
 import sune.app.mediadown.media.Media;
 import sune.app.mediadown.media.MediaContainer;
+import sune.app.mediadown.media.MediaQuality;
 import sune.app.mediadown.media.MediaType;
 import sune.app.mediadown.media.SubtitlesMedia;
 import sune.app.mediadown.media.VideoMediaBase;
@@ -271,6 +272,31 @@ public class MediaInfoWindow extends DraggableWindow<StackPane> {
 			return new TreeItem<>(MediaInfoRow.ofChild(title, Objects.toString(value)));
 		}
 		
+		/** @since 00.02.09 */
+		protected <T> TreeItem<MediaInfoRow> newChildOfList(String title, List<T> value) {
+			if(value.isEmpty()) {
+				return newChild(title, "EMPTY");
+			}
+			
+			TreeItem<MediaInfoRow> parent = newParent(title);
+			
+			for(int i = 0, l = value.size(); i < l; ++i) {
+				addChildren(parent, newChild(String.valueOf(i), value.get(i)));
+			}
+			
+			return parent;
+		}
+		
+		/** @since 00.02.09 */
+		@SuppressWarnings("unchecked")
+		protected <T> TreeItem<MediaInfoRow> newChildOfAny(String title, T value) {
+			if(value instanceof List) {
+				return newChildOfList(title, (List<T>) value);
+			}
+			
+			return newChild(title, value);
+		}
+		
 		protected final String rootName(Media media) {
 			return String.format("%s::%s", media.isContainer() ? "MediaContainer" : "Media", media.type().name());
 		}
@@ -288,6 +314,16 @@ public class MediaInfoWindow extends DraggableWindow<StackPane> {
 			// Do nothing by default
 		}
 		
+		/** @since 00.02.09 */
+		protected String textOfQuality(MediaQuality quality) {
+			return MediaQuality.removeNameSuffix(quality.name());
+		}
+		
+		/** @since 00.02.09 */
+		protected String textOfSize(long size) {
+			return size < 0L ? "UNKNOWN" : String.valueOf(size);
+		}
+		
 		@Override
 		public TreeItem<MediaInfoRow> load(Media media) {
 			TreeItem<MediaInfoRow> root = newParent(rootName(media));
@@ -296,8 +332,8 @@ public class MediaInfoWindow extends DraggableWindow<StackPane> {
 				newChild("uri", media.uri()),
 				newChild("type", media.type()),
 				newChild("format", media.format()),
-				newChild("quality", media.quality()),
-				newChild("size", media.size()),
+				newChild("quality", textOfQuality(media.quality())),
+				newChild("size", textOfSize(media.size())),
 				newChild("isContainer", media.isContainer()),
 				newChild("isSingle", media.isSingle()),
 				newChild("isSegmented", media.isSegmented()),
@@ -306,9 +342,14 @@ public class MediaInfoWindow extends DraggableWindow<StackPane> {
 			
 			loadBeforeMetadata(media, root);
 			
-			addChildren(root, media.metadata().data().entrySet().stream()
-			                        .map((e) -> newChild(e.getKey(), e.getValue()))
-			                        .collect(Collectors.toList()));
+			TreeItem<MediaInfoRow> metadataRoot = newParent("metadata");
+			addChildren(
+				metadataRoot,
+				media.metadata().data().entrySet().stream()
+					.map((e) -> newChildOfAny(e.getKey(), e.getValue()))
+					.collect(Collectors.toList())
+			);
+			addChildren(root, metadataRoot);
 			
 			return root;
 		}
@@ -322,7 +363,7 @@ public class MediaInfoWindow extends DraggableWindow<StackPane> {
 			addChildren(root,
 				newChild("resolution", video.resolution()),
 				newChild("duration", video.duration()),
-				newChild("codecs", video.codecs()),
+				newChildOfList("codecs", video.codecs()),
 				newChild("bandwidth", video.bandwidth()),
 				newChild("frameRate", video.frameRate())
 			);
@@ -337,7 +378,7 @@ public class MediaInfoWindow extends DraggableWindow<StackPane> {
 			addChildren(root,
 				newChild("language", audio.language()),
 				newChild("duration", audio.duration()),
-				newChild("codecs", audio.codecs()),
+				newChildOfList("codecs", audio.codecs()),
 				newChild("bandwidth", audio.bandwidth()),
 				newChild("sampleRate", audio.sampleRate())
 			);
