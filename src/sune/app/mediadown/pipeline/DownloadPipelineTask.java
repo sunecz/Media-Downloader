@@ -6,9 +6,12 @@ import sune.app.mediadown.concurrent.PositionAwareQueueTaskExecutor.PositionAwar
 import sune.app.mediadown.download.Download;
 import sune.app.mediadown.download.DownloadResult;
 import sune.app.mediadown.event.DownloadEvent;
+import sune.app.mediadown.event.Event;
 import sune.app.mediadown.event.EventRegistry;
 import sune.app.mediadown.event.EventType;
 import sune.app.mediadown.event.QueueEvent;
+import sune.app.mediadown.event.tracker.Trackable;
+import sune.app.mediadown.event.tracker.TrackerEvent;
 import sune.app.mediadown.manager.DownloadManager;
 import sune.app.mediadown.manager.PositionAwareManagerSubmitResult;
 import sune.app.mediadown.util.Pair;
@@ -28,9 +31,25 @@ public final class DownloadPipelineTask implements PipelineTask<DownloadPipeline
 		this.media = Objects.requireNonNull(media);
 	}
 	
+	/** @since 00.02.09 */
+	private static final void callTrackerEventUpdate(EventRegistry<EventType> eventRegistry, Trackable trackable) {
+		eventRegistry.call(TrackerEvent.UPDATE, trackable.trackerManager().tracker());
+	}
+	
 	/** @since 00.02.08 */
 	public static final DownloadPipelineTask of(PipelineMedia media) {
 		return new DownloadPipelineTask(media);
+	}
+	
+	/** @since 00.02.09 */
+	private final void bindAllDownloadEvents(EventRegistry<EventType> eventRegistry, Download download) {
+		for(Event<DownloadEvent, ?> event : DownloadEvent.values()) {
+			download.addEventListener(event, (ctx) -> callTrackerEventUpdate(eventRegistry, (Trackable) ctx));
+		}
+	}
+	
+	private final Download download() {
+		return result.value().download();
 	}
 	
 	@Override
@@ -60,14 +79,10 @@ public final class DownloadPipelineTask implements PipelineTask<DownloadPipeline
 		// Bind all events from the pipeline
 		EventRegistry<EventType> eventRegistry = pipeline.getEventRegistry();
 		Download download = downloadResult.download();
-		eventRegistry.bindAll(download, DownloadEvent.values());
+		bindAllDownloadEvents(eventRegistry, download);
 		
 		Ignore.Cancellation.call(result::get); // Wait for the download to finish
 		return Utils.cast(downloadResult.pipelineResult());
-	}
-	
-	private final Download download() {
-		return result.value().download();
 	}
 	
 	@Override

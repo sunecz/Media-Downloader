@@ -142,7 +142,8 @@ public final class PluginUpdater {
 	public static final Download update(String pluginURL, Path file) {
 		return new Download() {
 			
-			private final FileDownloader downloader = new FileDownloader(new TrackerManager());
+			private final TrackerManager trackerManager = new TrackerManager();
+			private final FileDownloader downloader = new FileDownloader(trackerManager);
 			
 			@Override
 			public void start() throws Exception {
@@ -205,6 +206,18 @@ public final class PluginUpdater {
 			public <V> void removeEventListener(Event<? extends DownloadEvent, V> event, Listener<V> listener) {
 				downloader.removeEventListener(event, listener);
 			}
+			
+			@Override
+			public TrackerManager trackerManager() {
+				return trackerManager;
+			}
+			
+			@Override public Exception exception() { return null; /* Not required */ }
+			@Override public Request request() { return null; /* Not required */ }
+			@Override public Path output() { return null; /* Not required */ }
+			@Override public DownloadConfiguration configuration() { return null; /* Not required */ }
+			@Override public Response response() { return null; /* Not required */ }
+			@Override public long totalBytes() { return 0; /* Not required */ }
 		};
 	}
 	

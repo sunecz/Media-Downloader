@@ -45,7 +45,6 @@ import sune.app.mediadown.concurrent.Threads;
 import sune.app.mediadown.download.Download;
 import sune.app.mediadown.entity.MediaEngine;
 import sune.app.mediadown.entity.MediaEngines;
-import sune.app.mediadown.event.ConversionEvent;
 import sune.app.mediadown.event.DownloadEvent;
 import sune.app.mediadown.event.PipelineEvent;
 import sune.app.mediadown.event.QueueEvent;
@@ -56,7 +55,6 @@ import sune.app.mediadown.event.tracker.PipelineStates;
 import sune.app.mediadown.event.tracker.PlainTextTracker;
 import sune.app.mediadown.event.tracker.Tracker;
 import sune.app.mediadown.event.tracker.TrackerEvent;
-import sune.app.mediadown.event.tracker.TrackerManager;
 import sune.app.mediadown.event.tracker.TrackerVisitor;
 import sune.app.mediadown.event.tracker.WaitTracker;
 import sune.app.mediadown.gui.Dialog;
@@ -724,9 +722,9 @@ public final class MainWindow extends Window<BorderPane> {
 						String pluginTitle = pluginFile.getPlugin().instance().title();
 						downloadUpdate = PluginUpdater.update(pluginURL, Path.of(pluginFile.getPath()));
 						downloadUpdate.addEventListener(DownloadEvent.BEGIN,
-							(data) -> context.setText(translation.getSingle("labels.update.download.begin", "name", pluginTitle)));
-						downloadUpdate.addEventListener(DownloadEvent.UPDATE, (data) -> {
-							DownloadTracker tracker = Utils.cast(data.b.tracker());
+							(ctx) -> context.setText(translation.getSingle("labels.update.download.begin", "name", pluginTitle)));
+						downloadUpdate.addEventListener(DownloadEvent.UPDATE, (ctx) -> {
+							DownloadTracker tracker = Utils.cast(ctx.trackerManager().tracker());
 							String progress = translation.getSingle("labels.update.download.progress",
 								"name",    pluginTitle,
 								"current", tracker.current(),
@@ -735,9 +733,9 @@ public final class MainWindow extends Window<BorderPane> {
 							context.setText(progress);
 						});
 						downloadUpdate.addEventListener(DownloadEvent.ERROR,
-							(data) -> context.setText(translation.getSingle("labels.update.download.error", "message", data.b)));
+							(ctx) -> context.setText(translation.getSingle("labels.update.download.error", "message", ctx.exception())));
 						downloadUpdate.addEventListener(DownloadEvent.END,
-							(data) -> context.setText(translation.getSingle("labels.update.download.end", "name", pluginTitle)));
+							(ctx) -> context.setText(translation.getSingle("labels.update.download.end", "name", pluginTitle)));
 						downloadUpdate.start();
 						return true;
 					}
@@ -945,15 +943,6 @@ public final class MainWindow extends Window<BorderPane> {
 		pipeline.addEventListener(PipelineEvent.PAUSE, (p) -> {
 			info.update(new PipelineInfoData.OfState(PipelineStates.PAUSED, PipelineInfo.TEXT_NONE));
 		});
-		
-		pipeline.getEventRegistry().addMany((o) -> {
-			if(!pipeline.isRunning()) {
-				return;
-			}
-			
-			Tracker tracker = Utils.<Pair<?, TrackerManager>>cast(o).b.tracker();
-			tracker.visit(visitor);
-		}, DownloadEvent.UPDATE, ConversionEvent.UPDATE);
 		
 		pipeline.addEventListener(TrackerEvent.UPDATE, (tracker) -> {
 			if(!pipeline.isRunning()) {

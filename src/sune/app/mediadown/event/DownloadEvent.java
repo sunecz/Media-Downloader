@@ -1,18 +1,16 @@
 package sune.app.mediadown.event;
 
-import sune.app.mediadown.download.InternalDownloader;
-import sune.app.mediadown.event.tracker.TrackerManager;
-import sune.app.mediadown.util.Pair;
+import sune.app.mediadown.download.DownloadContext;
 import sune.app.mediadown.util.Utils;
 
 public final class DownloadEvent implements EventType {
 	
-	public static final Event<DownloadEvent, InternalDownloader>                       BEGIN  = new Event<>();
-	public static final Event<DownloadEvent, Pair<InternalDownloader, TrackerManager>> UPDATE = new Event<>();
-	public static final Event<DownloadEvent, InternalDownloader>                       END    = new Event<>();
-	public static final Event<DownloadEvent, Pair<InternalDownloader, Exception>>      ERROR  = new Event<>();
-	public static final Event<DownloadEvent, InternalDownloader>                       PAUSE  = new Event<>();
-	public static final Event<DownloadEvent, InternalDownloader>                       RESUME = new Event<>();
+	public static final Event<DownloadEvent, DownloadContext> BEGIN  = new Event<>();
+	public static final Event<DownloadEvent, DownloadContext> UPDATE = new Event<>();
+	public static final Event<DownloadEvent, DownloadContext> END    = new Event<>();
+	public static final Event<DownloadEvent, DownloadContext> ERROR  = new Event<>();
+	public static final Event<DownloadEvent, DownloadContext> PAUSE  = new Event<>();
+	public static final Event<DownloadEvent, DownloadContext> RESUME = new Event<>();
 	
 	private static Event<DownloadEvent, ?>[] values;
 	

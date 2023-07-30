@@ -18,7 +18,6 @@ import sune.app.mediadown.event.Event;
 import sune.app.mediadown.event.EventRegistry;
 import sune.app.mediadown.event.Listener;
 import sune.app.mediadown.event.tracker.ConversionTracker;
-import sune.app.mediadown.event.tracker.TrackerEvent;
 import sune.app.mediadown.event.tracker.TrackerManager;
 import sune.app.mediadown.ffmpeg.FFmpeg.Options;
 import sune.app.mediadown.logging.Log;
@@ -42,6 +41,8 @@ public final class FFmpegConverter implements Converter {
 	private ReadOnlyProcess process;
 	private ConversionTracker tracker;
 	private FFmpeg.Command command;
+	
+	private Exception exception;
 	
 	public FFmpegConverter(TrackerManager trackerManager) {
 		this.trackerManager = Objects.requireNonNull(trackerManager);
@@ -71,6 +72,7 @@ public final class FFmpegConverter implements Converter {
 		if(!matcher.matches()) return; // Not a progress info
 		String time = matcher.group(1);
 		tracker.update(Utils.convertToSeconds(time));
+		eventRegistry.call(ConversionEvent.UPDATE, this);
 	}
 	
 	private final int doConversion(FFmpeg.Command command) throws Exception {
@@ -96,7 +98,6 @@ public final class FFmpegConverter implements Converter {
 		boolean isMerge = altered.outputs().stream().allMatch((o) -> o.options().contains(Options.codecCopy()));
 		
 		tracker = new ConversionTracker(duration, isMerge);
-		trackerManager.addEventListener(TrackerEvent.UPDATE, (t) -> eventRegistry.call(ConversionEvent.UPDATE, new Pair<>(this, trackerManager)));
 		trackerManager.tracker(tracker);
 		
 		for(Output output : command.outputs()) {
@@ -149,8 +150,9 @@ public final class FFmpegConverter implements Converter {
 			eventRegistry.call(ConversionEvent.BEGIN, this);
 			doStart();
 		} catch(Exception ex) {
+			exception = ex;
 			state.set(TaskStates.ERROR);
-			eventRegistry.call(ConversionEvent.ERROR, new Pair<>(this, ex));
+			eventRegistry.call(ConversionEvent.ERROR, this);
 			throw ex; // Propagate the error
 		} finally {
 			doStop(TaskStates.DONE);
@@ -250,5 +252,15 @@ public final class FFmpegConverter implements Converter {
 	@Override
 	public <V> void removeEventListener(Event<? extends ConversionEvent, V> event, Listener<V> listener) {
 		eventRegistry.remove(event, listener);
+	}
+	
+	@Override
+	public TrackerManager trackerManager() {
+		return trackerManager;
+	}
+	
+	@Override
+	public Exception exception() {
+		return exception;
 	}
 }

@@ -23,7 +23,6 @@ import sune.app.mediadown.net.Web;
 import sune.app.mediadown.net.Web.Request;
 import sune.app.mediadown.net.Web.Response;
 import sune.app.mediadown.util.CheckedConsumer;
-import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.Range;
 import sune.app.mediadown.util.Utils.Ignore;
 
@@ -32,7 +31,7 @@ public class AcceleratedFileDownloader implements InternalDownloader {
 	
 	private static final Range<Long> RANGE_UNSET = new Range<>(-1L, -1L);
 	
-	private final TrackerManager manager;
+	private final TrackerManager trackerManager;
 	private final int count;
 	private final List<InternalDownloader> downloaders;
 	private final EventRegistry<DownloadEvent> eventRegistry;
@@ -46,15 +45,17 @@ public class AcceleratedFileDownloader implements InternalDownloader {
 	private volatile Response response;
 	private long totalBytes;
 	
+	private Exception exception;
+	
 	public AcceleratedFileDownloader(TrackerManager manager) {
 		this(manager, acceleratedDownloaderCount());
 	}
 	
 	public AcceleratedFileDownloader(TrackerManager manager, int count) {
-		this.manager       = Objects.requireNonNull(manager);
-		this.count         = checkCount(count);
-		this.downloaders   = new ArrayList<>(this.count);
-		this.eventRegistry = new EventRegistry<>();
+		this.trackerManager = Objects.requireNonNull(manager);
+		this.count          = checkCount(count);
+		this.downloaders    = new ArrayList<>(this.count);
+		this.eventRegistry  = new EventRegistry<>();
 	}
 	
 	private static final int acceleratedDownloaderCount() {
@@ -109,7 +110,7 @@ public class AcceleratedFileDownloader implements InternalDownloader {
 		return downloaders.stream().allMatch(func);
 	}
 	
-	private final void onBegin(InternalDownloader downloader) {
+	private final void onBegin(DownloadContext context) {
 		// Only the first begin notification is propagated
 		if(!flagBegin.compareAndSet(false, true))
 			return;
@@ -118,12 +119,12 @@ public class AcceleratedFileDownloader implements InternalDownloader {
 		eventRegistry.call(DownloadEvent.BEGIN, this);
 	}
 	
-	private final void onUpdate(Pair<InternalDownloader, TrackerManager> pair) {
+	private final void onUpdate(DownloadContext context) {
 		// Update events are always propagated
-		eventRegistry.call(DownloadEvent.UPDATE, new Pair<>(this, pair.b));
+		eventRegistry.call(DownloadEvent.UPDATE, this);
 	}
 	
-	private final void onEnd(InternalDownloader downloader) {
+	private final void onEnd(DownloadContext context) {
 		// Only if all the downloaders are either done or stopped
 		if(!checkState((d) -> d.isDone() || d.isStopped()))
 			return;
@@ -132,15 +133,17 @@ public class AcceleratedFileDownloader implements InternalDownloader {
 		eventRegistry.call(DownloadEvent.END, this);
 	}
 	
-	private final void onError(Pair<InternalDownloader, Exception> pair) {
+	private final void onError(DownloadContext context) {
 		// Stop the downloaders
 		Ignore.callVoid(() -> doAction(InternalDownloader::stop));
+		// Remember the exception
+		exception = context.exception();
 		// Notify the event registry
-		eventRegistry.call(DownloadEvent.ERROR, new Pair<>(this, pair.b));
+		eventRegistry.call(DownloadEvent.ERROR, this);
 	}
 	
 	private final InternalDownloader createDownloader() {
-		return new FileDownloader(manager);
+		return new FileDownloader(trackerManager);
 	}
 	
 	private final void maybeSetResponse(Response responseToSet) {
@@ -231,7 +234,8 @@ public class AcceleratedFileDownloader implements InternalDownloader {
 							bytes.getAndAdd(downloaded);
 						}
 					} catch(Exception ex) {
-						onError(new Pair<>(this, ex));
+						exception = ex;
+						onError(this);
 					} finally {
 						lock.decrement();
 					}
@@ -369,5 +373,15 @@ public class AcceleratedFileDownloader implements InternalDownloader {
 	@Override
 	public <V> void call(Event<? extends DownloadEvent, V> event, V value) {
 		Ignore.callVoid(() -> doAction((downloader) -> downloader.call(event, value)));
+	}
+	
+	@Override
+	public TrackerManager trackerManager() {
+		return trackerManager;
+	}
+	
+	@Override
+	public Exception exception() {
+		return exception;
 	}
 }

@@ -1,10 +1,6 @@
 package sune.app.mediadown.download;
 
-import sune.app.mediadown.HasTaskState;
-import sune.app.mediadown.event.DownloadEvent;
-import sune.app.mediadown.event.EventBindable;
-
-public interface Download extends EventBindable<DownloadEvent>, HasTaskState {
+public interface Download extends DownloadContext {
 	
 	void start() throws Exception;
 	void stop() throws Exception;

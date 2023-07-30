@@ -1,19 +1,17 @@
 package sune.app.mediadown.event;
 
-import sune.app.mediadown.entity.Converter;
-import sune.app.mediadown.event.tracker.TrackerManager;
-import sune.app.mediadown.util.Pair;
+import sune.app.mediadown.conversion.ConversionContext;
 import sune.app.mediadown.util.Utils;
 
 /** @since 00.01.26 */
 public final class ConversionEvent implements EventType {
 	
-	public static final Event<ConversionEvent, Converter>                       BEGIN  = new Event<>();
-	public static final Event<ConversionEvent, Pair<Converter, TrackerManager>> UPDATE = new Event<>();
-	public static final Event<ConversionEvent, Converter>                       END    = new Event<>();
-	public static final Event<ConversionEvent, Pair<Converter, Exception>>      ERROR  = new Event<>();
-	public static final Event<ConversionEvent, Converter>                       PAUSE  = new Event<>();
-	public static final Event<ConversionEvent, Converter>                       RESUME = new Event<>();
+	public static final Event<ConversionEvent, ConversionContext> BEGIN  = new Event<>();
+	public static final Event<ConversionEvent, ConversionContext> UPDATE = new Event<>();
+	public static final Event<ConversionEvent, ConversionContext> END    = new Event<>();
+	public static final Event<ConversionEvent, ConversionContext> ERROR  = new Event<>();
+	public static final Event<ConversionEvent, ConversionContext> PAUSE  = new Event<>();
+	public static final Event<ConversionEvent, ConversionContext> RESUME = new Event<>();
 	
 	private static Event<ConversionEvent, ?>[] values;
 	

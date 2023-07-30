@@ -28,7 +28,6 @@ import sune.app.mediadown.exception.RejectedResponseException;
 import sune.app.mediadown.net.Web;
 import sune.app.mediadown.net.Web.Request;
 import sune.app.mediadown.net.Web.Response;
-import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.Range;
 
 /** @since 00.02.08 */
@@ -85,6 +84,8 @@ public class FileDownloader implements InternalDownloader {
 	private FileChannel channel;
 	private Response.OfStream response;
 	private ByteBuffer buffer;
+	
+	private Exception exception;
 	
 	public FileDownloader(TrackerManager trackerManager) {
 		this.trackerManager = Objects.requireNonNull(trackerManager);
@@ -215,7 +216,7 @@ public class FileDownloader implements InternalDownloader {
 	private final void update(long readBytes) {
 		bytes.getAndAdd(readBytes);
 		tracker.update(readBytes);
-		eventRegistry.call(DownloadEvent.UPDATE, new Pair<>(this, trackerManager));
+		eventRegistry.call(DownloadEvent.UPDATE, this);
 	}
 	
 	private final boolean doDownload() throws Exception {
@@ -329,8 +330,9 @@ public class FileDownloader implements InternalDownloader {
 			eventRegistry.call(DownloadEvent.BEGIN, this);
 			doStart();
 		} catch(Exception ex) {
+			exception = ex;
 			state.set(TaskStates.ERROR);
-			eventRegistry.call(DownloadEvent.ERROR, new Pair<>(this, ex));
+			eventRegistry.call(DownloadEvent.ERROR, this);
 			throw ex; // Propagate the error
 		} finally {
 			doStop(TaskStates.DONE);
@@ -458,6 +460,16 @@ public class FileDownloader implements InternalDownloader {
 	@Override
 	public boolean isError() {
 		return state.is(TaskStates.ERROR);
+	}
+	
+	@Override
+	public TrackerManager trackerManager() {
+		return trackerManager;
+	}
+	
+	@Override
+	public Exception exception() {
+		return exception;
 	}
 	
 	private static final class InternalInputStream extends InputStream {

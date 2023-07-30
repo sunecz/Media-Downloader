@@ -6,9 +6,12 @@ import sune.app.mediadown.concurrent.PositionAwareQueueTaskExecutor.PositionAwar
 import sune.app.mediadown.conversion.ConversionMedia;
 import sune.app.mediadown.entity.Converter;
 import sune.app.mediadown.event.ConversionEvent;
+import sune.app.mediadown.event.Event;
 import sune.app.mediadown.event.EventRegistry;
 import sune.app.mediadown.event.EventType;
 import sune.app.mediadown.event.QueueEvent;
+import sune.app.mediadown.event.tracker.Trackable;
+import sune.app.mediadown.event.tracker.TrackerEvent;
 import sune.app.mediadown.gui.table.ResolvedMedia;
 import sune.app.mediadown.manager.ConversionManager;
 import sune.app.mediadown.manager.ManagerSubmitResult;
@@ -41,10 +44,26 @@ public final class ConversionPipelineTask implements PipelineTask<ConversionPipe
 		this.metadata = metadata;
 	}
 	
+	/** @since 00.02.09 */
+	private static final void callTrackerEventUpdate(EventRegistry<EventType> eventRegistry, Trackable trackable) {
+		eventRegistry.call(TrackerEvent.UPDATE, trackable.trackerManager().tracker());
+	}
+	
 	/** @since 00.02.08 */
 	public static final ConversionPipelineTask of(ResolvedMedia output, List<ConversionMedia> inputs,
 			Metadata metadata) {
 		return new ConversionPipelineTask(output, inputs, metadata);
+	}
+	
+	/** @since 00.02.09 */
+	private final void bindAllConversionEvents(EventRegistry<EventType> eventRegistry, Converter converter) {
+		for(Event<ConversionEvent, ?> event : ConversionEvent.values()) {
+			converter.addEventListener(event, (ctx) -> callTrackerEventUpdate(eventRegistry, (Trackable) ctx));
+		}
+	}
+	
+	private final Converter converter() {
+		return result.value();
 	}
 	
 	@Override
@@ -73,14 +92,10 @@ public final class ConversionPipelineTask implements PipelineTask<ConversionPipe
 		// Bind all events from the pipeline
 		EventRegistry<EventType> eventRegistry = pipeline.getEventRegistry();
 		Converter converter = result.value();
-		eventRegistry.bindAll(converter, ConversionEvent.values());
+		bindAllConversionEvents(eventRegistry, converter);
 		
 		Ignore.Cancellation.call(result::get); // Wait for the conversion to finish
 		return ConversionPipelineResult.noConversion();
-	}
-	
-	private final Converter converter() {
-		return result.value();
 	}
 	
 	@Override

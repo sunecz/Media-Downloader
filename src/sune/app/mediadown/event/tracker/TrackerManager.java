@@ -4,10 +4,12 @@ import sune.app.mediadown.event.Event;
 import sune.app.mediadown.event.EventBindable;
 import sune.app.mediadown.event.EventRegistry;
 import sune.app.mediadown.event.Listener;
+import sune.app.mediadown.util.Pair;
 
 public class TrackerManager implements EventBindable<TrackerEvent> {
 	
 	private final Listener<Tracker> onUpdate = this::update;
+	private final Listener<Pair<Tracker, Exception>> onError = this::error;
 	private final EventRegistry<TrackerEvent> eventRegistry = new EventRegistry<>();
 	private Tracker tracker;
 	
@@ -23,12 +25,17 @@ public class TrackerManager implements EventBindable<TrackerEvent> {
 		eventRegistry.call(TrackerEvent.UPDATE, tracker);
 	}
 	
+	private final void error(Pair<Tracker, Exception> pair) {
+		eventRegistry.call(TrackerEvent.ERROR, pair);
+	}
+	
 	private final void unbind() {
 		if(tracker == null) {
 			return;
 		}
 		
 		tracker.removeEventListener(TrackerEvent.UPDATE, onUpdate);
+		tracker.removeEventListener(TrackerEvent.ERROR, onError);
 	}
 	
 	private final void bind() {
@@ -37,6 +44,7 @@ public class TrackerManager implements EventBindable<TrackerEvent> {
 		}
 		
 		tracker.addEventListener(TrackerEvent.UPDATE, onUpdate);
+		tracker.addEventListener(TrackerEvent.ERROR, onError);
 	}
 	
 	public void tracker(Tracker tracker) {

@@ -446,8 +446,8 @@ public final class MediaDownloader {
 					final Property<Double> progressValue = new Property<>(0.0);
 					FileDownloader downloader = new FileDownloader(new TrackerManager());
 					
-					downloader.addEventListener(DownloadEvent.BEGIN, (d) -> {
-						Path file = d.output();
+					downloader.addEventListener(DownloadEvent.BEGIN, (context) -> {
+						Path file = context.output();
 						String path = file.subpath(rootDir.getNameCount(), file.getNameCount()).toString();
 						
 						progressValue.setValue(getProgress());
@@ -455,9 +455,9 @@ public final class MediaDownloader {
 						setProgress(0.0);
 					});
 					
-					downloader.addEventListener(DownloadEvent.UPDATE, (pair) -> {
-						Path file = pair.a.output();
-						DownloadTracker tracker = (DownloadTracker) pair.b.tracker();
+					downloader.addEventListener(DownloadEvent.UPDATE, (context) -> {
+						Path file = context.output();
+						DownloadTracker tracker = (DownloadTracker) context.trackerManager().tracker();
 						double current = tracker.current();
 						double total = tracker.total();
 						double percent0 = (current / (double) total);
@@ -1052,23 +1052,23 @@ public final class MediaDownloader {
 				
 				FileDownloader downloader = new FileDownloader(new TrackerManager());
 				
-				downloader.addEventListener(DownloadEvent.BEGIN, (d) -> {
+				downloader.addEventListener(DownloadEvent.BEGIN, (context) -> {
 					receiver.receive("Downloading the new version...");
 				});
 				
-				downloader.addEventListener(DownloadEvent.UPDATE, (pair) -> {
-					DownloadTracker tracker = (DownloadTracker) pair.b.tracker();
+				downloader.addEventListener(DownloadEvent.UPDATE, (context) -> {
+					DownloadTracker tracker = (DownloadTracker) context.trackerManager().tracker();
 					long current = tracker.current();
 					long total = tracker.total();
 					receiver.receive(String.format(Locale.US, "Downloading the new version... %.2f%%", current * 100.0 / total));
 				});
 				
-				downloader.addEventListener(DownloadEvent.END, (d) -> {
+				downloader.addEventListener(DownloadEvent.END, (context) -> {
 					receiver.receive("Downloading the new version... done");
 				});
 				
-				downloader.addEventListener(DownloadEvent.ERROR, (pair) -> {
-					error(pair.b);
+				downloader.addEventListener(DownloadEvent.ERROR, (context) -> {
+					error(context.exception());
 				});
 				
 				// Download the new version's JAR file
@@ -2049,35 +2049,35 @@ public final class MediaDownloader {
 	private static final void bindPluginDownloadEvents(FileDownloader downloader) {
 		final StringReceiver receiver = InitializationStates::setText;
 		
-		downloader.addEventListener(DownloadEvent.BEGIN, (d) -> {
+		downloader.addEventListener(DownloadEvent.BEGIN, (context) -> {
 			receiver.receive(String.format(
 				"Downloading plugin %s...",
-				d.output().getFileName().toString()
+				context.output().getFileName().toString()
 			));
 		});
 		
-		downloader.addEventListener(DownloadEvent.END, (d) -> {
+		downloader.addEventListener(DownloadEvent.END, (context) -> {
 			receiver.receive(String.format(
 				"Downloading plugin %s... done",
-				d.output().getFileName().toString()
+				context.output().getFileName().toString()
 			));
 		});
 		
-		downloader.addEventListener(DownloadEvent.UPDATE, (pair) -> {
-			DownloadTracker tracker = (DownloadTracker) pair.b.tracker();
+		downloader.addEventListener(DownloadEvent.UPDATE, (context) -> {
+			DownloadTracker tracker = (DownloadTracker) context.trackerManager().tracker();
 			long current = tracker.current();
 			long total = tracker.total();
 			double percent = current / (double) total;
 			
 			receiver.receive(String.format(
 				"Downloading plugin %s... %.2f%%",
-				pair.a.output().getFileName().toString(),
+				context.output().getFileName().toString(),
 				percent
 			));
 		});
 		
-		downloader.addEventListener(DownloadEvent.ERROR, (pair) -> {
-			error(pair.b);
+		downloader.addEventListener(DownloadEvent.ERROR, (context) -> {
+			error(context.exception());
 		});
 	}
 	

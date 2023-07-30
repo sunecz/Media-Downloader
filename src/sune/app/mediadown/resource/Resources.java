@@ -57,17 +57,17 @@ public final class Resources {
 		final long minTime = 500000000L; // 500ms
 		final Property<Long> lastTime = new Property<>(0L);
 		
-		downloader.addEventListener(DownloadEvent.BEGIN, (d) -> {
+		downloader.addEventListener(DownloadEvent.BEGIN, (context) -> {
 			if(receiver != null) {
 				receiver.receive(String.format("Downloading %s...", fileName));
 			}
 		});
 		
-		downloader.addEventListener(DownloadEvent.UPDATE, (pair) -> {
+		downloader.addEventListener(DownloadEvent.UPDATE, (context) -> {
 			if(receiver != null
 					// Throttle to remove flickering
 					&& System.nanoTime() - lastTime.getValue() >= minTime) {
-				DownloadTracker tracker = (DownloadTracker) pair.b.tracker();
+				DownloadTracker tracker = (DownloadTracker) context.trackerManager().tracker();
 				long current = tracker.current();
 				long total = tracker.total();
 				double percent = current * 100.0 / total;
@@ -76,7 +76,7 @@ public final class Resources {
 			}
 		});
 		
-		downloader.addEventListener(DownloadEvent.END, (d) -> {
+		downloader.addEventListener(DownloadEvent.END, (context) -> {
 			if(receiver != null) {
 				receiver.receive(String.format("Downloading %s... done", fileName));
 			}
