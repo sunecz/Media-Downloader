@@ -49,6 +49,36 @@ public final class MediaProtection {
 		return content;
 	}
 	
+	@Override
+	public int hashCode() {
+		return Objects.hash(content, contentType, scheme, type);
+	}
+	
+	@Override
+	public boolean equals(Object obj) {
+		if(this == obj)
+			return true;
+		if(obj == null)
+			return false;
+		if(getClass() != obj.getClass())
+			return false;
+		MediaProtection other = (MediaProtection) obj;
+		return Objects.equals(content, other.content)
+		        && Objects.equals(contentType, other.contentType)
+		        && Objects.equals(scheme, other.scheme)
+		        && type == other.type;
+	}
+	
+	@Override
+	public String toString() {
+		return "MediaProtection["
+					+ "type=" + type + ", "
+					+ "scheme=" + scheme + ", "
+					+ "contentType=" + contentType + ", "
+					+ "content=" + content
+		        + "]";
+	}
+	
 	public static final class Builder {
 		
 		private final MediaProtectionType type;
