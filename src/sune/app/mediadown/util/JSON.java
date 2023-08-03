@@ -282,17 +282,24 @@ public final class JSON {
 			}
 		}
 		
-		private final void readObject() throws IOException {
-			if(parents.size() > 1 && (lastStr == null || lastStr.isEmpty()))
+		/** @since 00.02.09 */
+		private final void checkCollectionName() {
+			if((lastStr == null || lastStr.isEmpty())
+					&& parents.size() > 1
+					&& parents.peek().b.type() != JSONType.ARRAY) {
 				throw new IllegalStateException("Invalid name");
+			}
+		}
+		
+		private final void readObject() throws IOException {
+			checkCollectionName();
 			if(parents.isEmpty()) parents.push(new Pair<>(null,    JSONCollection.empty()));
 			else                  parents.push(new Pair<>(lastStr, JSONCollection.empty()));
 			c = next();
 		}
 		
 		private final void readArray() throws IOException {
-			if(parents.size() > 1 && (lastStr == null || lastStr.isEmpty()))
-				throw new IllegalStateException("Invalid name");
+			checkCollectionName();
 			if(parents.isEmpty()) parents.push(new Pair<>(null,    JSONCollection.emptyArray()));
 			else                  parents.push(new Pair<>(lastStr, JSONCollection.emptyArray()));
 			c = next();
