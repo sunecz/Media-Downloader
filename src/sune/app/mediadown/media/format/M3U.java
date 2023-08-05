@@ -18,7 +18,9 @@ import sune.app.mediadown.download.segment.RemoteFileSegment;
 import sune.app.mediadown.download.segment.RemoteFileSegmentable;
 import sune.app.mediadown.download.segment.RemoteFileSegmentsHolder;
 import sune.app.mediadown.media.MediaConstants;
+import sune.app.mediadown.media.MediaQuality;
 import sune.app.mediadown.media.MediaResolution;
+import sune.app.mediadown.media.MediaUtils;
 import sune.app.mediadown.net.Net;
 import sune.app.mediadown.net.Web;
 import sune.app.mediadown.net.Web.Request;
@@ -532,6 +534,11 @@ public final class M3U {
 						break;
 					case "audio":
 						fileBuilder.addAttribute("audio", Utils.unquote(partValue));
+						break;
+					case "bandwidth":
+						int bandwidth = Integer.valueOf(partValue);
+						MediaQuality quality = MediaUtils.estimateMediaQualityFromBandwidth(bandwidth);
+						fileBuilder.addAttribute("estimatedQuality", quality.name());
 						break;
 					default:
 						// Do nothing

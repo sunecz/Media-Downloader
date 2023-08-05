@@ -13,6 +13,8 @@ import java.util.stream.Stream;
 import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.download.segment.FileSegmentsHolder;
 import sune.app.mediadown.language.Translation;
+import sune.app.mediadown.media.MediaQuality.QualityValue;
+import sune.app.mediadown.media.MediaQuality.VideoQualityValue;
 import sune.app.mediadown.media.format.M3U;
 import sune.app.mediadown.media.format.M3U.M3UCombinedFile;
 import sune.app.mediadown.media.format.M3U.M3UFile;
@@ -65,6 +67,15 @@ public final class MediaUtils {
 			M3UFile video = result.video();
 			MediaMetadata metadata = parserData.mediaData().add(parserData.data()).title(title).build();
 			
+			MediaQuality videoQuality = MediaQuality.fromResolution(video.resolution());
+			if(videoQuality.is(MediaQuality.UNKNOWN)) {
+				String qualityName = video.attributes().get("estimatedQuality");
+				
+				if(qualityName != null) {
+					videoQuality = MediaQuality.ofName(qualityName);
+				}
+			}
+			
 			if(result.hasSeparateAudio()) {
 				M3UFile audio = result.audio();
 				MediaLanguage extractedLanguage = MediaLanguage.ofCode(audio.attributes().getOrDefault("language", ""));
@@ -75,7 +86,7 @@ public final class MediaUtils {
 				return VideoMediaContainer.separated().format(MediaFormat.M3U8).media(
 					VideoMedia.segmented().source(source)
 						.uri(video.uri()).format(MediaFormat.MP4)
-						.quality(MediaQuality.fromResolution(video.resolution()))
+						.quality(videoQuality)
 						.segments(Utils.<List<FileSegmentsHolder<?>>>cast(video.segmentsHolders()))
 						.resolution(video.resolution()).duration(video.duration())
 						.metadata(metadata),
@@ -91,7 +102,7 @@ public final class MediaUtils {
 			return VideoMediaContainer.combined().format(MediaFormat.M3U8).media(
 				VideoMedia.segmented().source(source)
 					.uri(video.uri()).format(MediaFormat.MP4)
-					.quality(MediaQuality.fromResolution(video.resolution()))
+					.quality(videoQuality)
 					.segments(Utils.<List<FileSegmentsHolder<?>>>cast(video.segmentsHolders()))
 					.resolution(video.resolution()).duration(video.duration())
 					.metadata(metadata),
@@ -131,10 +142,19 @@ public final class MediaUtils {
 				.ifFalse((l) -> l.is(MediaLanguage.UNKNOWN))
 				.orElse(language);
 			
+			MediaQuality videoQuality = MediaQuality.fromResolution(video.resolution());
+			if(videoQuality.is(MediaQuality.UNKNOWN)) {
+				String qualityName = video.attributes().get("estimatedQuality");
+				
+				if(qualityName != null) {
+					videoQuality = MediaQuality.ofName(qualityName);
+				}
+			}
+			
 			return VideoMediaContainer.separated().format(MediaFormat.DASH).media(
 				VideoMedia.segmented().source(source)
 					.uri(parserData.uri()).format(video.format())
-					.quality(MediaQuality.fromResolution(video.resolution()))
+					.quality(videoQuality)
 					.segments(Utils.<List<FileSegmentsHolder<?>>>cast(video.segmentsHolders()))
 					.resolution(video.resolution()).duration(video.duration())
 					.codecs(video.codecs()).bandwidth(video.bandwidth()).frameRate(frameRate)
@@ -259,6 +279,85 @@ public final class MediaUtils {
 	
 	public static final Parser parser() {
 		return new Parser();
+	}
+	
+	/** @since 00.02.09 */
+	public static final MediaQuality estimateMediaQualityFromBandwidth(int bandwidth) {
+		return MediaQualityEstimator.fromBandwidth(bandwidth);
+	}
+	
+	/** @since 00.02.09 */
+	private static final class MediaQualityEstimator {
+		
+		/*
+		 * [1] BitRate approximation table for video with aspect ratio 16:9.
+		 * Source: https://www.circlehd.com/blog/how-to-calculate-video-file-size
+		 * +---------+----------+
+		 * | Quality | BitRate  |
+		 * +---------+----------+
+		 * | 2160p   |  20 Mbps |
+		 * | 1080p   |   5 Mbps |
+		 * |  720p   |   1 Mbps |
+		 * |  480p   | 0.5 Mbps |
+		 * +---------+----------+
+		 */
+		
+		// Forbid anyone to create an instance of this class
+		private MediaQualityEstimator() {
+		}
+		
+		private static final double bandwidthToBitRateMbps(int bandwidth) {
+			return bandwidth / 1024.0 / 1024.0;
+		}
+		
+		private static final int approximateVideoHeightFromBandwidth(int bandwidth) {
+			double bitRate = bandwidthToBitRateMbps(bandwidth);
+			
+			// Inverse of quadratic regression for the approximation table [1] and some
+			// additional values to ensure the positivity of resulting values.
+			// Values {x,y} used: {0,0},{1,0.125},{2,0.25},{3,0.375},{4,0.5},{6,1},{9,5},{18,20}.
+			double y = 0.142703 + Math.sqrt(0.142703 * 0.142703 - 4.0 * 0.069617 * (0.0745748 - bitRate)) / (2.0 * 0.069617);
+			
+			// Handle special cases where the monotonicity of the quadratic regression
+			// is not preserved, i.e. in the range of <0, 1).
+			if(y <= 0.125) {
+				y = bitRate / 0.125; // Use linear interpolation
+			}
+			
+			return Math.max(1, (int) (y * 120.0));
+		}
+		
+		public static final MediaQuality fromBandwidth(int bandwidth) {
+			final int height = approximateVideoHeightFromBandwidth(bandwidth);
+			
+			// Try to match with progressive scan qualities
+			QualityValue value = new VideoQualityValue(height);
+			MediaQuality prev = null;
+			MediaQuality last = null;
+			
+			for(MediaQuality quality : Utils.iterable(
+				Stream.of(MediaQuality.validQualities())
+					.filter((q) -> q.mediaType().is(MediaType.VIDEO))
+					.filter((q) -> q.name().startsWith("P")) // Only progressive scan qualities
+					.sorted(MediaQuality.reversedComparatorKeepOrder())
+					.iterator()
+			)) {
+				if(value.compareTo(quality.value()) >= 0) {
+					last = quality;
+					break;
+				}
+				
+				prev = quality;
+			}
+			
+			// Now we have prev.height >= height >= last.height, so we just select
+			// either the prev or last based on the difference of their heights.
+			VideoQualityValue vqvPrev = (VideoQualityValue) prev.value();
+			VideoQualityValue vqvLast = (VideoQualityValue) last.value();
+			int diffPrev = Math.abs(vqvPrev.height() - height);
+			int diffLast = Math.abs(vqvLast.height() - height);
+			return diffPrev <= diffLast ? prev : last;
+		}
 	}
 	
 	public static final class Parser {
