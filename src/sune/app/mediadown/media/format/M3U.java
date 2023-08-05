@@ -538,6 +538,11 @@ public final class M3U {
 						break;
 				}
 			}
+			
+			// Ensure that the builder is dirty to notify the parser
+			if(!fileBuilder.isDirty()) {
+				fileBuilder.markDirty();
+			}
 		}
 		
 		// Reference: https://datatracker.ietf.org/doc/html/rfc8216#section-4.2
