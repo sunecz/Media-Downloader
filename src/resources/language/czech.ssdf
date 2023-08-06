@@ -43,6 +43,7 @@
 						copy_url:           "Zkopírovat URL",
 						copy_source_url:    "Zkopírovat zdrojovou URL",
 						media_info:         "Informace o médiu",
+						report_broken:      "Nahlásit nefunkční mediální zdroj",
 						move_up:            "Posunout nahoru",
 						move_down:          "Posunout dolů",
 						move_begin:         "Posunout na začátek",

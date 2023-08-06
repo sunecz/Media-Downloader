@@ -59,6 +59,7 @@ import sune.app.mediadown.event.tracker.TrackerEvent;
 import sune.app.mediadown.event.tracker.TrackerVisitor;
 import sune.app.mediadown.event.tracker.WaitTracker;
 import sune.app.mediadown.gui.Dialog;
+import sune.app.mediadown.gui.GUI;
 import sune.app.mediadown.gui.InformationItems.ItemDownloader;
 import sune.app.mediadown.gui.InformationItems.ItemMediaEngine;
 import sune.app.mediadown.gui.InformationItems.ItemPlugin;
@@ -85,10 +86,16 @@ import sune.app.mediadown.media.Media;
 import sune.app.mediadown.message.Message;
 import sune.app.mediadown.message.MessageList;
 import sune.app.mediadown.message.MessageManager;
+import sune.app.mediadown.pipeline.ConversionPipelineTask;
+import sune.app.mediadown.pipeline.DownloadPipelineTask;
 import sune.app.mediadown.pipeline.Pipeline;
+import sune.app.mediadown.pipeline.PipelineTask;
 import sune.app.mediadown.plugin.PluginFile;
 import sune.app.mediadown.plugin.PluginUpdater;
 import sune.app.mediadown.plugin.Plugins;
+import sune.app.mediadown.report.Report;
+import sune.app.mediadown.report.Report.Reason;
+import sune.app.mediadown.report.ReportContext;
 import sune.app.mediadown.util.ClipboardUtils;
 import sune.app.mediadown.util.FXUtils;
 import sune.app.mediadown.util.MathUtils;
@@ -612,6 +619,34 @@ public final class MainWindow extends Window<BorderPane> {
 					MediaDownloader.window(MediaInfoWindow.NAME)
 						.setArgs("parent", this, "media", media)
 						.show();
+				})
+				.addOnContextMenuShowing(MainWindow::contextMenuItemEnableIfAnySelected),
+			contextMenuItemFactory.create(tr("context_menus.table.items.report_broken"))
+				.setOnActivated((e) -> {
+					PipelineInfo info = table.selectedPipeline();
+					
+					if(info == null) {
+						return;
+					}
+					
+					PipelineTask<?> task = info.pipeline().getTask();
+					ReportContext reportContext = null;
+					
+					if(task instanceof DownloadPipelineTask) {
+						DownloadPipelineTask casted = (DownloadPipelineTask) task;
+						reportContext = ReportContext.ofDownload(casted);
+					} else if(task instanceof ConversionPipelineTask) {
+						ConversionPipelineTask casted = (ConversionPipelineTask) task;
+						reportContext = ReportContext.ofConversion(casted);
+					} else {
+						reportContext = ReportContext.none();
+					}
+					
+					Media media = info.resolvedMedia().media();
+					GUI.showReportWindow(this, Report.Builders.ofMedia(
+						media, Reason.BROKEN,
+						reportContext
+					));
 				})
 				.addOnContextMenuShowing(MainWindow::contextMenuItemEnableIfAnySelected),
 			contextMenuItemFactory.createSeparator(),
