@@ -125,4 +125,9 @@ public final class DownloadPipelineTask implements PipelineTask<DownloadPipeline
 	public final boolean isStopped() {
 		return download().isStopped();
 	}
+	
+	/** @since 00.02.09 */
+	public PipelineMedia media() {
+		return media;
+	}
 }

@@ -138,4 +138,19 @@ public final class ConversionPipelineTask implements PipelineTask<ConversionPipe
 	public final boolean isStopped() {
 		return converter().isStopped();
 	}
+	
+	/** @since 00.02.09 */
+	public ResolvedMedia output() {
+		return output;
+	}
+	
+	/** @since 00.02.09 */
+	public List<ConversionMedia> inputs() {
+		return inputs;
+	}
+	
+	/** @since 00.02.09 */
+	public Metadata metadata() {
+		return metadata;
+	}
 }
