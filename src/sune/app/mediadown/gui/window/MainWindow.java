@@ -179,6 +179,14 @@ public final class MainWindow extends Window<BorderPane> {
 		item.setDisable(stats.count() == 0);
 	}
 	
+	/** @since 00.02.09 */
+	private static final void contextMenuItemEnableIfOneSelected(Observable o, Pair<ContextMenuItem, Stats> oldValue,
+			Pair<ContextMenuItem, Stats> pair) {
+		ContextMenuItem item = pair.a;
+		Stats stats = pair.b;
+		item.setDisable(stats.count() != 1);
+	}
+	
 	/** @since 00.02.08 */
 	private static final <T> boolean moveItem(List<T> list, int from, int to) {
 		final int size = list.size();
@@ -620,7 +628,7 @@ public final class MainWindow extends Window<BorderPane> {
 						.setArgs("parent", this, "media", media)
 						.show();
 				})
-				.addOnContextMenuShowing(MainWindow::contextMenuItemEnableIfAnySelected),
+				.addOnContextMenuShowing(MainWindow::contextMenuItemEnableIfOneSelected),
 			contextMenuItemFactory.create(tr("context_menus.table.items.report_broken"))
 				.setOnActivated((e) -> {
 					PipelineInfo info = table.selectedPipeline();
@@ -648,7 +656,7 @@ public final class MainWindow extends Window<BorderPane> {
 						reportContext
 					));
 				})
-				.addOnContextMenuShowing(MainWindow::contextMenuItemEnableIfAnySelected),
+				.addOnContextMenuShowing(MainWindow::contextMenuItemEnableIfOneSelected),
 			contextMenuItemFactory.createSeparator(),
 			contextMenuItemFactory.createShowFile(tr("context_menus.table.items.show_file"))
 		));

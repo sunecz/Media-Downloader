@@ -123,11 +123,13 @@ public final class TablePipelineUtils {
 		menu.getItems().addAll(itemCopyURL, itemCopySourceURL, itemMediaInfo, itemReportBroken);
 		menu.showingProperty().addListener((o, ov, isShowing) -> {
 			if(!isShowing) return;
-			boolean noSelectedItems = table.getSelectionModel().getSelectedItems().isEmpty();
+			int countItems = table.getSelectionModel().getSelectedItems().size();
+			boolean noSelectedItems = countItems == 0;
+			boolean notOneSelectedItem = countItems != 1;
 			itemCopyURL.setDisable(noSelectedItems);
 			itemCopySourceURL.setDisable(noSelectedItems);
-			itemMediaInfo.setDisable(noSelectedItems);
-			itemReportBroken.setDisable(noSelectedItems);
+			itemMediaInfo.setDisable(notOneSelectedItem);
+			itemReportBroken.setDisable(notOneSelectedItem);
 		});
 		
 		return menu;
