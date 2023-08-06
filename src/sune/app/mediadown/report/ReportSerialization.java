@@ -9,7 +9,7 @@ import sune.app.mediadown.conversion.ConversionMedia;
 import sune.app.mediadown.download.DownloadConfiguration;
 import sune.app.mediadown.download.MediaDownloadConfiguration;
 import sune.app.mediadown.entity.Episode;
-import sune.app.mediadown.entity.MediaEngine;
+import sune.app.mediadown.entity.MediaGetter;
 import sune.app.mediadown.entity.Program;
 import sune.app.mediadown.gui.table.ResolvedMedia;
 import sune.app.mediadown.media.Media;
@@ -64,12 +64,12 @@ public final class ReportSerialization {
 		return parent;
 	}
 	
-	public static final JSONCollection serialize(MediaEngine engine, boolean anonymize) {
+	public static final JSONCollection serialize(MediaGetter getter, boolean anonymize) {
 		JSONCollection data = JSONCollection.empty();
-		data.set("title", engine.title());
-		data.set("version", engine.version());
-		data.set("url", engine.url());
-		data.set("author", engine.author());
+		data.set("title", getter.title());
+		data.set("version", getter.version());
+		data.set("url", getter.url());
+		data.set("author", getter.author());
 		return data;
 	}
 	

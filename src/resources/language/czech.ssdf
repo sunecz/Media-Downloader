@@ -241,6 +241,10 @@
 					placeholder: "Nebyly nalezeny žádné epizody",
 					columns: {
 						title: "Název epizody"
+					},
+					context_menu: {
+						copy_url:      "Zkopírovat URL",
+						report_broken: "Nahlásit nefunkční epizodu"
 					}
 				},
 				media: {
@@ -259,7 +263,8 @@
 					context_menu: {
 						copy_url:        "Zkopírovat URL",
 						copy_source_url: "Zkopírovat zdrojovou URL",
-						media_info:      "Informace o médiu"
+						media_info:      "Informace o médiu",
+						report_broken:   "Nahlásit nefunkční mediální zdroj"
 					}
 				}
 			},

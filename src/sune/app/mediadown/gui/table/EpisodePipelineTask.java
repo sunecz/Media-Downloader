@@ -7,6 +7,7 @@ import sune.app.mediadown.entity.Episode;
 import sune.app.mediadown.entity.MediaEngine;
 import sune.app.mediadown.gui.window.TableWindow;
 import sune.app.mediadown.media.Media;
+import sune.app.mediadown.report.ReportContext;
 import sune.app.mediadown.resource.cache.GlobalCache;
 import sune.app.mediadown.task.ListTask;
 import sune.app.mediadown.task.Tasks;
@@ -17,6 +18,11 @@ public final class EpisodePipelineTask extends MediaEnginePipelineTaskBase<Episo
 	
 	public EpisodePipelineTask(TableWindow window, MediaEngine engine, List<Episode> items) {
 		super(window, engine, items);
+	}
+	
+	/** @since 00.02.09 */
+	private final ReportContext newReportContext() {
+		return ReportContext.ofEpisode(items.get(0)); // Only one episode is always selected
 	}
 	
 	@Override
@@ -36,7 +42,7 @@ public final class EpisodePipelineTask extends MediaEnginePipelineTaskBase<Episo
 	
 	@Override
 	public final TableView<Media> getTable(TableWindow window) {
-		return TablePipelineUtils.newMediaTable(window);
+		return TablePipelineUtils.newMediaTable(window, this::newReportContext);
 	}
 	
 	@Override

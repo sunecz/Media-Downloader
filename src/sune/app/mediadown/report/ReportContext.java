@@ -3,7 +3,7 @@ package sune.app.mediadown.report;
 import java.util.Objects;
 
 import sune.app.mediadown.entity.Episode;
-import sune.app.mediadown.entity.MediaEngine;
+import sune.app.mediadown.entity.MediaGetter;
 import sune.app.mediadown.entity.Program;
 import sune.app.mediadown.media.Media;
 import sune.app.mediadown.pipeline.ConversionPipelineTask;
@@ -20,8 +20,8 @@ public abstract class ReportContext {
 		return OfNone.INSTANCE;
 	}
 	
-	public static final ReportContext ofMediaEngine(MediaEngine engine) {
-		return new OfMediaEngine(engine);
+	public static final ReportContext ofMediaGetter(MediaGetter getter) {
+		return new OfMediaGetter(getter);
 	}
 	
 	public static final ReportContext ofProgram(Program program) {
@@ -59,19 +59,19 @@ public abstract class ReportContext {
 		}
 	}
 	
-	private static final class OfMediaEngine extends ReportContext {
+	private static final class OfMediaGetter extends ReportContext {
 		
-		private final MediaEngine engine;
+		private final MediaGetter getter;
 		
-		protected OfMediaEngine(MediaEngine engine) {
-			this.engine = Objects.requireNonNull(engine);
+		protected OfMediaGetter(MediaGetter getter) {
+			this.getter = Objects.requireNonNull(getter);
 		}
 		
 		@Override
 		public JSONCollection serialize(boolean anonymize) {
 			JSONCollection data = JSONCollection.empty();
 			data.set("name", getClass().getSimpleName());
-			data.set("engine", ReportSerialization.serialize(engine, anonymize));
+			data.set("engine", ReportSerialization.serialize(getter, anonymize));
 			return data;
 		}
 	}

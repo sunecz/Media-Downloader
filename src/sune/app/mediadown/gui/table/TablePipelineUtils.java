@@ -28,6 +28,7 @@ import javafx.scene.control.TableColumn.SortType;
 import javafx.scene.control.TableView;
 import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.download.MediaDownloadConfiguration;
+import sune.app.mediadown.gui.GUI;
 import sune.app.mediadown.gui.Window;
 import sune.app.mediadown.gui.window.DownloadConfigurationWindow;
 import sune.app.mediadown.gui.window.DownloadConfigurationWindow.DownloadConfiguration;
@@ -50,6 +51,9 @@ import sune.app.mediadown.media.MediaLanguage;
 import sune.app.mediadown.media.MediaQuality;
 import sune.app.mediadown.media.MediaType;
 import sune.app.mediadown.media.SubtitlesMediaBase;
+import sune.app.mediadown.report.Report;
+import sune.app.mediadown.report.Report.Reason;
+import sune.app.mediadown.report.ReportContext;
 import sune.app.mediadown.util.Choosers;
 import sune.app.mediadown.util.Choosers.SelectedItem;
 import sune.app.mediadown.util.ClipboardUtils;
@@ -79,21 +83,25 @@ public final class TablePipelineUtils {
 		return builder.toString();
 	}
 	
-	private static final ContextMenu newMediaTableContextMenu(TableWindow window, TableView<Media> table) {
+	private static final ContextMenu newMediaTableContextMenu(TableWindow window, TableView<Media> table,
+			Supplier<ReportContext> reportContext) {
 		Translation translation = window.getTranslation();
 		ContextMenu menu = new ContextMenu();
+		
 		MenuItem itemCopyURL = new MenuItem(translation.getSingle("tables.media.context_menu.copy_url"));
-		MenuItem itemCopySourceURL = new MenuItem(translation.getSingle("tables.media.context_menu.copy_source_url"));
-		MenuItem itemMediaInfo = new MenuItem(translation.getSingle("tables.media.context_menu.media_info"));
 		itemCopyURL.setOnAction((e) -> {
 			ClipboardUtils.copy(listToString(table.getSelectionModel().getSelectedItems(),
 			                                 (m) -> m.uri().normalize().toString()));
 		});
+		
+		MenuItem itemCopySourceURL = new MenuItem(translation.getSingle("tables.media.context_menu.copy_source_url"));
 		itemCopySourceURL.setOnAction((e) -> {
 			ClipboardUtils.copy(listToString(table.getSelectionModel().getSelectedItems(),
 			                                 (m) -> Objects.toString(Optional.ofNullable(m.metadata().sourceURI())
 			                                                                 .map(URI::normalize).orElse(null))));
 		});
+		
+		MenuItem itemMediaInfo = new MenuItem(translation.getSingle("tables.media.context_menu.media_info"));
 		itemMediaInfo.setOnAction((e) -> {
 			Media media = table.getSelectionModel().getSelectedItem();
 			if(media != null) {
@@ -102,14 +110,26 @@ public final class TablePipelineUtils {
 					.show();
 			}
 		});
-		menu.getItems().addAll(itemCopyURL, itemCopySourceURL, itemMediaInfo);
+		
+		MenuItem itemReportBroken = new MenuItem(translation.getSingle("tables.media.context_menu.report_broken"));
+		itemReportBroken.setOnAction((e) -> {
+			Media item = table.getSelectionModel().getSelectedItem();
+			GUI.showReportWindow(window, Report.Builders.ofMedia(
+				item, Reason.BROKEN,
+				reportContext.get()
+			));
+		});
+		
+		menu.getItems().addAll(itemCopyURL, itemCopySourceURL, itemMediaInfo, itemReportBroken);
 		menu.showingProperty().addListener((o, ov, isShowing) -> {
 			if(!isShowing) return;
 			boolean noSelectedItems = table.getSelectionModel().getSelectedItems().isEmpty();
 			itemCopyURL.setDisable(noSelectedItems);
 			itemCopySourceURL.setDisable(noSelectedItems);
 			itemMediaInfo.setDisable(noSelectedItems);
+			itemReportBroken.setDisable(noSelectedItems);
 		});
+		
 		return menu;
 	}
 	
@@ -166,7 +186,7 @@ public final class TablePipelineUtils {
 					.findFirst().orElse(MediaFormat.UNKNOWN);
 	}
 	
-	public static final TableView<Media> newMediaTable(TableWindow window) {
+	public static final TableView<Media> newMediaTable(TableWindow window, Supplier<ReportContext> reportContext) {
 		Translation translation = window.getTranslation();
 		Translation translationLanguage = MediaDownloader.translation().getTranslation("media.language");
 		Translation translationFormat = MediaDownloader.translation().getTranslation("media.format");
@@ -224,7 +244,7 @@ public final class TablePipelineUtils {
 		table.getColumns().add(columnAudioFormat);
 		table.setPlaceholder(new Label(translation.getSingle("tables.media.placeholder")));
 		table.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-		table.setContextMenu(newMediaTableContextMenu(window, table));
+		table.setContextMenu(newMediaTableContextMenu(window, table, reportContext));
 		columnVideoQuality.setSortType(SortType.DESCENDING);
 		columnAudioQuality.setSortType(SortType.DESCENDING);
 		table.getSortOrder().add(columnVideoQuality);

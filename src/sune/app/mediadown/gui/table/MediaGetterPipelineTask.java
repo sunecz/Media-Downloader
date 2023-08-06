@@ -8,6 +8,7 @@ import javafx.scene.control.TableView;
 import sune.app.mediadown.entity.MediaGetter;
 import sune.app.mediadown.gui.window.TableWindow;
 import sune.app.mediadown.media.Media;
+import sune.app.mediadown.report.ReportContext;
 import sune.app.mediadown.resource.cache.GlobalCache;
 import sune.app.mediadown.task.ListTask;
 import sune.app.mediadown.task.Tasks;
@@ -24,6 +25,11 @@ public final class MediaGetterPipelineTask extends TableWindowPipelineTaskBase<M
 		super(window);
 		this.getter = getter;
 		this.uri = uri;
+	}
+	
+	/** @since 00.02.09 */
+	private final ReportContext newReportContext() {
+		return ReportContext.ofMediaGetter(getter);
 	}
 	
 	@Override
@@ -43,7 +49,7 @@ public final class MediaGetterPipelineTask extends TableWindowPipelineTaskBase<M
 	
 	@Override
 	public final TableView<Media> getTable(TableWindow window) {
-		return TablePipelineUtils.newMediaTable(window);
+		return TablePipelineUtils.newMediaTable(window, this::newReportContext);
 	}
 	
 	@Override

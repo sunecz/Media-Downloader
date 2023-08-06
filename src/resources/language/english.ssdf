@@ -241,6 +241,10 @@
 					placeholder: "No episodes were found",
 					columns: {
 						title: "Episode name"
+					},
+					context_menu: {
+						copy_url:      "Copy URL",
+						report_broken: "Report broken episode"
 					}
 				},
 				media: {
@@ -259,7 +263,8 @@
 					context_menu: {
 						copy_url:        "Copy URL",
 						copy_source_url: "Copy source URL",
-						media_info:      "Media information"
+						media_info:      "Media information",
+						report_broken:   "Report broken media source"
 					}
 				}
 			},

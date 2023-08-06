@@ -47,10 +47,10 @@ public final class MediaEnginePipelineTask extends TableWindowPipelineTaskBase<P
 		
 		MenuItem itemReportBroken = new MenuItem(translation.getSingle("tables.engines.context_menu.report_broken"));
 		itemReportBroken.setOnAction((e) -> {
-			Program program = table.getSelectionModel().getSelectedItem();
+			Program item = table.getSelectionModel().getSelectedItem();
 			GUI.showReportWindow(window, Report.Builders.ofProgram(
-				program, Reason.BROKEN,
-				ReportContext.ofMediaEngine(engine)
+				item, Reason.BROKEN,
+				ReportContext.ofMediaGetter(engine)
 			));
 		});
 		
@@ -59,6 +59,7 @@ public final class MediaEnginePipelineTask extends TableWindowPipelineTaskBase<P
 			if(!isShowing) return;
 			boolean noSelectedItems = table.getSelectionModel().getSelectedItems().isEmpty();
 			itemCopyURL.setDisable(noSelectedItems);
+			itemReportBroken.setDisable(noSelectedItems);
 		});
 		
 		return menu;
