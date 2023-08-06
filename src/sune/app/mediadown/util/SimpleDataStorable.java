@@ -1,8 +1,10 @@
 package sune.app.mediadown.util;
 
 import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.TreeMap;
 
 public class SimpleDataStorable implements DataStorable {
@@ -76,6 +78,33 @@ public class SimpleDataStorable implements DataStorable {
 		}
 		
 		data.remove(name);
+	}
+	
+	@Override
+	public Set<String> keys() {
+		if(isEmptyData()) {
+			return Set.of();
+		}
+		
+		return Set.copyOf(data.keySet());
+	}
+	
+	@Override
+	public List<Object> values() {
+		if(isEmptyData()) {
+			return List.of();
+		}
+		
+		return List.copyOf(data.values());
+	}
+	
+	@Override
+	public Map<String, Object> data() {
+		if(isEmptyData()) {
+			return Map.of();
+		}
+		
+		return Map.copyOf(data);
 	}
 	
 	@Override

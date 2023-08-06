@@ -1,8 +1,6 @@
 package sune.app.mediadown.util;
 
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /** @since 00.02.08 */
 public class Metadata extends SimpleDataStorable {
@@ -58,18 +56,6 @@ public class Metadata extends SimpleDataStorable {
 	
 	public Metadata seal() {
 		return new Immutable(this);
-	}
-	
-	public Set<String> keys() {
-		return Set.copyOf(data.keySet());
-	}
-	
-	public List<Object> values() {
-		return List.copyOf(data.values());
-	}
-	
-	public Map<String, Object> data() {
-		return Map.copyOf(data);
 	}
 	
 	@Override
