@@ -229,7 +229,11 @@
 					title:       "Select TV show",
 					placeholder: "No TV shows were found",
 					columns: {
-						title: "TV Show name"
+						title: "TV show name"
+					},
+					context_menu: {
+						copy_url:      "Copy URL",
+						report_broken: "Report broken TV show"
 					}
 				},
 				episodes: {
@@ -432,6 +436,17 @@
 				description: "Simple program for downloading TV shows, movies and media from various "
 				           + "web sites and servers."
 			}
+		},
+		report: {
+			title: "Report",
+			label: {
+				email: "Email (optional)",
+				raw_data: "Data to send",
+				anonymize_data: "Anonymize data (Contact information will still be sent)"
+			},
+			button: {
+				send: "Send"
+			}
 		}
 	},
 	dialogs: {
@@ -449,6 +464,16 @@
 				title: "Pre-release versions",
 				text:  "Configuration has been changed to not use pre-release versions. "
 				     + "Do you want to revert back to the release version?"
+			}
+		},
+		report: {
+			success: {
+				title: "Report",
+				text:  "Report has been successfully sent."
+			},
+			error: {
+				title: "Report",
+				text:  "An error occurred while sending a report."
 			}
 		}
 	},

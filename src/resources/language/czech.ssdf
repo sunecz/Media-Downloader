@@ -230,6 +230,10 @@
 					placeholder: "Nebyly nalezeny žádné pořady",
 					columns: {
 						title: "Název pořadu"
+					},
+					context_menu: {
+						copy_url:      "Zkopírovat URL",
+						report_broken: "Nahlásit nefunkční pořad"
 					}
 				},
 				episodes: {
@@ -432,6 +436,17 @@
 				description: "Jednoduchý program pro stahování seriálů, filmů a médií z různých "
 				           + "webových stránek a serverů."
 			}
+		},
+		report: {
+			title: "Nahlášení",
+			label: {
+				email: "Email (volitelné)",
+				raw_data: "Data k odeslání",
+				anonymize_data: "Anonymizovat data (Kontaktní údaje budou i nadále zaslány)"
+			},
+			button: {
+				send: "Odeslat"
+			}
 		}
 	},
 	dialogs: {
@@ -449,6 +464,16 @@
 				title: "Předběžné verze",
 				text:  "Nastavení bylo změněno tak, aby se nepoužívaly předběžné verze. "
 				     + "Chcete se vrátit zpět k hlavní verzi?"
+			}
+		},
+		report: {
+			success: {
+				title: "Nahlášení",
+				text:  "Hlášení bylo úspěšně odesláno."
+			},
+			error: {
+				title: "Nahlášení",
+				text:  "Při odesílání hlášení došlo k chybě. Zkuste to prosím znovu."
 			}
 		}
 	},

@@ -48,6 +48,7 @@ module sune.app.mediadown {
 	exports sune.app.mediadown.pipeline;
 	exports sune.app.mediadown.plugin;
 	exports sune.app.mediadown.registry;
+	exports sune.app.mediadown.report;
 	exports sune.app.mediadown.resource;
 	exports sune.app.mediadown.resource.cache;
 	exports sune.app.mediadown.task;

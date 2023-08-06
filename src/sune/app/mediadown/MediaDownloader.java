@@ -65,6 +65,7 @@ import sune.app.mediadown.gui.window.MediaGetterWindow;
 import sune.app.mediadown.gui.window.MediaInfoWindow;
 import sune.app.mediadown.gui.window.MessageWindow;
 import sune.app.mediadown.gui.window.PreviewWindow;
+import sune.app.mediadown.gui.window.ReportWindow;
 import sune.app.mediadown.gui.window.TableWindow;
 import sune.app.mediadown.language.Language;
 import sune.app.mediadown.language.Translation;
@@ -1897,6 +1898,7 @@ public final class MediaDownloader {
 			windows.register(PreviewWindow.NAME, initializator(PreviewWindow::new));
 			windows.register(ClipboardWatcherWindow.NAME, initializator(ClipboardWatcherWindow::new));
 			windows.register(AboutWindow.NAME, initializator(AboutWindow::new));
+			windows.register(ReportWindow.NAME, initializator(ReportWindow::new));
 		}
 		
 		/** @since 00.02.09 */
