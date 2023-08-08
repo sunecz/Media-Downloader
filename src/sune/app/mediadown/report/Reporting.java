@@ -45,13 +45,16 @@ public class Reporting {
 		}
 		
 		private static final Request request(Report report, boolean anonymize) {
-			URI uri = APP_URI.resolve("report/" + Net.encodeURL(report.name()));
+			URI uri = APP_URI.resolve("report");
 			String body = payload(report, anonymize).toString(true);
 			return Request.of(uri).POST(body, "application/json; charset=utf-8");
 		}
 		
 		public static final JSONCollection payload(Report report, boolean anonymize) {
 			JSONCollection payload = JSONCollection.empty();
+			
+			payload.set("name", report.name());
+			payload.set("reason", report.reason().name());
 			
 			ContactInformation contact = report.contact();
 			if(contact != null) {
@@ -60,7 +63,6 @@ public class Reporting {
 				payload.set("contact", dataContact);
 			}
 			
-			payload.set("reason", report.reason().name());
 			payload.set("context", report.context().serialize(anonymize));
 			payload.set("data", report.serializeData(anonymize));
 			payload.set("note", JSONObject.of(report.note()));
