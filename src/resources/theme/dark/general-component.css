@@ -322,3 +322,17 @@
 	-fx-border-width: 0;
     -fx-border-insets: 0 0 0 0;
 }
+
+/* GUI Component: Error alert */
+
+.alert.error.dialog-pane > .content {
+	-fx-padding: 0;
+}
+
+.alert.error.dialog-pane > .button-bar > .container {
+    -fx-background-color: derive(-fx-base, -5%);
+}
+
+.alert.error.dialog-pane:no-header .graphic-container {
+	-fx-padding: 0;
+}

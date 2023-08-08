@@ -2,6 +2,7 @@ package sune.app.mediadown.util;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
+import java.lang.module.ResolvedModule;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.URI;
@@ -36,8 +37,6 @@ import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
-import javafx.scene.control.ButtonBar;
-import javafx.scene.control.ButtonBar.ButtonData;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.Tab;
@@ -52,8 +51,9 @@ import javafx.scene.control.TreeTableView;
 import javafx.scene.control.skin.TableViewSkinBase;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
-import javafx.scene.text.Text;
 import javafx.stage.Modality;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
@@ -65,6 +65,7 @@ import sune.app.mediadown.language.Translation;
 import sune.app.mediadown.report.Report;
 import sune.app.mediadown.report.Report.Reason;
 import sune.app.mediadown.report.ReportContext;
+import sune.app.mediadown.theme.Theme;
 import sune.app.mediadown.util.Reflection2.InstanceCreationException;
 
 public final class FXUtils {
@@ -196,6 +197,24 @@ public final class FXUtils {
 		});
 	}
 	
+	/** @since 00.02.09 */
+	private static final Image modenaIcon(String name) {
+		ResolvedModule module = ModuleLayer.boot().configuration().findModule("javafx.controls").orElse(null);
+		
+		if(module == null) {
+			return null;
+		}
+		
+		URI moduleUri = module.reference().location().orElse(null);
+		
+		if(moduleUri == null) {
+			return null;
+		}
+		
+		String uri = "jar:" + moduleUri.toString() + "!/com/sun/javafx/scene/control/skin/modena/" + name;
+		return new Image(uri);
+	}
+	
 	/** @since 00.02.08 */
 	private static final class ExceptionWindow {
 		
@@ -288,7 +307,13 @@ public final class FXUtils {
 		}
 		
 		/** @since 00.02.09 */
-		private static final class ExceptionAlert extends Alert {
+		private static interface ExceptionAlertContext {
+			
+			Button createReportButton(ErrorItem item);
+		}
+		
+		/** @since 00.02.09 */
+		private static final class ExceptionAlert extends Alert implements ExceptionAlertContext {
 			
 			private final VBox pane;
 			private final TabPane tabs;
@@ -301,32 +326,34 @@ public final class FXUtils {
 				getDialogPane().setContent(pane);
 				setDialogIcon(this, MediaDownloader.ICON);
 				getButtonTypes().setAll(ButtonType.OK);
-				addReportButton();
+				setGraphic(null);
+				initStylesheet();
 			}
 			
-			private final void addReportButton() {
-				ButtonBar buttonBar = (ButtonBar) getDialogPane().lookup(".button-bar");
+			private final void initStylesheet() {
+				Theme currentTheme = MediaDownloader.theme();
+				Scene scene = getDialogPane().getScene();
+				scene.getStylesheets().add(currentTheme.stylesheet("general-component.css"));
+			}
+			
+			@Override
+			public Button createReportButton(ErrorItem item) {
 				Translation tr = MediaDownloader.translation().getTranslation("windows.exception");
 				Button btnReport = new Button(tr.getSingle("button.report"));
 				
 				btnReport.setOnAction((o) -> {
 					Stage parent = MainWindow.getInstance();
-					ErrorTab tab = (ErrorTab) tabs.getSelectionModel().getSelectedItem();
 					GUI.showReportWindow(parent, Report.Builders.ofError(
-						tab.throwable(), Reason.ERROR,
+						item.throwable(), Reason.ERROR,
 						ReportContext.none()
 					), ReportWindow.Feature.onlyReasons(Reason.ERROR));
 				});
 				
-				// To position the custom button to the left of the OK button,
-				// we must set its data to the same data as the OK button and then
-				// prepend it to the list of buttons.
-				ButtonBar.setButtonData(btnReport, ButtonData.OK_DONE);
-				buttonBar.getButtons().add(0, btnReport);
+				return btnReport;
 			}
 			
 			public void addTab(ErrorItem item) {
-				tabs.getTabs().add(item.createTab(tabs));
+				tabs.getTabs().add(item.createTab(this, tabs));
 			}
 			
 			public void clearTabs() {
@@ -337,23 +364,44 @@ public final class FXUtils {
 		/** @since 00.02.09 */
 		private static final class ErrorTab extends Tab {
 			
-			private final ErrorItem item;
-			
 			public ErrorTab(ErrorItem item, String text, Node content) {
 				super(text, content);
-				this.item = Objects.requireNonNull(item);
-			}
-			
-			public Throwable throwable() {
-				return item.throwable();
+				setClosable(false);
 			}
 		}
 		
 		/** @since 00.02.09 */
 		private static interface ErrorItem {
 			
-			ErrorTab createTab(TabPane pane);
+			ErrorTab createTab(ExceptionAlertContext context, TabPane pane);
 			Throwable throwable();
+		}
+		
+		/** @since 00.02.09 */
+		private static final class Common {
+			
+			private Common() {
+			}
+			
+			public static final HBox createTabContentHeader(Button btnReport) {
+				HBox wrapper = new HBox();
+				Image icon = modenaIcon("dialog-error.png");
+				
+				if(icon != null) {
+					ImageView iconView = new ImageView(icon);
+					iconView.setFitWidth(25.0);
+					iconView.setFitHeight(25.0);
+					wrapper.getChildren().add(iconView);
+				}
+				
+				HBox boxFill = new HBox();
+				wrapper.getChildren().add(boxFill);
+				HBox.setHgrow(boxFill, Priority.ALWAYS);
+				
+				wrapper.getChildren().add(btnReport);
+				
+				return wrapper;
+			}
 		}
 		
 		/** @since 00.02.09 */
@@ -366,16 +414,21 @@ public final class FXUtils {
 			}
 			
 			@Override
-			public ErrorTab createTab(TabPane pane) {
+			public ErrorTab createTab(ExceptionAlertContext context, TabPane pane) {
+				VBox wrapper = new VBox(5.0);
+				wrapper.setPadding(new Insets(10.0));
+				
+				Button btnReport = context.createReportButton(this);
+				HBox header = Common.createTabContentHeader(btnReport);
+				wrapper.getChildren().addAll(header);
+				
 				String text = Utils.throwableToString(throwable);
 				TextArea area = new TextArea(text);
 				area.setEditable(false);
+				wrapper.getChildren().add(area);
 				
 				String title = throwable.getClass().getSimpleName();
-				ErrorTab tab = new ErrorTab(this, title, area);
-				tab.setClosable(false);
-				
-				return tab;
+				return new ErrorTab(this, title, wrapper);
 			}
 			
 			@Override
@@ -396,11 +449,20 @@ public final class FXUtils {
 			}
 			
 			@Override
-			public ErrorTab createTab(TabPane pane) {
+			public ErrorTab createTab(ExceptionAlertContext context, TabPane pane) {
 				VBox wrapper = new VBox(5.0);
+				wrapper.setPadding(new Insets(10.0));
 				
-				Text label = new Text(message);
-				label.wrappingWidthProperty().bind(pane.widthProperty());
+				Button btnReport = context.createReportButton(this);
+				HBox header = Common.createTabContentHeader(btnReport);
+				wrapper.getChildren().addAll(header);
+				
+				TextArea label = new TextArea(message);
+				label.setEditable(false);
+				label.setPrefRowCount(1);
+				double labelHeight = label.getFont().getSize() * 2.5;
+				label.setPrefHeight(labelHeight);
+				label.setMinHeight(labelHeight);
 				wrapper.getChildren().add(label);
 				
 				if(content != null) {
@@ -409,13 +471,8 @@ public final class FXUtils {
 					wrapper.getChildren().add(area);
 				}
 				
-				wrapper.setPadding(new Insets(5.0, 0.0, 0.0, 0.0));
-				
 				String title = "Error";
-				ErrorTab tab = new ErrorTab(this, title, wrapper);
-				tab.setClosable(false);
-				
-				return tab;
+				return new ErrorTab(this, title, wrapper);
 			}
 			
 			@Override
