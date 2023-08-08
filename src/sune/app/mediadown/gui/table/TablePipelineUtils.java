@@ -73,16 +73,6 @@ public final class TablePipelineUtils {
 	private TablePipelineUtils() {
 	}
 	
-	private static final <T> String listToString(List<T> list, Function<T, String> mapper) {
-		StringBuilder builder = new StringBuilder();
-		boolean first = true;
-		for(T item : list) {
-			if(first) first = false; else builder.append("\n");
-			builder.append(mapper.apply(item));
-		}
-		return builder.toString();
-	}
-	
 	private static final ContextMenu newMediaTableContextMenu(TableWindow window, TableView<Media> table,
 			Supplier<ReportContext> reportContext) {
 		Translation translation = window.getTranslation();
@@ -90,15 +80,19 @@ public final class TablePipelineUtils {
 		
 		MenuItem itemCopyURL = new MenuItem(translation.getSingle("tables.media.context_menu.copy_url"));
 		itemCopyURL.setOnAction((e) -> {
-			ClipboardUtils.copy(listToString(table.getSelectionModel().getSelectedItems(),
-			                                 (m) -> m.uri().normalize().toString()));
+			ClipboardUtils.copy(Utils.toString(
+				table.getSelectionModel().getSelectedItems(),
+				(m) -> m.uri().normalize().toString()
+			));
 		});
 		
 		MenuItem itemCopySourceURL = new MenuItem(translation.getSingle("tables.media.context_menu.copy_source_url"));
 		itemCopySourceURL.setOnAction((e) -> {
-			ClipboardUtils.copy(listToString(table.getSelectionModel().getSelectedItems(),
-			                                 (m) -> Objects.toString(Optional.ofNullable(m.metadata().sourceURI())
-			                                                                 .map(URI::normalize).orElse(null))));
+			ClipboardUtils.copy(Utils.toString(
+				table.getSelectionModel().getSelectedItems(),
+				(m) -> Objects.toString(Optional.ofNullable(m.metadata().sourceURI())
+				                                .map(URI::normalize).orElse(null))
+			));
 		});
 		
 		MenuItem itemMediaInfo = new MenuItem(translation.getSingle("tables.media.context_menu.media_info"));
