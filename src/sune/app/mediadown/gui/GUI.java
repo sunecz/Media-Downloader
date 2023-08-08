@@ -1,5 +1,6 @@
 package sune.app.mediadown.gui;
 
+import javafx.stage.Stage;
 import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.gui.window.ReportWindow;
 import sune.app.mediadown.language.Translation;
@@ -14,7 +15,7 @@ public final class GUI {
 	private GUI() {
 	}
 	
-	public static final void showReportWindow(Window<?> parent, Report.Builder builder,
+	public static final void showReportWindow(Stage parent, Report.Builder builder,
 			ReportWindow.Feature... features) {
 		((ReportWindow) MediaDownloader.window(ReportWindow.NAME)).showWithFeatures(parent, builder, features);
 	}

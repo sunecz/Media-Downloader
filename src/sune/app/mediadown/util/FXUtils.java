@@ -35,6 +35,9 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
+import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonBar.ButtonData;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.Tab;
@@ -55,6 +58,13 @@ import javafx.stage.Modality;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import sune.app.mediadown.MediaDownloader;
+import sune.app.mediadown.gui.GUI;
+import sune.app.mediadown.gui.window.MainWindow;
+import sune.app.mediadown.gui.window.ReportWindow;
+import sune.app.mediadown.language.Translation;
+import sune.app.mediadown.report.Report;
+import sune.app.mediadown.report.Report.Reason;
+import sune.app.mediadown.report.ReportContext;
 import sune.app.mediadown.util.Reflection2.InstanceCreationException;
 
 public final class FXUtils {
@@ -223,8 +233,6 @@ public final class FXUtils {
 			alert.initModality(Modality.APPLICATION_MODAL);
 			alert.setHeaderText(null);
 			alert.setOnCloseRequest((e) -> clear());
-			setDialogIcon(alert, MediaDownloader.ICON);
-			alert.getButtonTypes().setAll(ButtonType.OK);
 		}
 		
 		private final void clear() {
@@ -282,8 +290,6 @@ public final class FXUtils {
 		/** @since 00.02.09 */
 		private static final class ExceptionAlert extends Alert {
 			
-			// TODO: Add report button
-			
 			private final VBox pane;
 			private final TabPane tabs;
 			
@@ -293,6 +299,30 @@ public final class FXUtils {
 				tabs = new TabPane();
 				pane.getChildren().addAll(tabs);
 				getDialogPane().setContent(pane);
+				setDialogIcon(this, MediaDownloader.ICON);
+				getButtonTypes().setAll(ButtonType.OK);
+				addReportButton();
+			}
+			
+			private final void addReportButton() {
+				ButtonBar buttonBar = (ButtonBar) getDialogPane().lookup(".button-bar");
+				Translation tr = MediaDownloader.translation().getTranslation("windows.exception");
+				Button btnReport = new Button(tr.getSingle("button.report"));
+				
+				btnReport.setOnAction((o) -> {
+					Stage parent = MainWindow.getInstance();
+					ErrorTab tab = (ErrorTab) tabs.getSelectionModel().getSelectedItem();
+					GUI.showReportWindow(parent, Report.Builders.ofError(
+						tab.throwable(), Reason.ERROR,
+						ReportContext.none()
+					), ReportWindow.Feature.onlyReasons(Reason.ERROR));
+				});
+				
+				// To position the custom button to the left of the OK button,
+				// we must set its data to the same data as the OK button and then
+				// prepend it to the list of buttons.
+				ButtonBar.setButtonData(btnReport, ButtonData.OK_DONE);
+				buttonBar.getButtons().add(0, btnReport);
 			}
 			
 			public void addTab(ErrorItem item) {
@@ -305,9 +335,25 @@ public final class FXUtils {
 		}
 		
 		/** @since 00.02.09 */
+		private static final class ErrorTab extends Tab {
+			
+			private final ErrorItem item;
+			
+			public ErrorTab(ErrorItem item, String text, Node content) {
+				super(text, content);
+				this.item = Objects.requireNonNull(item);
+			}
+			
+			public Throwable throwable() {
+				return item.throwable();
+			}
+		}
+		
+		/** @since 00.02.09 */
 		private static interface ErrorItem {
 			
-			Tab createTab(TabPane pane);
+			ErrorTab createTab(TabPane pane);
+			Throwable throwable();
 		}
 		
 		/** @since 00.02.09 */
@@ -320,16 +366,21 @@ public final class FXUtils {
 			}
 			
 			@Override
-			public Tab createTab(TabPane pane) {
+			public ErrorTab createTab(TabPane pane) {
 				String text = Utils.throwableToString(throwable);
 				TextArea area = new TextArea(text);
 				area.setEditable(false);
 				
 				String title = throwable.getClass().getSimpleName();
-				Tab tab = new Tab(title, area);
+				ErrorTab tab = new ErrorTab(this, title, area);
 				tab.setClosable(false);
 				
 				return tab;
+			}
+			
+			@Override
+			public Throwable throwable() {
+				return throwable;
 			}
 		}
 		
@@ -345,7 +396,7 @@ public final class FXUtils {
 			}
 			
 			@Override
-			public Tab createTab(TabPane pane) {
+			public ErrorTab createTab(TabPane pane) {
 				VBox wrapper = new VBox(5.0);
 				
 				Text label = new Text(message);
@@ -361,10 +412,21 @@ public final class FXUtils {
 				wrapper.setPadding(new Insets(5.0, 0.0, 0.0, 0.0));
 				
 				String title = "Error";
-				Tab tab = new Tab(title, wrapper);
+				ErrorTab tab = new ErrorTab(this, title, wrapper);
 				tab.setClosable(false);
 				
 				return tab;
+			}
+			
+			@Override
+			public Throwable throwable() {
+				String text = message;
+				
+				if(content != null) {
+					text += "\n\n" + content;
+				}
+				
+				return new Throwable(text);
 			}
 		}
 	}

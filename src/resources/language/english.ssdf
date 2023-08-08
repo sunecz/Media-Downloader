@@ -4,6 +4,11 @@
 	title:   "English",
 	code:    "eng",
 	windows: {
+		exception: {
+			button: {
+				report: "Report"
+			}
+		},
 		main: {
 			title: "Media Downloader",
 			buttons: {

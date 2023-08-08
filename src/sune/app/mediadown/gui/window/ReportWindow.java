@@ -27,7 +27,6 @@ import javafx.stage.Stage;
 import sune.app.mediadown.gui.Dialog;
 import sune.app.mediadown.gui.DraggableWindow;
 import sune.app.mediadown.gui.GUI;
-import sune.app.mediadown.gui.Window;
 import sune.app.mediadown.gui.control.TranslatableListCell;
 import sune.app.mediadown.language.Translation;
 import sune.app.mediadown.report.ContactInformation;
@@ -265,12 +264,12 @@ public class ReportWindow extends DraggableWindow<VBox> {
 		this.features = new Features(features);
 	}
 	
-	public final void showWithFeatures(Window<?> parent, Report.Builder builder, Set<Feature> features) {
+	public final void showWithFeatures(Stage parent, Report.Builder builder, Set<Feature> features) {
 		initArgsBeforeShow(builder, features);
 		show(parent);
 	}
 	
-	public final void showWithFeatures(Window<?> parent, Report.Builder builder, Feature... features) {
+	public final void showWithFeatures(Stage parent, Report.Builder builder, Feature... features) {
 		showWithFeatures(parent, builder, Set.of(features));
 	}
 	

@@ -4,6 +4,11 @@
 	title:   "Čeština",
 	code:    "ces",
 	windows: {
+		exception: {
+			button: {
+				report: "Nahlásit"
+			}
+		},
 		main: {
 			title: "Media Downloader",
 			buttons: {
