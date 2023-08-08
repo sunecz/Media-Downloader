@@ -1627,7 +1627,7 @@ public final class MediaDownloader {
 		if(message == null) return; // Do nothing
 		String text = message + "\n" + content;
 		Log.error(text);
-		if(FXUtils.isInitialized()) Dialog.showContentError("Error", message, content);
+		if(FXUtils.isInitialized()) FXUtils.showExceptionWindow(message, content);
 		else System.err.println(text); // FX not available, print to stderr
 	}
 	

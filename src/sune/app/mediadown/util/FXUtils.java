@@ -29,6 +29,7 @@ import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
 import javafx.collections.ObservableSet;
 import javafx.collections.SetChangeListener;
+import javafx.geometry.Insets;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -48,6 +49,8 @@ import javafx.scene.control.TreeTableView;
 import javafx.scene.control.skin.TableViewSkinBase;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.layout.VBox;
+import javafx.scene.text.Text;
 import javafx.stage.Modality;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
@@ -186,51 +189,53 @@ public final class FXUtils {
 	/** @since 00.02.08 */
 	private static final class ExceptionWindow {
 		
-		private static ExceptionWindow instance;
+		private static volatile ExceptionWindow instance;
 		
-		private Alert alert;
-		private TabPane tabs;
-		private boolean allowClear;
+		private volatile ExceptionAlert alert;
+		private volatile boolean allowClear;
 		
 		private ExceptionWindow() {
 			allowClear = true;
 		}
 		
 		public static final ExceptionWindow instance() {
-			synchronized(ExceptionWindow.class) {
-				if(instance == null) {
-					instance = new ExceptionWindow();
+			ExceptionWindow ref = instance;
+			
+			if(ref == null) {
+				synchronized(ExceptionWindow.class) {
+					ref = instance;
+					
+					if(ref == null) {
+						instance = ref = new ExceptionWindow();
+					}
 				}
-				
-				return instance;
 			}
+			
+			return ref;
 		}
 		
-		private void initialize() {
+		private final void initialize() {
 			if(alert != null) {
 				return;
 			}
 			
-			alert = new Alert(AlertType.ERROR);
+			alert = new ExceptionAlert(AlertType.ERROR);
 			alert.initModality(Modality.APPLICATION_MODAL);
 			alert.setHeaderText(null);
 			alert.setOnCloseRequest((e) -> clear());
 			setDialogIcon(alert, MediaDownloader.ICON);
 			alert.getButtonTypes().setAll(ButtonType.OK);
-			
-			tabs = new TabPane();
-			alert.getDialogPane().setContent(tabs);
 		}
 		
-		private void clear() {
-			if(tabs == null || !allowClear) {
+		private final void clear() {
+			if(alert == null || !allowClear) {
 				return;
 			}
 			
-			tabs.getTabs().clear();
+			alert.clearTabs();
 		}
 		
-		private void show() {
+		private final void show() {
 			if(alert.isShowing()) {
 				return;
 			}
@@ -238,22 +243,29 @@ public final class FXUtils {
 			alert.showAndWait();
 		}
 		
-		private void add(Throwable throwable) {
-			String title = throwable.getClass().getSimpleName();
-			String text = Utils.throwableToString(throwable);
-			TextArea area = new TextArea(text);
-			area.setEditable(false);
-			Tab tab = new Tab(title, area);
-			tab.setClosable(false);
-			tabs.getTabs().add(tab);
+		private final void add(ErrorItem item) {
+			enqueue(() -> {
+				initialize();
+				alert.addTab(item);
+				show();
+			});
 		}
 		
 		public void error(Throwable throwable) {
-			enqueue(() -> {
-				initialize();
-				add(throwable);
-				show();
-			});
+			if(throwable == null) {
+				return;
+			}
+			
+			add(new OfThrowable(throwable));
+		}
+		
+		/** @since 00.02.09 */
+		public void error(String message, String content) {
+			if(message == null) {
+				return;
+			}
+			
+			add(new OfMessage(message, content));
 		}
 		
 		public void refresh() {
@@ -266,10 +278,104 @@ public final class FXUtils {
 			allowClear = true;
 			enqueue(this::show);
 		}
+		
+		/** @since 00.02.09 */
+		private static final class ExceptionAlert extends Alert {
+			
+			// TODO: Add report button
+			
+			private final VBox pane;
+			private final TabPane tabs;
+			
+			public ExceptionAlert(AlertType alertType) {
+				super(alertType);
+				pane = new VBox(5.0);
+				tabs = new TabPane();
+				pane.getChildren().addAll(tabs);
+				getDialogPane().setContent(pane);
+			}
+			
+			public void addTab(ErrorItem item) {
+				tabs.getTabs().add(item.createTab(tabs));
+			}
+			
+			public void clearTabs() {
+				tabs.getTabs().clear();
+			}
+		}
+		
+		/** @since 00.02.09 */
+		private static interface ErrorItem {
+			
+			Tab createTab(TabPane pane);
+		}
+		
+		/** @since 00.02.09 */
+		private static final class OfThrowable implements ErrorItem {
+			
+			private final Throwable throwable;
+			
+			public OfThrowable(Throwable throwable) {
+				this.throwable = Objects.requireNonNull(throwable);
+			}
+			
+			@Override
+			public Tab createTab(TabPane pane) {
+				String text = Utils.throwableToString(throwable);
+				TextArea area = new TextArea(text);
+				area.setEditable(false);
+				
+				String title = throwable.getClass().getSimpleName();
+				Tab tab = new Tab(title, area);
+				tab.setClosable(false);
+				
+				return tab;
+			}
+		}
+		
+		/** @since 00.02.09 */
+		private static final class OfMessage implements ErrorItem {
+			
+			private final String message;
+			private final String content;
+			
+			public OfMessage(String message, String content) {
+				this.message = Objects.requireNonNull(message);
+				this.content = content; // May be null
+			}
+			
+			@Override
+			public Tab createTab(TabPane pane) {
+				VBox wrapper = new VBox(5.0);
+				
+				Text label = new Text(message);
+				label.wrappingWidthProperty().bind(pane.widthProperty());
+				wrapper.getChildren().add(label);
+				
+				if(content != null) {
+					TextArea area = new TextArea(content);
+					area.setEditable(false);
+					wrapper.getChildren().add(area);
+				}
+				
+				wrapper.setPadding(new Insets(5.0, 0.0, 0.0, 0.0));
+				
+				String title = "Error";
+				Tab tab = new Tab(title, wrapper);
+				tab.setClosable(false);
+				
+				return tab;
+			}
+		}
 	}
 	
 	public static final void showExceptionWindow(Throwable throwable) {
 		ExceptionWindow.instance().error(throwable);
+	}
+	
+	/** @since 00.02.09 */
+	public static final void showExceptionWindow(String title, String message) {
+		ExceptionWindow.instance().error(title, message);
 	}
 	
 	/** @since 00.02.08 */
