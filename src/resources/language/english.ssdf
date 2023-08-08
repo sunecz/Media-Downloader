@@ -80,6 +80,14 @@
 						clipboard_watcher: "Clipboard watcher",
 						update_resources:  "Update resources"
 					}
+				},
+				help: {
+					title: "Help",
+					item: {
+						report_issue:  "Report issue",
+						feedback:      "Feedback",
+						documentation: "Documentation"
+					}
 				}
 			},
 			progress: {
@@ -445,10 +453,13 @@
 		},
 		report: {
 			title: "Report",
+			text: {
+				optional: " (optional)"
+			},
 			label: {
 				reason: "Reason",
-				email: "Email (optional)",
-				note: "Note (optional)",
+				email: "Email",
+				note: "Note",
 				raw_data: "Data to send",
 				anonymize_data: "Anonymize data (Contact information will still be sent)"
 			},
@@ -460,8 +471,15 @@
 					ERROR:       "Error",
 					BROKEN:      "Broken",
 					IMPROVEMENT: "Improvement",
+					ISSUE:       "Issue",
 					FEEDBACK:    "Feedback",
 					OTHER:       "Other"
+				}
+			},
+			message: {
+				note_required: {
+					title: "Validation",
+					text:  "A note is required!"
 				}
 			}
 		}

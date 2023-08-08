@@ -39,6 +39,7 @@ import sune.app.mediadown.gui.window.DownloadConfigurationWindow.Feature.Preferr
 import sune.app.mediadown.gui.window.DownloadConfigurationWindow.Feature.SubtitlesLanguageFeatureValueFactory;
 import sune.app.mediadown.gui.window.DownloadConfigurationWindow.FeatureValue;
 import sune.app.mediadown.gui.window.MediaInfoWindow;
+import sune.app.mediadown.gui.window.ReportWindow;
 import sune.app.mediadown.gui.window.TableWindow;
 import sune.app.mediadown.language.Translation;
 import sune.app.mediadown.media.AudioMedia;
@@ -110,7 +111,7 @@ public final class TablePipelineUtils {
 			GUI.showReportWindow(window, Report.Builders.ofMedia(
 				item, Reason.BROKEN,
 				reportContext.get()
-			));
+			), ReportWindow.Feature.onlyReasons(Reason.BROKEN));
 		});
 		
 		menu.getItems().addAll(itemCopyURL, itemCopySourceURL, itemMediaInfo, itemReportBroken);

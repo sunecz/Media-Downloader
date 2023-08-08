@@ -128,6 +128,58 @@ public abstract class Report {
 		}
 	}
 	
+	private static final class OfIssue extends Report {
+		
+		private static final String NAME = "issue";
+		
+		public OfIssue(String note, ReportContext context, ContactInformation contact) {
+			super(NAME, Reason.ISSUE, context, note, contact);
+		}
+		
+		@Override
+		public JSONCollection serializeData(boolean anonymize) {
+			return JSONCollection.empty();
+		}
+		
+		public static final class Builder extends Report.Builder {
+			
+			public Builder(ReportContext context) {
+				super(NAME, Reason.ISSUE, context);
+			}
+			
+			@Override
+			public Report build() {
+				return new OfIssue(note, context, contact);
+			}
+		}
+	}
+	
+	private static final class OfFeedback extends Report {
+		
+		private static final String NAME = "feedback";
+		
+		public OfFeedback(String note, ReportContext context, ContactInformation contact) {
+			super(NAME, Reason.FEEDBACK, context, note, contact);
+		}
+		
+		@Override
+		public JSONCollection serializeData(boolean anonymize) {
+			return JSONCollection.empty();
+		}
+		
+		public static final class Builder extends Report.Builder {
+			
+			public Builder(ReportContext context) {
+				super(NAME, Reason.FEEDBACK, context);
+			}
+			
+			@Override
+			public Report build() {
+				return new OfFeedback(note, context, contact);
+			}
+		}
+	}
+	
 	private static final class OfProgram extends Report {
 		
 		private static final String NAME = "program";
@@ -304,7 +356,7 @@ public abstract class Report {
 	
 	public static enum Reason {
 		
-		ERROR, BROKEN, IMPROVEMENT, FEEDBACK, OTHER;
+		ERROR, BROKEN, IMPROVEMENT, ISSUE, FEEDBACK, OTHER;
 	}
 	
 	public static abstract class Builder {
@@ -368,6 +420,14 @@ public abstract class Report {
 		
 		public static final Builder ofError(Throwable error, Reason reason, ReportContext context) {
 			return new OfError.Builder(reason, context, error);
+		}
+		
+		public static final Builder ofIssue(ReportContext context) {
+			return new OfIssue.Builder(context);
+		}
+		
+		public static final Builder ofFeedback(ReportContext context) {
+			return new OfFeedback.Builder(context);
 		}
 		
 		public static final Builder ofProgram(Program program, Reason reason, ReportContext context) {

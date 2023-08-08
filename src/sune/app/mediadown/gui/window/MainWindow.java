@@ -85,6 +85,8 @@ import sune.app.mediadown.media.Media;
 import sune.app.mediadown.message.Message;
 import sune.app.mediadown.message.MessageList;
 import sune.app.mediadown.message.MessageManager;
+import sune.app.mediadown.net.Net;
+import sune.app.mediadown.os.OS;
 import sune.app.mediadown.pipeline.ConversionPipelineTask;
 import sune.app.mediadown.pipeline.DownloadPipelineTask;
 import sune.app.mediadown.pipeline.Pipeline;
@@ -115,6 +117,9 @@ public final class MainWindow extends Window<BorderPane> {
 	/** @since 00.02.08 */
 	private static final double MINIMUM_HEIGHT = 400.0;
 	
+	/** @since 00.02.09 */
+	private static final String URI_DOCUMENTATION = "https://projects.suneweb.net/media-downloader/docs/";
+	
 	private static MainWindow INSTANCE;
 	
 	private final AtomicBoolean closeRequest = new AtomicBoolean();
@@ -137,6 +142,14 @@ public final class MainWindow extends Window<BorderPane> {
 	private Menu menuTools;
 	private MenuItem menuItemClipboardWatcher;
 	private MenuItem menuItemUpdateResources;
+	/** @since 00.02.09 */
+	private Menu menuHelp;
+	/** @since 00.02.09 */
+	private MenuItem menuItemReportIssue;
+	/** @since 00.02.09 */
+	private MenuItem menuItemFeedback;
+	/** @since 00.02.09 */
+	private MenuItem menuItemDocumentation;
 	
 	public MainWindow() {
 		super(NAME, new BorderPane(), DEFAULT_WIDTH, DEFAULT_HEIGHT);
@@ -642,7 +655,7 @@ public final class MainWindow extends Window<BorderPane> {
 					GUI.showReportWindow(this, Report.Builders.ofMedia(
 						media, Reason.BROKEN,
 						reportContext
-					));
+					), ReportWindow.Feature.onlyReasons(Reason.BROKEN));
 				})
 				.addOnContextMenuShowing(MainWindow::contextMenuItemEnableIfOneSelected),
 			contextMenuItemFactory.createSeparator(),
@@ -657,6 +670,7 @@ public final class MainWindow extends Window<BorderPane> {
 		menuBar = new MenuBar();
 		menuApplication = new Menu(tr("menu_bar.application.title"));
 		menuTools = new Menu(tr("menu_bar.tools.title"));
+		menuHelp = new Menu(tr("menu_bar.help.title"));
 		
 		menuItemInformation = new MenuItem(tr("menu_bar.application.item.information"));
 		menuItemInformation.setOnAction((e) -> {
@@ -694,9 +708,33 @@ public final class MainWindow extends Window<BorderPane> {
 			}
 		});
 		
+		menuItemReportIssue = new MenuItem(tr("menu_bar.help.item.report_issue"));
+		menuItemReportIssue.setOnAction((e) -> {
+			GUI.showReportWindow(
+				this, Report.Builders.ofIssue(ReportContext.none()),
+				ReportWindow.Feature.onlyReasons(Reason.ISSUE),
+				ReportWindow.Feature.noteRequired()
+			);
+		});
+		
+		menuItemFeedback = new MenuItem(tr("menu_bar.help.item.feedback"));
+		menuItemFeedback.setOnAction((e) -> {
+			GUI.showReportWindow(
+				this, Report.Builders.ofFeedback(ReportContext.none()),
+				ReportWindow.Feature.onlyReasons(Reason.FEEDBACK),
+				ReportWindow.Feature.noteRequired()
+			);
+		});
+		
+		menuItemDocumentation = new MenuItem(tr("menu_bar.help.item.documentation"));
+		menuItemDocumentation.setOnAction((e) -> {
+			Ignore.callVoid(() -> OS.current().browse(Net.uri(URI_DOCUMENTATION)), MediaDownloader::error);
+		});
+		
 		menuApplication.getItems().addAll(menuItemInformation, menuItemConfiguration, menuItemMessages, menuItemAbout);
 		menuTools.getItems().addAll(menuItemClipboardWatcher, menuItemUpdateResources);
-		menuBar.getMenus().addAll(menuApplication, menuTools);
+		menuHelp.getItems().addAll(menuItemReportIssue, menuItemFeedback, menuItemDocumentation);
+		menuBar.getMenus().addAll(menuApplication, menuTools, menuHelp);
 		
 		return menuBar;
 	}

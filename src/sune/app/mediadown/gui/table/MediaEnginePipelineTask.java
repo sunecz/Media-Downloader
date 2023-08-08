@@ -13,6 +13,7 @@ import javafx.scene.control.TableView;
 import sune.app.mediadown.entity.MediaEngine;
 import sune.app.mediadown.entity.Program;
 import sune.app.mediadown.gui.GUI;
+import sune.app.mediadown.gui.window.ReportWindow;
 import sune.app.mediadown.gui.window.TableWindow;
 import sune.app.mediadown.language.Translation;
 import sune.app.mediadown.report.Report;
@@ -51,7 +52,7 @@ public final class MediaEnginePipelineTask extends TableWindowPipelineTaskBase<P
 			GUI.showReportWindow(window, Report.Builders.ofProgram(
 				item, Reason.BROKEN,
 				ReportContext.ofMediaGetter(engine)
-			));
+			), ReportWindow.Feature.onlyReasons(Reason.BROKEN));
 		});
 		
 		menu.getItems().addAll(itemCopyURL, itemReportBroken);

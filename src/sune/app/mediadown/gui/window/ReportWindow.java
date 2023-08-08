@@ -1,7 +1,12 @@
 package sune.app.mediadown.gui.window;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -19,6 +24,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import sune.app.mediadown.gui.Dialog;
 import sune.app.mediadown.gui.DraggableWindow;
 import sune.app.mediadown.gui.GUI;
 import sune.app.mediadown.gui.Window;
@@ -30,6 +36,7 @@ import sune.app.mediadown.report.Report.Reason;
 import sune.app.mediadown.report.Reporting;
 import sune.app.mediadown.util.FXUtils;
 import sune.app.mediadown.util.JSON.JSONCollection;
+import sune.app.mediadown.util.Utils;
 
 /** @since 00.02.09 */
 public class ReportWindow extends DraggableWindow<VBox> {
@@ -38,20 +45,22 @@ public class ReportWindow extends DraggableWindow<VBox> {
 	
 	private final Label lblReason;
 	private final ComboBox<Reason> chbReason;
-	private final Label lblEmail;
+	private final LabelOptionalField lblEmail;
 	private final TextField txtEmail;
-	private final Label lblNote;
+	private final LabelOptionalField lblNote;
 	private final TextArea txtNote;
 	private final TextArea txtRawData;
 	private final CheckBox chbAnonymizeData;
 	private final Button btnSend;
 	
 	private volatile Report.Builder report;
-	private volatile Set<Feature> features;
+	private volatile Features features;
 	
 	public ReportWindow() {
 		super(NAME, new VBox(5.0), 450.0, 400.0);
 		initModality(Modality.APPLICATION_MODAL);
+		
+		String textOptional = translation.getSingle("text.optional");
 		
 		VBox boxReason = new VBox(5.0);
 		lblReason = new Label(translation.getSingle("label.reason"));
@@ -59,19 +68,18 @@ public class ReportWindow extends DraggableWindow<VBox> {
 		Translation trReason = translation.getTranslation("value.reason");
 		chbReason.setCellFactory((view) -> new TranslatableListCell<>(trReason, Reason::name));
 		chbReason.setButtonCell(new TranslatableListCell<>(trReason, Reason::name));
-		chbReason.getItems().setAll(Reason.values());
 		chbReason.valueProperty().addListener((o, ov, nv) -> updateData());
 		chbReason.setMaxWidth(Double.MAX_VALUE);
 		boxReason.getChildren().addAll(lblReason, chbReason);
 		
 		VBox boxContactInformation = new VBox(5.0);
-		lblEmail = new Label(translation.getSingle("label.email"));
+		lblEmail = new LabelOptionalField(translation.getSingle("label.email"), textOptional);
 		txtEmail = new TextField();
 		txtEmail.textProperty().addListener((o, ov, nv) -> updateData());
 		boxContactInformation.getChildren().addAll(lblEmail, txtEmail);
 		
 		VBox boxNote = new VBox(5.0);
-		lblNote = new Label(translation.getSingle("label.note"));
+		lblNote = new LabelOptionalField(translation.getSingle("label.note"), textOptional);
 		txtNote = new TextArea();
 		txtNote.textProperty().addListener((o, ov, nv) -> updateData());
 		txtNote.setPrefHeight(100.0);
@@ -133,8 +141,46 @@ public class ReportWindow extends DraggableWindow<VBox> {
 	}
 	
 	private final void loadFeatures() {
-		boolean reasonIsEditable = features.contains(Feature.EDITABLE_REASON);
+		Feature.OfReason reason = features.get(Feature.OfReason.NAME);
+		List<Reason> reasons;
+		
+		if(reason != null) {
+			reasons = reason.allowedReasons();
+		} else {
+			reasons = List.of(Reason.values());
+		}
+		
+		boolean reasonIsEditable = reasons.size() > 1;
 		chbReason.setDisable(!reasonIsEditable);
+		chbReason.getItems().setAll(reasons);
+		
+		boolean emailRequired = false;
+		lblEmail.isOptional(!emailRequired);
+		
+		boolean noteRequired = false;
+		Feature.OfNote note = features.get(Feature.OfNote.NAME);
+		
+		if(note != null) {
+			noteRequired = note.isRequired();
+		}
+		
+		lblNote.isOptional(!noteRequired);
+	}
+	
+	private final boolean validateOptionalField(LabelOptionalField label, Supplier<String> textSupplier,
+			Translation translation) {
+		if(label.isOptional()) {
+			return true; // No validation needed
+		}
+		
+		String text = textSupplier.get();
+		
+		if(text == null || text.isBlank()) {
+			Dialog.showError(translation.getSingle("title"), translation.getSingle("text"));
+			return false;
+		}
+		
+		return true;
 	}
 	
 	private final void updateReportData() {
@@ -204,6 +250,10 @@ public class ReportWindow extends DraggableWindow<VBox> {
 		updateReportData();
 		boolean anonymize = chbAnonymizeData.isSelected();
 		
+		if(!validateOptionalField(lblNote, txtNote::getText, translation.getTranslation("message.note_required"))) {
+			return; // Do not continue
+		}
+		
 		if(GUI.report(report.build(), anonymize)) {
 			clearData();
 			close();
@@ -212,7 +262,7 @@ public class ReportWindow extends DraggableWindow<VBox> {
 	
 	private final void initArgsBeforeShow(Report.Builder builder, Set<Feature> features) {
 		this.report = builder; // May be null
-		this.features = Objects.requireNonNull(features);
+		this.features = new Features(features);
 	}
 	
 	public final void showWithFeatures(Window<?> parent, Report.Builder builder, Set<Feature> features) {
@@ -224,8 +274,103 @@ public class ReportWindow extends DraggableWindow<VBox> {
 		showWithFeatures(parent, builder, Set.of(features));
 	}
 	
-	public static enum Feature {
+	private static final class LabelOptionalField extends Label {
 		
-		EDITABLE_REASON;
+		private final String textOriginal;
+		private final String textOptional;
+		private boolean optional;
+		
+		public LabelOptionalField(String text, String textOptional) {
+			this.textOriginal = text;
+			this.textOptional = textOptional;
+		}
+		
+		public void isOptional(boolean isOptional) {
+			optional = isOptional;
+			String text = textOriginal;
+			
+			if(isOptional) {
+				text += textOptional;
+			}
+			
+			setText(text);
+		}
+		
+		public boolean isOptional() {
+			return optional;
+		}
+	}
+	
+	private static final class Features {
+		
+		private final Map<String, Feature> features;
+		
+		public Features(Set<Feature> features) {
+			this.features = Objects.requireNonNull(features).stream().collect(
+				Collectors.toUnmodifiableMap(Feature::name, Function.identity())
+			);
+		}
+		
+		public <T extends Feature> T get(String name) {
+			return Utils.cast(features.get(name));
+		}
+	}
+	
+	public static abstract class Feature {
+		
+		private final String name;
+		
+		private Feature(String name) {
+			this.name = Objects.requireNonNull(name);
+		}
+		
+		protected final String name() {
+			return name;
+		}
+		
+		public static final Feature onlyReasons(Reason... reasons) {
+			if(reasons.length < 1) {
+				throw new IllegalArgumentException("At least one reason must be specified");
+			}
+			
+			return new OfReason(List.of(reasons));
+		}
+		
+		public static final Feature noteRequired() {
+			return OfNote.REQUIRED;
+		}
+		
+		private static final class OfReason extends Feature {
+			
+			private static final String NAME = "reason";
+			
+			private final List<Reason> allowedReasons;
+			
+			public OfReason(List<Reason> allowedReasons) {
+				super(NAME);
+				this.allowedReasons = Objects.requireNonNull(allowedReasons);
+			}
+			
+			public List<Reason> allowedReasons() {
+				return allowedReasons;
+			}
+		}
+		
+		private static final class OfNote extends Feature {
+			
+			private static final String NAME = "note";
+			private static final OfNote REQUIRED = new OfNote(true);
+			
+			private final boolean isRequired;
+			
+			public OfNote(boolean isRequired) {
+				super(NAME);
+				this.isRequired = isRequired;
+			}
+			
+			public boolean isRequired() {
+				return isRequired;
+			}
+		}
 	}
 }

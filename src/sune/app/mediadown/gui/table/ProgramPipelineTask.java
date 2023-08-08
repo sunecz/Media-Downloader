@@ -13,6 +13,7 @@ import sune.app.mediadown.entity.Episode;
 import sune.app.mediadown.entity.MediaEngine;
 import sune.app.mediadown.entity.Program;
 import sune.app.mediadown.gui.GUI;
+import sune.app.mediadown.gui.window.ReportWindow;
 import sune.app.mediadown.gui.window.TableWindow;
 import sune.app.mediadown.language.Translation;
 import sune.app.mediadown.report.Report;
@@ -49,7 +50,7 @@ public final class ProgramPipelineTask extends MediaEnginePipelineTaskBase<Progr
 			GUI.showReportWindow(window, Report.Builders.ofEpisode(
 				item, Reason.BROKEN,
 				ReportContext.ofProgram(items.get(0)) // Only one program is always selected
-			));
+			), ReportWindow.Feature.onlyReasons(Reason.BROKEN));
 		});
 		
 		menu.getItems().addAll(itemCopyURL, itemReportBroken);

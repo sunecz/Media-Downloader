@@ -80,6 +80,14 @@
 						clipboard_watcher: "Sledování schránky",
 						update_resources:  "Aktualizovat prostředky"
 					}
+				},
+				help: {
+					title: "Nápověda",
+					item: {
+						report_issue:  "Nahlásit problém",
+						feedback:      "Zpětná vazba",
+						documentation: "Dokumentace"
+					}
 				}
 			},
 			progress: {
@@ -445,10 +453,13 @@
 		},
 		report: {
 			title: "Nahlášení",
+			text: {
+				optional: " (volitelné)"
+			},
 			label: {
 				reason: "Důvod",
-				email: "Email (volitelné)",
-				note: "Poznámka (volitelné)",
+				email: "Email",
+				note: "Poznámka",
 				raw_data: "Data k odeslání",
 				anonymize_data: "Anonymizovat data (Kontaktní údaje budou i nadále zaslány)"
 			},
@@ -460,8 +471,15 @@
 					ERROR:       "Chyba",
 					BROKEN:      "Nefunkční",
 					IMPROVEMENT: "Vylepšení",
+					ISSUE:       "Problém",
 					FEEDBACK:    "Zpětná vazba",
 					OTHER:       "Ostatní"
+				}
+			},
+			message: {
+				note_required: {
+					title: "Validace",
+					text:  "Poznámka je povinná!"
 				}
 			}
 		}
