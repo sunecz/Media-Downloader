@@ -1,6 +1,6 @@
 {
 	name: "light",
-	version: "4",
+	version: "5",
 	title: {
 		eng: "Light",
 		ces: "Světlý"
