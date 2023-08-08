@@ -1548,16 +1548,9 @@ public final class Utils {
 	/** @since 00.02.09 */
 	public static final <T> String toString(List<T> list, Function<T, String> mapper) {
 		StringBuilder builder = new StringBuilder();
-		boolean first = true;
 		
 		for(T item : list) {
-			if(first) {
-				first = false;
-			} else {
-				builder.append("\n");
-			}
-			
-			builder.append(mapper.apply(item));
+			builder.append(mapper.apply(item)).append('\n');
 		}
 		
 		return builder.toString();

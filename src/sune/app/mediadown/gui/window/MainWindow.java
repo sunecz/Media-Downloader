@@ -12,7 +12,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -158,17 +157,6 @@ public final class MainWindow extends Window<BorderPane> {
 		FXUtils.onWindowShowOnce(this, this::maybeAutoEnableClipboardWatcher);
 		
 		INSTANCE = this;
-	}
-	
-	/** @since 00.02.08 */
-	private static final <T> String listToString(List<T> list, Function<T, String> mapper) {
-		StringBuilder builder = new StringBuilder();
-		
-		for(T item : list) {
-			builder.append(mapper.apply(item)).append('\n');
-		}
-		
-		return builder.toString();
 	}
 	
 	/** @since 00.02.08 */
@@ -593,7 +581,7 @@ public final class MainWindow extends Window<BorderPane> {
 						.collect(Collectors.toList());
 					
 					ClipboardUtils.copy(
-						listToString(media, (m) -> m.uri().normalize().toString())
+						Utils.toString(media, (m) -> m.uri().normalize().toString())
 					);
 				})
 				.addOnContextMenuShowing(MainWindow::contextMenuItemEnableIfAnySelected),
@@ -610,8 +598,8 @@ public final class MainWindow extends Window<BorderPane> {
 						.collect(Collectors.toList());
 					
 					ClipboardUtils.copy(
-						listToString(media, (m) -> Objects.toString(Optional.ofNullable(m.metadata().sourceURI())
-						                                                    .map(URI::normalize).orElse(null)))
+						Utils.toString(media, (m) -> Objects.toString(Optional.ofNullable(m.metadata().sourceURI())
+						                                                      .map(URI::normalize).orElse(null)))
 					);
 				})
 				.addOnContextMenuShowing(MainWindow::contextMenuItemEnableIfAnySelected),

@@ -80,19 +80,18 @@ public final class TablePipelineUtils {
 		
 		MenuItem itemCopyURL = new MenuItem(translation.getSingle("tables.media.context_menu.copy_url"));
 		itemCopyURL.setOnAction((e) -> {
-			ClipboardUtils.copy(Utils.toString(
-				table.getSelectionModel().getSelectedItems(),
-				(m) -> m.uri().normalize().toString()
-			));
+			ClipboardUtils.copy(
+				Utils.toString(table.getSelectionModel().getSelectedItems(), (m) -> m.uri().normalize().toString())
+			);
 		});
 		
 		MenuItem itemCopySourceURL = new MenuItem(translation.getSingle("tables.media.context_menu.copy_source_url"));
 		itemCopySourceURL.setOnAction((e) -> {
-			ClipboardUtils.copy(Utils.toString(
-				table.getSelectionModel().getSelectedItems(),
-				(m) -> Objects.toString(Optional.ofNullable(m.metadata().sourceURI())
-				                                .map(URI::normalize).orElse(null))
-			));
+			ClipboardUtils.copy(
+				Utils.toString(table.getSelectionModel().getSelectedItems(),
+				               (m) -> Objects.toString(Optional.ofNullable(m.metadata().sourceURI())
+				                                               .map(URI::normalize).orElse(null)))
+			);
 		});
 		
 		MenuItem itemMediaInfo = new MenuItem(translation.getSingle("tables.media.context_menu.media_info"));

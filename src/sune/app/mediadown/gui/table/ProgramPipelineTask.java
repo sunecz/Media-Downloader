@@ -38,10 +38,9 @@ public final class ProgramPipelineTask extends MediaEnginePipelineTaskBase<Progr
 		
 		MenuItem itemCopyURL = new MenuItem(translation.getSingle("tables.episodes.context_menu.copy_url"));
 		itemCopyURL.setOnAction((e) -> {
-			ClipboardUtils.copy(Utils.toString(
-				table.getSelectionModel().getSelectedItems(),
-				(m) -> m.uri().normalize().toString()
-			));
+			ClipboardUtils.copy(
+				Utils.toString(table.getSelectionModel().getSelectedItems(), (m) -> m.uri().normalize().toString())
+			);
 		});
 		
 		MenuItem itemReportBroken = new MenuItem(translation.getSingle("tables.episodes.context_menu.report_broken"));
