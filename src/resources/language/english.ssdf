@@ -446,12 +446,23 @@
 		report: {
 			title: "Report",
 			label: {
+				reason: "Reason",
 				email: "Email (optional)",
+				note: "Note (optional)",
 				raw_data: "Data to send",
 				anonymize_data: "Anonymize data (Contact information will still be sent)"
 			},
 			button: {
 				send: "Send"
+			},
+			value: {
+				reason: {
+					ERROR:       "Error",
+					BROKEN:      "Broken",
+					IMPROVEMENT: "Improvement",
+					FEEDBACK:    "Feedback",
+					OTHER:       "Other"
+				}
 			}
 		}
 	},

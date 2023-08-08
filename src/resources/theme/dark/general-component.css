@@ -304,3 +304,21 @@
 .table-cell .progress-bar > .track {
 	-fx-background-color: rgba(0, 0, 0, 1.0);
 }
+
+/* GUI Component: Accordion */
+
+.accordion-labeled > .titled-pane > .title {
+	-fx-padding: 0;
+	-fx-background-color: transparent;
+	-fx-background-insets: 0;
+}
+
+.accordion-labeled > .first-titled-pane > .title {
+	-fx-background-insets: 0;
+}
+
+.accordion-labeled > .titled-pane > *.content {
+    -fx-background-color: transparent;
+	-fx-border-width: 0;
+    -fx-border-insets: 0 0 0 0;
+}

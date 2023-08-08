@@ -446,12 +446,23 @@
 		report: {
 			title: "Nahlášení",
 			label: {
+				reason: "Důvod",
 				email: "Email (volitelné)",
+				note: "Poznámka (volitelné)",
 				raw_data: "Data k odeslání",
 				anonymize_data: "Anonymizovat data (Kontaktní údaje budou i nadále zaslány)"
 			},
 			button: {
 				send: "Odeslat"
+			},
+			value: {
+				reason: {
+					ERROR:       "Chyba",
+					BROKEN:      "Nefunkční",
+					IMPROVEMENT: "Vylepšení",
+					FEEDBACK:    "Zpětná vazba",
+					OTHER:       "Ostatní"
+				}
 			}
 		}
 	},

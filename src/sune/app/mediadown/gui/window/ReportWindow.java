@@ -1,12 +1,18 @@
 package sune.app.mediadown.gui.window;
 
+import java.util.Objects;
+import java.util.Set;
+
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.control.Accordion;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TitledPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
@@ -15,8 +21,12 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import sune.app.mediadown.gui.DraggableWindow;
 import sune.app.mediadown.gui.GUI;
+import sune.app.mediadown.gui.Window;
+import sune.app.mediadown.gui.control.TranslatableListCell;
+import sune.app.mediadown.language.Translation;
 import sune.app.mediadown.report.ContactInformation;
 import sune.app.mediadown.report.Report;
+import sune.app.mediadown.report.Report.Reason;
 import sune.app.mediadown.report.Reporting;
 import sune.app.mediadown.util.FXUtils;
 import sune.app.mediadown.util.JSON.JSONCollection;
@@ -26,32 +36,64 @@ public class ReportWindow extends DraggableWindow<VBox> {
 	
 	public static final String NAME = "report";
 	
+	private final Label lblReason;
+	private final ComboBox<Reason> chbReason;
 	private final Label lblEmail;
 	private final TextField txtEmail;
-	private final Label lblRawData;
+	private final Label lblNote;
+	private final TextArea txtNote;
 	private final TextArea txtRawData;
 	private final CheckBox chbAnonymizeData;
 	private final Button btnSend;
 	
 	private volatile Report.Builder report;
+	private volatile Set<Feature> features;
 	
 	public ReportWindow() {
-		super(NAME, new VBox(5.0), 700.0, 500.0);
+		super(NAME, new VBox(5.0), 450.0, 400.0);
 		initModality(Modality.APPLICATION_MODAL);
+		
+		VBox boxReason = new VBox(5.0);
+		lblReason = new Label(translation.getSingle("label.reason"));
+		chbReason = new ComboBox<>();
+		Translation trReason = translation.getTranslation("value.reason");
+		chbReason.setCellFactory((view) -> new TranslatableListCell<>(trReason, Reason::name));
+		chbReason.setButtonCell(new TranslatableListCell<>(trReason, Reason::name));
+		chbReason.getItems().setAll(Reason.values());
+		chbReason.valueProperty().addListener((o, ov, nv) -> updateData());
+		chbReason.setMaxWidth(Double.MAX_VALUE);
+		boxReason.getChildren().addAll(lblReason, chbReason);
 		
 		VBox boxContactInformation = new VBox(5.0);
 		lblEmail = new Label(translation.getSingle("label.email"));
 		txtEmail = new TextField();
-		txtEmail.focusedProperty().addListener((o, ov, nv) -> updateData());
 		txtEmail.textProperty().addListener((o, ov, nv) -> updateData());
 		boxContactInformation.getChildren().addAll(lblEmail, txtEmail);
 		
+		VBox boxNote = new VBox(5.0);
+		lblNote = new Label(translation.getSingle("label.note"));
+		txtNote = new TextArea();
+		txtNote.textProperty().addListener((o, ov, nv) -> updateData());
+		txtNote.setPrefHeight(100.0);
+		boxNote.getChildren().addAll(lblNote, txtNote);
+		
 		VBox boxRawData = new VBox(5.0);
-		lblRawData = new Label(translation.getSingle("label.raw_data"));
 		txtRawData = new TextArea();
 		txtRawData.setFont(Font.font("monospaced", txtRawData.getFont().getSize()));
 		txtRawData.setEditable(false);
-		boxContactInformation.getChildren().addAll(lblRawData, txtRawData);
+		boxRawData.getChildren().addAll(txtRawData);
+		
+		Accordion accordionRawData = new Accordion();
+		accordionRawData.getStyleClass().add("accordion-labeled");
+		TitledPane paneRawData = new TitledPane(translation.getSingle("label.raw_data"), boxRawData);
+		paneRawData.setAnimated(false);
+		boxRawData.setPadding(new Insets(5.0, 0.0, 0.0, 0.0));
+		accordionRawData.expandedPaneProperty().addListener((o, ov, expandedPane) -> {
+			boolean isExpanded = expandedPane != null;
+			VBox.setVgrow(boxNote, isExpanded ? Priority.NEVER : Priority.ALWAYS);
+			VBox.setVgrow(accordionRawData, isExpanded ? Priority.ALWAYS : Priority.NEVER);
+		});
+		accordionRawData.getPanes().addAll(paneRawData);
 		
 		VBox boxAnonymizeData = new VBox(5.0);
 		chbAnonymizeData = new CheckBox(translation.getSingle("label.anonymize_data"));
@@ -61,16 +103,19 @@ public class ReportWindow extends DraggableWindow<VBox> {
 		HBox boxBottom = new HBox(5.0);
 		btnSend = new Button(translation.getSingle("button.send"));
 		btnSend.setOnAction((e) -> sendData());
-		
 		HBox boxFill = new HBox();
-		HBox.setHgrow(boxFill, Priority.ALWAYS);
 		boxBottom.getChildren().addAll(boxFill, btnSend);
-		content.getChildren().addAll(boxContactInformation, boxRawData, boxAnonymizeData, boxBottom);
+		HBox.setHgrow(boxFill, Priority.ALWAYS);
+		
+		content.getChildren().addAll(
+			boxReason, boxContactInformation, boxNote, accordionRawData, boxAnonymizeData, boxBottom
+		);
 		content.setPadding(new Insets(10));
 		btnSend.setMinWidth(80);
 		boxBottom.setAlignment(Pos.CENTER_LEFT);
+		VBox.setVgrow(txtNote, Priority.ALWAYS);
 		VBox.setVgrow(txtRawData, Priority.ALWAYS);
-		VBox.setVgrow(boxContactInformation, Priority.ALWAYS);
+		VBox.setVgrow(boxNote, Priority.ALWAYS);
 		
 		FXUtils.onWindowShow(this, () -> {
 			Stage parent = (Stage) args.get("parent");
@@ -79,7 +124,7 @@ public class ReportWindow extends DraggableWindow<VBox> {
 				centerWindow(parent);
 			}
 			
-			report = (Report.Builder) args.get("report_builder");
+			loadFeatures();
 			
 			if(report != null) {
 				loadData();
@@ -87,7 +132,14 @@ public class ReportWindow extends DraggableWindow<VBox> {
 		});
 	}
 	
-	private final void updateContactInformation() {
+	private final void loadFeatures() {
+		boolean reasonIsEditable = features.contains(Feature.EDITABLE_REASON);
+		chbReason.setDisable(!reasonIsEditable);
+	}
+	
+	private final void updateReportData() {
+		report.reason(chbReason.getValue());
+		
 		ContactInformation contact = null;
 		String email = txtEmail.getText();
 		
@@ -95,11 +147,19 @@ public class ReportWindow extends DraggableWindow<VBox> {
 			contact = new ContactInformation(email);
 		}
 		
+		String note = null;
+		String noteText = txtNote.getText();
+		
+		if(!noteText.isBlank()) {
+			note = noteText;
+		}
+		
 		report.contact(contact);
+		report.note(note);
 	}
 	
 	private final void updatePayload() {
-		updateContactInformation();
+		updateReportData();
 		
 		boolean anonymize = chbAnonymizeData.isSelected();
 		JSONCollection payload = Reporting.payload(report.build(), anonymize);
@@ -108,10 +168,18 @@ public class ReportWindow extends DraggableWindow<VBox> {
 	}
 	
 	private final void loadData() {
+		chbReason.setValue(report.reason());
+		
 		ContactInformation contact = report.contact();
 		
 		if(contact != null) {
 			txtEmail.setText(contact.email());
+		}
+		
+		String note = report.note();
+		
+		if(note != null) {
+			txtNote.setText(note);
 		}
 		
 		boolean anonymize = chbAnonymizeData.isSelected();
@@ -125,18 +193,39 @@ public class ReportWindow extends DraggableWindow<VBox> {
 	}
 	
 	private final void clearData() {
+		chbReason.setValue(Reason.OTHER);
 		txtEmail.setText("");
+		txtNote.setText("");
 		txtRawData.setText("");
 		chbAnonymizeData.setSelected(false);
 	}
 	
 	private final void sendData() {
-		updateContactInformation();
+		updateReportData();
 		boolean anonymize = chbAnonymizeData.isSelected();
 		
 		if(GUI.report(report.build(), anonymize)) {
 			clearData();
 			close();
 		}
+	}
+	
+	private final void initArgsBeforeShow(Report.Builder builder, Set<Feature> features) {
+		this.report = builder; // May be null
+		this.features = Objects.requireNonNull(features);
+	}
+	
+	public final void showWithFeatures(Window<?> parent, Report.Builder builder, Set<Feature> features) {
+		initArgsBeforeShow(builder, features);
+		show(parent);
+	}
+	
+	public final void showWithFeatures(Window<?> parent, Report.Builder builder, Feature... features) {
+		showWithFeatures(parent, builder, Set.of(features));
+	}
+	
+	public static enum Feature {
+		
+		EDITABLE_REASON;
 	}
 }

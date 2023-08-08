@@ -14,8 +14,9 @@ public final class GUI {
 	private GUI() {
 	}
 	
-	public static final void showReportWindow(Window<?> parent, Report.Builder builder) {
-		MediaDownloader.window(ReportWindow.NAME).setArgs("report_builder", builder).show(parent);
+	public static final void showReportWindow(Window<?> parent, Report.Builder builder,
+			ReportWindow.Feature... features) {
+		((ReportWindow) MediaDownloader.window(ReportWindow.NAME)).showWithFeatures(parent, builder, features);
 	}
 	
 	public static final boolean report(Report report, boolean anonymize) {

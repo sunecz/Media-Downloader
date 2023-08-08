@@ -17,22 +17,25 @@ public abstract class Report {
 	private final String name;
 	private final Reason reason;
 	private final ReportContext context;
+	private final String note;
 	private final ContactInformation contact;
 	
-	protected Report(String name, Reason reason, ReportContext context, ContactInformation contact) {
+	protected Report(String name, Reason reason, ReportContext context, String note, ContactInformation contact) {
 		this.name = Objects.requireNonNull(name);
 		this.reason = Objects.requireNonNull(reason);
 		this.context = Objects.requireNonNull(context);
-		this.contact = contact;
+		this.note = note; // May be null
+		this.contact = contact; // May be null
 	}
 	
-	public static final Report ofURI(URI uri, Reason reason, ReportContext context, ContactInformation contact) {
-		return new OfURI(reason, context, contact, uri);
-	}
-	
-	public static final Report ofError(Throwable error, Reason reason, ReportContext context,
+	public static final Report ofURI(URI uri, Reason reason, ReportContext context, String note,
 			ContactInformation contact) {
-		return new OfError(reason, context, contact, error);
+		return new OfURI(reason, context, note, contact, uri);
+	}
+	
+	public static final Report ofError(Throwable error, Reason reason, ReportContext context, String note,
+			ContactInformation contact) {
+		return new OfError(reason, context, note, contact, error);
 	}
 	
 	public abstract JSONCollection serializeData(boolean anonymize);
@@ -49,6 +52,10 @@ public abstract class Report {
 		return context;
 	}
 	
+	public String note() {
+		return note;
+	}
+	
 	public ContactInformation contact() {
 		return contact;
 	}
@@ -59,8 +66,8 @@ public abstract class Report {
 		
 		private final URI uri;
 		
-		public OfURI(Reason reason, ReportContext context, ContactInformation contact, URI uri) {
-			super(NAME, reason, context, contact);
+		public OfURI(Reason reason, ReportContext context, String note, ContactInformation contact, URI uri) {
+			super(NAME, reason, context, note, contact);
 			this.uri = Objects.requireNonNull(uri);
 		}
 		
@@ -82,7 +89,7 @@ public abstract class Report {
 			
 			@Override
 			public Report build() {
-				return new OfURI(reason, context, contact, uri);
+				return new OfURI(reason, context, note, contact, uri);
 			}
 		}
 	}
@@ -93,8 +100,8 @@ public abstract class Report {
 		
 		private final Throwable error;
 		
-		public OfError(Reason reason, ReportContext context, ContactInformation contact, Throwable error) {
-			super(NAME, reason, context, contact);
+		public OfError(Reason reason, ReportContext context, String note, ContactInformation contact, Throwable error) {
+			super(NAME, reason, context, note, contact);
 			this.error = Objects.requireNonNull(error);
 		}
 		
@@ -116,7 +123,7 @@ public abstract class Report {
 			
 			@Override
 			public Report build() {
-				return new OfError(reason, context, contact, error);
+				return new OfError(reason, context, note, contact, error);
 			}
 		}
 	}
@@ -127,8 +134,9 @@ public abstract class Report {
 		
 		private final Program program;
 		
-		public OfProgram(Reason reason, ReportContext context, ContactInformation contact, Program program) {
-			super(NAME, reason, context, contact);
+		public OfProgram(Reason reason, ReportContext context, String note, ContactInformation contact,
+				Program program) {
+			super(NAME, reason, context, note, contact);
 			this.program = Objects.requireNonNull(program);
 		}
 		
@@ -150,7 +158,7 @@ public abstract class Report {
 			
 			@Override
 			public Report build() {
-				return new OfProgram(reason, context, contact, program);
+				return new OfProgram(reason, context, note, contact, program);
 			}
 		}
 	}
@@ -161,8 +169,9 @@ public abstract class Report {
 		
 		private final Episode episode;
 		
-		public OfEpisode(Reason reason, ReportContext context, ContactInformation contact, Episode episode) {
-			super(NAME, reason, context, contact);
+		public OfEpisode(Reason reason, ReportContext context, String note, ContactInformation contact,
+				Episode episode) {
+			super(NAME, reason, context, note, contact);
 			this.episode = Objects.requireNonNull(episode);
 		}
 		
@@ -184,7 +193,7 @@ public abstract class Report {
 			
 			@Override
 			public Report build() {
-				return new OfEpisode(reason, context, contact, episode);
+				return new OfEpisode(reason, context, note, contact, episode);
 			}
 		}
 	}
@@ -195,8 +204,8 @@ public abstract class Report {
 		
 		private final Media media;
 		
-		public OfMedia(Reason reason, ReportContext context, ContactInformation contact, Media media) {
-			super(NAME, reason, context, contact);
+		public OfMedia(Reason reason, ReportContext context, String note, ContactInformation contact, Media media) {
+			super(NAME, reason, context, note, contact);
 			this.media = Objects.requireNonNull(media);
 		}
 		
@@ -218,7 +227,7 @@ public abstract class Report {
 			
 			@Override
 			public Report build() {
-				return new OfMedia(reason, context, contact, media);
+				return new OfMedia(reason, context, note, contact, media);
 			}
 		}
 	}
@@ -229,8 +238,9 @@ public abstract class Report {
 		
 		private final DownloadPipelineTask task;
 		
-		public OfDownload(Reason reason, ReportContext context, ContactInformation contact, DownloadPipelineTask task) {
-			super(NAME, reason, context, contact);
+		public OfDownload(Reason reason, ReportContext context, String note, ContactInformation contact,
+				DownloadPipelineTask task) {
+			super(NAME, reason, context, note, contact);
 			this.task = Objects.requireNonNull(task);
 		}
 		
@@ -252,7 +262,7 @@ public abstract class Report {
 			
 			@Override
 			public Report build() {
-				return new OfDownload(reason, context, contact, task);
+				return new OfDownload(reason, context, note, contact, task);
 			}
 		}
 	}
@@ -263,8 +273,9 @@ public abstract class Report {
 		
 		private final ConversionPipelineTask task;
 		
-		public OfConversion(Reason reason, ReportContext context, ContactInformation contact, ConversionPipelineTask task) {
-			super(NAME, reason, context, contact);
+		public OfConversion(Reason reason, ReportContext context, String note, ContactInformation contact,
+				ConversionPipelineTask task) {
+			super(NAME, reason, context, note, contact);
 			this.task = Objects.requireNonNull(task);
 		}
 		
@@ -286,14 +297,14 @@ public abstract class Report {
 			
 			@Override
 			public Report build() {
-				return new OfConversion(reason, context, contact, task);
+				return new OfConversion(reason, context, note, contact, task);
 			}
 		}
 	}
 	
 	public static enum Reason {
 		
-		ERROR, BROKEN, IMPROVEMENT, OTHER;
+		ERROR, BROKEN, IMPROVEMENT, FEEDBACK, OTHER;
 	}
 	
 	public static abstract class Builder {
@@ -301,6 +312,7 @@ public abstract class Report {
 		protected String name;
 		protected Reason reason;
 		protected ReportContext context;
+		protected String note;
 		protected ContactInformation contact;
 		
 		protected Builder(String name, Reason reason, ReportContext context) {
@@ -311,8 +323,16 @@ public abstract class Report {
 		
 		public abstract Report build();
 		
+		public void reason(Reason reason) {
+			this.reason = reason;
+		}
+		
 		public void contact(ContactInformation contact) {
 			this.contact = contact;
+		}
+		
+		public void note(String note) {
+			this.note = note;
 		}
 		
 		public String name() {
@@ -329,6 +349,10 @@ public abstract class Report {
 		
 		public ContactInformation contact() {
 			return contact;
+		}
+		
+		public String note() {
+			return note;
 		}
 	}
 	

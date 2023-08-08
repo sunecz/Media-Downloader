@@ -10,6 +10,7 @@ import sune.app.mediadown.net.Web.Request;
 import sune.app.mediadown.net.Web.Response;
 import sune.app.mediadown.util.JSON;
 import sune.app.mediadown.util.JSON.JSONCollection;
+import sune.app.mediadown.util.JSON.JSONObject;
 
 /** @since 00.02.09 */
 public class Reporting {
@@ -62,6 +63,7 @@ public class Reporting {
 			payload.set("reason", report.reason().name());
 			payload.set("context", report.context().serialize(anonymize));
 			payload.set("data", report.serializeData(anonymize));
+			payload.set("note", JSONObject.of(report.note()));
 			payload.set("environment", OSInformation.obtain(anonymize));
 			
 			return payload;
