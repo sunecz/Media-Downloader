@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -68,7 +69,7 @@ public final class MediaUtils {
 			MediaMetadata metadata = parserData.mediaData().add(parserData.data()).title(title).build();
 			
 			MediaQuality videoQuality = MediaQuality.fromResolution(video.resolution());
-			if(videoQuality.is(MediaQuality.UNKNOWN)) {
+			if(videoQuality.is(MediaQuality.UNKNOWN) && video.attributes() != null) {
 				String qualityName = video.attributes().get("estimatedQuality");
 				
 				if(qualityName != null) {
@@ -368,8 +369,23 @@ public final class MediaUtils {
 			parsers = new HashMap<>();
 		}
 		
-		private static final List<String> contentType(HttpHeaders headers) {
-			return headers.allValues("content-type");
+		/** @since 00.02.09 */
+		private static final boolean isNotUnknownFormat(MediaFormat format) {
+			return format != null && !format.is(MediaFormat.UNKNOWN);
+		}
+		
+		private static final MediaFormat contentType(HttpHeaders headers) {
+			return Optional.ofNullable(headers.allValues("content-type"))
+						.map(List::stream)
+						.orElseGet(Stream::empty)
+						.map(MediaFormat::fromMimeType)
+						.findFirst()
+						.orElse(MediaFormat.UNKNOWN);
+		}
+		
+		/** @since 00.02.09 */
+		private static final MediaFormat contentTypeFromUri(URI uri) {
+			return MediaFormat.fromPath(uri.getPath());
 		}
 		
 		private static final FormatParser defaultFormatParser(MediaFormat format) {
@@ -395,8 +411,9 @@ public final class MediaUtils {
 			Request request = Request.of(uri).GET();
 			try(Response.OfStream response = Web.peek(request)) {
 				MediaFormat format = Opt.of(contentType(response.headers()))
-					.ifTrue(Objects::nonNull).map(List::stream).orElseGet(Stream::empty)
-					.map(MediaFormat::fromMimeType).filter(Objects::nonNull).findFirst()
+					.ifTrue(Parser::isNotUnknownFormat)
+					.or((o) -> Opt.of(contentTypeFromUri(uri)))
+					.ifTrue(Parser::isNotUnknownFormat)
 					.orElse(MediaFormat.UNKNOWN);
 				return parseFormat(uri, format, request, sourceURI, data, Web.size(response));
 			}
