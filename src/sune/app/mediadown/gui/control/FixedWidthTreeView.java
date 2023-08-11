@@ -223,6 +223,11 @@ public class FixedWidthTreeView<T> extends TreeView<T> {
 						FixedWidthTreeCell cell;
 						
 						if(ref != null && (cell = ref.get()) != null) {
+							// Do not update the expanded width since the cell was actually not updated
+							if(cell == this) {
+								return ref;
+							}
+							
 							double width = cell.expandedWidth;
 							expandedWidth = width;
 							// Must reset the previous cell's expanded width
