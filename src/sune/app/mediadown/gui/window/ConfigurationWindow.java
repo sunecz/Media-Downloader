@@ -1,6 +1,7 @@
 package sune.app.mediadown.gui.window;
 
 import java.io.IOException;
+import java.lang.ref.WeakReference;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -16,17 +17,17 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import javafx.collections.ListChangeListener.Change;
+import javafx.collections.ObservableList;
 import javafx.geometry.Pos;
-import javafx.geometry.Side;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ScrollPane;
-import javafx.scene.control.Tab;
-import javafx.scene.control.TabPane;
-import javafx.scene.control.TabPane.TabClosingPolicy;
+import javafx.scene.control.SelectionMode;
+import javafx.scene.control.TreeItem;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
@@ -44,6 +45,7 @@ import sune.app.mediadown.configuration.Configuration.TypeConfigurationProperty;
 import sune.app.mediadown.configuration.ConfigurationReloadable;
 import sune.app.mediadown.gui.Dialog;
 import sune.app.mediadown.gui.DraggableWindow;
+import sune.app.mediadown.gui.control.FixedWidthTreeView;
 import sune.app.mediadown.gui.form.Form;
 import sune.app.mediadown.gui.form.FormBuilder;
 import sune.app.mediadown.gui.form.FormField;
@@ -68,7 +70,6 @@ import sune.app.mediadown.theme.Theme;
 import sune.app.mediadown.update.Version;
 import sune.app.mediadown.update.VersionType;
 import sune.app.mediadown.util.FXUtils;
-import sune.app.mediadown.util.HorizontalLeftTabPaneSkin;
 import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.Password;
 import sune.app.mediadown.util.Regex;
@@ -120,18 +121,17 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 	private final Map<String, String> groupTitles = new HashMap<>();
 	/** @since 00.02.08 */
 	private final List<ConfigurationEntry> configurationEntries = new ArrayList<>();
+	/** @since 00.02.09 */
+	private final Map<String, String> groupParents = new HashMap<>();
 	
-	private final TabPane tabPane;
+	private final ConfigurationTabPane tabPane;
 	private final Button btnSave;
 	private final Button btnClose;
 	
 	public ConfigurationWindow() {
 		super(NAME, new BorderPane(), 600.0, 480.0);
 		initModality(Modality.APPLICATION_MODAL);
-		tabPane = new TabPane();
-		tabPane.setTabClosingPolicy(TabClosingPolicy.UNAVAILABLE);
-		tabPane.setSide(Side.LEFT);
-		Ignore.callVoid(() -> tabPane.setSkin(new HorizontalLeftTabPaneSkin(tabPane)));
+		tabPane = new ConfigurationTabPane();
 		content.setCenter(tabPane);
 		btnSave = new Button(translation.getSingle("buttons.save"));
 		btnClose = new Button(translation.getSingle("buttons.close"));
@@ -152,10 +152,6 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 		HBox.setHgrow(boxFiller, Priority.ALWAYS);
 		content.setBottom(boxButtonsPanel);
 		setMinWidth(350.0);
-		// Graphical fix for "extending" the tab pane header
-		FXUtils.once(scene::addPostLayoutPulseListener,
-		             scene::removePostLayoutPulseListener,
-		             this::updateBackgroundExtender);
 		// Load configurations later, so that all plugins can also append their configurations,
 		// if they have any.
 		FXUtils.onWindowShowOnce(this, this::loadConfigurations);
@@ -266,12 +262,6 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 		return ((v) -> tr.getSingle(stringConverter.apply(v)));
 	}
 	
-	/** @since 00.02.04 */
-	private final void updateBackgroundExtender() {
-		((Region) content.lookup(".buttons-panel-background"))
-			.setMinWidth(((Region) tabPane.lookup(".headers-region")).getWidth() + 10.0);
-	}
-	
 	/** @since 00.02.07 */
 	private final String groupTitle(String group) {
 		Objects.requireNonNull(group);
@@ -292,7 +282,7 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 	}
 	
 	/** @since 00.02.07 */
-	private final Tab addFormAndCreateTab(String group, FormBuilder builder) {
+	private final ConfigurationTab addFormAndCreateTab(String parent, String group, FormBuilder builder) {
 		builder.name(group);
 		builder.pane(new VBox(5.0));
 		Form form = builder.build();
@@ -300,7 +290,7 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 		ScrollPane scrollable = new ScrollPane();
 		scrollable.setFitToWidth(true);
 		StackPane content = new StackPane();
-		Tab tab = new Tab(groupTitle(group), scrollable);
+		ConfigurationTab tab = new ConfigurationTab(parent, group, groupTitle(group), scrollable);
 		content.getChildren().add(form);
 		content.getStyleClass().add("scroll-tab-content");
 		scrollable.setContent(content);
@@ -320,10 +310,13 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 		// Finally, build forms of all added configurations
 		buildConfigurationForms();
 		
-		tabPane.getTabs().addAll(
+		tabPane.addTabs(
 			formBuilders.entrySet().stream()
-				.map((entry) -> addFormAndCreateTab(entry.getKey(), entry.getValue()))
-				.toArray(Tab[]::new)
+				.map((entry) -> addFormAndCreateTab(
+					groupParents.get(Regex.of("\\.general$").replaceAll(entry.getKey(), "")),
+					entry.getKey(), entry.getValue()
+				))
+				.toArray(ConfigurationTab[]::new)
 		);
 	}
 	
@@ -339,6 +332,7 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 		
 		addGroupTitlesFromTranslation("plugin", translation);
 		addConfiguration(configuration, translation);
+		groupParents.putIfAbsent(configuration.name(), "plugins");
 	}
 	
 	/** @since 00.02.07 */
@@ -553,6 +547,109 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 			}
 			
 			return entries;
+		}
+	}
+	
+	/** @since 00.02.09 */
+	private static final class ConfigurationTabPane extends BorderPane {
+		
+		private final Map<String, WeakReference<TreeItem<ConfigurationTab>>> parents = new HashMap<>();
+		
+		private final FixedWidthTreeView<ConfigurationTab> header;
+		private final StackPane content;
+		
+		public ConfigurationTabPane() {
+			header = new FixedWidthTreeView<>();
+			content = new StackPane();
+			
+			header.setShowRoot(false);
+			header.setRoot(new TreeItem<>());
+			header.setEditable(false);
+			
+			header.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
+			header.getSelectionModel().selectedItemProperty().addListener((o, ov, selectedItem) -> {
+				if(selectedItem == null) {
+					return;
+				}
+				
+				content.getChildren().setAll(selectedItem.getValue().content());
+			});
+			
+			addParent(null, root());
+			
+			ObservableList<TreeItem<ConfigurationTab>> children = root().getChildren();
+			FXUtils.once(
+				children::addListener, children::removeListener,
+				(Change<? extends TreeItem<ConfigurationTab>> change) -> {
+					header.getSelectionModel().clearSelection();
+					header.getSelectionModel().select(root().getChildren().get(0));
+				}
+			);
+			
+			setLeft(header);
+			setCenter(content);
+			
+			header.getStyleClass().add("configuration-tab-pane-header");
+			content.getStyleClass().add("configuration-tab-pane-content");
+			getStyleClass().add("configuration-tab-pane");
+		}
+		
+		private final TreeItem<ConfigurationTab> root() {
+			return header.getRoot();
+		}
+		
+		private final void addParent(String parentName, TreeItem<ConfigurationTab> item) {
+			parents.put(parentName, new WeakReference<>(item));
+		}
+		
+		private final TreeItem<ConfigurationTab> parentOf(String parentName) {
+			WeakReference<TreeItem<ConfigurationTab>> ref;
+			return (ref = parents.get(parentName)) != null ? ref.get() : null;
+		}
+		
+		public void addTabs(ConfigurationTab... tabs) {
+			for(ConfigurationTab tab : tabs) {
+				TreeItem<ConfigurationTab> item = new TreeItem<>(tab);
+				addParent(tab.name(), item);
+				parentOf(tab.parent()).getChildren().add(item);
+			}
+		}
+	}
+	
+	/** @since 00.02.09 */
+	private static final class ConfigurationTab {
+		
+		private final String parent;
+		private final String name;
+		private final String title;
+		private final Node content;
+		
+		public ConfigurationTab(String parent, String name, String title, Node content) {
+			this.parent = parent; // null = root
+			this.name = Objects.requireNonNull(name);
+			this.title = Objects.requireNonNull(title);
+			this.content = Objects.requireNonNull(content);
+		}
+		
+		public String parent() {
+			return parent;
+		}
+		
+		public String name() {
+			return name;
+		}
+		
+		public String title() {
+			return title;
+		}
+		
+		public Node content() {
+			return content;
+		}
+		
+		@Override
+		public String toString() {
+			return title();
 		}
 	}
 	

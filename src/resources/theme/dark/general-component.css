@@ -238,6 +238,25 @@
 	-fx-translate-y: 0.1em;
 }
 
+/* GUI Component: Tree view */
+
+.tree-view {
+	-fx-background-color: -fx-base;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+
+.tree-view:focused {
+	-fx-background-color: -fx-base;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+
+.tree-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-cell:focused {
+	-fx-background-color: -fx-background;
+    -fx-background-insets: 0;
+}
+
 /* GUI Component: Tooltip */
 
 .tooltip {

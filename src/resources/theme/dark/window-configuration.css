@@ -1,14 +1,27 @@
-.tab-pane {
-	-fx-open-tab-animation: NONE;
-	-fx-close-tab-animation: NONE;
+.configuration-tab-pane-header,
+.configuration-tab-pane-header > .virtual-flow > .clipped-container,
+.configuration-tab-pane-header > .virtual-flow > .clipped-container > .sheet > .tree-cell {
+	-fx-background-color: derive(-fx-base, -10%);
 }
 
-.tab-content-area .scroll-tab-content {
+.configuration-tab-pane-header > .virtual-flow > .clipped-container > .sheet > .tree-cell {
+	-fx-padding: 5 0;
+}
+
+.configuration-tab-pane-content {
 	-fx-padding: 10;
 }
 
-.buttons-panel .buttons-panel-background {
-	-fx-background-color: derive(-fx-base, -15%);
+.configuration-tab-pane-content > .scroll-pane {
+	-fx-background-color: -fx-base;
+}
+
+.configuration-tab-pane-content > .scroll-pane > .viewport {
+	-fx-background-color: -fx-base;
+}
+
+.buttons-panel {
+	-fx-background-color: derive(-fx-base, -5%);
 }
 
 .buttons-panel .buttons-panel-wrapper {

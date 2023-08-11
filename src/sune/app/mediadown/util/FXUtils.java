@@ -1145,6 +1145,48 @@ public final class FXUtils {
 				return ((o, ov, nv) -> { listener.changed(o, ov, nv); remove(id); });
 			}
 		}
+		
+		/** @since 00.02.09 */
+		public static final class OnceListChangeListener<T> extends Once<ListChangeListener<T>> {
+			
+			public OnceListChangeListener(Consumer<ListChangeListener<T>> methodAdd,
+					Consumer<ListChangeListener<T>> methodRemove) {
+				super(methodAdd, methodRemove);
+			}
+			
+			@Override
+			protected ListChangeListener<T> createListener(long id, ListChangeListener<T> listener) {
+				return ((c) -> { listener.onChanged(c); remove(id); });
+			}
+		}
+		
+		/** @since 00.02.09 */
+		public static final class OnceSetChangeListener<T> extends Once<SetChangeListener<T>> {
+			
+			public OnceSetChangeListener(Consumer<SetChangeListener<T>> methodAdd,
+					Consumer<SetChangeListener<T>> methodRemove) {
+				super(methodAdd, methodRemove);
+			}
+			
+			@Override
+			protected SetChangeListener<T> createListener(long id, SetChangeListener<T> listener) {
+				return ((c) -> { listener.onChanged(c); remove(id); });
+			}
+		}
+		
+		/** @since 00.02.09 */
+		public static final class OnceMapChangeListener<K, V> extends Once<MapChangeListener<K, V>> {
+			
+			public OnceMapChangeListener(Consumer<MapChangeListener<K, V>> methodAdd,
+					Consumer<MapChangeListener<K, V>> methodRemove) {
+				super(methodAdd, methodRemove);
+			}
+			
+			@Override
+			protected MapChangeListener<K, V> createListener(long id, MapChangeListener<K, V> listener) {
+				return ((c) -> { listener.onChanged(c); remove(id); });
+			}
+		}
 	}
 	
 	/** @since 00.02.00 */
@@ -1162,6 +1204,24 @@ public final class FXUtils {
 	public static final <T> void once(Consumer<ChangeListener<T>> methodAdd,
 			Consumer<ChangeListener<T>> methodRemove, ChangeListener<T> listener) {
 		(new Once.OnceChangeListener<>(methodAdd, methodRemove)).addListener(listener);
+	}
+	
+	/** @since 00.02.09 */
+	public static final <T> void once(Consumer<ListChangeListener<T>> methodAdd,
+			Consumer<ListChangeListener<T>> methodRemove, ListChangeListener<T> listener) {
+		(new Once.OnceListChangeListener<>(methodAdd, methodRemove)).addListener(listener);
+	}
+	
+	/** @since 00.02.09 */
+	public static final <T> void once(Consumer<SetChangeListener<T>> methodAdd,
+			Consumer<SetChangeListener<T>> methodRemove, SetChangeListener<T> listener) {
+		(new Once.OnceSetChangeListener<>(methodAdd, methodRemove)).addListener(listener);
+	}
+	
+	/** @since 00.02.09 */
+	public static final <K, V> void once(Consumer<MapChangeListener<K, V>> methodAdd,
+			Consumer<MapChangeListener<K, V>> methodRemove, MapChangeListener<K, V> listener) {
+		(new Once.OnceMapChangeListener<>(methodAdd, methodRemove)).addListener(listener);
 	}
 	
 	/** @since 00.02.05 */
