@@ -17,6 +17,8 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 import javafx.geometry.Pos;
@@ -483,6 +485,16 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 		close();
 	}
 	
+	/** @since 00.02.09 */
+	public ReadOnlyObjectProperty<ConfigurationTab> selectedTabProperty() {
+		return tabPane.selectedTabProperty();
+	}
+	
+	/** @since 00.02.09 */
+	public ConfigurationTab selectedTab() {
+		return selectedTabProperty().get();
+	}
+	
 	/** @since 00.02.08 */
 	private static final class ConfigurationPropertyEntry implements Comparable<ConfigurationPropertyEntry> {
 		
@@ -558,6 +570,8 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 		private final FixedWidthTreeView<ConfigurationTab> header;
 		private final StackPane content;
 		
+		private final ReadOnlyObjectWrapper<ConfigurationTab> selectedTabProperty = new ReadOnlyObjectWrapper<>();
+		
 		public ConfigurationTabPane() {
 			header = new FixedWidthTreeView<>();
 			content = new StackPane();
@@ -569,10 +583,13 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 			header.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
 			header.getSelectionModel().selectedItemProperty().addListener((o, ov, selectedItem) -> {
 				if(selectedItem == null) {
+					selectedTabProperty.set(null);
 					return;
 				}
 				
-				content.getChildren().setAll(selectedItem.getValue().content());
+				ConfigurationTab tab = selectedItem.getValue();
+				content.getChildren().setAll(tab.content());
+				selectedTabProperty.set(tab);
 			});
 			
 			addParent(null, root());
@@ -614,10 +631,14 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 				parentOf(tab.parent()).getChildren().add(item);
 			}
 		}
+		
+		public ReadOnlyObjectProperty<ConfigurationTab> selectedTabProperty() {
+			return selectedTabProperty.getReadOnlyProperty();
+		}
 	}
 	
 	/** @since 00.02.09 */
-	private static final class ConfigurationTab {
+	public static final class ConfigurationTab {
 		
 		private final String parent;
 		private final String name;
