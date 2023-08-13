@@ -27,8 +27,6 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.function.Function;
 
-import sune.app.mediadown.util.Utils.StringOps;
-
 /**
  * Contains utilities for JSON strings, input streams and files.
  * @author Sune
@@ -127,7 +125,6 @@ public final class JSON {
 		
 		private final Deque<Pair<String, JSONCollection>> parents;
 		private final StringBuilder str;
-		private final StringOps ops;
 		private String lastStr;
 		private JSONType lastType = JSONType.UNKNOWN;
 		private Pair<String, JSONCollection> lastParent;
@@ -141,7 +138,6 @@ public final class JSON {
 			this.buf = CharBuffer.allocate(BUFFER_SIZE).flip();
 			this.parents = new ArrayDeque<>();
 			this.str = Utils.utf16StringBuilder();
-			this.ops = new StringOps(str);
 			this.allowUnquotedNames = false;
 		}
 		
@@ -232,7 +228,7 @@ public final class JSON {
 				}
 			}
 			
-			String value = ops.replaceUnicodeEscapeSequences().unslash().toStringAndReset();
+			String value = str.toString();
 			JSONObject object = JSONObject.ofType(lastType, value);
 			str.setLength(0);
 			
@@ -513,44 +509,43 @@ public final class JSON {
 	public static final class JSONString {
 		
 		private static final char UE = 0b100000000;
-		private static final char DE = 0b010000000;
 		
 		private static final char[] charsEscape = {
-			UE |   0, UE |   1, UE |   2, UE |   3, UE |   4, UE |   5, UE |   6, UE |   7,
-			DE | 'b', DE | 't', DE | 'n', UE |  11, DE | 'f', DE | 'r', UE |  14, UE |  15,
-			UE |  16, UE |  17, UE |  18, UE |  19, UE |  20, UE |  21, UE |  22, UE |  23,
-			UE |  24, UE |  25, UE |  26, UE |  27, UE |  28, UE |  29, UE |  30, UE |  31,
-			       0,        0,      '"',        0,        0,        0,        0,        0,
-			       0,        0,        0,        0,        0,        0,        0,        0,
-			       0,        0,        0,        0,        0,        0,        0,        0,
-			       0,        0,        0,        0,        0,        0,        0,        0,
-			       0,        0,        0,        0,        0,        0,        0,        0,
-			       0,        0,        0,        0,        0,        0,        0,        0,
-			       0,        0,        0,        0,        0,        0,        0,        0,
-			       0,        0,        0,        0,     '\\',        0,        0,        0,
-			       0,        0,        0,        0,        0,        0,        0,        0,
-			       0,        0,        0,        0,        0,        0,        0,        0,
-			       0,        0,        0,        0,        0,        0,        0,        0,
-			       0,        0,        0,        0,        0,        0,        0,        0,
+			UE |  0, UE |  1, UE |  2, UE |  3, UE |  4, UE |  5, UE |  6, UE |  7,
+			    'b',     't',     'n', UE | 11,     'f',     'r', UE | 14, UE | 15,
+			UE | 16, UE | 17, UE | 18, UE | 19, UE | 20, UE | 21, UE | 22, UE | 23,
+			UE | 24, UE | 25, UE | 26, UE | 27, UE | 28, UE | 29, UE | 30, UE | 31,
+			      0,       0,     '"',       0,       0,       0,       0,       0,
+			      0,       0,       0,       0,       0,       0,       0,       0,
+			      0,       0,       0,       0,       0,       0,       0,       0,
+			      0,       0,       0,       0,       0,       0,       0,       0,
+			      0,       0,       0,       0,       0,       0,       0,       0,
+			      0,       0,       0,       0,       0,       0,       0,       0,
+			      0,       0,       0,       0,       0,       0,       0,       0,
+			      0,       0,       0,       0,    '\\',       0,       0,       0,
+			      0,       0,       0,       0,       0,       0,       0,       0,
+			      0,       0,       0,       0,       0,       0,       0,       0,
+			      0,       0,       0,       0,       0,       0,       0,       0,
+			      0,       0,       0,       0,       0,       0,       0,       0,
 		};
 		
 		private static final char[] charsUnescape = {
-			       0,        0,        0,        0,        0,        0,        0,        0,
-			       0,        0,        0,        0,        0,        0,        0,        0,
-			       0,        0,        0,        0,        0,        0,        0,        0,
-			       0,        0,        0,        0,        0,        0,        0,        0,
-			       0,        0,      '"',        0,        0,        0,        0,        0,
-			       0,        0,        0,        0,        0,        0,        0,        0,
-			       0,        0,        0,        0,        0,        0,        0,        0,
-			       0,        0,        0,        0,        0,        0,        0,        0,
-			       0,        0,        0,        0,        0,        0,        0,        0,
-			       0,        0,        0,        0,        0,        0,        0,        0,
-			       0,        0,        0,        0,        0,        0,        0,        0,
-			       0,        0,        0,        0,     '\\',        0,        0,        0,
-			       0,        0,     '\b',        0,        0,        0,     '\f',        0,
-			       0,        0,        0,        0,        0,        0,     '\n',        0,
-			       0,        0,     '\r',        0,     '\t',        0,        0,        0,
-			       0,        0,        0,        0,        0,        0,        0,        0,
+			      0,       0,       0,       0,       0,       0,       0,       0,
+			      0,       0,       0,       0,       0,       0,       0,       0,
+			      0,       0,       0,       0,       0,       0,       0,       0,
+			      0,       0,       0,       0,       0,       0,       0,       0,
+			      0,       0,     '"',       0,       0,       0,       0,       0,
+			      0,       0,       0,       0,       0,       0,       0,       0,
+			      0,       0,       0,       0,       0,       0,       0,       0,
+			      0,       0,       0,       0,       0,       0,       0,       0,
+			      0,       0,       0,       0,       0,       0,       0,       0,
+			      0,       0,       0,       0,       0,       0,       0,       0,
+			      0,       0,       0,       0,       0,       0,       0,       0,
+			      0,       0,       0,       0,    '\\',       0,       0,       0,
+			      0,       0,    '\b',       0,       0,       0,    '\f',       0,
+			      0,       0,       0,       0,       0,       0,    '\n',       0,
+			      0,       0,    '\r',       0,    '\t',       0,       0,       0,
+			      0,       0,       0,       0,       0,       0,       0,       0,
 		};
 		
 		private static final char[] charsHex = {
@@ -595,9 +590,6 @@ public final class JSON {
 						output.append("u00")
 							.append(c >> 4)
 							.append(charsHex[c & 0xf]);
-					} else if((v & DE) != 0) {
-						output.append(backslashes);
-						output.append((char) (v & ~DE));
 					} else {
 						output.append((char) CHAR_ESCAPE_SLASH);
 						output.append((char) v);
