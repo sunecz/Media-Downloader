@@ -138,7 +138,7 @@ public final class Net {
 	}
 	
 	public static final String uriFix(String uri) {
-		return uri.startsWith("//") ? "https" + uri : uri;
+		return uri.startsWith("//") ? "https:" + uri : uri;
 	}
 	
 	public static final URI uriBasename(URI uri) {
