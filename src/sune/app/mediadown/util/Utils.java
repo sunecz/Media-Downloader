@@ -2000,15 +2000,39 @@ public final class Utils {
 			doOperation(input, output, len, UnicodeEscapeSequence::opReplace);
 		}
 		
-		public static final void prefix(StringBuilder input, StringBuilder output, String prefix) {
+		public static final void replace(String input, StringBuilder output) {
 			final int len = input.length();
-			doOperation(input, output, len, (out, in, start, end) -> opPrefix(out, in, start, end, prefix));
+			doOperation(input, output, len, UnicodeEscapeSequence::opReplace);
+		}
+		
+		public static final String replace(StringBuilder input) {
+			final int len = input.length();
+			StringBuilder builder = utf16StringBuilder(len);
+			doOperation(input, builder, len, UnicodeEscapeSequence::opReplace);
+			return builder.toString();
 		}
 		
 		public static final String replace(String string) {
 			final int len = string.length();
 			StringBuilder builder = utf16StringBuilder(len);
 			doOperation(string, builder, len, UnicodeEscapeSequence::opReplace);
+			return builder.toString();
+		}
+		
+		public static final void prefix(StringBuilder input, StringBuilder output, String prefix) {
+			final int len = input.length();
+			doOperation(input, output, len, (out, in, start, end) -> opPrefix(out, in, start, end, prefix));
+		}
+		
+		public static final void prefix(String input, StringBuilder output, String prefix) {
+			final int len = input.length();
+			doOperation(input, output, len, (out, in, start, end) -> opPrefix(out, in, start, end, prefix));
+		}
+		
+		public static final String prefix(StringBuilder input, String prefix) {
+			final int len = input.length();
+			StringBuilder builder = utf16StringBuilder(len);
+			doOperation(input, builder, len, (out, in, start, end) -> opPrefix(out, in, start, end, prefix));
 			return builder.toString();
 		}
 		

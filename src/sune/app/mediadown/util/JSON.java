@@ -510,6 +510,168 @@ public final class JSON {
 	}
 	
 	/** @since 00.02.09 */
+	public static final class JSONString {
+		
+		private static final char UE = 0b100000000;
+		private static final char DE = 0b010000000;
+		
+		private static final char[] charsEscape = {
+			UE |   0, UE |   1, UE |   2, UE |   3, UE |   4, UE |   5, UE |   6, UE |   7,
+			DE | 'b', DE | 't', DE | 'n', UE |  11, DE | 'f', DE | 'r', UE |  14, UE |  15,
+			UE |  16, UE |  17, UE |  18, UE |  19, UE |  20, UE |  21, UE |  22, UE |  23,
+			UE |  24, UE |  25, UE |  26, UE |  27, UE |  28, UE |  29, UE |  30, UE |  31,
+			       0,        0,      '"',        0,        0,        0,        0,        0,
+			       0,        0,        0,        0,        0,        0,        0,        0,
+			       0,        0,        0,        0,        0,        0,        0,        0,
+			       0,        0,        0,        0,        0,        0,        0,        0,
+			       0,        0,        0,        0,        0,        0,        0,        0,
+			       0,        0,        0,        0,        0,        0,        0,        0,
+			       0,        0,        0,        0,        0,        0,        0,        0,
+			       0,        0,        0,        0,     '\\',        0,        0,        0,
+			       0,        0,        0,        0,        0,        0,        0,        0,
+			       0,        0,        0,        0,        0,        0,        0,        0,
+			       0,        0,        0,        0,        0,        0,        0,        0,
+			       0,        0,        0,        0,        0,        0,        0,        0,
+		};
+		
+		private static final char[] charsUnescape = {
+			       0,        0,        0,        0,        0,        0,        0,        0,
+			       0,        0,        0,        0,        0,        0,        0,        0,
+			       0,        0,        0,        0,        0,        0,        0,        0,
+			       0,        0,        0,        0,        0,        0,        0,        0,
+			       0,        0,      '"',        0,        0,        0,        0,        0,
+			       0,        0,        0,        0,        0,        0,        0,        0,
+			       0,        0,        0,        0,        0,        0,        0,        0,
+			       0,        0,        0,        0,        0,        0,        0,        0,
+			       0,        0,        0,        0,        0,        0,        0,        0,
+			       0,        0,        0,        0,        0,        0,        0,        0,
+			       0,        0,        0,        0,        0,        0,        0,        0,
+			       0,        0,        0,        0,     '\\',        0,        0,        0,
+			       0,        0,     '\b',        0,        0,        0,     '\f',        0,
+			       0,        0,        0,        0,        0,        0,     '\n',        0,
+			       0,        0,     '\r',        0,     '\t',        0,        0,        0,
+			       0,        0,        0,        0,        0,        0,        0,        0,
+		};
+		
+		private static final char[] charsHex = {
+			'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'
+		};
+		
+		// Forbid anyone to create an instance of this class
+		private JSONString() {
+		}
+		
+		private static final int nonZero(int v) {
+			return (v | -v) >>> 31;
+		}
+		
+		private static final int negative(int v) {
+			return v >>> 31;
+		}
+		
+		private static final boolean shouldEscape(int c) {
+			// Reference: https://www.ietf.org/rfc/rfc4627.txt, section 2.5
+			// quotation mark = 34
+			// backslash = 92
+			// control characters = <0, 31>
+			return (negative(c - 32) | (nonZero(c - 34) ^ nonZero(c - 92))) == 1;
+		}
+		
+		public static final void escape(String string, StringBuilder output) {
+			final char[] backslashes = { CHAR_ESCAPE_SLASH, CHAR_ESCAPE_SLASH };
+			
+			final int len = string.length();
+			int off = 0;
+			
+			for(int i = 0, c, v; i < len; ++i) {
+				c = string.charAt(i);
+				
+				if(shouldEscape(c)) {
+					output.append(string, off, i);
+					v = charsEscape[c];
+					
+					if((v & UE) != 0) {
+						output.append(backslashes);
+						output.append("u00")
+							.append(c >> 4)
+							.append(charsHex[c & 0xf]);
+					} else if((v & DE) != 0) {
+						output.append(backslashes);
+						output.append((char) (v & ~DE));
+					} else {
+						output.append((char) CHAR_ESCAPE_SLASH);
+						output.append((char) v);
+					}
+					
+					off = i + 1;
+				} else if(c > 0x7f) {
+					output.append(string, off, i);
+					
+					output.append(backslashes);
+					output.append('u')
+						.append(charsHex[(c >> 12) & 0xf])
+						.append(charsHex[(c >>  8) & 0xf])
+						.append(charsHex[(c >>  4) & 0xf])
+						.append(charsHex[(c      ) & 0xf]);
+					
+					off = i + 1;
+				}
+			}
+			
+			if(off < len) {
+				output.append(string, off, len);
+			}
+		}
+		
+		public static final String escape(String string) {
+			final int len = string.length();
+			StringBuilder output = Utils.utf16StringBuilder(len);
+			escape(string, output);
+			return output.toString();
+		}
+		
+		public static final void unescape(String string, StringBuilder output) {
+			final int len = string.length();
+			int off = 0;
+			boolean escaped = false;
+			
+			for(int i = 0, c, v; i < len; ++i) {
+				c = string.charAt(i);
+				
+				if(escaped) {
+					if(c <= 0x7f
+							&& (v = charsUnescape[c & 0xff]) != 0) {
+						output.append(string, off, i - 1);
+						output.append((char) v);
+						off = i + 1;
+					}
+					
+					escaped = false;
+				} else if(c == CHAR_ESCAPE_SLASH) {
+					escaped = true;
+				}
+			}
+			
+			if(off < len) {
+				output.append(string, off, len);
+			}
+			
+			StringBuilder input = output;
+			output = Utils.utf16StringBuilder(input.length());
+			Utils.UnicodeEscapeSequence.replace(input, output);
+			input.setLength(0);
+			input.append(output);
+		}
+		
+		public static final String unescape(String string) {
+			final int len = string.length();
+			StringBuilder output = Utils.utf16StringBuilder(len);
+			unescape(string, output);
+			return output.toString();
+		}
+	}
+	
+	/** @since 00.02.09 */
 	public static enum JSONType {
 		
 		NULL,
@@ -636,7 +798,7 @@ public final class JSON {
 		public static final JSONObject ofLong(long value) { return new JSONObject(JSONType.INTEGER, value); }
 		public static final JSONObject ofFloat(float value) { return new JSONObject(JSONType.DECIMAL, (double) value); }
 		public static final JSONObject ofDouble(double value) { return new JSONObject(JSONType.DECIMAL, value); }
-		public static final JSONObject ofString(String value) { return new JSONObject(JSONType.STRING, value); }
+		public static final JSONObject ofString(String value) { return new JSONObject(JSONType.STRING, JSONString.unescape(value)); }
 		
 		// Do not expose to the public interface
 		private static final JSONObject ofStringUnquoted(String value) { return new JSONObject(JSONType.STRING_UNQUOTED, value); }
@@ -667,7 +829,12 @@ public final class JSON {
 				case BOOLEAN: { builder.append((boolean) value); break; }
 				case INTEGER: { builder.append((long) value); break; }
 				case DECIMAL: { builder.append((double) value); break; }
-				case STRING: { builder.append('"').append(String.valueOf(value)).append('"'); break; }
+				case STRING: {
+					builder.append('"');
+					JSONString.escape(String.valueOf(value), builder);
+					builder.append('"');
+					break;
+				}
 				case STRING_UNQUOTED: { builder.append(String.valueOf(value)); break; }
 				default: { builder.append((Object) null); break; }
 			}
