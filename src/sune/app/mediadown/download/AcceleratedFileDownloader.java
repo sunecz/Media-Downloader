@@ -174,7 +174,7 @@ public class AcceleratedFileDownloader implements InternalDownloader {
 		
 		// If the total size is still unknown, we cannot split the file into chunks,
 		// therefore just use a single file downloader with unset ranges.
-		if(totalBytes < 0L) {
+		if(totalBytes <= 0L) {
 			rangeRequest = RANGE_UNSET;
 			rangeOutput = RANGE_UNSET;
 			numOfThreads = 1; // Use just one downloader
