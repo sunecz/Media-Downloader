@@ -6,8 +6,8 @@ import sune.app.mediadown.entity.Episode;
 import sune.app.mediadown.entity.MediaGetter;
 import sune.app.mediadown.entity.Program;
 import sune.app.mediadown.media.Media;
-import sune.app.mediadown.pipeline.ConversionPipelineTask;
-import sune.app.mediadown.pipeline.DownloadPipelineTask;
+import sune.app.mediadown.media.MediaConversionContext;
+import sune.app.mediadown.media.MediaDownloadContext;
 import sune.app.mediadown.util.JSON.JSONCollection;
 
 /** @since 00.02.09 */
@@ -36,12 +36,12 @@ public abstract class ReportContext {
 		return new OfMedia(media);
 	}
 	
-	public static final ReportContext ofDownload(DownloadPipelineTask task) {
-		return new OfDownload(task);
+	public static final ReportContext ofDownload(MediaDownloadContext context) {
+		return new OfDownload(context);
 	}
 	
-	public static final ReportContext ofConversion(ConversionPipelineTask task) {
-		return new OfConversion(task);
+	public static final ReportContext ofConversion(MediaConversionContext context) {
+		return new OfConversion(context);
 	}
 	
 	public abstract JSONCollection serialize(boolean anonymize);
@@ -129,34 +129,34 @@ public abstract class ReportContext {
 	
 	private static final class OfDownload extends ReportContext {
 		
-		private final DownloadPipelineTask task;
+		private final MediaDownloadContext context;
 		
-		protected OfDownload(DownloadPipelineTask task) {
-			this.task = Objects.requireNonNull(task);
+		protected OfDownload(MediaDownloadContext context) {
+			this.context = Objects.requireNonNull(context);
 		}
 		
 		@Override
 		public JSONCollection serialize(boolean anonymize) {
 			JSONCollection data = JSONCollection.empty();
 			data.set("name", getClass().getSimpleName());
-			data.set("task", ReportSerialization.serialize(task, anonymize));
+			data.set("task", ReportSerialization.serialize(context, anonymize));
 			return data;
 		}
 	}
 	
 	private static final class OfConversion extends ReportContext {
 		
-		private final ConversionPipelineTask task;
+		private final MediaConversionContext context;
 		
-		protected OfConversion(ConversionPipelineTask task) {
-			this.task = Objects.requireNonNull(task);
+		protected OfConversion(MediaConversionContext context) {
+			this.context = Objects.requireNonNull(context);
 		}
 		
 		@Override
 		public JSONCollection serialize(boolean anonymize) {
 			JSONCollection data = JSONCollection.empty();
 			data.set("name", getClass().getSimpleName());
-			data.set("task", ReportSerialization.serialize(task, anonymize));
+			data.set("task", ReportSerialization.serialize(context, anonymize));
 			return data;
 		}
 	}

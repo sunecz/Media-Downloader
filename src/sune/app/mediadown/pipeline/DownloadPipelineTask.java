@@ -1,10 +1,13 @@
 package sune.app.mediadown.pipeline;
 
+import java.nio.file.Path;
 import java.util.Objects;
 
 import sune.app.mediadown.concurrent.PositionAwareQueueTaskExecutor.PositionAwareQueueTaskResult;
 import sune.app.mediadown.download.Download;
+import sune.app.mediadown.download.DownloadConfiguration;
 import sune.app.mediadown.download.DownloadResult;
+import sune.app.mediadown.download.MediaDownloadConfiguration;
 import sune.app.mediadown.event.DownloadEvent;
 import sune.app.mediadown.event.Event;
 import sune.app.mediadown.event.EventRegistry;
@@ -14,13 +17,15 @@ import sune.app.mediadown.event.tracker.Trackable;
 import sune.app.mediadown.event.tracker.TrackerEvent;
 import sune.app.mediadown.manager.DownloadManager;
 import sune.app.mediadown.manager.PositionAwareManagerSubmitResult;
+import sune.app.mediadown.media.Media;
+import sune.app.mediadown.media.MediaDownloadContext;
 import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.QueueContext;
 import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Utils.Ignore;
 
 /** @since 00.01.26 */
-public final class DownloadPipelineTask implements PipelineTask<DownloadPipelineResult> {
+public final class DownloadPipelineTask implements PipelineTask<DownloadPipelineResult>, MediaDownloadContext {
 	
 	/** @since 00.02.08 */
 	private final PipelineMedia media;
@@ -127,7 +132,26 @@ public final class DownloadPipelineTask implements PipelineTask<DownloadPipeline
 	}
 	
 	/** @since 00.02.09 */
-	public PipelineMedia media() {
-		return media;
+	@Override
+	public Media media() {
+		return media.media();
+	}
+	
+	/** @since 00.02.09 */
+	@Override
+	public Path destination() {
+		return media.destination();
+	}
+	
+	/** @since 00.02.09 */
+	@Override
+	public MediaDownloadConfiguration mediaConfiguration() {
+		return media.mediaConfiguration();
+	}
+	
+	/** @since 00.02.09 */
+	@Override
+	public DownloadConfiguration configuration() {
+		return media.configuration();
 	}
 }

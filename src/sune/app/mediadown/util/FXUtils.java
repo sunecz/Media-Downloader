@@ -58,6 +58,7 @@ import javafx.stage.Modality;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import sune.app.mediadown.MediaDownloader;
+import sune.app.mediadown.exception.WrappedReportContextException;
 import sune.app.mediadown.gui.GUI;
 import sune.app.mediadown.gui.window.MainWindow;
 import sune.app.mediadown.gui.window.ReportWindow;
@@ -345,7 +346,7 @@ public final class FXUtils {
 					Stage parent = MainWindow.getInstance();
 					GUI.showReportWindow(parent, Report.Builders.ofError(
 						item.throwable(), Reason.ERROR,
-						ReportContext.none()
+						item.reportContext()
 					), ReportWindow.Feature.onlyReasons(Reason.ERROR));
 				});
 				
@@ -374,6 +375,7 @@ public final class FXUtils {
 		private static interface ErrorItem {
 			
 			ErrorTab createTab(ExceptionAlertContext context, TabPane pane);
+			ReportContext reportContext();
 			Throwable throwable();
 		}
 		
@@ -413,6 +415,15 @@ public final class FXUtils {
 				this.throwable = Objects.requireNonNull(throwable);
 			}
 			
+			private final Throwable unwrappedThrowable() {
+				if(throwable instanceof WrappedReportContextException) {
+					WrappedReportContextException ex = (WrappedReportContextException) throwable;
+					return ex.getCause();
+				}
+				
+				return throwable;
+			}
+			
 			@Override
 			public ErrorTab createTab(ExceptionAlertContext context, TabPane pane) {
 				VBox wrapper = new VBox(5.0);
@@ -422,6 +433,7 @@ public final class FXUtils {
 				HBox header = Common.createTabContentHeader(btnReport);
 				wrapper.getChildren().addAll(header);
 				
+				Throwable throwable = unwrappedThrowable();
 				String text = Utils.throwableToString(throwable);
 				TextArea area = new TextArea(text);
 				area.setEditable(false);
@@ -432,8 +444,18 @@ public final class FXUtils {
 			}
 			
 			@Override
+			public ReportContext reportContext() {
+				if(throwable instanceof WrappedReportContextException) {
+					WrappedReportContextException ex = (WrappedReportContextException) throwable;
+					return ex.context();
+				}
+				
+				return ReportContext.none();
+			}
+			
+			@Override
 			public Throwable throwable() {
-				return throwable;
+				return unwrappedThrowable();
 			}
 		}
 		
@@ -473,6 +495,11 @@ public final class FXUtils {
 				
 				String title = "Error";
 				return new ErrorTab(this, title, wrapper);
+			}
+			
+			@Override
+			public ReportContext reportContext() {
+				return ReportContext.none();
 			}
 			
 			@Override

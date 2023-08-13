@@ -260,6 +260,11 @@ public final class FFmpegConverter implements Converter {
 	}
 	
 	@Override
+	public FFmpeg.Command command() {
+		return command;
+	}
+	
+	@Override
 	public Exception exception() {
 		return exception;
 	}

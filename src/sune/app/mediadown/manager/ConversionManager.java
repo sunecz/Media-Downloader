@@ -13,9 +13,12 @@ import sune.app.mediadown.entity.Converter;
 import sune.app.mediadown.event.tracker.PipelineStates;
 import sune.app.mediadown.event.tracker.TrackerManager;
 import sune.app.mediadown.event.tracker.WaitTracker;
+import sune.app.mediadown.exception.WrappedReportContextException;
 import sune.app.mediadown.ffmpeg.FFmpeg;
 import sune.app.mediadown.ffmpeg.FFmpegConverter;
 import sune.app.mediadown.gui.table.ResolvedMedia;
+import sune.app.mediadown.media.MediaConversionContext;
+import sune.app.mediadown.report.ReportContext;
 import sune.app.mediadown.util.Metadata;
 import sune.app.mediadown.util.QueueContext;
 
@@ -98,7 +101,7 @@ public final class ConversionManager implements QueueContext {
 	}
 	
 	/** @since 00.02.08 */
-	private static final class FFmpegTask implements QueueTask<Void> {
+	private static final class FFmpegTask implements QueueTask<Void>, MediaConversionContext {
 		
 		private final Converter converter;
 		private final ResolvedMedia output;
@@ -112,10 +115,37 @@ public final class ConversionManager implements QueueContext {
 			this.metadata = Objects.requireNonNull(metadata);
 		}
 		
+		/** @since 00.02.09 */
+		private final ReportContext createContext() {
+			return ReportContext.ofConversion(this);
+		}
+		
 		@Override
 		public Void call() throws Exception {
-			converter.start(FFmpeg.Command.of(output, inputs, metadata));
-			return null;
+			try {
+				converter.start(FFmpeg.Command.of(output, inputs, metadata));
+				return null;
+			} catch(Exception ex) {
+				throw new WrappedReportContextException(ex, createContext());
+			}
+		}
+		
+		/** @since 00.02.09 */
+		@Override
+		public ResolvedMedia output() {
+			return output;
+		}
+		
+		/** @since 00.02.09 */
+		@Override
+		public List<ConversionMedia> inputs() {
+			return inputs;
+		}
+		
+		/** @since 00.02.09 */
+		@Override
+		public Metadata metadata() {
+			return metadata;
 		}
 	}
 }

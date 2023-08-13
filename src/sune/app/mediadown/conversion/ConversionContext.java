@@ -8,5 +8,6 @@ import sune.app.mediadown.event.tracker.Trackable;
 /** @since 00.02.09 */
 public interface ConversionContext extends EventBindable<ConversionEvent>, HasTaskState, Trackable {
 	
+	ConversionCommand command();
 	Exception exception();
 }

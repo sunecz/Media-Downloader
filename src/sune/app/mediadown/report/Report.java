@@ -6,8 +6,8 @@ import java.util.Objects;
 import sune.app.mediadown.entity.Episode;
 import sune.app.mediadown.entity.Program;
 import sune.app.mediadown.media.Media;
-import sune.app.mediadown.pipeline.ConversionPipelineTask;
-import sune.app.mediadown.pipeline.DownloadPipelineTask;
+import sune.app.mediadown.media.MediaConversionContext;
+import sune.app.mediadown.media.MediaDownloadContext;
 import sune.app.mediadown.util.JSON.JSONCollection;
 import sune.app.mediadown.util.Utils;
 
@@ -288,33 +288,33 @@ public abstract class Report {
 		
 		private static final String NAME = "download";
 		
-		private final DownloadPipelineTask task;
+		private final MediaDownloadContext mediaContext;
 		
 		public OfDownload(Reason reason, ReportContext context, String note, ContactInformation contact,
-				DownloadPipelineTask task) {
+				MediaDownloadContext mediaContext) {
 			super(NAME, reason, context, note, contact);
-			this.task = Objects.requireNonNull(task);
+			this.mediaContext = Objects.requireNonNull(mediaContext);
 		}
 		
 		@Override
 		public JSONCollection serializeData(boolean anonymize) {
 			JSONCollection data = JSONCollection.empty();
-			data.set("task", ReportSerialization.serialize(task, anonymize));
+			data.set("task", ReportSerialization.serialize(mediaContext, anonymize));
 			return data;
 		}
 		
 		public static final class Builder extends Report.Builder {
 			
-			private final DownloadPipelineTask task;
+			private final MediaDownloadContext mediaContext;
 			
-			public Builder(Reason reason, ReportContext context, DownloadPipelineTask task) {
+			public Builder(Reason reason, ReportContext context, MediaDownloadContext mediaContext) {
 				super(NAME, reason, context);
-				this.task = Objects.requireNonNull(task);
+				this.mediaContext = Objects.requireNonNull(mediaContext);
 			}
 			
 			@Override
 			public Report build() {
-				return new OfDownload(reason, context, note, contact, task);
+				return new OfDownload(reason, context, note, contact, mediaContext);
 			}
 		}
 	}
@@ -323,33 +323,33 @@ public abstract class Report {
 		
 		private static final String NAME = "conversion";
 		
-		private final ConversionPipelineTask task;
+		private final MediaConversionContext mediaContext;
 		
 		public OfConversion(Reason reason, ReportContext context, String note, ContactInformation contact,
-				ConversionPipelineTask task) {
+				MediaConversionContext mediaContext) {
 			super(NAME, reason, context, note, contact);
-			this.task = Objects.requireNonNull(task);
+			this.mediaContext = Objects.requireNonNull(mediaContext);
 		}
 		
 		@Override
 		public JSONCollection serializeData(boolean anonymize) {
 			JSONCollection data = JSONCollection.empty();
-			data.set("task", ReportSerialization.serialize(task, anonymize));
+			data.set("task", ReportSerialization.serialize(mediaContext, anonymize));
 			return data;
 		}
 		
 		public static final class Builder extends Report.Builder {
 			
-			private final ConversionPipelineTask task;
+			private final MediaConversionContext mediaContext;
 			
-			public Builder(Reason reason, ReportContext context, ConversionPipelineTask task) {
+			public Builder(Reason reason, ReportContext context, MediaConversionContext mediaContext) {
 				super(NAME, reason, context);
-				this.task = Objects.requireNonNull(task);
+				this.mediaContext = Objects.requireNonNull(mediaContext);
 			}
 			
 			@Override
 			public Report build() {
-				return new OfConversion(reason, context, note, contact, task);
+				return new OfConversion(reason, context, note, contact, mediaContext);
 			}
 		}
 	}
@@ -442,12 +442,12 @@ public abstract class Report {
 			return new OfMedia.Builder(reason, context, media);
 		}
 		
-		public static final Builder ofDownload(DownloadPipelineTask task, Reason reason, ReportContext context) {
-			return new OfDownload.Builder(reason, context, task);
+		public static final Builder ofDownload(MediaDownloadContext mediaContext, Reason reason, ReportContext context) {
+			return new OfDownload.Builder(reason, context, mediaContext);
 		}
 		
-		public static final Builder ofConversion(ConversionPipelineTask task, Reason reason, ReportContext context) {
-			return new OfConversion.Builder(reason, context, task);
+		public static final Builder ofConversion(MediaConversionContext mediaContext, Reason reason, ReportContext context) {
+			return new OfConversion.Builder(reason, context, mediaContext);
 		}
 	}
 }

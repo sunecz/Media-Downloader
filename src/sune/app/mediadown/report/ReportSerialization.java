@@ -13,10 +13,9 @@ import sune.app.mediadown.entity.MediaGetter;
 import sune.app.mediadown.entity.Program;
 import sune.app.mediadown.gui.table.ResolvedMedia;
 import sune.app.mediadown.media.Media;
+import sune.app.mediadown.media.MediaConversionContext;
+import sune.app.mediadown.media.MediaDownloadContext;
 import sune.app.mediadown.media.MediaType;
-import sune.app.mediadown.pipeline.ConversionPipelineTask;
-import sune.app.mediadown.pipeline.DownloadPipelineTask;
-import sune.app.mediadown.pipeline.PipelineMedia;
 import sune.app.mediadown.util.JSON.JSONCollection;
 import sune.app.mediadown.util.JSON.JSONNode;
 import sune.app.mediadown.util.JSON.JSONObject;
@@ -114,19 +113,18 @@ public final class ReportSerialization {
 		return data;
 	}
 	
-	public static final JSONCollection serialize(DownloadPipelineTask task, boolean anonymize) {
+	public static final JSONCollection serialize(MediaDownloadContext context, boolean anonymize) {
 		JSONCollection data = JSONCollection.empty();
 		
-		PipelineMedia media = task.media();
-		data.set("media", serialize(media.media(), anonymize));
+		data.set("media", serialize(context.media(), anonymize));
 		
-		Path destination = media.destination().toAbsolutePath();
+		Path destination = context.destination().toAbsolutePath();
 		if(!anonymize) {
 			data.set("destination", ReportSerialization.prepare(destination.toString()));
 		}
-		data.set("mediaConfiguration", ReportSerialization.serialize(media.mediaConfiguration(), anonymize));
+		data.set("mediaConfiguration", ReportSerialization.serialize(context.mediaConfiguration(), anonymize));
 		
-		DownloadConfiguration configuration = media.configuration();
+		DownloadConfiguration configuration = context.configuration();
 		JSONCollection dataConfiguration = JSONCollection.empty();
 		dataConfiguration.set("rangeOutput", ReportSerialization.serialize(configuration.rangeOutput()));
 		dataConfiguration.set("rangeRequest", ReportSerialization.serialize(configuration.rangeRequest()));
@@ -136,10 +134,10 @@ public final class ReportSerialization {
 		return data;
 	}
 	
-	public static final JSONCollection serialize(ConversionPipelineTask task, boolean anonymize) {
+	public static final JSONCollection serialize(MediaConversionContext context, boolean anonymize) {
 		JSONCollection data = JSONCollection.empty();
 		
-		ResolvedMedia output = task.output();
+		ResolvedMedia output = context.output();
 		JSONCollection dataOutput = JSONCollection.empty();
 		dataOutput.set("media", serialize(output.media(), anonymize));
 		dataOutput.set("configuration", ReportSerialization.serialize(output.configuration(), anonymize));
@@ -148,7 +146,7 @@ public final class ReportSerialization {
 		}
 		data.set("output", dataOutput);
 		
-		List<ConversionMedia> inputs = task.inputs();
+		List<ConversionMedia> inputs = context.inputs();
 		JSONCollection dataInputs = JSONCollection.emptyArray();
 		
 		for(ConversionMedia media : inputs) {
@@ -162,7 +160,7 @@ public final class ReportSerialization {
 			dataInputs.add(item);
 		}
 		
-		Metadata metadata = task.metadata();
+		Metadata metadata = context.metadata();
 		data.set("metadata", ReportSerialization.serialize(metadata.data()));
 		
 		return data;

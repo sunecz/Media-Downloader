@@ -15,7 +15,10 @@ import sune.app.mediadown.download.MediaDownloadConfiguration;
 import sune.app.mediadown.entity.Downloader;
 import sune.app.mediadown.entity.Downloaders;
 import sune.app.mediadown.event.tracker.PipelineStates;
+import sune.app.mediadown.exception.WrappedReportContextException;
 import sune.app.mediadown.media.Media;
+import sune.app.mediadown.media.MediaDownloadContext;
+import sune.app.mediadown.report.ReportContext;
 import sune.app.mediadown.util.QueueContext;
 
 /** @since 00.01.26 */
@@ -54,8 +57,9 @@ public final class DownloadManager implements QueueContext {
 		return downloader.download(media, destination, mediaConfiguration);
 	}
 	
-	private final DownloadManagerTask createTask(DownloadResult result) {
-		return new DownloadManagerTask(result);
+	private final DownloadManagerTask createTask(DownloadResult result, Media media, Path destination,
+			MediaDownloadConfiguration mediaConfiguration, DownloadConfiguration configuration) {
+		return new DownloadManagerTask(result, media, destination, mediaConfiguration, configuration);
 	}
 	
 	/** @since 00.02.08 */
@@ -70,7 +74,8 @@ public final class DownloadManager implements QueueContext {
 		}
 		
 		DownloadResult result = createDownloadResult(media, destination, mediaConfiguration);
-		PositionAwareQueueTaskResult<Long> taskResult = executor().submit(createTask(result));
+		DownloadManagerTask task = createTask(result, media, destination, mediaConfiguration, configuration);
+		PositionAwareQueueTaskResult<Long> taskResult = executor().submit(task);
 		
 		return new PositionAwareManagerSubmitResult<>(result, taskResult, this);
 	}
@@ -98,18 +103,60 @@ public final class DownloadManager implements QueueContext {
 	}
 	
 	/** @since 00.02.08 */
-	private static final class DownloadManagerTask implements QueueTask<Long> {
+	private static final class DownloadManagerTask implements QueueTask<Long>, MediaDownloadContext {
 		
 		private final DownloadResult result;
+		private final Media media;
+		private final Path destination;
+		private final MediaDownloadConfiguration mediaConfiguration;
+		private final DownloadConfiguration configuration;
 		
-		private DownloadManagerTask(DownloadResult result) {
+		private DownloadManagerTask(DownloadResult result, Media media, Path destination,
+				MediaDownloadConfiguration mediaConfiguration, DownloadConfiguration configuration) {
 			this.result = Objects.requireNonNull(result);
+			this.media = Objects.requireNonNull(media);
+			this.destination = Objects.requireNonNull(destination);
+			this.mediaConfiguration = Objects.requireNonNull(mediaConfiguration);
+			this.configuration = Objects.requireNonNull(configuration);
+		}
+		
+		/** @since 00.02.09 */
+		private final ReportContext createContext() {
+			return ReportContext.ofDownload(this);
 		}
 		
 		@Override
 		public Long call() throws Exception {
-			result.download().start();
-			return 0L;
+			try {
+				result.download().start();
+				return 0L;
+			} catch(Exception ex) {
+				throw new WrappedReportContextException(ex, createContext());
+			}
+		}
+		
+		/** @since 00.02.09 */
+		@Override
+		public Media media() {
+			return media;
+		}
+		
+		/** @since 00.02.09 */
+		@Override
+		public Path destination() {
+			return destination;
+		}
+		
+		/** @since 00.02.09 */
+		@Override
+		public MediaDownloadConfiguration mediaConfiguration() {
+			return mediaConfiguration;
+		}
+		
+		/** @since 00.02.09 */
+		@Override
+		public DownloadConfiguration configuration() {
+			return configuration;
 		}
 	}
 }

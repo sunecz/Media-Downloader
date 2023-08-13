@@ -15,6 +15,7 @@ import sune.app.mediadown.event.tracker.TrackerEvent;
 import sune.app.mediadown.gui.table.ResolvedMedia;
 import sune.app.mediadown.manager.ConversionManager;
 import sune.app.mediadown.manager.ManagerSubmitResult;
+import sune.app.mediadown.media.MediaConversionContext;
 import sune.app.mediadown.util.Metadata;
 import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.QueueContext;
@@ -22,7 +23,7 @@ import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Utils.Ignore;
 
 /** @since 00.01.26 */
-public final class ConversionPipelineTask implements PipelineTask<ConversionPipelineResult> {
+public final class ConversionPipelineTask implements PipelineTask<ConversionPipelineResult>, MediaConversionContext {
 	
 	/** @since 00.02.08 */
 	private final ResolvedMedia output;
@@ -140,16 +141,19 @@ public final class ConversionPipelineTask implements PipelineTask<ConversionPipe
 	}
 	
 	/** @since 00.02.09 */
+	@Override
 	public ResolvedMedia output() {
 		return output;
 	}
 	
 	/** @since 00.02.09 */
+	@Override
 	public List<ConversionMedia> inputs() {
 		return inputs;
 	}
 	
 	/** @since 00.02.09 */
+	@Override
 	public Metadata metadata() {
 		return metadata;
 	}
