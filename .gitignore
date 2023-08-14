@@ -49,9 +49,10 @@ Temporary Items
 # Ignore folders
 .settings/
 /bin/
-/etc/binary/
-/etc/jre/
-/etc/*.txt
+/etc/*
+!/etc/dist/
+!/etc/graphics/
+!/etc/scripts/
 /dist/
 /build/
 /versions/
