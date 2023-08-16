@@ -55,6 +55,7 @@ module sune.app.mediadown {
 	exports sune.app.mediadown.resource.cache;
 	exports sune.app.mediadown.task;
 	exports sune.app.mediadown.theme;
+	exports sune.app.mediadown.tor;
 	exports sune.app.mediadown.transformer;
 	exports sune.app.mediadown.update;
 	exports sune.app.mediadown.util;
