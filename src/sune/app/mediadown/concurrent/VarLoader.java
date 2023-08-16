@@ -1,20 +1,32 @@
 package sune.app.mediadown.concurrent;
 
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 import sune.app.mediadown.util.CheckedSupplier;
 import sune.app.mediadown.util.UncheckedException;
-import sune.app.mediadown.util.Utils.Ignore;
 
 /** @since 00.02.08 */
 public final class VarLoader<T> {
 	
 	private static final Object UNSET = new Object();
+	/** @since 00.02.09 */
+	private static final VarHandle HANDLE;
 	
 	private final CheckedSupplier<T> supplier;
-	private final AtomicReference<Object> value = new AtomicReference<>(UNSET);
+	@SuppressWarnings("unused")
+	private volatile Object value = UNSET;
+	
+	static {
+		try {
+			MethodHandles.Lookup lookup = MethodHandles.lookup();
+			HANDLE = lookup.findVarHandle(VarLoader.class, "value", Object.class);
+		} catch(NoSuchFieldException | IllegalAccessException ex) {
+			throw new ExceptionInInitializerError(ex);
+		}
+	}
 	
 	private VarLoader(CheckedSupplier<T> supplier) {
 		this.supplier = Objects.requireNonNull(supplier);
@@ -28,29 +40,64 @@ public final class VarLoader<T> {
 		return new VarLoader<>(supplier);
 	}
 	
-	public final T valueChecked() throws Exception {
-		Object val;
+	/** @since 00.02.09 */
+	private final void atomicSet(Object value) {
+		HANDLE.setRelease(this, value);
+	}
+	
+	/** @since 00.02.09 */
+	private final Object atomicGet() {
+		return HANDLE.getAcquire(this);
+	}
+	
+	/** @since 00.02.09 */
+	private final Object valueRaw() throws Exception {
+		Object ref = atomicGet();
 		
-		if((val = value.get()) == UNSET) {
-			for(Object supplied = supplier.get();
-					(val = value.compareAndExchange(UNSET, supplied)) == UNSET;);
+		if(ref == UNSET) {
+			synchronized(this) {
+				ref = atomicGet();
+				
+				if(ref == UNSET) {
+					ref = supplier.get();
+					atomicSet(ref);
+				}
+			}
 		}
 		
+		return ref;
+	}
+	
+	public T valueChecked() throws Exception {
 		@SuppressWarnings("unchecked")
-		T casted = (T) val;
-		
+		T casted = (T) valueRaw();
 		return casted;
 	}
 	
 	public final T value() {
-		return Ignore.call(this::valueChecked, UncheckedException::new);
+		try {
+			return valueChecked();
+		} catch(Exception ex) {
+			throw new UncheckedException(ex);
+		}
 	}
 	
 	public final T valueOrElse(T defaultValue) {
-		return Ignore.defaultValue(this::valueChecked, defaultValue);
+		try {
+			return valueChecked();
+		} catch(Exception ex) {
+			// Ignore
+		}
+		
+		return defaultValue;
 	}
 	
 	public final boolean isSet() {
-		return value.get() != UNSET;
+		return atomicGet() != UNSET;
+	}
+	
+	/** @since 00.02.09 */
+	public final boolean isUnset() {
+		return atomicGet() == UNSET;
 	}
 }
