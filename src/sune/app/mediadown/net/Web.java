@@ -2,10 +2,13 @@ package sune.app.mediadown.net;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.ref.WeakReference;
 import java.net.CookieManager;
 import java.net.CookiePolicy;
 import java.net.CookieStore;
 import java.net.HttpCookie;
+import java.net.InetSocketAddress;
+import java.net.ProxySelector;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpClient.Redirect;
@@ -29,6 +32,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.WeakHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -60,8 +64,10 @@ public final class Web {
 	private static Duration defaultConnectTimeout = Duration.ofMillis(5000);
 	private static Duration defaultReadTimeout = Duration.ofMillis(20000);
 	
-	private static final VarLoader<HttpClient> httpClientWithRedirect = VarLoader.of(Web::newDefaultHttpClientWithRedirect);
-	private static final VarLoader<HttpClient> httpClientNoRedirect = VarLoader.of(Web::newDefaultHttpClientNoRedirect);
+	/** @since 00.02.09 */
+	private static final VarLoader<Client> client = VarLoader.of(Client.OfDefault::new);
+	/** @since 00.02.09 */
+	private static final VarLoader<Map<Proxy, WeakReference<Client>>> proxyClients = VarLoader.of(WeakHashMap::new);
 	private static final VarLoader<CookieManager> cookieManager = VarLoader.of(Web::newCookieManager);
 	private static final VarLoader<HttpRequest.Builder> httpRequestBuilder = VarLoader.of(Web::newHttpRequestBuilder);
 	
@@ -93,6 +99,16 @@ public final class Web {
 		return newHttpClientBuilder().followRedirects(Redirect.NEVER).build();
 	}
 	
+	/** @since 00.02.09 */
+	private static final HttpClient newProxyHttpClientWithRedirect(Proxy proxy) {
+		return newHttpClientBuilder().followRedirects(Redirect.NORMAL).proxy(proxy.selector()).build();
+	}
+	
+	/** @since 00.02.09 */
+	private static final HttpClient newProxyHttpClientNoRedirect(Proxy proxy) {
+		return newHttpClientBuilder().followRedirects(Redirect.NEVER).proxy(proxy.selector()).build();
+	}
+	
 	private static final CookieManager newCookieManager() {
 		return new CookieManager(null, CookiePolicy.ACCEPT_ALL);
 	}
@@ -115,15 +131,56 @@ public final class Web {
 		return httpRequestBuilder.value().copy();
 	}
 	
-	private static final HttpClient httpClientFor(Request request) {
-		switch(request.followRedirects()) {
-			case NORMAL:
-			case ALWAYS:
-				return httpClientWithRedirect.value();
-			case NEVER:
-			default:
-				return httpClientNoRedirect.value();
+	/** @since 00.02.09 */
+	private static final Client clientFor(Request request, boolean recreate) {
+		Proxy proxy;
+		
+		if((proxy = request.proxy()) != null) {
+			Map<Proxy, WeakReference<Client>> clients = proxyClients.value();
+			Client client = null;
+			WeakReference<Client> ref = null;
+			
+			if(!recreate
+					&& (ref = clients.get(proxy)) != null) {
+				client = ref.get();
+			}
+			
+			if(client == null) {
+				client = new Client.OfProxy(proxy);
+				ref = new WeakReference<>(client);
+				clients.put(proxy, ref);
+			}
+			
+			return client;
 		}
+		
+		return client.value();
+	}
+	
+	private static final HttpClient httpClientFor(Request request) {
+		HttpClient httpClient = null;
+		boolean recreate = false;
+		
+		do {
+			Client client = clientFor(request, recreate);
+			
+			switch(request.followRedirects()) {
+				case NORMAL:
+				case ALWAYS:
+					httpClient = client.withRedirect();
+				case NEVER:
+				default:
+					httpClient = client.noRedirect();
+			}
+			
+			if(recreate) {
+				break; // Already tried to recreate once, just fail
+			}
+			
+			recreate = true;
+		} while(httpClient == null);
+		
+		return httpClient;
 	}
 	
 	private static final <T, R extends Response> R doRequest(Request request,
@@ -258,6 +315,73 @@ public final class Web {
 		}
 	}
 	
+	/** @since 00.02.09 */
+	private static interface Client {
+		
+		HttpClient withRedirect();
+		HttpClient noRedirect();
+		
+		public static final class OfDefault implements Client {
+			
+			private final VarLoader<HttpClient> withRedirect;
+			private final VarLoader<HttpClient> noRedirect;
+			
+			private OfDefault() {
+				withRedirect = VarLoader.of(Web::newDefaultHttpClientWithRedirect);
+				noRedirect = VarLoader.of(Web::newDefaultHttpClientNoRedirect);
+			}
+			
+			public HttpClient withRedirect() {
+				return withRedirect.value();
+			}
+			
+			public HttpClient noRedirect() {
+				return noRedirect.value();
+			}
+		}
+		
+		public static final class OfProxy implements Client {
+			
+			private final WeakReference<Proxy> refProxy;
+			private final VarLoader<HttpClient> withRedirect;
+			private final VarLoader<HttpClient> noRedirect;
+			
+			private OfProxy(Proxy proxy) {
+				refProxy = new WeakReference<>(proxy);
+				withRedirect = VarLoader.of(this::newWithRedirect);
+				noRedirect = VarLoader.of(this::newNoRedirect);
+			}
+			
+			private final HttpClient newWithRedirect() {
+				Proxy proxy = refProxy.get();
+				
+				if(proxy == null) {
+					return null;
+				}
+				
+				return Web.newProxyHttpClientWithRedirect(proxy);
+			}
+			
+			private final HttpClient newNoRedirect() {
+				Proxy proxy = refProxy.get();
+				
+				if(proxy == null) {
+					return null;
+				}
+				
+				return Web.newProxyHttpClientNoRedirect(proxy);
+			}
+			
+			public HttpClient withRedirect() {
+				return withRedirect.value();
+			}
+			
+			public HttpClient noRedirect() {
+				return noRedirect.value();
+			}
+		}
+	}
+	
 	public static abstract class Response implements AutoCloseable {
 		
 		protected final Request request;
@@ -331,6 +455,7 @@ public final class Web {
 		protected final String identifier;
 		protected final Range<Long> range;
 		protected final Duration timeout;
+		protected final Proxy proxy;
 		
 		protected Request(String method, Builder builder) {
 			this.method = Objects.requireNonNull(method);
@@ -342,6 +467,7 @@ public final class Web {
 			this.identifier = builder.identifier();
 			this.range = builder.range();
 			this.timeout = Objects.requireNonNull(builder.timeout());
+			this.proxy = builder.proxy();
 		}
 		
 		public static Builder of(URI uri) {
@@ -387,6 +513,14 @@ public final class Web {
 			
 			builder.timeout(timeout.plus(defaultConnectTimeout));
 			
+			if(proxy != null) {
+				String authentication = proxy.authentication();
+				
+				if(authentication != null) {
+					builder.setHeader("Proxy-Authorization", authentication);
+				}
+			}
+			
 			return builder;
 		}
 		
@@ -410,6 +544,7 @@ public final class Web {
 		public String identifier() { return identifier; }
 		public Range<Long> range() { return range; }
 		public Duration timeout() { return timeout; }
+		public Proxy proxy() { return proxy; }
 		
 		protected static class GET extends Request {
 			
@@ -512,6 +647,7 @@ public final class Web {
 			private String identifier;
 			private Range<Long> range;
 			private Duration timeout;
+			private Proxy proxy;
 			
 			private Builder(URI uri) {
 				this.uri = Objects.requireNonNull(uri);
@@ -529,6 +665,7 @@ public final class Web {
 				identifier = request.identifier();
 				range = request.range();
 				timeout = request.timeout();
+				proxy = request.proxy();
 			}
 			
 			protected static final <T> List<T> merge(List<T> list, Collection<T> values) {
@@ -627,6 +764,7 @@ public final class Web {
 			public Builder identifier(String identifier) { this.identifier = identifier; return this; }
 			public Builder range(Range<Long> range) { this.range = range; return this; }
 			public Builder timeout(Duration timeout) { this.timeout = timeout; return this; }
+			public Builder proxy(Proxy proxy) { this.proxy = proxy; return this; }
 			
 			public URI uri() { return uri; }
 			public String userAgent() { return userAgent; }
@@ -636,6 +774,67 @@ public final class Web {
 			public String identifier() { return identifier; }
 			public Range<Long> range() { return range; }
 			public Duration timeout() { return timeout; }
+			public Proxy proxy() { return proxy; }
+		}
+	}
+	
+	/** @since 00.02.09 */
+	public static final class Proxy {
+		
+		private static final VarLoader<Proxy> none = VarLoader.of(Proxy::new);
+		
+		private final InetSocketAddress address;
+		private final ProxySelector selector;
+		private final String authentication;
+		
+		private Proxy() {
+			this.address = null;
+			this.selector = ProxySelector.of(null);
+			this.authentication = null;
+		}
+		
+		private Proxy(InetSocketAddress address, ProxySelector selector, String authentication) {
+			this.address = Objects.requireNonNull(address);
+			this.selector = Objects.requireNonNull(selector);
+			this.authentication = authentication;
+		}
+		
+		public static final Proxy none() {
+			return none.value();
+		}
+		
+		public static final Proxy of(InetSocketAddress address, String authentication) {
+			return new Proxy(address, ProxySelector.of(address), authentication);
+		}
+		
+		public InetSocketAddress address() {
+			return address;
+		}
+		
+		public ProxySelector selector() {
+			return selector;
+		}
+		
+		public String authentication() {
+			return authentication;
+		}
+		
+		@Override
+		public int hashCode() {
+			return Objects.hash(address, authentication);
+		}
+		
+		@Override
+		public boolean equals(Object obj) {
+			if(this == obj)
+				return true;
+			if(obj == null)
+				return false;
+			if(getClass() != obj.getClass())
+				return false;
+			Proxy other = (Proxy) obj;
+			return Objects.equals(address, other.address)
+						&& Objects.equals(authentication, other.authentication);
 		}
 	}
 	
