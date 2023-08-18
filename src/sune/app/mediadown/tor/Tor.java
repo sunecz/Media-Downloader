@@ -1,19 +1,13 @@
 package sune.app.mediadown.tor;
 
-import java.net.InetSocketAddress;
-import java.net.ProxySelector;
 import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpClient.Version;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.net.http.HttpResponse.BodyHandlers;
 import java.nio.file.Path;
 
 import sune.app.mediadown.concurrent.VarLoader;
 import sune.app.mediadown.net.Net;
 import sune.app.mediadown.net.Web;
 import sune.app.mediadown.net.Web.Request;
+import sune.app.mediadown.net.Web.Response;
 import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.OSUtils;
 import sune.app.mediadown.util.Utils;
@@ -41,6 +35,10 @@ public final class Tor {
 		return path.value();
 	}
 	
+	public static final Path path(TorResource resource) {
+		return path().resolveSibling(resource.relativePath()).toAbsolutePath();
+	}
+	
 	public static final TorProcess createProcess() {
 		return TorProcess.create();
 	}
@@ -51,78 +49,29 @@ public final class Tor {
 		}
 	}
 	
-	private static final String ip() throws Exception {
-		return Web.request(Request.of(Net.uri("https://api.ipify.org/")).GET()).body();
-	}
-	
-	private static final String ipTor(int port) throws Exception {
+	private static final String ip(TorConnection connection) throws Exception {
 		URI uri = Net.uri("https://api.ipify.org/");
 		
-		HttpClient client = HttpClient.newBuilder()
-			.proxy(ProxySelector.of(InetSocketAddress.createUnresolved("127.0.0.1", port)))
-			.version(Version.HTTP_2)
-			.build();
-		
-		// Use different authentication for the proxy to not reuse streams. For more information,
-		// see the following links:
-		// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Proxy-Authorization (Basic username:password)
-		// https://manpages.debian.org/stretch-backports/tor/torrc.5.en.html (SocksPort, IsolateSOCKSAuth)
-		String auth = Utils.randomString(16) + ':' + Utils.randomString(16);
-		HttpRequest request = HttpRequest.newBuilder(uri)
-			.header("Proxy-Authorization", auth)
-			.GET().build();
-		
-		HttpResponse<String> response = client.send(request, BodyHandlers.ofString());
-		return response.body();
+		try(Response.OfString response = Web.request(Request.of(uri).proxy(connection.proxy()).GET())) {
+			return response.body();
+		}
 	}
 	
 	public static void main(String[] args) throws Exception {
 		String password = Utils.randomString(32);
-		String passwordHash = passwordHash(password);
 		
-		TorConfiguration configuration = TorConfiguration.builder()
-			.set(TorConfiguration.Options.ClientOnly)
-			.set(TorConfiguration.Options.GeoIPFile.ofValue(path().resolveSibling("data/geoip").toString()))
-			.set(TorConfiguration.Options.GeoIPv6File.ofValue(path().resolveSibling("data/geoip6").toString()))
-			.set(TorConfiguration.Options.ControlPort.ofValue("auto"))
-			.set(TorConfiguration.Options.SocksPort.ofValue("0"))
-			.set(TorConfiguration.Options.HTTPTunnelPort.ofValue("auto"))
-			.set(TorConfiguration.Options.HardwareAccel)
-			.set(TorConfiguration.Options.HashedControlPassword.ofValue(passwordHash))
-			.build();
-		
-		try(TorProcess tor = Tor.createProcess()) {
-			System.out.println("----- Tor initializing");
-			tor.start(TorConfigurationFile.ofTemporary(configuration));
-			tor.waitForInitialized();
-			System.out.println("----- Tor initialized");
-			TorControl control = tor.control();
+		try(TorConnection connection = TorConnection.builder().password(password).build()) {
+			connection.open(password);
 			
-			if(!control.authenticate(password)) {
-				throw new IllegalStateException("Failed to authenticate to access Tor control");
-			}
+			TorControl control = connection.control();
 			
-			System.out.println("----- Authenticated");
-			
-			if(!control.listenForStreamEvents()) {
-				throw new IllegalStateException("Failed to listen for stream events");
-			}
-			
-			System.out.println("----- Listening for stream events");
-			
-			System.out.println("Current IP (Tor): " + ipTor(tor.httpPort()));
+			System.out.println("Current IP (Tor): " + ip(connection));
 			System.out.println("Current IP (Tor Control): " + control.ipAddress());
 			System.out.println("Current country: " + control.country());
 			
-			/*System.out.println("----- Requesting a new identity");
+			connection.newCircuit();
 			
-			if(!control.newCircuit()) {
-				throw new IllegalStateException("Failed to obtain a new identity");
-			}
-			
-			System.out.println("----- New identity obtained");*/
-			
-			System.out.println("Current IP (Tor): " + ipTor(tor.httpPort()));
+			System.out.println("Current IP (Tor): " + ip(connection));
 			System.out.println("Current IP (Tor Control): " + control.ipAddress());
 			System.out.println("Current country: " + control.country());
 		}

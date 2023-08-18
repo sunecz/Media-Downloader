@@ -81,6 +81,11 @@ public final class TorConfiguration {
 			TorConfiguration.Option<T> option = (TorConfiguration.Option<T>) options.get(name);
 			return option;
 		}
+		
+		public <T> TorConfiguration.Builder remove(String name) {
+			options.remove(Objects.requireNonNull(name));
+			return this;
+		}
 	}
 	
 	public static final class Options {
