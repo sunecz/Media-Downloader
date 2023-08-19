@@ -187,9 +187,11 @@ public final class Web {
 				case NORMAL:
 				case ALWAYS:
 					httpClient = client.withRedirect();
+					break;
 				case NEVER:
 				default:
 					httpClient = client.noRedirect();
+					break;
 			}
 			
 			if(recreate) {
