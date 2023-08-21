@@ -5,8 +5,8 @@ import java.util.Objects;
 /** @since 00.02.09 */
 public enum TorResource {
 	
-	GEO_IPV4("data/geoip"),
-	GEO_IPV6("data/geoip6");
+	GEO_IPV4("geoip"),
+	GEO_IPV6("geoip6");
 	
 	private final String relativePath;
 	
