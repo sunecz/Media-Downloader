@@ -78,7 +78,22 @@ public final class TorConnection implements AutoCloseable {
 			throw new IllegalStateException("Failed to listen for stream events");
 		}
 		
-		address = InetSocketAddress.createUnresolved("127.0.0.1", process.httpPort());
+		TorConfiguration.Option<String> option;
+		int port = -1;
+		
+		option = configuration.get(TorConfiguration.Options.HTTPTunnelPort.name());
+		
+		if(option != null && !option.value().equals("0")) {
+			port = process.httpPort();
+		} else {
+			option = configuration.get(TorConfiguration.Options.SocksPort.name());
+			
+			if(option != null && !option.value().equals("0")) {
+				port = process.socksPort();
+			}
+		}
+		
+		address = InetSocketAddress.createUnresolved("127.0.0.1", port);
 		requestAuth = newRequestAuth();
 		proxy = null;
 		
