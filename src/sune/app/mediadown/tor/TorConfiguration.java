@@ -158,7 +158,7 @@ public final class TorConfiguration {
 		
 		public static final class OfBoolean extends TorConfiguration.Option<Boolean> {
 			
-			private OfBoolean(String name, Boolean value) {
+			public OfBoolean(String name, Boolean value) {
 				super(name, value);
 			}
 			
@@ -175,7 +175,7 @@ public final class TorConfiguration {
 		
 		public static final class OfInteger extends TorConfiguration.Option<Integer> {
 			
-			private OfInteger(String name, Integer value) {
+			public OfInteger(String name, Integer value) {
 				super(name, value);
 			}
 			
@@ -192,7 +192,7 @@ public final class TorConfiguration {
 
 		public static final class OfString extends TorConfiguration.Option<String> {
 			
-			private OfString(String name, String value) {
+			public OfString(String name, String value) {
 				super(name, value);
 			}
 			
@@ -209,7 +209,7 @@ public final class TorConfiguration {
 		
 		public static final class OfList extends TorConfiguration.Option<List<?>> {
 			
-			private OfList(String name, List<?> value) {
+			public OfList(String name, List<?> value) {
 				super(name, value);
 			}
 			
@@ -230,7 +230,7 @@ public final class TorConfiguration {
 			
 			private final boolean strict;
 			
-			private OfNodeList(String name, List<String> value, boolean strict) {
+			public OfNodeList(String name, List<String> value, boolean strict) {
 				super(name, value);
 				this.strict = strict;
 			}
