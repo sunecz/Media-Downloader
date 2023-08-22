@@ -11,7 +11,7 @@ public final class Version implements Comparable<Version> {
 	
 	public static final Version UNKNOWN = new Version();
 	/** @since 00.02.07 */
-	public static final Version ZERO    = new Version(VersionType.UNKNOWN, 0, 0, 0, 0);
+	public static final Version ZERO    = new Version(VersionType.UNKNOWN, 0, 0, 0, 0, false);
 	
 	private static Comparator<Version> comparator;
 	
@@ -24,6 +24,8 @@ public final class Version implements Comparable<Version> {
 	private final int patch;
 	/** @since 00.02.07 */
 	private final int value;
+	/** @since 00.02.09 */
+	private final boolean compact;
 	
 	/** @since 00.02.07 */
 	private Version() {
@@ -32,15 +34,17 @@ public final class Version implements Comparable<Version> {
 		this.minor = -1;
 		this.patch = -1;
 		this.value = -1;
+		this.compact = false;
 	}
 	
-	/** @since 00.02.07 */
-	private Version(VersionType type, int major, int minor, int patch, int value) {
+	/** @since 00.02.09 */
+	private Version(VersionType type, int major, int minor, int patch, int value, boolean compact) {
 		this.type = Objects.requireNonNull(type);
 		this.major = checkInteger(major);
 		this.minor = checkInteger(minor);
 		this.patch = checkInteger(patch);
 		this.value = checkInteger(value);
+		this.compact = compact;
 	}
 	
 	/** @since 00.02.07 */
@@ -65,6 +69,11 @@ public final class Version implements Comparable<Version> {
 		return builder().type(type).major(major).minor(minor).patch(patch).value(value).build();
 	}
 	
+	/** @since 00.02.09 */
+	public static final Version ofCompact(VersionType type, int major, int minor, int patch, int value) {
+		return builder().type(type).major(major).minor(minor).patch(patch).value(value).compact(true).build();
+	}
+	
 	/** @since 00.02.07 */
 	public static final Builder builder() {
 		return new Builder();
@@ -82,7 +91,12 @@ public final class Version implements Comparable<Version> {
 	
 	/** @since 00.02.07 */
 	public Version release() {
-		return this == UNKNOWN ? UNKNOWN : new Version(VersionType.RELEASE, major, minor, patch, 0);
+		return this == UNKNOWN ? UNKNOWN : new Version(VersionType.RELEASE, major, minor, patch, 0, compact);
+	}
+	
+	/** @since 00.02.09 */
+	public Version compact() {
+		return this == UNKNOWN ? UNKNOWN : new Version(type, major, minor, patch, value, true);
 	}
 	
 	public VersionType type() {
@@ -106,6 +120,11 @@ public final class Version implements Comparable<Version> {
 	
 	public int value() {
 		return value;
+	}
+	
+	/** @since 00.02.09 */
+	public boolean isCompact() {
+		return compact;
 	}
 	
 	/** @since 00.02.07 */
@@ -176,7 +195,7 @@ public final class Version implements Comparable<Version> {
 	
 	@Override
 	public String toString() {
-		return string();
+		return compact ? compactString() : string();
 	}
 	
 	/** @since 00.02.07 */
@@ -187,6 +206,23 @@ public final class Version implements Comparable<Version> {
 		
 		// Forbid anyone to create an instance of this class
 		private Parser() {
+		}
+		
+		/** @since 00.02.09 */
+		private static final boolean hasLeadingZeroes(Matcher matcher) {
+			for(int i = 1, l = matcher.groupCount(); i <= l; ++i) {
+				String group = matcher.group(i);
+				
+				if(group == null || group.isEmpty()) {
+					continue;
+				}
+				
+				if(group.charAt(0) == '0' && !group.equals("0")) {
+					return true;
+				}
+			}
+			
+			return false;
 		}
 		
 		public static final Parser instance() {
@@ -208,7 +244,9 @@ public final class Version implements Comparable<Version> {
 			int patch = Optional.ofNullable(matcher.group(3)).map(Integer::valueOf).orElse(0);
 			VersionType type = Optional.ofNullable(matcher.group(4)).map(VersionType::from).orElse(VersionType.RELEASE);
 			int value = Optional.ofNullable(matcher.group(5)).map(Integer::valueOf).orElse(0);
-			return new Version(type, major, minor, patch, value);
+			boolean compact = !hasLeadingZeroes(matcher);
+			
+			return new Version(type, major, minor, patch, value, compact);
 		}
 	}
 	
@@ -355,6 +393,8 @@ public final class Version implements Comparable<Version> {
 		private int minor;
 		private int patch;
 		private int value;
+		/** @since 00.02.09 */
+		private boolean compact;
 		
 		private Builder() {
 			this.type = VersionType.UNKNOWN;
@@ -362,10 +402,11 @@ public final class Version implements Comparable<Version> {
 			this.minor = 0;
 			this.patch = 0;
 			this.value = 0;
+			this.compact = false;
 		}
 		
 		public Version build() {
-			return new Version(type, major, minor, patch, value);
+			return new Version(type, major, minor, patch, value, compact);
 		}
 		
 		public Builder type(VersionType type) {
@@ -393,6 +434,12 @@ public final class Version implements Comparable<Version> {
 			return this;
 		}
 		
+		/** @since 00.02.09 */
+		public Builder compact(boolean compact) {
+			this.compact = compact;
+			return this;
+		}
+		
 		public VersionType type() {
 			return type;
 		}
@@ -411,6 +458,11 @@ public final class Version implements Comparable<Version> {
 		
 		public int value() {
 			return value;
+		}
+		
+		/** @since 00.02.09 */
+		public boolean compact() {
+			return compact;
 		}
 	}
 }

@@ -86,7 +86,20 @@ public final class Requirements {
 	
 	@Override
 	public String toString() {
-		return String.format("%s%s%s", osName == null ? STRING_ANY_OS_NAME : osName,
-			STRING_DELIMITER, osArch == null ? STRING_ANY_OS_ARCH : osArch);
+		return String.format(
+			"%s%s%s",
+			osName == null ? STRING_ANY_OS_NAME : osName,
+			STRING_DELIMITER,
+			osArch == null ? STRING_ANY_OS_ARCH : osArch
+		);
+	}
+	
+	/** @since 00.02.09 */
+	public String toCompactString() {
+		return String.format(
+			"%s%s",
+			osName == null ? STRING_ANY_OS_NAME : osName,
+			osArch == null ? STRING_ANY_OS_ARCH : osArch
+		);
 	}
 }

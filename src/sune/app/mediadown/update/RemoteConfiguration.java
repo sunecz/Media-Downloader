@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.URI;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -11,6 +12,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
 
+import sune.app.mediadown.net.Web;
+import sune.app.mediadown.net.Web.Request;
+import sune.app.mediadown.net.Web.Response;
 import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.Regex;
 
@@ -88,6 +92,18 @@ public final class RemoteConfiguration {
 		try(BufferedReader reader = new BufferedReader(new InputStreamReader(stream))) {
 			return from(reader);
 		}
+	}
+	
+	/** @since 00.02.09 */
+	public static final RemoteConfiguration of(Request request) throws Exception {
+		try(Response.OfStream response = Web.requestStream(request)) {
+			return from(response.stream());
+		}
+	}
+	
+	/** @since 00.02.09 */
+	public static final RemoteConfiguration of(URI uri) throws Exception {
+		return of(Request.of(uri).GET());
 	}
 	
 	public final String value(String name) {
