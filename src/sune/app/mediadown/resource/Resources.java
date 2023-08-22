@@ -23,10 +23,12 @@ import sune.app.mediadown.net.Web.Request;
 import sune.app.mediadown.update.FileChecker;
 import sune.app.mediadown.update.Requirements;
 import sune.app.mediadown.update.Updater;
+import sune.app.mediadown.update.Version;
 import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.OSUtils;
 import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.Ref;
+import sune.app.mediadown.util.Utils;
 
 public final class Resources {
 	
@@ -215,6 +217,16 @@ public final class Resources {
 		
 		checker.generate((path) -> true, true, predicateComputeHash);
 		return checker;
+	}
+	
+	/** @since 00.02.09 */
+	public static final URI baseUri(String name, Version version, Requirements requirements) {
+		return Net.uri(Utils.format(
+			"https://app.sune.tech/mediadown/res/%{name}s/%{version}s/%{os}s/",
+			"name", name,
+			"version", version.toString(),
+			"os", requirements.toCompactString()
+		));
 	}
 	
 	public static interface StringReceiver {

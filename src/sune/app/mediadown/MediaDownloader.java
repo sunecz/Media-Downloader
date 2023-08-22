@@ -64,6 +64,7 @@ import sune.app.mediadown.event.EventType;
 import sune.app.mediadown.event.FileCheckEvent;
 import sune.app.mediadown.event.LibraryEvent;
 import sune.app.mediadown.event.NativeLibraryLoaderEvent;
+import sune.app.mediadown.event.PatchEvent;
 import sune.app.mediadown.event.PluginLoaderEvent;
 import sune.app.mediadown.event.tracker.DownloadTracker;
 import sune.app.mediadown.event.tracker.TrackerManager;
@@ -121,6 +122,7 @@ import sune.app.mediadown.resource.Resources;
 import sune.app.mediadown.resource.Resources.InternalResource;
 import sune.app.mediadown.resource.Resources.StringReceiver;
 import sune.app.mediadown.theme.Theme;
+import sune.app.mediadown.tor.TorBootstrap;
 import sune.app.mediadown.update.FileChecker;
 import sune.app.mediadown.update.RemoteConfiguration;
 import sune.app.mediadown.update.Requirements;
@@ -680,6 +682,7 @@ public final class MediaDownloader {
 			@Override
 			public InitializationState run(Arguments args) {
 				loadMiscellaneousResources(InitializationStates::setText);
+				loadTorResources(InitializationStates::setText);
 				return new InitializeDefaults();
 			}
 			
@@ -2239,14 +2242,94 @@ public final class MediaDownloader {
 			Resources.ensureResources(stringReceiver, (path) -> checkIntegrity || pathsToCheck.contains(path), null);
 			
 			for(InternalResource resource : Resources.localResources()) {
-				VersionEntryAccessor version = VersionEntryAccessor.of("res_" + resource.name());
-				Version verLocal = version.get();
+				Version verLocal = Versions.get("res_" + resource.name());
 				Version verRemote = Version.of(resource.version());
 				
 				if(verLocal.compareTo(verRemote) != 0 || verLocal == Version.UNKNOWN) {
-					version.set(verRemote);
+					Path path = pathResources.resolve(OSUtils.getExecutableName(resource.name()));
+					pathsToCheck.add(path);
 				}
 			}
+		} catch(Exception ex) {
+			errorDebug(ex);
+		}
+		
+		for(InternalResource resource : Resources.localResources()) {
+			VersionEntryAccessor version = VersionEntryAccessor.of("res_" + resource.name());
+			Version verLocal = version.get();
+			Version verRemote = Version.of(resource.version());
+			
+			if(verLocal.compareTo(verRemote) != 0 || verLocal == Version.UNKNOWN) {
+				version.set(verRemote);
+			}
+		}
+	}
+	
+	/** @since 00.02.09 */
+	private static final void loadTorResources(StringReceiver stringReceiver) {
+		boolean checkIntegrity = configuration.isCheckResourcesIntegrity();
+		
+		TorBootstrap torBootstrap = TorBootstrap.instance();
+		final long minTime = 500000000L; // 500ms
+		final Ref.Mutable<Long> lastTime = new Ref.Mutable<>(0L);
+		
+		torBootstrap.addEventListener(PatchEvent.BEGIN, (context) -> {
+			if(stringReceiver != null) {
+				stringReceiver.receive("Checking Tor resources...");
+			}
+		});
+		
+		torBootstrap.addEventListener(PatchEvent.UPDATE, (context) -> {
+			if(stringReceiver != null) {
+				String name = Utils.OfPath.baseName(context.remoteEntry().relativePath());
+				stringReceiver.receive(String.format("Checking Tor resource %s...", name));
+			}
+		});
+		
+		torBootstrap.addEventListener(PatchEvent.ERROR, (context) -> {
+			if(stringReceiver != null) {
+				stringReceiver.receive("Checking Tor resources: Error");
+			}
+			
+			error(context.exception());
+		});
+		
+		torBootstrap.addEventListener(PatchEvent.END, (context) -> {
+			if(stringReceiver != null) {
+				stringReceiver.receive("Checking Tor resources... done");
+			}
+		});
+		
+		torBootstrap.addEventListener(DownloadEvent.BEGIN, (context) -> {
+			if(stringReceiver != null) {
+				String name = context.output().getFileName().toString();
+				stringReceiver.receive(String.format("Downloading %s...", name));
+			}
+		});
+		
+		torBootstrap.addEventListener(DownloadEvent.UPDATE, (context) -> {
+			if(stringReceiver != null
+					// Throttle to remove flickering
+					&& System.nanoTime() - lastTime.get() >= minTime) {
+				DownloadTracker tracker = (DownloadTracker) context.trackerManager().tracker();
+				long current = tracker.current();
+				long total = tracker.total();
+				double percent = current * 100.0 / total;
+				String name = context.output().getFileName().toString();
+				stringReceiver.receive(String.format(Locale.US, "Downloading %s... %.2f%%", name, percent));
+				lastTime.set(System.nanoTime());
+			}
+		});
+		
+		torBootstrap.addEventListener(DownloadEvent.END, (context) -> {
+			if(stringReceiver != null) {
+				String name = context.output().getFileName().toString();
+				stringReceiver.receive(String.format("Downloading %s... done", name));
+			}
+		});
+		
+		try {
+			torBootstrap.bootstrap(checkIntegrity);
 		} catch(Exception ex) {
 			errorDebug(ex);
 		}

@@ -8,42 +8,71 @@ import java.nio.file.StandardOpenOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
+import sune.app.mediadown.concurrent.VarLoader;
+
 public final class Hash {
 	
-	private static MessageDigest MD_SHA1;
-	private static MessageDigest ensureMD_SHA1() {
-		if((MD_SHA1 == null)) {
-			try {
-				return MD_SHA1 = MessageDigest.getInstance("SHA-1");
-			} catch(NoSuchAlgorithmException ex) {
-				// Should not happen
-				throw new IllegalStateException("Unable to instantiate SHA-1 Message Digest");
-			}
-		}
-		return MD_SHA1;
-	}
+	/** @since 00.02.09 */
+	private static final VarLoader<MessageDigest> sha1 = VarLoader.ofChecked(Hash::initSha1MessageDigest);
 	
 	// Forbid anyone to create an instance of this class
 	private Hash() {
 	}
 	
-	private static final byte[] sha1raw(Path file) {
-		// Ensure the message digest of SHA1
-		MessageDigest mdg = ensureMD_SHA1();
-		// Open the file's channel so it can be mapped and read
-		try(FileChannel fch = FileChannel.open(file, StandardOpenOption.READ)) {
-			ByteBuffer  buf = ByteBuffer.allocate(8192);
-			while(fch.read(buf) != -1) {
-				buf.flip();
-				mdg.update(buf);
-				buf.clear();
-			}
-		} catch(IOException ex) {
+	/** @since 00.02.09 */
+	private static final MessageDigest initSha1MessageDigest() throws NoSuchAlgorithmException {
+		return MessageDigest.getInstance("SHA-1");
+	}
+	
+	/** @since 00.02.09 */
+	private static final MessageDigest sha1MessageDigest() throws IOException {
+		try {
+			return sha1.valueChecked();
+		} catch(Exception ex) {
+			throw new IOException(ex);
 		}
-		return mdg.digest();
+	}
+	
+	/** @since 00.02.09 */
+	public static final byte[] sha1rawChecked(Path file) throws IOException {
+		MessageDigest digest = sha1MessageDigest();
+		
+		try(FileChannel channel = FileChannel.open(file, StandardOpenOption.READ)) {
+			ByteBuffer buffer = ByteBuffer.allocate(8192);
+			
+			while(channel.read(buffer) != -1) {
+				buffer.flip();
+				digest.update(buffer);
+				buffer.clear();
+			}
+		}
+		
+		return digest.digest();
+	}
+	
+	/** @since 00.02.09 */
+	public static final byte[] sha1raw(Path file) throws IOException {
+		try {
+			return sha1rawChecked(file);
+		} catch(IOException ex) {
+			// Ignore
+		}
+		
+		return null;
+	}
+	
+	/** @since 00.02.09 */
+	public static final String sha1Checked(Path file) throws IOException {
+		return Hex.string(sha1raw(file));
 	}
 	
 	public static final String sha1(Path file) {
-		return Hex.string(sha1raw(file));
+		try {
+			return sha1Checked(file);
+		} catch(IOException ex) {
+			// Ignore
+		}
+		
+		return null;
 	}
 }
