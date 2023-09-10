@@ -17,9 +17,11 @@ public final class TorConnection implements AutoCloseable {
 	private final AtomicBoolean opening = new AtomicBoolean();
 	private volatile boolean open;
 	
-	private InetSocketAddress address;
+	private InetSocketAddress addressHttp;
+	private InetSocketAddress addressSocks;
 	private String requestAuth;
-	private Proxy proxy;
+	private Proxy proxyHttp;
+	private Proxy proxySocks;
 	
 	private TorConnection(TorConfiguration configuration) {
 		this.configuration = Objects.requireNonNull(configuration);
@@ -52,6 +54,17 @@ public final class TorConnection implements AutoCloseable {
 		return new Builder(configuration);
 	}
 	
+	public static final TorConnection ofOpen() throws Exception {
+		return ofOpen(defaultConfiguration());
+	}
+	
+	public static final TorConnection ofOpen(TorConfiguration.Builder configuration) throws Exception {
+		String password = Utils.randomString(32);
+		TorConnection connection = builder(configuration).password(password).build();
+		connection.open(password);
+		return connection;
+	}
+	
 	private final String newRequestAuth() {
 		return Utils.randomString(16) + ':' + Utils.randomString(16);
 	}
@@ -79,23 +92,22 @@ public final class TorConnection implements AutoCloseable {
 		}
 		
 		TorConfiguration.Option<String> option;
-		int port = -1;
 		
 		option = configuration.get(TorConfiguration.Options.HTTPTunnelPort.name());
 		
 		if(option != null && !option.value().equals("0")) {
-			port = process.httpPort();
-		} else {
-			option = configuration.get(TorConfiguration.Options.SocksPort.name());
-			
-			if(option != null && !option.value().equals("0")) {
-				port = process.socksPort();
-			}
+			addressHttp = InetSocketAddress.createUnresolved("127.0.0.1", process.httpPort());
 		}
 		
-		address = InetSocketAddress.createUnresolved("127.0.0.1", port);
+		option = configuration.get(TorConfiguration.Options.SocksPort.name());
+		
+		if(option != null && !option.value().equals("0")) {
+			addressSocks = InetSocketAddress.createUnresolved("127.0.0.1", process.socksPort());
+		}
+		
 		requestAuth = newRequestAuth();
-		proxy = null;
+		proxyHttp = null;
+		proxySocks = null;
 		
 		open = true;
 		opening.set(false);
@@ -110,7 +122,8 @@ public final class TorConnection implements AutoCloseable {
 		// see the following links:
 		// https://manpages.debian.org/stretch-backports/tor/torrc.5.en.html (SocksPort, IsolateSOCKSAuth)
 		requestAuth = newRequestAuth();
-		proxy = null;
+		proxyHttp = null;
+		proxySocks = null;
 	}
 	
 	public TorConfiguration configuration() {
@@ -125,12 +138,20 @@ public final class TorConnection implements AutoCloseable {
 		return control;
 	}
 	
-	public Proxy proxy() {
-		if(proxy == null) {
-			proxy = Proxy.of(address, requestAuth);
+	public Proxy httpProxy() {
+		if(proxyHttp == null) {
+			proxyHttp = Proxy.of("http", addressHttp, requestAuth);
 		}
 		
-		return proxy;
+		return proxyHttp;
+	}
+	
+	public Proxy socksProxy() {
+		if(proxySocks == null) {
+			proxySocks = Proxy.of("socks5h", addressSocks, requestAuth);
+		}
+		
+		return proxySocks;
 	}
 	
 	public boolean isOpen() {
