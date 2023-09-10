@@ -3,6 +3,7 @@ package sune.app.mediadown.net;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.ref.WeakReference;
+import java.lang.reflect.InvocationTargetException;
 import java.net.CookieManager;
 import java.net.CookiePolicy;
 import java.net.CookieStore;
@@ -21,6 +22,7 @@ import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandler;
 import java.net.http.HttpResponse.BodyHandlers;
+import java.nio.channels.SocketChannel;
 import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -52,6 +54,7 @@ import sune.app.mediadown.Shared;
 import sune.app.mediadown.concurrent.VarLoader;
 import sune.app.mediadown.util.Opt;
 import sune.app.mediadown.util.Range;
+import sune.app.mediadown.util.Reflection3;
 import sune.app.mediadown.util.Regex;
 import sune.app.mediadown.util.Utils;
 
@@ -150,7 +153,7 @@ public final class Web {
 		return httpRequestBuilder.value().copy();
 	}
 	
-	/** @since 00.02.09 */
+	/** @since 00.02.10 */
 	private static final Client clientFor(Request request, boolean recreate) {
 		Proxy proxy;
 		
@@ -428,6 +431,58 @@ public final class Web {
 		}
 	}
 	
+	/** @since 00.02.10 */
+	private static final class Internals {
+		
+		private static final Class<?> class_HttpResponseImpl;
+		private static final Class<?> class_HttpConnection;
+		
+		static {
+			try {
+				class_HttpResponseImpl = Class.forName("jdk.internal.net.http.HttpResponseImpl");
+				class_HttpConnection = Class.forName("jdk.internal.net.http.HttpConnection");
+			} catch(ClassNotFoundException ex) {
+				throw new ExceptionInInitializerError(ex);
+			}
+		}
+		
+		private Internals() {
+		}
+		
+		private static final Object connection(Response response) {
+			try {
+				return Reflection3.getFieldValue(response.response(), class_HttpResponseImpl, "connection");
+			} catch(NoSuchFieldException
+						| IllegalArgumentException
+						| IllegalAccessException
+						| SecurityException ex) {
+				throw new IllegalStateException(ex);
+			}
+		}
+		
+		private static final Object channel(Object connection) {
+			try {
+				return Reflection3.invoke(connection, class_HttpConnection, "channel");
+			} catch(NoSuchFieldException
+						| IllegalArgumentException
+						| IllegalAccessException
+						| InvocationTargetException
+						| NoSuchMethodException
+						| SecurityException ex) {
+				throw new IllegalStateException(ex);
+			}
+		}
+		
+		public static final SocketChannel channelOf(Response response) {
+			return (SocketChannel) channel(connection(response));
+		}
+	}
+	
+	/** @since 00.02.10 */
+	public static final SocketChannel channelOf(Response response) {
+		return Internals.channelOf(response);
+	}
+	
 	private static final class WebThreadFactory implements ThreadFactory {
 		
 		private final String namePrefix;
@@ -446,7 +501,7 @@ public final class Web {
 		}
 	}
 	
-	/** @since 00.02.09 */
+	/** @since 00.02.10 */
 	private static interface Client {
 		
 		HttpClient withRedirect();
@@ -670,10 +725,10 @@ public final class Web {
 			builder.timeout(timeout.plus(defaultConnectTimeout));
 			
 			if(proxy != null) {
-				String authentication = proxy.authentication();
+				String authorization = proxy.authorization();
 				
-				if(authentication != null) {
-					builder.setHeader("Proxy-Authorization", authentication);
+				if(authorization != null) {
+					builder.setHeader("Proxy-Authorization", authorization);
 				}
 			}
 			
@@ -1105,28 +1160,39 @@ public final class Web {
 		
 		private static final VarLoader<Proxy> none = VarLoader.of(Proxy::new);
 		
+		private final String scheme;
 		private final InetSocketAddress address;
 		private final ProxySelector selector;
-		private final String authentication;
+		private final String authorization;
 		
 		private Proxy() {
+			this.scheme = null;
 			this.address = null;
 			this.selector = ProxySelector.of(null);
-			this.authentication = null;
+			this.authorization = null;
 		}
 		
-		private Proxy(InetSocketAddress address, ProxySelector selector, String authentication) {
+		private Proxy(String scheme, InetSocketAddress address, ProxySelector selector, String authorization) {
+			this.scheme = Objects.requireNonNull(scheme);
 			this.address = Objects.requireNonNull(address);
 			this.selector = Objects.requireNonNull(selector);
-			this.authentication = authentication;
+			this.authorization = authorization;
 		}
 		
 		public static final Proxy none() {
 			return none.value();
 		}
 		
-		public static final Proxy of(InetSocketAddress address, String authentication) {
-			return new Proxy(address, ProxySelector.of(address), authentication);
+		public static final Proxy of(String scheme, InetSocketAddress address, String authorization) {
+			return new Proxy(scheme, address, ProxySelector.of(address), authorization);
+		}
+		
+		public Proxy asBasicAuthorization() {
+			return new Proxy(scheme, address, selector, "Basic " + authorization);
+		}
+		
+		public String scheme() {
+			return scheme;
 		}
 		
 		public InetSocketAddress address() {
@@ -1137,13 +1203,13 @@ public final class Web {
 			return selector;
 		}
 		
-		public String authentication() {
-			return authentication;
+		public String authorization() {
+			return authorization;
 		}
 		
 		@Override
 		public int hashCode() {
-			return Objects.hash(address, authentication);
+			return Objects.hash(address, authorization);
 		}
 		
 		@Override
@@ -1156,7 +1222,7 @@ public final class Web {
 				return false;
 			Proxy other = (Proxy) obj;
 			return Objects.equals(address, other.address)
-						&& Objects.equals(authentication, other.authentication);
+						&& Objects.equals(authorization, other.authorization);
 		}
 	}
 	

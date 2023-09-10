@@ -10,18 +10,25 @@ import java.net.Socket;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 import java.util.regex.Matcher;
 
 import sune.app.mediadown.concurrent.StateMutex;
 import sune.app.mediadown.concurrent.VarLoader;
+import sune.app.mediadown.util.Ref;
 import sune.app.mediadown.util.Regex;
 
 /** @since 00.02.09 */
@@ -51,6 +58,7 @@ public final class TorControl implements AutoCloseable {
 	private volatile IOException readException = null;
 	
 	private final Map<String, EventListener> listeners = new ConcurrentHashMap<>();
+	private volatile boolean listenForStreamEvents;
 	
 	public TorControl(int port) {
 		this.port = checkPort(port);
@@ -120,6 +128,12 @@ public final class TorControl implements AutoCloseable {
 		boolean statusLine = false;
 		
 		for(String line; (line = readLine()) != null;) {
+			// Since lines can mix together, we must filter the stream event lines
+			if(listenForStreamEvents
+					&& StreamEventListener.isStreamEventLine(line)) {
+				continue;
+			}
+			
 			lines.add(line);
 			
 			if(statusLine) {
@@ -191,7 +205,7 @@ public final class TorControl implements AutoCloseable {
 		return listener.circuitId(streamId);
 	}
 	
-	private final int lastStreamId() {
+	public final int lastStreamId() {
 		StreamEventListener listener = eventListenerOf(StreamEventListener.NAME);
 		
 		if(listener == null) {
@@ -230,6 +244,7 @@ public final class TorControl implements AutoCloseable {
 		}
 		
 		addEventListener(new StreamEventListener());
+		listenForStreamEvents = true;
 		return true;
 	}
 	
@@ -257,26 +272,32 @@ public final class TorControl implements AutoCloseable {
 		return circuits;
 	}
 	
-	public TorCircuit circuit() throws IOException {
-		List<TorCircuit> circuits = circuits();
+	public TorCircuit circuit(int circuitId) throws IOException {
+		List<String> response = command("GETINFO circuit-status");
 		
-		if(circuits == null) {
+		if(responseCode(response) != 250) {
 			return null;
 		}
 		
-		TorCircuit current = null;
-		int circuitId = circuitId();
-		
-		for(TorCircuit circuit : circuits) {
-			if(!circuit.status().equals("BUILT") || circuit.id() != circuitId) {
-				continue;
-			}
+		for(String line : response) {
+			TorCircuit circuit = TorCircuit.parse(line);
 			
-			current = circuit;
-			break;
+			if(circuit != null && circuit.id() == circuitId) {
+				return circuit;
+			}
 		}
 		
-		return current;
+		return null;
+	}
+	
+	public TorCircuit circuit() throws IOException {
+		TorCircuit circuit = circuit(circuitId());
+		
+		if(circuit == null || !circuit.status().equals("BUILT")) {
+			return null;
+		}
+		
+		return circuit;
 	}
 	
 	public String nodeIp(TorCircuit.Node node) throws IOException {
@@ -359,6 +380,145 @@ public final class TorControl implements AutoCloseable {
 		return responseCode(response) == 250;
 	}
 	
+	private static final int REASON_DESTROY = 5;
+	
+	public boolean closeStream(int streamId) throws IOException {
+		return closeStream(streamId, REASON_DESTROY);
+	}
+	
+	public boolean closeStream(int streamId, int reason) throws IOException {
+		String response = commandFirstResponse(String.format("CLOSESTREAM %d %d", streamId, reason));
+		return responseCode(response) == 250;
+	}
+	
+	public List<TorStream> streams() {
+		StreamEventListener listener = eventListenerOf(StreamEventListener.NAME);
+		
+		if(listener == null) {
+			return null;
+		}
+		
+		return listener.streams();
+	}
+	
+	public TorStream stream(int streamId) {
+		StreamEventListener listener = eventListenerOf(StreamEventListener.NAME);
+		
+		if(listener == null) {
+			return null;
+		}
+		
+		return listener.stream(streamId);
+	}
+	
+	public boolean closeCircuit() throws IOException {
+		return closeCircuit(circuitId());
+	}
+	
+	public boolean closeCircuit(int circuitId) throws IOException {
+		String response = commandFirstResponse(String.format("CLOSECIRCUIT %d", circuitId));
+		return responseCode(response) == 250;
+	}
+	
+	private final StateMutex mtxCircuitConnection = new StateMutex(true);
+	private final VarLoader<ConnectionWaiter> connectionWaiter = VarLoader.of(this::newConnectionWaiter);
+	
+	public TorCircuitConnection newCircuitConnection() throws IOException {
+		TorCircuitConnection cc = new TorCircuitConnection(connectionWaiter.value());
+		
+		if(!cc.acquire()) {
+			throw new IOException("Unable to acquire circuit connection");
+		}
+		
+		return cc;
+	}
+	
+	private final ConnectionWaiter newConnectionWaiter() {
+		return new ConnectionWaiter(this);
+	}
+	
+	private static final class ConnectionWaiter {
+		
+		private final TorControl control;
+		private final Ref.Mutable<Integer> circuitId = new Ref.Mutable<>(ID_UNKNOWN);
+		private final StateMutex mtxConnection = new StateMutex();
+		private final Consumer<Integer> ncl = this::listener;
+		
+		public ConnectionWaiter(TorControl control) {
+			this.control = control;
+		}
+		
+		private final StreamEventListener streamListener() {
+			return control.eventListenerOf(StreamEventListener.NAME);
+		}
+		
+		private final void listener(int cid) {
+			circuitId.set(cid);
+			mtxConnection.unlock();
+		}
+		
+		public int await() {
+			StreamEventListener listener;
+			if((listener = streamListener()) == null) {
+				return ID_UNKNOWN;
+			}
+			
+			mtxConnection.awaitAndReset();
+			listener.removeNewCircuitListener(ncl);
+			return circuitId.get();
+		}
+		
+		public boolean acquire() {
+			control.mtxCircuitConnection.awaitAndReset();
+			
+			StreamEventListener listener;
+			if((listener = streamListener()) == null) {
+				return false;
+			}
+			
+			circuitId.set(ID_UNKNOWN);
+			listener.addNewCircuitListener(ncl);
+			return true;
+		}
+		
+		public boolean release() throws IOException {
+			StreamEventListener listener;
+			if((listener = streamListener()) == null) {
+				return false;
+			}
+			
+			listener.forgetCircuit(circuitId.get());
+			control.mtxCircuitConnection.unlockOne();
+			return true;
+		}
+	}
+	
+	public static final class TorCircuitConnection implements AutoCloseable {
+		
+		private final ConnectionWaiter waiter;
+		
+		private TorCircuitConnection(ConnectionWaiter waiter) {
+			this.waiter = waiter;
+		}
+		
+		public final int await() throws IOException {
+			return waiter.await();
+		}
+		
+		public boolean acquire() throws IOException {
+			return waiter.acquire();
+		}
+		
+		public boolean release() throws IOException {
+			return waiter.release();
+		}
+		
+		@Override
+		public void close() throws Exception {
+			release();
+		}
+	}
+	
 	@Override
 	public void close() throws Exception {
 		if(threadInput != null) {
@@ -386,32 +546,103 @@ public final class TorControl implements AutoCloseable {
 		
 		private static final String NAME = "STREAM";
 		
-		private static final Regex regexCanAccept = Regex.of("^\\d+ STREAM");
-		private static final Regex regexConnect = Regex.of("^\\d+ STREAM (?<streamId>\\d+) SENTCONNECT (?<circuitId>\\d+)");
+		// Tor control-spec.txt, section 4.1.2.
+		private static final Regex regexStatusChanged = Regex.of(
+			"^650 STREAM (?<streamId>\\d+) (?<state>[^\\s]+) (?<circuitId>\\d+) (?<target>[^\\s]+)(?: (?<attributes>.*?))?$"
+		);
 		
-		private final Map<Integer, Integer> streamIdToCircuitId = new ConcurrentHashMap<>();
+		private final Map<Integer, TorStream> streams = new HashMap<>();
 		private volatile int lastStreamId = ID_UNKNOWN;
+		
+		private final Set<Integer> circuitIds = Collections.newSetFromMap(new ConcurrentHashMap<>());
+		private final Deque<Consumer<Integer>> listenersNewCircuit = new ConcurrentLinkedDeque<>();
+		
+		public static final boolean isStreamEventLine(String line) {
+			return line.startsWith("650 STREAM");
+		}
 		
 		@Override
 		public boolean canAccept(String line) {
-			return regexCanAccept.matcher(line).find();
+			return isStreamEventLine(line);
 		}
 		
 		@Override
 		public void accept(String line) {
 			Matcher matcher;
-			if(!(matcher = regexConnect.matcher(line)).find()) {
+			if(!(matcher = regexStatusChanged.matcher(line)).find()) {
 				return;
 			}
 			
 			int streamId = Integer.valueOf(matcher.group("streamId"));
+			TorStream.Status status = TorStream.Status.of(matcher.group("state"));
 			int circuitId = Integer.valueOf(matcher.group("circuitId"));
-			streamIdToCircuitId.put(streamId, circuitId);
+			String target = matcher.group("target");
+			String strAttributes = matcher.group("attributes");
+			Map<String, String> attributes = null;
+			
+			if(strAttributes != null && !strAttributes.isEmpty()) {
+				attributes = new HashMap<>();
+				
+				for(int i = 0, l = strAttributes.length(); i < l;) {
+					int idx = strAttributes.indexOf(' ', i);
+					if(idx < 0) idx = strAttributes.length();
+					String strAttribute = strAttributes.substring(i, idx);
+					String[] parts = strAttribute.split("=", 2);
+					String name = parts[0];
+					String value = parts.length < 2 ? null : parts[1];
+					attributes.put(name, value);
+					i = idx + 1;
+				}
+			}
+			
+			TorStream stream = streams.get(streamId);
+			
+			if(stream == null) {
+				stream = TorStream.create(streamId, status, circuitId, target);
+				stream.attributes(attributes);
+				streams.put(streamId, stream);
+			} else {
+				stream.status(status);
+				stream.circuitId(circuitId);
+				stream.addTarget(target);
+				
+				if(attributes != null) {
+					stream.addAttributes(attributes);
+				}
+			}
+			
+			if(circuitIds.add(circuitId)) {
+				for(Consumer<Integer> listener : listenersNewCircuit) {
+					listener.accept(circuitId);
+				}
+			}
+			
 			lastStreamId = streamId;
 		}
 		
+		public void addNewCircuitListener(Consumer<Integer> listener) {
+			listenersNewCircuit.add(Objects.requireNonNull(listener));
+		}
+		
+		public void removeNewCircuitListener(Consumer<Integer> listener) {
+			listenersNewCircuit.remove(listener);
+		}
+		
+		public void forgetCircuit(int circuitId) {
+			circuitIds.remove(circuitId);
+		}
+		
+		public List<TorStream> streams() {
+			return List.copyOf(streams.values());
+		}
+		
+		public TorStream stream(int streamId) {
+			return streams.get(streamId);
+		}
+		
 		public int circuitId(int streamId) {
-			return streamIdToCircuitId.getOrDefault(streamId, ID_UNKNOWN);
+			TorStream stream = stream(streamId);
+			return stream == null ? ID_UNKNOWN : stream.circuitId();
 		}
 		
 		public int lastStreamId() {
