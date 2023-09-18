@@ -257,6 +257,21 @@ public final class TableWindow extends DraggableWindow<BorderPane> {
 		if(!selection.isEmpty()) notifySelection();
 	}
 	
+	/** @since 00.02.09 */
+	private final void setItems(List<Object> items) {
+		TableView<Object> table = this.table;
+		
+		FXUtils.thread(() -> {
+			// Fix: "index exceeds maxCellCount" JavaFX error
+			if(!items.isEmpty()) {
+				table.scrollTo(0);
+			}
+			
+			table.getItems().setAll(items);
+			table.sort();
+		});
+	}
+	
 	private final void clearSearchResults() {
 		FXUtils.thread(() -> txtSearch.setText(""));
 	}
@@ -264,20 +279,17 @@ public final class TableWindow extends DraggableWindow<BorderPane> {
 	private final void updateSearchResults(String text) {
 		TableWindowPipelineTaskBase<Object, PipelineResult<?>> task = currentTask();
 		String normalizedText = Utils.normalize(text).toLowerCase();
-		ObservableList<Object> tableItems = table.getItems();
+		List<Object> filtered;
+		
 		if(text == null || text.isEmpty()) {
-			FXUtils.thread(() -> tableItems.setAll(items));
+			filtered = items;
 		} else {
-			List<Object> filtered = items.stream()
-					.filter((item) -> task.filter(item, normalizedText))
-					.collect(Collectors.toList());
-			FXUtils.thread(() -> tableItems.setAll(filtered));
+			filtered = items.stream()
+				.filter((item) -> task.filter(item, normalizedText))
+				.collect(Collectors.toList());
 		}
-		FXUtils.thread(() -> {
-			// Fix: "index exceeds maxCellCount" JavaFX error
-			if(!tableItems.isEmpty())
-				table.scrollTo(0);
-		});
+		
+		setItems(filtered);
 	}
 	
 	private final void terminateAndClose() {
