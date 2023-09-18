@@ -4,10 +4,15 @@ import java.net.URI;
 import java.util.List;
 import java.util.Set;
 
+import sune.app.mediadown.MediaDownloader;
+import sune.app.mediadown.configuration.ApplicationConfiguration;
 import sune.app.mediadown.net.Net;
 import sune.app.mediadown.net.Web;
 import sune.app.mediadown.net.Web.Request;
 import sune.app.mediadown.net.Web.Response;
+import sune.app.mediadown.plugin.Plugin;
+import sune.app.mediadown.plugin.PluginFile;
+import sune.app.mediadown.plugin.Plugins;
 import sune.app.mediadown.util.JSON;
 import sune.app.mediadown.util.JSON.JSONCollection;
 import sune.app.mediadown.util.JSON.JSONObject;
@@ -66,13 +71,72 @@ public class Reporting {
 			payload.set("context", report.context().serialize(anonymize));
 			payload.set("data", report.serializeData(anonymize));
 			payload.set("note", JSONObject.of(report.note()));
-			payload.set("environment", OSInformation.obtain(anonymize));
+			
+			JSONCollection environment = JSONCollection.empty();
+			environment.set("os", OSInformation.obtain(anonymize));
+			environment.set("application", ApplicationInformation.obtain(anonymize));
+			payload.set("environment", environment);
 			
 			return payload;
 		}
 		
 		public static final Response.OfStream send(Report report, boolean anonymize) throws Exception {
 			return Web.requestStream(request(report, anonymize));
+		}
+	}
+	
+	private static final class ApplicationInformation {
+		
+		private ApplicationInformation() {
+		}
+		
+		private static final JSONCollection obtainConfiguration(boolean anonymize) {
+			JSONCollection configuration = JSONCollection.empty();
+			ApplicationConfiguration appConfig = MediaDownloader.configuration();
+			
+			configuration.set("accelerated_download", appConfig.acceleratedDownload());
+			configuration.set("compute_stream_size", appConfig.computeStreamSize());
+			configuration.set("is_auto_update_check", appConfig.isAutoUpdateCheck());
+			configuration.set("is_check_resources_integrity", appConfig.isCheckResourcesIntegrity());
+			configuration.set("is_plugins_auto_update_check", appConfig.isPluginsAutoUpdateCheck());
+			configuration.set("parallel_conversions", appConfig.parallelConversions());
+			configuration.set("parallel_downloads", appConfig.parallelDownloads());
+			configuration.set("request_connect_timeout", appConfig.requestConnectTimeout());
+			configuration.set("request_read_timeout", appConfig.requestReadTimeout());
+			configuration.set("use_pre_release_versions", appConfig.usePreReleaseVersions().name());
+			
+			return configuration;
+		}
+		
+		private static final JSONCollection obtainPlugins(boolean anonymize) {
+			JSONCollection plugins = JSONCollection.emptyArray();
+			
+			for(PluginFile pluginFile : Plugins.allLoaded()) {
+				JSONCollection plugin = JSONCollection.empty();
+				Plugin pluginInstance = pluginFile.getPlugin().instance();
+				
+				plugin.set("name", pluginInstance.name());
+				plugin.set("version", pluginInstance.version());
+				plugin.set("author", pluginInstance.author());
+				plugin.set("module_name", pluginInstance.moduleName());
+				plugin.set("url", pluginInstance.url());
+				
+				plugins.add(plugin);
+			}
+			
+			return plugins;
+		}
+		
+		public static final JSONCollection obtain(boolean anonymize) {
+			JSONCollection parent = JSONCollection.empty();
+			
+			parent.set("version", MediaDownloader.version().string());
+			parent.set("language", MediaDownloader.language().name());
+			parent.set("theme", MediaDownloader.theme().name());
+			parent.set("configuration", obtainConfiguration(anonymize));
+			parent.set("plugins", obtainPlugins(anonymize));
+			
+			return parent;
 		}
 	}
 	
