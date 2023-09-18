@@ -13,6 +13,7 @@ import sune.app.mediadown.entity.MediaGetter;
 import sune.app.mediadown.entity.Program;
 import sune.app.mediadown.gui.table.ResolvedMedia;
 import sune.app.mediadown.media.Media;
+import sune.app.mediadown.media.MediaContainer;
 import sune.app.mediadown.media.MediaConversionContext;
 import sune.app.mediadown.media.MediaDownloadContext;
 import sune.app.mediadown.media.MediaType;
@@ -103,11 +104,15 @@ public final class ReportSerialization {
 		data.set("isSolid", media.isSolid());
 		data.set("metadata", ReportSerialization.serialize(media.metadata().data()));
 		
-		Media parent;
-		if((parent = media.parent()) != null) {
-			data.set("parent", serialize(parent, anonymize));
-		} else {
-			data.setNull("parent");
+		if(media.isContainer()) {
+			JSONCollection children = JSONCollection.emptyArray();
+			MediaContainer container = (MediaContainer) media;
+			
+			for(Media child : container.media()) {
+				children.add(serialize(child, anonymize));
+			}
+			
+			data.set("media", children);
 		}
 		
 		return data;
