@@ -145,6 +145,7 @@ public final class Web {
 				Throwable cause = ex.getCause();
 				
 				if(cause instanceof IOException
+						&& cause.getMessage() != null
 						&& cause.getMessage().contains("GOAWAY received")) {
 					continue; // Retry the request
 				}
