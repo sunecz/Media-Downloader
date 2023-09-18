@@ -2,6 +2,7 @@ package sune.app.mediadown.media;
 
 import java.net.URI;
 import java.net.URL;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -91,6 +92,11 @@ public final class MediaMetadata {
 		return get(Properties.protections, List.of());
 	}
 	
+	/** @since 00.02.09 */
+	public final Instant expiration() {
+		return get(Properties.expiration, Instant.MAX);
+	}
+	
 	@Override
 	public int hashCode() {
 		return Objects.hash(data);
@@ -120,6 +126,8 @@ public final class MediaMetadata {
 		public static final String isProtected = "isProtected";
 		/** @since 00.02.09 */
 		public static final String protections = "protection";
+		/** @since 00.02.09 */
+		public static final String expiration = "expiration";
 	}
 	
 	public static final class Builder {
@@ -207,6 +215,12 @@ public final class MediaMetadata {
 			return this;
 		}
 		
+		/** @since 00.02.09 */
+		public final Builder expiration(Instant expiration) {
+			data.put(Properties.expiration, expiration);
+			return this;
+		}
+		
 		public final <T> T get(String name) {
 			@SuppressWarnings("unchecked")
 			T value = (T) this.data.get(name);
@@ -228,6 +242,11 @@ public final class MediaMetadata {
 		/** @since 00.02.09 */
 		public final List<MediaProtection> protections() {
 			return get(Properties.protections);
+		}
+		
+		/** @since 00.02.09 */
+		public final Instant expiration() {
+			return get(Properties.expiration);
 		}
 	}
 }
