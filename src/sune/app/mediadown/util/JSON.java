@@ -44,6 +44,8 @@ public final class JSON {
 	private static final int CHAR_ESCAPE_SLASH       = '\\';
 	private static final int CHAR_SEPARATOR_PROPERTY = ':';
 	private static final int CHAR_SEPARATOR_ELEMENT  = ',';
+	/** @since 00.02.09 */
+	private static final int CHAR_NAME_SEPARATOR     = '.';
 	
 	// Forbid anyone to create an instance of this class
 	private JSON() {
@@ -707,9 +709,17 @@ public final class JSON {
 		public abstract boolean isCollection();
 		
 		public JSONCollection parent() { return parent; }
-		public String fullName() { return parent != null ? parent.fullName() + (name != null ? name : "") : name; }
 		public String name() { return name; }
 		public JSONType type() { return type; }
+		
+		public String fullName() {
+			if(parent == null) {
+				return name;
+			}
+			
+			String prefix = parent.fullName();
+			return prefix == null ? name : prefix + (char) CHAR_NAME_SEPARATOR + name;
+		}
 		
 		public String toString() { return toString(0, false); }
 		public String toString(boolean compress) { return toString(0, compress); }
@@ -855,8 +865,6 @@ public final class JSON {
 	
 	/** @since 00.02.09 */
 	public static final class JSONCollection extends JSONNode implements Iterable<JSONNode> {
-		
-		private static final int CHAR_NAME_SEPARATOR = '.';
 		
 		private Map<String, JSONNode> nodes;
 		
