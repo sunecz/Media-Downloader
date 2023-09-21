@@ -920,14 +920,18 @@ public final class JSON {
 			return result;
 		}
 		
+		private static final <T> void iterableToCollection(Collection<T> collection, Iterable<T> iterable) {
+			for(T t : iterable) collection.add(t);
+		}
+		
 		private static final <T> List<T> iterableToList(Iterable<T> iterable) {
 			List<T> collection = new ArrayList<>();
 			iterableToCollection(collection, iterable);
 			return collection;
 		}
 		
-		private static final <T> void iterableToCollection(Collection<T> collection, Iterable<T> iterable) {
-			for(T t : iterable) collection.add(t);
+		private static final <T> List<T> iterableToUnmodifiableList(Iterable<T> iterable) {
+			return Collections.unmodifiableList(iterableToList(iterable));
 		}
 		
 		public static final JSONCollection empty(boolean isArray) { return new JSONCollection(isArray); }
@@ -1303,6 +1307,7 @@ public final class JSON {
 		@Override public boolean isCollection() { return true; }
 		
 		public int length() { return nodes == null ? 0 : nodes.size(); }
+		public boolean isEmpty() { return nodes == null || nodes.isEmpty(); }
 		
 		@Override public Iterator<JSONNode> iterator() { return nodesIterator(); }
 		public Iterator<JSONNode> nodesIterator() { return new Iterators.Nodes(this); }
@@ -1311,9 +1316,9 @@ public final class JSON {
 		public Iterable<JSONNode> nodesIterable() { return () -> nodesIterator(); }
 		public Iterable<JSONObject> objectsIterable() { return () -> objectsIterator(); }
 		public Iterable<JSONCollection> collectionsIterable() { return () -> collectionsIterator(); }
-		public List<JSONNode> nodes() { return Collections.unmodifiableList(iterableToList(nodesIterable())); }
-		public List<JSONObject> objects() { return Collections.unmodifiableList(iterableToList(objectsIterable())); }
-		public List<JSONCollection> collections() { return Collections.unmodifiableList(iterableToList(collectionsIterable())); }
+		public List<JSONNode> nodes() { return iterableToUnmodifiableList(nodesIterable()); }
+		public List<JSONObject> objects() { return iterableToUnmodifiableList(objectsIterable()); }
+		public List<JSONCollection> collections() { return iterableToUnmodifiableList(collectionsIterable()); }
 		
 		@Override
 		public void toString(StringBuilder builder, int depth, boolean compress) {
