@@ -722,7 +722,7 @@ public final class JSON {
 		
 		@Override
 		public int hashCode() {
-			return Objects.hash(name, parent, type);
+			return Objects.hash(type, name);
 		}
 		
 		@Override
@@ -734,7 +734,7 @@ public final class JSON {
 			if(getClass() != obj.getClass())
 				return false;
 			JSONNode other = (JSONNode) obj;
-			return Objects.equals(name, other.name) && Objects.equals(parent, other.parent) && type == other.type;
+			return type == other.type && Objects.equals(name, other.name);
 		}
 	}
 	
