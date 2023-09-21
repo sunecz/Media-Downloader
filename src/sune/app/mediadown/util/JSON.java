@@ -1321,9 +1321,9 @@ public final class JSON {
 		public Iterator<JSONNode> nodesIterator() { return new Iterators.Nodes(this); }
 		public Iterator<JSONObject> objectsIterator() { return new Iterators.Objects(this); }
 		public Iterator<JSONCollection> collectionsIterator() { return new Iterators.Collections(this); }
-		public Iterable<JSONNode> nodesIterable() { return () -> nodesIterator(); }
-		public Iterable<JSONObject> objectsIterable() { return () -> objectsIterator(); }
-		public Iterable<JSONCollection> collectionsIterable() { return () -> collectionsIterator(); }
+		public Iterable<JSONNode> nodesIterable() { return this::nodesIterator; }
+		public Iterable<JSONObject> objectsIterable() { return this::objectsIterator; }
+		public Iterable<JSONCollection> collectionsIterable() { return this::collectionsIterator; }
 		public List<JSONNode> nodes() { return iterableToUnmodifiableList(nodesIterable()); }
 		public List<JSONObject> objects() { return iterableToUnmodifiableList(objectsIterable()); }
 		public List<JSONCollection> collections() { return iterableToUnmodifiableList(collectionsIterable()); }
