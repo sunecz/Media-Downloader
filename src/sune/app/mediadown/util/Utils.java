@@ -224,9 +224,23 @@ public final class Utils {
 	// not using any built-in function and ignoring all other characters that
 	// are not defined as digits.
 	public static final int extractInt(String string) {
+		return extractIntOrDefault(string, null);
+	}
+	
+	/** @since 00.02.09 */
+	public static final int extractInt(String string, int defaultValue) {
+		return extractIntOrDefault(string, defaultValue);
+	}
+	
+	// Provides realtively fast method for converting a string into an integer
+	// not using any built-in function and ignoring all other characters that
+	// are not defined as digits.
+	/** @since 00.02.09 */
+	private static final int extractIntOrDefault(String string, Integer defaultValue) {
 		if(string == null || string.isEmpty()) {
 			throw new IllegalArgumentException(
-				"The given string cannot be null nor empty!");
+				"The given string cannot be null nor empty!"
+			);
 		}
 		
 		int value = 0;
@@ -245,7 +259,8 @@ public final class Utils {
 				if(val > value || (!neg && val == Integer.MIN_VALUE)) {
 					throw new IllegalArgumentException(
 						"The given string contains number outside of " +
-						"the range of a signed integer!");
+						"the range of a signed integer!"
+					);
 				}
 				
 				value = val;
@@ -254,8 +269,13 @@ public final class Utils {
 		}
 		
 		if(!has) {
-			throw new IllegalArgumentException(
-				"The given string does not contain any digit!");
+			if(defaultValue == null) {
+				throw new IllegalArgumentException(
+					"The given string does not contain any digit!"
+				);
+			}
+			
+			return defaultValue;
 		}
 		
 		return neg ? value : -value;
