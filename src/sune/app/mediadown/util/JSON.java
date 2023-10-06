@@ -708,6 +708,13 @@ public final class JSON {
 		public abstract boolean isObject();
 		public abstract boolean isCollection();
 		
+		/** @since 00.02.09 */
+		public void clear() {
+			parent = null;
+			name = null;
+			type = null;
+		}
+		
 		public JSONCollection parent() { return parent; }
 		public String name() { return name; }
 		public JSONType type() { return type; }
@@ -804,6 +811,13 @@ public final class JSON {
 		
 		// Do not expose to the public interface
 		private static final JSONObject ofStringUnquoted(String value) { return new JSONObject(JSONType.STRING_UNQUOTED, value); }
+		
+		/** @since 00.02.09 */
+		@Override
+		public void clear() {
+			super.clear();
+			value = null;
+		}
 		
 		@Override public JSONObject copy() { return new JSONObject(parent, name, type, value); }
 		@Override public boolean isObject() { return true; }
@@ -1310,11 +1324,23 @@ public final class JSON {
 		public void removeDouble(int index) { remove(indexName(index), JSONType.DECIMAL); }
 		public void removeString(int index) { remove(indexName(index), JSONType.STRING); }
 		
+		/** @since 00.02.09 */
+		@Override
+		public void clear() {
+			super.clear();
+			
+			if(nodes != null) {
+				nodes.clear();
+				nodes = null;
+			}
+		}
+		
 		@Override public JSONCollection copy() { return new JSONCollection(parent, name, type, nodes); }
 		@Override public boolean isObject() { return false; }
 		@Override public boolean isCollection() { return true; }
 		
 		public int length() { return nodes == null ? 0 : nodes.size(); }
+		/** @since 00.02.09 */
 		public boolean isEmpty() { return nodes == null || nodes.isEmpty(); }
 		
 		@Override public Iterator<JSONNode> iterator() { return nodesIterator(); }
