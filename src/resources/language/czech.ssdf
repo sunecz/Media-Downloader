@@ -321,7 +321,7 @@
 				url_invalid: "Neplatná URL adresa",
 				unsupported_urls: {
 					title: "Chyba - Nepodporované URL",
-					description: "Níže uvedené URL nemohly být rozpoznány."
+					description: "Následující URL adresy nejsou podporovány."
 				}
 			},
 			getter: {

@@ -321,7 +321,7 @@
 				url_invalid: "Invalid URL address",
 				unsupported_urls: {
 					title: "Error - Unsupported URLs",
-					description: "URLs below could not be recognized."
+					description: "The following URLs are not supported."
 				}
 			},
 			getter: {
