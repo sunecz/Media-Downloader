@@ -127,10 +127,6 @@ public class FileCredentialsStore implements CredentialsStore {
 		try {
 			String type = credentials.getClass().getName();
 			data = credentials.serialize();
-			int size = path.length() + type.length() + data.length + 3 * Integer.BYTES;
-			ByteBuffer buf = ByteBuffer.allocate(size);
-			writeString(buf, path);
-			writeString(buf, type);
 			
 			byte[] modified;
 			if((modified = modifySerializationData(data)) != data) {
@@ -138,6 +134,11 @@ public class FileCredentialsStore implements CredentialsStore {
 			}
 			
 			data = modified;
+			
+			int size = path.length() + type.length() + data.length + 3 * Integer.BYTES;
+			ByteBuffer buf = ByteBuffer.allocate(size);
+			writeString(buf, path);
+			writeString(buf, type);
 			writeInt(buf, data.length);
 			buf.put(data);
 			return buf.flip();
@@ -580,10 +581,21 @@ public class FileCredentialsStore implements CredentialsStore {
 				return true;
 			}
 			
+			private final boolean initBuffer() throws IOException {
+				buf.compact();
+				
+				if(fillBuffer() < 0) {
+					return false;
+				}
+				
+				buf.flip();
+				return true;
+			}
+			
 			protected Table read() throws IOException {
 				Table table = new Table(channel.position());
 				
-				if(fillBuffer() < 0) { // Prefill buffer
+				if(!initBuffer()) {
 					return null;
 				}
 				
