@@ -102,6 +102,8 @@ public class FileCredentialsStore implements CredentialsStore {
 		return buf.getInt();
 	}
 	
+	// Note: The given buffer must contain the whole string, i.e. at least the length
+	//       of the string and the string's contents.
 	protected final String readString(ByteBuffer buf) {
 		int length = buf.getInt();
 		buf.limit(buf.position() + length);

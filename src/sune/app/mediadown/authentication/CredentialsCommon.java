@@ -8,7 +8,7 @@ import java.util.Objects;
 
 import sune.app.mediadown.Shared;
 import sune.app.mediadown.util.JSON;
-import sune.app.mediadown.util.JSON.JSONNode;
+import sune.app.mediadown.util.JSON.JSONCollection;
 
 /** @since 00.02.09 */
 public final class CredentialsCommon {
@@ -25,11 +25,9 @@ public final class CredentialsCommon {
 		return new String(Objects.requireNonNull(data), Shared.CHARSET);
 	}
 	
-	public static final <T extends JSONNode> T json(byte[] data) {
+	public static final JSONCollection json(byte[] data) {
 		try(ByteArrayInputStream stream = new ByteArrayInputStream(data)) {
-			@SuppressWarnings("unchecked")
-			T json = (T) JSON.read(stream, Shared.CHARSET);
-			return json;
+			return JSON.read(stream, Shared.CHARSET);
 		} catch(IOException ex) {
 			// Should not happen
 		}
@@ -56,7 +54,7 @@ public final class CredentialsCommon {
 		Arrays.fill(fill, (byte) 0x00);
 		
 		for(int pos = 0; pos < cap; pos += len) {
-			buf.put(fill, 0, len);
+			buf.put(fill, 0, Math.min(cap - pos, len));
 		}
 	}
 }

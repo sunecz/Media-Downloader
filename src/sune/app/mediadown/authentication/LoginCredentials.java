@@ -29,8 +29,8 @@ public class LoginCredentials implements Credentials {
 	
 	// Method to be reused by subclasses
 	protected void serialize(JSONCollection json) {
-		json.set("username", getUsername());
-		json.set("password", getPassword());
+		json.set("username", CredentialsCommon.string(username));
+		json.set("password", CredentialsCommon.string(password));
 	}
 	
 	// Method to be reused by subclasses
@@ -47,7 +47,9 @@ public class LoginCredentials implements Credentials {
 		
 		JSONCollection data = JSONCollection.empty();
 		serialize(data);
-		return CredentialsCommon.bytes(data.toString(true));
+		byte[] bytes = CredentialsCommon.bytes(data.toString(true));
+		data.clear();
+		return bytes;
 	}
 	
 	@Override
