@@ -11,10 +11,10 @@ import sune.app.mediadown.util.JSON;
 import sune.app.mediadown.util.JSON.JSONCollection;
 
 /** @since 00.02.09 */
-public final class CredentialsCommon {
+public final class CredentialsUtils {
 	
 	// Forbid anyone to create an instance of this class
-	private CredentialsCommon() {
+	private CredentialsUtils() {
 	}
 	
 	public static final byte[] bytes(String data) {

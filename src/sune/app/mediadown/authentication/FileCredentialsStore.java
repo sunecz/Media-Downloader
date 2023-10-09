@@ -132,7 +132,7 @@ public class FileCredentialsStore implements CredentialsStore {
 			
 			byte[] modified;
 			if((modified = modifySerializationData(data)) != data) {
-				CredentialsCommon.dispose(data);
+				CredentialsUtils.dispose(data);
 			}
 			
 			data = modified;
@@ -146,7 +146,7 @@ public class FileCredentialsStore implements CredentialsStore {
 			return buf.flip();
 		} finally {
 			if(data != null) {
-				CredentialsCommon.dispose(data);
+				CredentialsUtils.dispose(data);
 				data = null;
 			}
 		}
@@ -184,7 +184,7 @@ public class FileCredentialsStore implements CredentialsStore {
 			
 			byte[] modified;
 			if((modified = modifyDeserializationData(data)) != data) {
-				CredentialsCommon.dispose(data);
+				CredentialsUtils.dispose(data);
 			}
 			
 			data = modified;
@@ -192,7 +192,7 @@ public class FileCredentialsStore implements CredentialsStore {
 			return credentials;
 		} finally {
 			if(data != null) {
-				CredentialsCommon.dispose(data);
+				CredentialsUtils.dispose(data);
 				data = null;
 			}
 		}
@@ -231,7 +231,7 @@ public class FileCredentialsStore implements CredentialsStore {
 			return deserialize(type, buf, len);
 		} finally {
 			if(buf != null) {
-				CredentialsCommon.dispose(buf);
+				CredentialsUtils.dispose(buf);
 				buf = null;
 			}
 		}
@@ -263,7 +263,7 @@ public class FileCredentialsStore implements CredentialsStore {
 			}
 		} finally {
 			if(buf != null) {
-				CredentialsCommon.dispose(buf);
+				CredentialsUtils.dispose(buf);
 				buf = null;
 			}
 		}
@@ -585,11 +585,7 @@ public class FileCredentialsStore implements CredentialsStore {
 			
 			private final boolean initBuffer() throws IOException {
 				buf.compact();
-				
-				if(fillBuffer() < 0) {
-					return false;
-				}
-				
+				fillBuffer(); // Ignore EOF
 				buf.flip();
 				return true;
 			}

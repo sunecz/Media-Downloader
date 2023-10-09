@@ -7,7 +7,7 @@ import sune.app.mediadown.concurrent.VarLoader;
 import sune.app.mediadown.util.JSON.JSONCollection;
 
 /** @since 00.02.09 */
-public class LoginCredentials implements Credentials {
+public class LoginCredentials implements Credentials, AutoCloseable {
 	
 	private static final VarLoader<LoginCredentials> empty = VarLoader.of(LoginCredentials::new);
 	
@@ -23,20 +23,24 @@ public class LoginCredentials implements Credentials {
 		this.password = Arrays.copyOf(Objects.requireNonNull(password), password.length);
 	}
 	
+	public LoginCredentials(String username, String password) {
+		this(CredentialsUtils.bytes(username), CredentialsUtils.bytes(password));
+	}
+	
 	public static final LoginCredentials empty() {
 		return empty.value();
 	}
 	
 	// Method to be reused by subclasses
 	protected void serialize(JSONCollection json) {
-		json.set("username", CredentialsCommon.string(username));
-		json.set("password", CredentialsCommon.string(password));
+		json.set("username", CredentialsUtils.string(username));
+		json.set("password", CredentialsUtils.string(password));
 	}
 	
 	// Method to be reused by subclasses
 	protected void deserialize(JSONCollection json) {
-		username = CredentialsCommon.bytes(json.getString("username"));
-		password = CredentialsCommon.bytes(json.getString("password"));
+		username = CredentialsUtils.bytes(json.getString("username"));
+		password = CredentialsUtils.bytes(json.getString("password"));
 	}
 	
 	@Override
@@ -47,14 +51,14 @@ public class LoginCredentials implements Credentials {
 		
 		JSONCollection data = JSONCollection.empty();
 		serialize(data);
-		byte[] bytes = CredentialsCommon.bytes(data.toString(true));
+		byte[] bytes = CredentialsUtils.bytes(data.toString(true));
 		data.clear();
 		return bytes;
 	}
 	
 	@Override
 	public void deserialize(byte[] data) {
-		JSONCollection json = CredentialsCommon.json(data);
+		JSONCollection json = CredentialsUtils.json(data);
 		deserialize(json);
 		json.clear();
 		disposed = false;
@@ -66,11 +70,16 @@ public class LoginCredentials implements Credentials {
 			return;
 		}
 		
-		CredentialsCommon.dispose(username);
-		CredentialsCommon.dispose(password);
+		CredentialsUtils.dispose(username);
+		CredentialsUtils.dispose(password);
 		username = null;
 		password = null;
 		disposed = true;
+	}
+	
+	@Override
+	public void close() {
+		dispose();
 	}
 	
 	@Override
@@ -84,10 +93,10 @@ public class LoginCredentials implements Credentials {
 	}
 	
 	public String getUsername() {
-		return isInitialized() ? CredentialsCommon.string(username) : null;
+		return isInitialized() ? CredentialsUtils.string(username) : null;
 	}
 	
 	public String getPassword() {
-		return isInitialized() ? CredentialsCommon.string(password) : null;
+		return isInitialized() ? CredentialsUtils.string(password) : null;
 	}
 }

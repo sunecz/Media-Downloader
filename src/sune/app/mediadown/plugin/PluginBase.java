@@ -4,7 +4,7 @@ import javafx.scene.image.Image;
 import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.language.Translation;
 
-public abstract class PluginBase {
+public abstract class PluginBase implements PluginInstance {
 	
 	private final Plugin plugin;
 	private final PluginFile context;
@@ -17,8 +17,8 @@ public abstract class PluginBase {
 			throw new IllegalStateException("Invalid plugin. Missing Plugin annotation.");
 	}
 	
-	public abstract void init() throws Exception;
-	public abstract void dispose() throws Exception;
+	@Override public abstract void init() throws Exception;
+	@Override public abstract void dispose() throws Exception;
 	
 	/** @since 00.02.04 */
 	public PluginConfiguration.Builder configuration() {
