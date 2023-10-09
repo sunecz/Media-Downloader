@@ -589,6 +589,11 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 				
 				ConfigurationTab tab = selectedItem.getValue();
 				content.getChildren().setAll(tab.content());
+				
+				if(!selectedItem.getChildren().isEmpty()) {
+					selectedItem.setExpanded(true);
+				}
+				
 				selectedTabProperty.set(tab);
 			});
 			
