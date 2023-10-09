@@ -75,6 +75,7 @@
 					item: {
 						information:   "Informace",
 						configuration: "Nastavení",
+						credentials:   "Přihlašovací údaje",
 						messages:      "Zprávy",
 						about:         "O programu"
 					}
@@ -487,6 +488,24 @@
 					text:  "Poznámka je povinná!"
 				}
 			}
+		},
+		credentials: {
+			title: "Přihlašovací údaje",
+			column: {
+				title: "Název"
+			},
+			button: {
+				edit: "Upravit"
+			}
+		},
+		dialogs: {
+			credentials_edit: {
+				title: "Přihlašovací údaje - %{title}",
+				button: {
+					save:   "Uložit",
+					cancel: "Zrušit"
+				}
+			}
 		}
 	},
 	dialogs: {
@@ -577,6 +596,22 @@
 		naming: {
 			word_season:  "sezóna",
 			word_episode: "díl"
+		}
+	},
+	credentials: {
+		type: {
+			username_credentials: {
+				label: {
+					username: "Uživatelské jméno",
+					password: "Heslo"
+				}
+			},
+			email_credentials: {
+				label: {
+					email:    "Email",
+					password: "Heslo"
+				}
+			}
 		}
 	}
 }

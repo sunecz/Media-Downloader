@@ -75,6 +75,7 @@
 					item: {
 						information:   "Information",
 						configuration: "Configuration",
+						credentials:   "Login credentials",
 						messages:      "Messages",
 						about:         "About"
 					}
@@ -487,6 +488,24 @@
 					text:  "A note is required!"
 				}
 			}
+		},
+		credentials: {
+			title: "Login credentials",
+			column: {
+				title: "Name"
+			},
+			button: {
+				edit: "Edit"
+			}
+		},
+		dialogs: {
+			credentials_edit: {
+				title: "Login credentials - %{title}",
+				button: {
+					save:   "Save",
+					cancel: "Cancel"
+				}
+			}
 		}
 	},
 	dialogs: {
@@ -577,6 +596,22 @@
 		naming: {
 			word_season:  "season",
 			word_episode: "episode"
+		}
+	},
+	credentials: {
+		type: {
+			username_credentials: {
+				label: {
+					username: "Username",
+					password: "Password"
+				}
+			},
+			email_credentials: {
+				label: {
+					email:    "Email",
+					password: "Password"
+				}
+			}
 		}
 	}
 }

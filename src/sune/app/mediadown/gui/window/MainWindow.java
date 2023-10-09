@@ -136,6 +136,8 @@ public final class MainWindow extends Window<BorderPane> {
 	private Menu menuApplication;
 	private MenuItem menuItemInformation;
 	private MenuItem menuItemConfiguration;
+	/** @since 00.02.09 */
+	private MenuItem menuItemCredentials;
 	private MenuItem menuItemMessages;
 	/** @since 00.02.08 */
 	private MenuItem menuItemAbout;
@@ -682,6 +684,11 @@ public final class MainWindow extends Window<BorderPane> {
 			MediaDownloader.window(ConfigurationWindow.NAME).show(this);
 		});
 		
+		menuItemCredentials = new MenuItem(tr("menu_bar.application.item.credentials"));
+		menuItemCredentials.setOnAction((e) -> {
+			showCredentialsWindow();
+		});
+		
 		menuItemMessages = new MenuItem(tr("menu_bar.application.item.messages"));
 		menuItemMessages.setOnAction((e) -> resetAndShowMessagesAsync());
 		
@@ -731,7 +738,9 @@ public final class MainWindow extends Window<BorderPane> {
 			Ignore.callVoid(() -> OS.current().browse(Net.uri(URI_DOCUMENTATION)), MediaDownloader::error);
 		});
 		
-		menuApplication.getItems().addAll(menuItemInformation, menuItemConfiguration, menuItemMessages, menuItemAbout);
+		menuApplication.getItems().addAll(
+			menuItemInformation, menuItemConfiguration, menuItemCredentials, menuItemMessages, menuItemAbout
+		);
 		menuTools.getItems().addAll(menuItemClipboardWatcher, menuItemUpdateResources);
 		menuHelp.getItems().addAll(menuItemReportIssue, menuItemFeedback, menuItemDocumentation);
 		menuBar.getMenus().addAll(menuApplication, menuTools, menuHelp);
@@ -921,6 +930,11 @@ public final class MainWindow extends Window<BorderPane> {
 	/** @since 00.02.08 */
 	private final void showAboutWindow() {
 		MediaDownloader.window(AboutWindow.NAME).show(this);
+	}
+	
+	/** @since 00.02.09 */
+	private final void showCredentialsWindow() {
+		MediaDownloader.window(CredentialsWindow.NAME).show(this);
 	}
 	
 	private final void prepareContextMenuForShowing(ContextMenu contextMenu) {

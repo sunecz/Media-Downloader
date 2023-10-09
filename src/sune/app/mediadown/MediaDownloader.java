@@ -58,6 +58,8 @@ import sune.app.mediadown.gui.Window;
 import sune.app.mediadown.gui.window.AboutWindow;
 import sune.app.mediadown.gui.window.ClipboardWatcherWindow;
 import sune.app.mediadown.gui.window.ConfigurationWindow;
+import sune.app.mediadown.gui.window.CredentialsEditDialogWindow;
+import sune.app.mediadown.gui.window.CredentialsWindow;
 import sune.app.mediadown.gui.window.DownloadConfigurationWindow;
 import sune.app.mediadown.gui.window.InformationWindow;
 import sune.app.mediadown.gui.window.MainWindow;
@@ -1899,6 +1901,8 @@ public final class MediaDownloader {
 			windows.register(ClipboardWatcherWindow.NAME, initializator(ClipboardWatcherWindow::new));
 			windows.register(AboutWindow.NAME, initializator(AboutWindow::new));
 			windows.register(ReportWindow.NAME, initializator(ReportWindow::new));
+			windows.register(CredentialsWindow.NAME, initializator(CredentialsWindow::new));
+			windows.register(CredentialsEditDialogWindow.NAME, initializator(CredentialsEditDialogWindow::new));
 		}
 		
 		/** @since 00.02.09 */
@@ -2318,7 +2322,7 @@ public final class MediaDownloader {
 	
 	public static final <W extends Window<?>> W window(String name) {
 		@SuppressWarnings("unchecked")
-		W casted = Ignore.call(() -> (W) GUI.windows.get(name));
+		W casted = Ignore.call(() -> (W) GUI.windows.get(name), MediaDownloader::error);
 		return casted;
 	}
 	
