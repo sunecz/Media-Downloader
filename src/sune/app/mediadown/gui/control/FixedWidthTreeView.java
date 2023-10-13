@@ -247,7 +247,7 @@ public class FixedWidthTreeView<T> extends TreeView<T> {
 				}
 				
 				double gap = getGraphicTextGap();
-				double graphicWidth = ARROW_DEFAULT_WIDTH;
+				double graphicWidth = 2.0 * ARROW_DEFAULT_WIDTH + gap;
 				Node graphic = getGraphic();
 				
 				if(graphic != null) {
