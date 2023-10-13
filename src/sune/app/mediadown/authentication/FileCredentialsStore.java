@@ -13,8 +13,10 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.Objects;
@@ -294,7 +296,8 @@ public class FileCredentialsStore implements CredentialsStore {
 	
 	protected static final class Table {
 		
-		private final TreeMap<String, MapEntry> map = new TreeMap<>(Comparator.reverseOrder());
+		private final TreeMap<Long, MapEntry> map = new TreeMap<>();
+		private final Map<String, Long> mapOffsets = new HashMap<>();
 		private final long baseOffset;
 		
 		private Table(long baseOffset) {
@@ -306,7 +309,7 @@ public class FileCredentialsStore implements CredentialsStore {
 		}
 		
 		private final Row add(String path, long size) {
-			Entry<String, MapEntry> lastEntry = map.lastEntry();
+			Entry<Long, MapEntry> lastEntry = map.lastEntry();
 			long offset = baseOffset;
 			
 			if(lastEntry != null) {
@@ -314,48 +317,66 @@ public class FileCredentialsStore implements CredentialsStore {
 				offset = last.offset() + last.size();
 			}
 			
-			map.put(path, new MapEntry(offset, size));
+			map.put(offset, new MapEntry(path, offset, size));
+			mapOffsets.put(path, offset);
 			return new Row(offset, size);
 		}
 		
 		private final void reoffset(Collection<MapEntry> items, int startIndex, int endIndex, long startOffset) {
 			long offset = startOffset;
 			Iterator<MapEntry> it = items.iterator();
+			int size = endIndex - startIndex;
 			
 			while(it.hasNext() && startIndex-- > 0) {
 				it.next();
 				--endIndex;
 			}
 			
+			// Also remember the MapEntry since there may be a conflict and the actual
+			// old value would be removed.
+			Map<Long, MapEntry> newOffsets = new LinkedHashMap<>(size);
+			
 			while(it.hasNext() && endIndex-- > 0) {
 				MapEntry item = it.next();
+				long oldOffset = item.offset();
 				item.offset(offset);
+				String path = item.path();
+				mapOffsets.put(path, offset);
+				newOffsets.put(oldOffset, item);
 				offset += item.size();
+			}
+			
+			for(Entry<Long, MapEntry> pair : newOffsets.entrySet()) {
+				MapEntry entry = pair.getValue();
+				map.remove(pair.getKey());
+				map.put(entry.offset(), entry);
 			}
 		}
 		
 		public boolean has(String path) {
-			return map.containsKey(path);
+			return mapOffsets.containsKey(path);
 		}
 		
 		public Row get(String path) {
-			MapEntry last = map.get(path);
+			Long offset = mapOffsets.get(path);
 			
-			if(last == null) {
+			if(offset == null) {
 				return null;
 			}
 			
-			return new Row(last.offset(), last.size());
+			MapEntry entry = map.get(offset);
+			return new Row(entry.offset(), entry.size());
 		}
 		
 		public Row set(String path, long size) {
-			NavigableMap<String, MapEntry> tail = map.tailMap(path, true);
-			Entry<String, MapEntry> firstEntry;
+			Long offset = mapOffsets.get(path);
 			
-			if(tail.isEmpty() || !(firstEntry = tail.firstEntry()).getKey().equals(path)) {
+			if(offset == null) {
 				return add(path, size);
 			}
 			
+			NavigableMap<Long, MapEntry> tail = map.tailMap(offset, true);
+			Entry<Long, MapEntry> firstEntry = tail.firstEntry();
 			MapEntry first = firstEntry.getValue();
 			first.size(size);
 			reoffset(tail.values(), 1, tail.size(), first.offset() + size);
@@ -363,24 +384,29 @@ public class FileCredentialsStore implements CredentialsStore {
 		}
 		
 		public Row remove(String path) {
-			NavigableMap<String, MapEntry> tail = map.tailMap(path, true);
+			Long offset = mapOffsets.remove(path);
 			
-			if(tail.isEmpty() || !tail.lastKey().equals(path)) {
+			if(offset == null) {
 				return null;
 			}
 			
-			MapEntry last = map.lastEntry().getValue();
-			reoffset(tail.values(), 0, tail.size() - 1, last.offset());
-			MapEntry removed = map.remove(path);
+			NavigableMap<Long, MapEntry> tail = map.tailMap(offset, false);
+			MapEntry removed = map.remove(offset);
+			
+			if(!tail.isEmpty()) {
+				reoffset(tail.values(), 0, tail.size(), offset);
+			}
+			
 			return new Row(removed.offset(), removed.size());
 		}
 		
 		public Set<String> paths() {
-			return map.keySet();
+			return mapOffsets.keySet();
 		}
 		
 		public void clear() {
 			map.clear();
+			mapOffsets.clear();
 		}
 		
 		public static final class Row {
@@ -397,42 +423,23 @@ public class FileCredentialsStore implements CredentialsStore {
 			public long size() { return size; }
 		}
 		
-		private static final class MapEntry implements Comparable<MapEntry> {
+		private static final class MapEntry {
 			
+			private final String path;
 			private long offset;
 			private long size;
 			
-			public MapEntry(long offset, long size) {
+			public MapEntry(String path, long offset, long size) {
+				this.path = path;
 				this.offset = offset;
 				this.size = size;
 			}
 			
+			public String path() { return path; }
 			public void offset(long offset) { this.offset = offset; }
 			public long offset() { return offset; }
 			public void size(long size) { this.size = size; }
 			public long size() { return size; }
-			
-			@Override
-			public int hashCode() {
-				return Objects.hash(offset, size);
-			}
-			
-			@Override
-			public boolean equals(Object obj) {
-				if(this == obj)
-					return true;
-				if(obj == null)
-					return false;
-				if(getClass() != obj.getClass())
-					return false;
-				MapEntry other = (MapEntry) obj;
-				return offset == other.offset && size == other.size;
-			}
-			
-			@Override
-			public int compareTo(MapEntry other) {
-				return Long.compare(offset, other.offset);
-			}
 		}
 		
 		private static final class Reader {
