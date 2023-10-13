@@ -138,7 +138,7 @@ public class CredentialsWindow extends DraggableWindow<VBox> {
 	private static final TableColumn<CredentialsEntryItem, String> columnTitle(String title) {
 		TableColumn<CredentialsEntryItem, String> column = new TableColumn<>(title);
 		column.setCellValueFactory(new PropertyValueFactory<>("title"));
-		column.setPrefWidth(250.0);
+		column.setPrefWidth(280.0);
 		column.setReorderable(false);
 		return column;
 	}

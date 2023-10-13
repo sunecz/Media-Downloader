@@ -15,6 +15,7 @@ import java.util.stream.Stream;
 
 import sune.app.mediadown.configuration.Configuration;
 import sune.app.mediadown.configuration.Configuration.ConfigurationProperty;
+import sune.app.mediadown.util.Reflection;
 import sune.app.mediadown.util.UncheckedException;
 import sune.app.mediadown.util.Utils;
 
@@ -163,11 +164,14 @@ public final class CredentialsMigrator {
 			
 			Credentials instance;
 			try {
+				Reflection.setAccessible(constructor, true);
 				instance = constructor.newInstance(args);
 			} catch(InstantiationException
 						| InvocationTargetException
 						| IllegalAccessException
-						| IllegalArgumentException ex) {
+						| IllegalArgumentException
+						| NoSuchFieldException
+						| SecurityException ex) {
 				throw new UncheckedException(ex);
 			}
 			

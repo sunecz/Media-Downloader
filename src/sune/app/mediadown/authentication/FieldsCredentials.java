@@ -1,5 +1,6 @@
 package sune.app.mediadown.authentication;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
@@ -30,6 +31,19 @@ public class FieldsCredentials implements Credentials, AutoCloseable {
 		}
 		
 		return fields;
+	}
+	
+	protected final void defineFields(Object... fields) {
+		defineFields(Utils.<String, byte[]>toMap(fields));
+	}
+	
+	protected final void defineFields(Map<String, byte[]> fields) {
+		checkFields(fields);
+		int size = this.fields.size() + fields.size();
+		Map<String, byte[]> newFields = new LinkedHashMap<>(size);
+		newFields.putAll(this.fields);
+		newFields.putAll(fields);
+		this.fields = newFields;
 	}
 	
 	// Method to be reused by subclasses
