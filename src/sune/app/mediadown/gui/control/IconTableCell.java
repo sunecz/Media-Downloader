@@ -1,11 +1,13 @@
 package sune.app.mediadown.gui.control;
 
+import java.util.Objects;
+
 import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.TableCell;
 import javafx.scene.image.ImageView;
 
 /** @since 00.02.09 */
-public abstract class IconTableCell<T> extends TableCell<T, String> {
+public abstract class IconTableCell<T, V> extends TableCell<T, V> {
 	
 	protected ImageView icon;
 	
@@ -13,18 +15,14 @@ public abstract class IconTableCell<T> extends TableCell<T, String> {
 		getStyleClass().add("has-icon");
 	}
 	
-	protected abstract ImageView iconView();
+	protected abstract ImageView iconView(V value);
 	
-	protected void initialize() {
-		if(isInitialized()) {
-			return;
-		}
-		
+	protected void update(V value) {
 		if(getTableRow().getItem() == null) {
 			return;
 		}
 		
-		ImageView view = iconView();
+		ImageView view = iconView(value);
 		
 		if(view == null) {
 			return;
@@ -47,13 +45,9 @@ public abstract class IconTableCell<T> extends TableCell<T, String> {
 		return icon != null;
 	}
 	
-	protected void value(String value) {
-		initialize();
-	}
-	
 	@Override
-	protected void updateItem(String item, boolean empty) {
-		if(item == getItem() && isInitialized()) {
+	protected void updateItem(V item, boolean empty) {
+		if(Objects.equals(item, getItem()) && isInitialized()) {
 			return;
 		}
 		
@@ -64,7 +58,7 @@ public abstract class IconTableCell<T> extends TableCell<T, String> {
 			setGraphic(null);
 			dispose();
 		} else {
-			value(item);
+			update(item);
 		}
 	}
 }

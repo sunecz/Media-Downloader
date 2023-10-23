@@ -8,6 +8,7 @@ import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.geometry.Insets;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumn.SortType;
@@ -47,7 +48,7 @@ public class CredentialsWindow extends DraggableWindow<VBox> {
 		
 		table = new TableView<>();
 		TableColumn<CredentialsEntryItem, String> columnIcon = columnIcon("");
-		TableColumn<CredentialsEntryItem, String> columnTitle = columnTitle(translation.getSingle("column.title"));
+		TableColumn<CredentialsEntryItem, String> columnTitle = columnTitle(tr("table.column.title"));
 		table.getColumns().add(columnIcon);
 		table.getColumns().add(columnTitle);
 		columnTitle.setSortType(SortType.ASCENDING);
@@ -56,9 +57,10 @@ public class CredentialsWindow extends DraggableWindow<VBox> {
 		table.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
 		table.getSelectionModel().selectedItemProperty().addListener((o, ov, nv) -> itemSelected(nv));
 		table.setMaxWidth(Double.MAX_VALUE);
+		table.setPlaceholder(new Label(tr("table.placeholder")));
 		
 		boxButtons = new HBox(5.0);
-		btnEdit = new Button(translation.getSingle("button.edit"));
+		btnEdit = new Button(tr("button.edit"));
 		btnEdit.setOnAction((e) -> editSelectedCredentials());
 		HBox fill = new HBox();
 		HBox.setHgrow(fill, Priority.ALWAYS);
@@ -86,6 +88,7 @@ public class CredentialsWindow extends DraggableWindow<VBox> {
 				.map(CredentialsEntryItem::new)
 				.collect(Collectors.toList())
 		);
+		table.sort();
 	}
 	
 	private final void itemSelected(CredentialsEntryItem item) {
@@ -143,10 +146,10 @@ public class CredentialsWindow extends DraggableWindow<VBox> {
 		return column;
 	}
 	
-	private static final class CredentialsEntryIconTableCell extends IconTableCell<CredentialsEntryItem> {
+	private static final class CredentialsEntryIconTableCell extends IconTableCell<CredentialsEntryItem, String> {
 		
 		@Override
-		protected ImageView iconView() {
+		protected ImageView iconView(String value) {
 			Image image = getTableRow().getItem().icon();
 			
 			if(image == null) {
@@ -173,7 +176,7 @@ public class CredentialsWindow extends DraggableWindow<VBox> {
 		
 		public StringProperty iconProperty() {
 			return iconProperty == null
-						? iconProperty = new SimpleStringProperty("")
+						? iconProperty = new SimpleStringProperty(name())
 						: iconProperty;
 		}
 		
@@ -184,6 +187,7 @@ public class CredentialsWindow extends DraggableWindow<VBox> {
 		}
 		
 		public CredentialsEntry entry() { return entry; }
+		public String name() { return entry.name(); }
 		public String title() { return entry.title(); }
 		public Image icon() { return entry.icon(); }
 	}

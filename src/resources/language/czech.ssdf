@@ -491,8 +491,11 @@
 		},
 		credentials: {
 			title: "Přihlašovací údaje",
-			column: {
-				title: "Název"
+			table: {
+				placeholder: "Nejsou dostupné žádné přihlašovací údaje",
+				column: {
+					title: "Název"
+				}
 			},
 			button: {
 				edit: "Upravit"

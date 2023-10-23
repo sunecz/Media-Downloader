@@ -491,8 +491,11 @@
 		},
 		credentials: {
 			title: "Login credentials",
-			column: {
-				title: "Name"
+			table: {
+				placeholder: "No credentials available",
+				column: {
+					title: "Name"
+				}
 			},
 			button: {
 				edit: "Edit"
