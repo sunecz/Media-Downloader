@@ -161,7 +161,7 @@ public final class MainWindow extends Window<BorderPane> {
 		pane.setBottom(initializeButtons());
 		
 		setScene(scene);
-		setOnCloseRequest(this::close);
+		setOnCloseRequest(this::closeRequest);
 		setMinWidth(MINIMUM_WIDTH);
 		setMinHeight(MINIMUM_HEIGHT);
 		setResizable(true);
@@ -306,9 +306,33 @@ public final class MainWindow extends Window<BorderPane> {
 		return INSTANCE;
 	}
 	
-	private final void close(WindowEvent e) {
+	/** @since 00.02.09 */
+	private final boolean shouldClose() {
+		// Note: The only consideration now when closing the window is put to active pipelines.
+		//       Saving the list of incompleted pipelines is currently not supported.
+		
+		if(!table.hasActivePipelines()) {
+			// Nothing is active, may be closed
+			return true;
+		}
+		
+		Translation tr = trtr("dialogs.close_request.active_processes");
+		return Dialog.showPrompt(tr.getSingle("title"), tr.getSingle("text"));
+	}
+	
+	/** @since 00.02.09 */
+	private final void closeRequest(WindowEvent e) {
 		if(!closeRequest.compareAndSet(false, true)) {
 			return;
+		}
+		
+		// Check whether the user confirmed the window to be closed
+		// when there are running pipelines.
+		if(!shouldClose()) {
+			// Prevent window from closing
+			e.consume();
+			closeRequest.set(false);
+			return; // Do not continue
 		}
 		
 		// Since all of the environment will be disposed and it will take some time,

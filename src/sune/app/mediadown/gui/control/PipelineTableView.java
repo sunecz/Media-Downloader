@@ -181,6 +181,12 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 		infos.stream().forEachOrdered(PipelineInfo::stop);
 	}
 	
+	/** @since 00.02.09 */
+	private final boolean isActivePipeline(PipelineInfo info) {
+		Pipeline pipeline = info.pipeline();
+		return pipeline.isRunning() || pipeline.isPaused();
+	}
+	
 	public void add(PipelineInfo info) {
 		FXUtils.thread(() -> getItems().add(info));
 	}
@@ -292,6 +298,16 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 	
 	public int selectedIndex() {
 		return getSelectionModel().getSelectedIndex();
+	}
+	
+	/** @since 00.02.09 */
+	public List<PipelineInfo> activePipelines() {
+		return pipelines().stream().filter(this::isActivePipeline).collect(Collectors.toList());
+	}
+	
+	/** @since 00.02.09 */
+	public boolean hasActivePipelines() {
+		return pipelines().stream().anyMatch(this::isActivePipeline);
 	}
 	
 	private static final class DefaultContextMenuItemFactory implements ContextMenuItemFactory {

@@ -130,6 +130,12 @@
 						title: "Update resources",
 						text:  "Resources have been updated."
 					}
+				},
+				close_request: {
+					active_processes: {
+						title: "Quit application",
+						text:  "Some processes are still active. Are you sure you want to quit the program?"
+					}
 				}
 			},
 			actions: {
