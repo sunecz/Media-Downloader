@@ -912,34 +912,37 @@ public final class JSON {
 		}
 		
 		private static final TraverseResult traverse(JSONCollection parent, String name) {
-			TraverseResult result = new TraverseResult();
+			JSONCollection trParent = null;
+			JSONNode trNode = null;
+			boolean success = false;
+			int offset = 0;
 			
 			for(int off = 0, len = name.length(), idx; off < len; off = idx + 1) {
 				idx = name.indexOf(CHAR_NAME_SEPARATOR, off);
 				
 				if(idx < 0) {
 					JSONNode node = parent.directGet(name.substring(off));
-					result.parent = parent;
-					result.node = node;
-					result.success = node != null;
-					result.offset = off;
+					trParent = parent;
+					trNode = node;
+					success = node != null;
+					offset = off;
 					break;
 				}
 				
 				JSONNode node = parent.directGet(name.substring(off, idx));
 				
 				if(node == null || !node.isCollection()) {
-					result.parent = parent;
-					result.node = node;
-					result.success = false;
-					result.offset = off;
+					trParent = parent;
+					trNode = node;
+					success = false;
+					offset = off;
 					break;
 				}
 				
 				parent = (JSONCollection) node;
 			}
 			
-			return result;
+			return new TraverseResult(trParent, trNode, success, offset);
 		}
 		
 		private static final <T> void iterableToCollection(Collection<T> collection, Iterable<T> iterable) {
@@ -1436,10 +1439,17 @@ public final class JSON {
 		
 		private static final class TraverseResult {
 			
-			JSONCollection parent;
-			JSONNode node;
-			boolean success;
-			int offset;
+			private final JSONCollection parent;
+			private final JSONNode node;
+			private final boolean success;
+			private final int offset;
+			
+			public TraverseResult(JSONCollection parent, JSONNode node, boolean success, int offset) {
+				this.parent = parent;
+				this.node = node;
+				this.success = success;
+				this.offset = offset;
+			}
 		}
 		
 		private static final class Iterators {
