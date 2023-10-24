@@ -2282,17 +2282,14 @@ public final class MediaDownloader {
 	
 	// Will be called automatically when closed properly
 	protected static final void dispose() {
-		if((isDisposed.get()))
+		if(!isDisposed.compareAndSet(false, true)) {
 			return;
-		try {
-			Plugins.dispose();
-		} catch(Exception ex) {
-			error(ex);
 		}
-		Disposables.dispose();
-		Threads    .destroy();
-		Web        .clear();
-		isDisposed.set(true);
+		
+		Ignore.callVoid(Plugins::dispose, MediaDownloader::error);
+		Ignore.callVoid(Disposables::dispose, MediaDownloader::error);
+		Ignore.callVoid(Threads::destroy, MediaDownloader::error);
+		Ignore.callVoid(Web::clear, MediaDownloader::error);
 	}
 	
 	// https://stackoverflow.com/questions/4159802/how-can-i-restart-a-java-application
@@ -2313,7 +2310,8 @@ public final class MediaDownloader {
 	
 	public static final void close() {
 		dispose();
-		FXUtils.exit();
+		// Ensure that all FX stuff is run in the FX thread
+		FXUtils.thread(FXUtils::exit);
 	}
 	
 	public static final Version version() {

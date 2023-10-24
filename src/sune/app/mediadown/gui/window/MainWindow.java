@@ -307,23 +307,20 @@ public final class MainWindow extends Window<BorderPane> {
 	}
 	
 	private final void close(WindowEvent e) {
+		if(!closeRequest.compareAndSet(false, true)) {
+			return;
+		}
+		
+		// Since all of the environment will be disposed and it will take some time,
+		// run it in a new thread.
+		Threads.executeEnsured(MediaDownloader::close);
+	}
+	
+	/** @since 00.02.09 */
+	private final void dispose() {
 		actions.terminate();
 		maybeAutoDisableClipboardWatcher();
-		
-		if(!table.pipelines().isEmpty()) {
-			e.consume();
-			
-			if(!closeRequest.get()) {
-				Threads.execute(() -> {
-					stopPipelines();
-					FXUtils.thread(MediaDownloader::close);
-				});
-				
-				closeRequest.set(true);
-			}
-		} else {
-			MediaDownloader.close();
-		}
+		stopPipelines();
 	}
 	
 	private final void stopPipelines() {
@@ -332,7 +329,7 @@ public final class MainWindow extends Window<BorderPane> {
 	
 	/** @since 00.02.08 */
 	private final void initialize() {
-		Disposables.add(this::stopPipelines);
+		Disposables.add(this::dispose);
 		
 		// Initialize the menu AFTER the window is shown so that plugins are already loaded.
 		initializeAddMenu();

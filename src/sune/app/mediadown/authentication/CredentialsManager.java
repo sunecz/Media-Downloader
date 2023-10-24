@@ -134,6 +134,10 @@ public final class CredentialsManager implements CredentialsStore, Disposable {
 	
 	@Override
 	public void dispose() throws Exception {
+		if(store == null) {
+			return; // Already disposed
+		}
+		
 		try {
 			store.close();
 		} finally {
