@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
@@ -37,12 +38,15 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
 import sune.app.mediadown.Disposables;
 import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.concurrent.Threads;
 import sune.app.mediadown.download.Download;
+import sune.app.mediadown.download.DownloadState;
 import sune.app.mediadown.entity.MediaEngine;
 import sune.app.mediadown.entity.MediaEngines;
 import sune.app.mediadown.event.DownloadEvent;
@@ -58,6 +62,7 @@ import sune.app.mediadown.event.tracker.TrackerEvent;
 import sune.app.mediadown.event.tracker.TrackerVisitor;
 import sune.app.mediadown.event.tracker.WaitTracker;
 import sune.app.mediadown.gui.Dialog;
+import sune.app.mediadown.gui.DownloadProgressBar;
 import sune.app.mediadown.gui.GUI;
 import sune.app.mediadown.gui.InformationItems.ItemDownloader;
 import sune.app.mediadown.gui.InformationItems.ItemMediaEngine;
@@ -803,7 +808,32 @@ public final class MainWindow extends Window<BorderPane> {
 		box.getChildren().addAll(btnAdd, fillBox, btnDownloadSelected, btnDownload);
 		box.setPadding(new Insets(0, 15, 15, 15));
 		
-		return box;
+		VBox vbox = new VBox(5);
+		StackPane barWrapper = new StackPane();
+		barWrapper.setPrefHeight(25.0);
+		barWrapper.setPadding(new Insets(0, 15, 0, 15));
+		DownloadProgressBar bar = new DownloadProgressBar();
+		barWrapper.widthProperty().addListener((o, ov, nv) -> bar.setWidth(nv.doubleValue()));
+		barWrapper.heightProperty().addListener((o, ov, nv) -> bar.setHeight(nv.doubleValue()));
+		barWrapper.getChildren().add(bar);
+		vbox.getChildren().addAll(barWrapper, box);
+		
+		int numSegments = 1 << 14;
+		DownloadState.OfSegments state = new DownloadState.OfSegments(numSegments);
+		bar.setState(state);
+		
+		Threads.executeEnsured(() -> {
+			Random r = new Random();
+			
+			for(int i = 0, l = numSegments; i < l; ++i) {
+				int v;
+				while(state.get(v = r.nextInt(state.total())));
+				state.set(v);
+				Ignore.callVoid(() -> Thread.sleep(1));
+			}
+		});
+		
+		return vbox;
 	}
 	
 	private final ProgressAction action_updatePlugins(Stage window, Collection<PluginFile> plugins) {
