@@ -5,16 +5,19 @@ import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.WRITE;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URL;
+import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.WritableByteChannel;
 import java.nio.charset.Charset;
 import java.nio.file.DirectoryStream;
 import java.nio.file.FileVisitResult;
@@ -23,6 +26,7 @@ import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.PosixFilePermission;
 import java.util.ArrayList;
@@ -439,5 +443,124 @@ public final class NIO {
 		}
 		
 		file.setExecutable(true, true);
+	}
+	
+	/** @since 00.02.09 */
+	public static final void transferTo(FileChannel ch, long position, long count, WritableByteChannel target)
+			throws IOException {
+		for(long num;
+			count > 0L && (num = ch.transferTo(position, count, target)) >= 0L;
+			count -= num, position += num)
+		;
+	}
+	
+	/** @since 00.02.09 */
+	public static final void transferFrom(ReadableByteChannel src, FileChannel ch, long position, long count)
+			throws IOException {
+		for(long num;
+			count > 0L && (num = ch.transferFrom(src, position, count)) >= 0L;
+			count -= num, position += num)
+		;
+	}
+	
+	/** @since 00.02.09 */
+	public static final ByteBuffer read(FileChannel ch, long position, long count) throws IOException {
+		try(ByteBufferWritableByteChannel target = new ByteBufferWritableByteChannel((int) count)) {
+			transferTo(ch, position, count, target);
+			return target.toByteBuffer();
+		}
+	}
+	
+	/** @since 00.02.09 */
+	private static final class ByteBufferWritableByteChannel
+			extends ByteArrayOutputStream
+			implements WritableByteChannel {
+		
+		private final byte[] temp = new byte[8192];
+		private boolean open = true;
+		
+		public ByteBufferWritableByteChannel(int size) {
+			super(size);
+		}
+		
+		@Override
+		public int write(ByteBuffer b) throws IOException {
+			int num = 0;
+			
+			for(int len; (len = Math.min(b.remaining(), temp.length)) > 0; num += len) {
+				b.get(temp, 0, len);
+				write(temp, 0, len);
+			}
+			
+			return num;
+		}
+		
+		@Override
+		public boolean isOpen() {
+			return open;
+		}
+		
+		@Override
+		public void close() throws IOException {
+			super.close();
+			open = false;
+		}
+		
+		public ByteBuffer toByteBuffer() {
+			return ByteBuffer.wrap(buf, 0, count);
+		}
+	}
+	
+	/** @since 00.02.09 */
+	public static final void write(FileChannel ch, long position, ByteBuffer buf) throws IOException {
+		for(int num;
+			buf.hasRemaining() && (num = ch.write(buf, position)) >= 0;
+			position += num)
+		;
+	}
+	
+	/** @since 00.02.09 */
+	private static final OpenOption[] OPEN_OPTIONS_TEMPORARY_CHANNEL = {
+		StandardOpenOption.CREATE, StandardOpenOption.READ, StandardOpenOption.WRITE,
+		StandardOpenOption.TRUNCATE_EXISTING
+	};
+	
+	/** @since 00.02.09 */
+	private static final void temporaryFileChannel(CheckedConsumer<FileChannel> action) throws IOException {
+		Path temp = Files.createTempFile(null, null);
+		
+		try(FileChannel tempCh = FileChannel.open(temp, OPEN_OPTIONS_TEMPORARY_CHANNEL)) {
+			action.accept(tempCh);
+		} catch(IOException ex) {
+			throw ex;
+		} catch(Exception ex) {
+			throw new IOException(ex);
+		} finally {
+			Files.deleteIfExists(temp);
+		}
+	}
+	
+	/** @since 00.02.09 */
+	public static final void truncate(FileChannel ch, long position, long count) throws IOException {
+		temporaryFileChannel((tempCh) -> {
+			long copySize = ch.size() - position - count;
+			transferTo(ch, position + count, copySize, tempCh);
+			ch.truncate(position);
+			tempCh.position(0L);
+			transferFrom(tempCh, ch, position, copySize);
+		});
+	}
+	
+	/** @since 00.02.09 */
+	public static final void replace(FileChannel ch, long position, long count, ByteBuffer buf) throws IOException {
+		temporaryFileChannel((tempCh) -> {
+			long copySize = ch.size() - position - count;
+			transferTo(ch, position + count, copySize, tempCh);
+			ch.truncate(position);
+			tempCh.position(0L);
+			int replaceSize = buf.remaining();
+			write(ch, position, buf);
+			transferFrom(tempCh, ch, position + replaceSize, copySize);
+		});
 	}
 }

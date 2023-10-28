@@ -75,6 +75,7 @@
 					item: {
 						information:   "Information",
 						configuration: "Configuration",
+						credentials:   "Login credentials",
 						messages:      "Messages",
 						about:         "About"
 					}
@@ -128,6 +129,12 @@
 					success: {
 						title: "Update resources",
 						text:  "Resources have been updated."
+					}
+				},
+				close_request: {
+					active_processes: {
+						title: "Quit application",
+						text:  "Some processes are still active. Are you sure you want to quit the program?"
 					}
 				}
 			},
@@ -321,7 +328,7 @@
 				url_invalid: "Invalid URL address",
 				unsupported_urls: {
 					title: "Error - Unsupported URLs",
-					description: "URLs below could not be recognized."
+					description: "The following URLs are not supported."
 				}
 			},
 			getter: {
@@ -487,6 +494,27 @@
 					text:  "A note is required!"
 				}
 			}
+		},
+		credentials: {
+			title: "Login credentials",
+			table: {
+				placeholder: "No credentials available",
+				column: {
+					title: "Name"
+				}
+			},
+			button: {
+				edit: "Edit"
+			}
+		},
+		dialogs: {
+			credentials_edit: {
+				title: "Login credentials - %{title}",
+				button: {
+					save:   "Save",
+					cancel: "Cancel"
+				}
+			}
 		}
 	},
 	dialogs: {
@@ -577,6 +605,22 @@
 		naming: {
 			word_season:  "season",
 			word_episode: "episode"
+		}
+	},
+	credentials: {
+		type: {
+			username_credentials: {
+				label: {
+					username: "Username",
+					password: "Password"
+				}
+			},
+			email_credentials: {
+				label: {
+					email:    "Email",
+					password: "Password"
+				}
+			}
 		}
 	}
 }

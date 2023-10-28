@@ -182,9 +182,7 @@ public class MediaGetterWindow extends DraggableWindow<VBox> {
 			
 			List<URI> errors = task.errors();
 			if(!errors.isEmpty()) {
-				Translation tr = translation.getTranslation("errors.unsupported_urls");
-				String content = errors.stream().map((u) -> u.toString() + '\n').reduce("", (a, b) -> a + b);
-				Dialog.showContentError(tr.getSingle("title"), tr.getSingle("description"), content);
+				showDialogOfUnsupportedUris(errors);
 			}
 			
 			if(isTerminating) {
@@ -199,6 +197,13 @@ public class MediaGetterWindow extends DraggableWindow<VBox> {
 		if(onFinish != null) {
 			onFinish.accept(shouldClose);
 		}
+	}
+	
+	/** @since 00.02.09 */
+	private final void showDialogOfUnsupportedUris(List<URI> uris) {
+		Translation tr = translation.getTranslation("errors.unsupported_urls");
+		String content = uris.stream().map((u) -> u.toString() + '\n').reduce("", (a, b) -> a + b);
+		Dialog.showContentError(tr.getSingle("title"), tr.getSingle("description"), content);
 	}
 	
 	private final void showSelectionWindow() {
@@ -232,9 +237,13 @@ public class MediaGetterWindow extends DraggableWindow<VBox> {
 		}
 		
 		MediaGetter getter = getterSupplier.apply(uri);
-		if(getter != null) {
-			Threads.execute(() -> doTask(parent, getter, uri, onFinish));
+		
+		if(getter == null || getter instanceof AutomaticMediaGetter) {
+			showDialogOfUnsupportedUris(List.of(uri));
+			return;
 		}
+		
+		Threads.execute(() -> doTask(parent, getter, uri, onFinish));
 	}
 	
 	private final void showSelectionWindow(MediaGetter getter, URI uri) {
@@ -324,7 +333,7 @@ public class MediaGetterWindow extends DraggableWindow<VBox> {
 		@Override
 		public ListTask<Media> getMedia(URI uri, Map<String, Object> data) throws Exception {
 			// Do nothing
-			return null;
+			return ListTask.empty();
 		}
 		
 		@Override

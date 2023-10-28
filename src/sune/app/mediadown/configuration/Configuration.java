@@ -1328,6 +1328,8 @@ public class Configuration implements ConfigurationAccessor {
 		protected final String name;
 		protected final Map<String, ConfigurationProperty.BuilderBase<?, ?>> properties = new LinkedHashMap<>();
 		protected Accessor accessor;
+		/** @since 00.02.09 */
+		protected boolean dataLoaded;
 		
 		protected Builder(String name) {
 			this.name = Objects.requireNonNull(name);
@@ -1367,6 +1369,11 @@ public class Configuration implements ConfigurationAccessor {
 			ensureDataParents(collection, fullName.substring(end));
 		}
 		
+		/** @since 00.02.09 */
+		public ConfigurationProperty.BuilderBase<?, ?> getProperty(String propertyName) {
+			return properties.get(propertyName);
+		}
+		
 		public Builder addProperty(ConfigurationProperty.BuilderBase<?, ?> property) {
 			Objects.requireNonNull(property);
 			properties.put(property.name(), property);
@@ -1397,6 +1404,7 @@ public class Configuration implements ConfigurationAccessor {
 				}
 			}
 			
+			dataLoaded = true;
 			return this;
 		}
 		
@@ -1425,6 +1433,11 @@ public class Configuration implements ConfigurationAccessor {
 		
 		public Accessor accessor() {
 			return accessor == null ? (accessor = new Accessor()) : accessor;
+		}
+		
+		/** @since 00.02.09 */
+		public boolean isDataLoaded() {
+			return dataLoaded;
 		}
 		
 		public class Accessor implements ConfigurationAccessor {

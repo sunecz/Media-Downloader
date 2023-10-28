@@ -1,6 +1,6 @@
 package sune.app.mediadown.plugin;
 
-public abstract class PluginBootstrapBase {
+public abstract class PluginBootstrapBase implements PluginInstance {
 	
 	private final PluginBootstrap plugin;
 	/** @since 00.02.05 */
@@ -13,8 +13,8 @@ public abstract class PluginBootstrapBase {
 			throw new IllegalStateException("Invalid plugin bootstrap. Missing Plugin bootstrap annotation.");
 	}
 	
-	public abstract void init() throws Exception;
-	public abstract void dispose() throws Exception;
+	@Override public abstract void init() throws Exception;
+	@Override public abstract void dispose() throws Exception;
 	
 	/** @since 00.02.05 */
 	public PluginConfiguration.Builder configuration() {

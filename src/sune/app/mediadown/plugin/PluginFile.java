@@ -85,6 +85,11 @@ public class PluginFile {
 		return instanceBootstrap;
 	}
 	
+	/** @since 00.02.09 */
+	public PluginInstance getPluginInstance() {
+		return instance == null ? instanceBootstrap : instance;
+	}
+	
 	/** @since 00.02.04 */
 	public PluginConfiguration getConfiguration() {
 		return configuration;

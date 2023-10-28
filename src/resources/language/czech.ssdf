@@ -75,6 +75,7 @@
 					item: {
 						information:   "Informace",
 						configuration: "Nastavení",
+						credentials:   "Přihlašovací údaje",
 						messages:      "Zprávy",
 						about:         "O programu"
 					}
@@ -128,6 +129,12 @@
 					success: {
 						title: "Aktualizovat prostředky",
 						text:  "Prostředky byly aktualizovány."
+					}
+				},
+				close_request: {
+					active_processes: {
+						title: "Ukončit program",
+						text:  "Stále jsou aktivní některé procesy. Jste si jistí, že chcete ukončit program?"
 					}
 				}
 			},
@@ -321,7 +328,7 @@
 				url_invalid: "Neplatná URL adresa",
 				unsupported_urls: {
 					title: "Chyba - Nepodporované URL",
-					description: "Níže uvedené URL nemohly být rozpoznány."
+					description: "Následující URL adresy nejsou podporovány."
 				}
 			},
 			getter: {
@@ -487,6 +494,27 @@
 					text:  "Poznámka je povinná!"
 				}
 			}
+		},
+		credentials: {
+			title: "Přihlašovací údaje",
+			table: {
+				placeholder: "Nejsou dostupné žádné přihlašovací údaje",
+				column: {
+					title: "Název"
+				}
+			},
+			button: {
+				edit: "Upravit"
+			}
+		},
+		dialogs: {
+			credentials_edit: {
+				title: "Přihlašovací údaje - %{title}",
+				button: {
+					save:   "Uložit",
+					cancel: "Zrušit"
+				}
+			}
 		}
 	},
 	dialogs: {
@@ -577,6 +605,22 @@
 		naming: {
 			word_season:  "sezóna",
 			word_episode: "díl"
+		}
+	},
+	credentials: {
+		type: {
+			username_credentials: {
+				label: {
+					username: "Uživatelské jméno",
+					password: "Heslo"
+				}
+			},
+			email_credentials: {
+				label: {
+					email:    "Email",
+					password: "Heslo"
+				}
+			}
 		}
 	}
 }

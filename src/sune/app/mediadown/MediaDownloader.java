@@ -58,6 +58,8 @@ import sune.app.mediadown.gui.Window;
 import sune.app.mediadown.gui.window.AboutWindow;
 import sune.app.mediadown.gui.window.ClipboardWatcherWindow;
 import sune.app.mediadown.gui.window.ConfigurationWindow;
+import sune.app.mediadown.gui.window.CredentialsEditDialogWindow;
+import sune.app.mediadown.gui.window.CredentialsWindow;
 import sune.app.mediadown.gui.window.DownloadConfigurationWindow;
 import sune.app.mediadown.gui.window.InformationWindow;
 import sune.app.mediadown.gui.window.MainWindow;
@@ -127,8 +129,8 @@ import sune.util.ssdf2.SSDObject;
 public final class MediaDownloader {
 	
 	public static final String  TITLE   = "Media Downloader";
-	public static final Version VERSION = Version.of("00.02.09-dev.9");
-	public static final String  DATE    = "2023-08-13";
+	public static final Version VERSION = Version.of("00.02.09-dev.11");
+	public static final String  DATE    = "2023-10-24";
 	public static final String  AUTHOR  = "Sune";
 	public static final Image   ICON    = icon("app.png");
 	
@@ -1899,6 +1901,8 @@ public final class MediaDownloader {
 			windows.register(ClipboardWatcherWindow.NAME, initializator(ClipboardWatcherWindow::new));
 			windows.register(AboutWindow.NAME, initializator(AboutWindow::new));
 			windows.register(ReportWindow.NAME, initializator(ReportWindow::new));
+			windows.register(CredentialsWindow.NAME, initializator(CredentialsWindow::new));
+			windows.register(CredentialsEditDialogWindow.NAME, initializator(CredentialsEditDialogWindow::new));
 		}
 		
 		/** @since 00.02.09 */
@@ -2278,17 +2282,14 @@ public final class MediaDownloader {
 	
 	// Will be called automatically when closed properly
 	protected static final void dispose() {
-		if((isDisposed.get()))
+		if(!isDisposed.compareAndSet(false, true)) {
 			return;
-		try {
-			Plugins.dispose();
-		} catch(Exception ex) {
-			error(ex);
 		}
-		Disposables.dispose();
-		Threads    .destroy();
-		Web        .clear();
-		isDisposed.set(true);
+		
+		Ignore.callVoid(Plugins::dispose, MediaDownloader::error);
+		Ignore.callVoid(Disposables::dispose, MediaDownloader::error);
+		Ignore.callVoid(Threads::destroy, MediaDownloader::error);
+		Ignore.callVoid(Web::clear, MediaDownloader::error);
 	}
 	
 	// https://stackoverflow.com/questions/4159802/how-can-i-restart-a-java-application
@@ -2309,7 +2310,8 @@ public final class MediaDownloader {
 	
 	public static final void close() {
 		dispose();
-		FXUtils.exit();
+		// Ensure that all FX stuff is run in the FX thread
+		FXUtils.thread(FXUtils::exit);
 	}
 	
 	public static final Version version() {
@@ -2318,7 +2320,7 @@ public final class MediaDownloader {
 	
 	public static final <W extends Window<?>> W window(String name) {
 		@SuppressWarnings("unchecked")
-		W casted = Ignore.call(() -> (W) GUI.windows.get(name));
+		W casted = Ignore.call(() -> (W) GUI.windows.get(name), MediaDownloader::error);
 		return casted;
 	}
 	

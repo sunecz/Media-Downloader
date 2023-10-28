@@ -179,9 +179,15 @@ public final class Log {
 			}
 			
 			String message = formatMessage(record);
-			String throwable = Utils.throwableToString(record.getThrown());
 			String loggerName = record.getLoggerName();
 			String level = getLevelName(record.getLevel());
+			Throwable thrown = record.getThrown();
+			String throwable = "";
+			
+			if(thrown != null) {
+				throwable = '\n' + Utils.throwableToString(thrown);
+			}
+			
 			return String.format(FORMAT, dateTime, source, loggerName, level, message, throwable);
 		}
 	}

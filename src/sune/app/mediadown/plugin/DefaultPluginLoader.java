@@ -134,7 +134,8 @@ final class DefaultPluginLoader implements PluginLoader {
 		}
 	}
 	
-	private static final void initConfiguration(PluginFile file, PluginConfiguration.Builder configuration) {
+	private static final void initConfiguration(PluginFile file, PluginConfiguration.Builder configuration)
+			throws Exception {
 		if(configuration == null) {
 			return;
 		}
@@ -146,7 +147,17 @@ final class DefaultPluginLoader implements PluginLoader {
 			configuration.path(configPath);
 		}
 		
+		PluginInstance instance = file.getPluginInstance();
+		
+		if(instance != null) {
+			instance.beforeBuildConfiguration();
+		}
+		
 		file.setConfiguration(configuration.build());
+		
+		if(instance != null) {
+			instance.afterBuildConfiguration();
+		}
 	}
 	
 	private static final void disposePluginMemory(PluginFile file) {

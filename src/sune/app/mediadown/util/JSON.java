@@ -44,6 +44,8 @@ public final class JSON {
 	private static final int CHAR_ESCAPE_SLASH       = '\\';
 	private static final int CHAR_SEPARATOR_PROPERTY = ':';
 	private static final int CHAR_SEPARATOR_ELEMENT  = ',';
+	/** @since 00.02.09 */
+	private static final int CHAR_NAME_SEPARATOR     = '.';
 	
 	// Forbid anyone to create an instance of this class
 	private JSON() {
@@ -706,10 +708,25 @@ public final class JSON {
 		public abstract boolean isObject();
 		public abstract boolean isCollection();
 		
+		/** @since 00.02.09 */
+		public void clear() {
+			parent = null;
+			name = null;
+			type = null;
+		}
+		
 		public JSONCollection parent() { return parent; }
-		public String fullName() { return parent != null ? parent.fullName() + (name != null ? name : "") : name; }
 		public String name() { return name; }
 		public JSONType type() { return type; }
+		
+		public String fullName() {
+			if(parent == null) {
+				return name;
+			}
+			
+			String prefix = parent.fullName();
+			return prefix == null ? name : prefix + (char) CHAR_NAME_SEPARATOR + name;
+		}
 		
 		public String toString() { return toString(0, false); }
 		public String toString(boolean compress) { return toString(0, compress); }
@@ -722,7 +739,7 @@ public final class JSON {
 		
 		@Override
 		public int hashCode() {
-			return Objects.hash(name, parent, type);
+			return Objects.hash(type, name);
 		}
 		
 		@Override
@@ -734,7 +751,7 @@ public final class JSON {
 			if(getClass() != obj.getClass())
 				return false;
 			JSONNode other = (JSONNode) obj;
-			return Objects.equals(name, other.name) && Objects.equals(parent, other.parent) && type == other.type;
+			return type == other.type && Objects.equals(name, other.name);
 		}
 	}
 	
@@ -794,6 +811,13 @@ public final class JSON {
 		
 		// Do not expose to the public interface
 		private static final JSONObject ofStringUnquoted(String value) { return new JSONObject(JSONType.STRING_UNQUOTED, value); }
+		
+		/** @since 00.02.09 */
+		@Override
+		public void clear() {
+			super.clear();
+			value = null;
+		}
 		
 		@Override public JSONObject copy() { return new JSONObject(parent, name, type, value); }
 		@Override public boolean isObject() { return true; }
@@ -856,8 +880,6 @@ public final class JSON {
 	/** @since 00.02.09 */
 	public static final class JSONCollection extends JSONNode implements Iterable<JSONNode> {
 		
-		private static final int CHAR_NAME_SEPARATOR = '.';
-		
 		private Map<String, JSONNode> nodes;
 		
 		private JSONCollection(boolean isArray) {
@@ -890,34 +912,41 @@ public final class JSON {
 		}
 		
 		private static final TraverseResult traverse(JSONCollection parent, String name) {
-			TraverseResult result = new TraverseResult();
+			JSONCollection trParent = null;
+			JSONNode trNode = null;
+			boolean success = false;
+			int offset = 0;
 			
 			for(int off = 0, len = name.length(), idx; off < len; off = idx + 1) {
 				idx = name.indexOf(CHAR_NAME_SEPARATOR, off);
 				
 				if(idx < 0) {
 					JSONNode node = parent.directGet(name.substring(off));
-					result.parent = parent;
-					result.node = node;
-					result.success = node != null;
-					result.offset = off;
+					trParent = parent;
+					trNode = node;
+					success = node != null;
+					offset = off;
 					break;
 				}
 				
 				JSONNode node = parent.directGet(name.substring(off, idx));
 				
 				if(node == null || !node.isCollection()) {
-					result.parent = parent;
-					result.node = node;
-					result.success = false;
-					result.offset = off;
+					trParent = parent;
+					trNode = node;
+					success = false;
+					offset = off;
 					break;
 				}
 				
 				parent = (JSONCollection) node;
 			}
 			
-			return result;
+			return new TraverseResult(trParent, trNode, success, offset);
+		}
+		
+		private static final <T> void iterableToCollection(Collection<T> collection, Iterable<T> iterable) {
+			for(T t : iterable) collection.add(t);
 		}
 		
 		private static final <T> List<T> iterableToList(Iterable<T> iterable) {
@@ -926,8 +955,8 @@ public final class JSON {
 			return collection;
 		}
 		
-		private static final <T> void iterableToCollection(Collection<T> collection, Iterable<T> iterable) {
-			for(T t : iterable) collection.add(t);
+		private static final <T> List<T> iterableToUnmodifiableList(Iterable<T> iterable) {
+			return Collections.unmodifiableList(iterableToList(iterable));
 		}
 		
 		public static final JSONCollection empty(boolean isArray) { return new JSONCollection(isArray); }
@@ -1298,22 +1327,35 @@ public final class JSON {
 		public void removeDouble(int index) { remove(indexName(index), JSONType.DECIMAL); }
 		public void removeString(int index) { remove(indexName(index), JSONType.STRING); }
 		
+		/** @since 00.02.09 */
+		@Override
+		public void clear() {
+			super.clear();
+			
+			if(nodes != null) {
+				nodes.clear();
+				nodes = null;
+			}
+		}
+		
 		@Override public JSONCollection copy() { return new JSONCollection(parent, name, type, nodes); }
 		@Override public boolean isObject() { return false; }
 		@Override public boolean isCollection() { return true; }
 		
 		public int length() { return nodes == null ? 0 : nodes.size(); }
+		/** @since 00.02.09 */
+		public boolean isEmpty() { return nodes == null || nodes.isEmpty(); }
 		
 		@Override public Iterator<JSONNode> iterator() { return nodesIterator(); }
 		public Iterator<JSONNode> nodesIterator() { return new Iterators.Nodes(this); }
 		public Iterator<JSONObject> objectsIterator() { return new Iterators.Objects(this); }
 		public Iterator<JSONCollection> collectionsIterator() { return new Iterators.Collections(this); }
-		public Iterable<JSONNode> nodesIterable() { return () -> nodesIterator(); }
-		public Iterable<JSONObject> objectsIterable() { return () -> objectsIterator(); }
-		public Iterable<JSONCollection> collectionsIterable() { return () -> collectionsIterator(); }
-		public List<JSONNode> nodes() { return Collections.unmodifiableList(iterableToList(nodesIterable())); }
-		public List<JSONObject> objects() { return Collections.unmodifiableList(iterableToList(objectsIterable())); }
-		public List<JSONCollection> collections() { return Collections.unmodifiableList(iterableToList(collectionsIterable())); }
+		public Iterable<JSONNode> nodesIterable() { return this::nodesIterator; }
+		public Iterable<JSONObject> objectsIterable() { return this::objectsIterator; }
+		public Iterable<JSONCollection> collectionsIterable() { return this::collectionsIterator; }
+		public List<JSONNode> nodes() { return iterableToUnmodifiableList(nodesIterable()); }
+		public List<JSONObject> objects() { return iterableToUnmodifiableList(objectsIterable()); }
+		public List<JSONCollection> collections() { return iterableToUnmodifiableList(collectionsIterable()); }
 		
 		@Override
 		public void toString(StringBuilder builder, int depth, boolean compress) {
@@ -1397,10 +1439,17 @@ public final class JSON {
 		
 		private static final class TraverseResult {
 			
-			JSONCollection parent;
-			JSONNode node;
-			boolean success;
-			int offset;
+			private final JSONCollection parent;
+			private final JSONNode node;
+			private final boolean success;
+			private final int offset;
+			
+			public TraverseResult(JSONCollection parent, JSONNode node, boolean success, int offset) {
+				this.parent = parent;
+				this.node = node;
+				this.success = success;
+				this.offset = offset;
+			}
 		}
 		
 		private static final class Iterators {

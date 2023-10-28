@@ -136,6 +136,8 @@ public final class MainWindow extends Window<BorderPane> {
 	private Menu menuApplication;
 	private MenuItem menuItemInformation;
 	private MenuItem menuItemConfiguration;
+	/** @since 00.02.09 */
+	private MenuItem menuItemCredentials;
 	private MenuItem menuItemMessages;
 	/** @since 00.02.08 */
 	private MenuItem menuItemAbout;
@@ -159,7 +161,7 @@ public final class MainWindow extends Window<BorderPane> {
 		pane.setBottom(initializeButtons());
 		
 		setScene(scene);
-		setOnCloseRequest(this::close);
+		setOnCloseRequest(this::closeRequest);
 		setMinWidth(MINIMUM_WIDTH);
 		setMinHeight(MINIMUM_HEIGHT);
 		setResizable(true);
@@ -304,24 +306,45 @@ public final class MainWindow extends Window<BorderPane> {
 		return INSTANCE;
 	}
 	
-	private final void close(WindowEvent e) {
+	/** @since 00.02.09 */
+	private final boolean shouldClose() {
+		// Note: The only consideration now when closing the window is put to active pipelines.
+		//       Saving the list of incompleted pipelines is currently not supported.
+		
+		if(!table.hasActivePipelines()) {
+			// Nothing is active, may be closed
+			return true;
+		}
+		
+		Translation tr = trtr("dialogs.close_request.active_processes");
+		return Dialog.showPrompt(tr.getSingle("title"), tr.getSingle("text"));
+	}
+	
+	/** @since 00.02.09 */
+	private final void closeRequest(WindowEvent e) {
+		if(!closeRequest.compareAndSet(false, true)) {
+			return;
+		}
+		
+		// Check whether the user confirmed the window to be closed
+		// when there are running pipelines.
+		if(!shouldClose()) {
+			// Prevent window from closing
+			e.consume();
+			closeRequest.set(false);
+			return; // Do not continue
+		}
+		
+		// Since all of the environment will be disposed and it will take some time,
+		// run it in a new thread.
+		Threads.executeEnsured(MediaDownloader::close);
+	}
+	
+	/** @since 00.02.09 */
+	private final void dispose() {
 		actions.terminate();
 		maybeAutoDisableClipboardWatcher();
-		
-		if(!table.pipelines().isEmpty()) {
-			e.consume();
-			
-			if(!closeRequest.get()) {
-				Threads.execute(() -> {
-					stopPipelines();
-					FXUtils.thread(MediaDownloader::close);
-				});
-				
-				closeRequest.set(true);
-			}
-		} else {
-			MediaDownloader.close();
-		}
+		stopPipelines();
 	}
 	
 	private final void stopPipelines() {
@@ -330,7 +353,7 @@ public final class MainWindow extends Window<BorderPane> {
 	
 	/** @since 00.02.08 */
 	private final void initialize() {
-		Disposables.add(this::stopPipelines);
+		Disposables.add(this::dispose);
 		
 		// Initialize the menu AFTER the window is shown so that plugins are already loaded.
 		initializeAddMenu();
@@ -682,6 +705,11 @@ public final class MainWindow extends Window<BorderPane> {
 			MediaDownloader.window(ConfigurationWindow.NAME).show(this);
 		});
 		
+		menuItemCredentials = new MenuItem(tr("menu_bar.application.item.credentials"));
+		menuItemCredentials.setOnAction((e) -> {
+			showCredentialsWindow();
+		});
+		
 		menuItemMessages = new MenuItem(tr("menu_bar.application.item.messages"));
 		menuItemMessages.setOnAction((e) -> resetAndShowMessagesAsync());
 		
@@ -731,7 +759,9 @@ public final class MainWindow extends Window<BorderPane> {
 			Ignore.callVoid(() -> OS.current().browse(Net.uri(URI_DOCUMENTATION)), MediaDownloader::error);
 		});
 		
-		menuApplication.getItems().addAll(menuItemInformation, menuItemConfiguration, menuItemMessages, menuItemAbout);
+		menuApplication.getItems().addAll(
+			menuItemInformation, menuItemConfiguration, menuItemCredentials, menuItemMessages, menuItemAbout
+		);
 		menuTools.getItems().addAll(menuItemClipboardWatcher, menuItemUpdateResources);
 		menuHelp.getItems().addAll(menuItemReportIssue, menuItemFeedback, menuItemDocumentation);
 		menuBar.getMenus().addAll(menuApplication, menuTools, menuHelp);
@@ -921,6 +951,11 @@ public final class MainWindow extends Window<BorderPane> {
 	/** @since 00.02.08 */
 	private final void showAboutWindow() {
 		MediaDownloader.window(AboutWindow.NAME).show(this);
+	}
+	
+	/** @since 00.02.09 */
+	private final void showCredentialsWindow() {
+		MediaDownloader.window(CredentialsWindow.NAME).show(this);
 	}
 	
 	private final void prepareContextMenuForShowing(ContextMenu contextMenu) {
