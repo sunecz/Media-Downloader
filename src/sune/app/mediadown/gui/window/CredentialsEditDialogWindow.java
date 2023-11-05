@@ -102,11 +102,6 @@ public final class CredentialsEditDialogWindow extends DialogWindow<VBox, Creden
 		
 		try {
 			CredentialsManager cm = CredentialsManager.instance();
-			
-			if(!cm.has(name)) {
-				throw new IllegalStateException("Credentials '" + name + "' do not exist");
-			}
-			
 			entryPane = initEntryPane(cm, name);
 			content.getChildren().setAll(entryPane, boxButtons);
 			VBox.setVgrow(entryPane, Priority.ALWAYS);
