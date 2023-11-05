@@ -26,6 +26,8 @@ public final class CredentialsUtils {
 	}
 	
 	public static final JSONCollection json(byte[] data) {
+		Objects.requireNonNull(data);
+		
 		try(ByteArrayInputStream stream = new ByteArrayInputStream(data)) {
 			return JSON.read(stream, Shared.CHARSET);
 		} catch(IOException ex) {
@@ -36,6 +38,7 @@ public final class CredentialsUtils {
 	}
 	
 	public static final void dispose(byte[] data) {
+		Objects.requireNonNull(data);
 		Arrays.fill(data, (byte) 0x00);
 	}
 	

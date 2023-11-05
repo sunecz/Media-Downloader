@@ -133,13 +133,10 @@ public final class CredentialsMigrator {
 				.collect(Collectors.toMap((k) -> k, (k) -> (v) -> v.build().value(), (a, b) -> a, LinkedHashMap::new));
 		}
 		
-		private final Credentials newCredentials(Class<? extends Credentials> clazz, Class<?>... argsClasses) {
+		private final Credentials newCredentialsInstance(
+				Class<? extends Credentials> clazz, Class<?>[] argsClasses, Object[] args
+		) {
 			Objects.requireNonNull(clazz);
-			int length = properties.size();
-			
-			if(length != argsClasses.length) {
-				throw new IllegalArgumentException("Number of classes does not equal number of properties");
-			}
 			
 			Constructor<? extends Credentials> constructor;
 			try {
@@ -147,19 +144,6 @@ public final class CredentialsMigrator {
 			} catch(NoSuchMethodException
 						| SecurityException ex) {
 				throw new UncheckedException(ex);
-			}
-			
-			Object[] args = new Object[length];
-			
-			int i = 0;
-			for(Entry<String, Function<ConfigurationProperty.BuilderBase<?, ?>, Object>> property : properties.entrySet()) {
-				ConfigurationProperty.BuilderBase<?, ?> configProperty = configuration.getProperty(property.getKey());
-				
-				if(configProperty == null) {
-					throw new IllegalStateException("Configuration property '" + property.getKey() + "' does not exist");
-				}
-				
-				args[i++] = property.getValue().apply(configProperty);
 			}
 			
 			Credentials instance;
@@ -178,6 +162,33 @@ public final class CredentialsMigrator {
 			return instance;
 		}
 		
+		private final Credentials newDefaultCredentials(Class<? extends Credentials> clazz) {
+			return newCredentialsInstance(clazz, new Class[0], new Object[0]);
+		}
+		
+		private final Credentials newCredentials(Class<? extends Credentials> clazz, Class<?>[] argsClasses) {
+			final int length = properties.size();
+			
+			if(length != argsClasses.length) {
+				throw new IllegalArgumentException("Number of classes does not equal number of properties");
+			}
+			
+			Object[] args = new Object[length];
+			
+			int i = 0;
+			for(Entry<String, Function<ConfigurationProperty.BuilderBase<?, ?>, Object>> property : properties.entrySet()) {
+				ConfigurationProperty.BuilderBase<?, ?> configProperty = configuration.getProperty(property.getKey());
+				
+				if(configProperty == null) {
+					throw new IllegalStateException("Configuration property '" + property.getKey() + "' does not exist");
+				}
+				
+				args[i++] = property.getValue().apply(configProperty);
+			}
+			
+			return newCredentialsInstance(clazz, argsClasses, args);
+		}
+		
 		private final ConfigurationCleaner newCleaner() {
 			return new ConfigurationCleaner(configuration, properties.keySet());
 		}
@@ -194,11 +205,12 @@ public final class CredentialsMigrator {
 		}
 		
 		public CredentialsMigrator asCredentials(Class<? extends Credentials> clazz, Class<?>... argsClasses) {
-			if(!configuration.isDataLoaded()) {
-				return new CredentialsMigrator(null, null);
-			}
-			
-			return new CredentialsMigrator(newCredentials(clazz, argsClasses), newCleaner());
+			return new CredentialsMigrator(
+				configuration.isDataLoaded()
+					? newCredentials(clazz, argsClasses)
+					: newDefaultCredentials(clazz),
+				newCleaner()
+			);
 		}
 	}
 }

@@ -72,12 +72,12 @@ public class FieldsCredentials implements Credentials, AutoCloseable {
 	
 	@Override
 	public byte[] serialize() {
-		if(!isInitialized()) {
-			return null;
+		JSONCollection data = JSONCollection.empty();
+		
+		if(isInitialized()) {
+			serialize(data);
 		}
 		
-		JSONCollection data = JSONCollection.empty();
-		serialize(data);
 		byte[] bytes = CredentialsUtils.bytes(data.toString(true));
 		data.clear();
 		return bytes;
