@@ -1,8 +1,6 @@
 package sune.app.mediadown.util;
 
 import java.lang.invoke.MethodHandles;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.function.BiFunction;
@@ -10,7 +8,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 /** @since 00.02.05 */
 public final class Opt<T> {
@@ -447,56 +444,33 @@ public final class Opt<T> {
 	
 	public static final class OptMapper<A, B> implements Function<A, B> {
 		
-		private final List<Function<Object, Object>> mappers;
+		private static final Function<?, ?> IDENTITY = Function.identity();
 		
-		private OptMapper(List<Function<?, ?>> mappers) {
-			this.mappers = Objects.requireNonNull(mappers).stream()
-					.map(OptMapper::typeErasure)
-					.collect(Collectors.toList());
+		private final Function<A, B> mapper;
+		
+		private OptMapper(Function<A, B> mapper) {
+			this.mapper = Objects.requireNonNull(mapper);
 		}
 		
-		@SuppressWarnings("unchecked")
-		private static final Function<Object, Object> typeErasure(Function<?, ?> mapper) {
-			return (Function<Object, Object>) mapper;
+		/** @since 00.02.09 */
+		public static final <A> OptMapper<A, A> identity() {
+			@SuppressWarnings("unchecked")
+			Function<A, A> mapper = (Function<A, A>) IDENTITY;
+			return new OptMapper<>(mapper);
 		}
 		
-		@SuppressWarnings("unchecked")
-		private static final <A, B> Function<A, B> typeCast(Function<Object, Object> mapper) {
-			return (Function<A, B>) mapper;
-		}
-		
-		private static final Function<Object, Object> combiner(Function<Object, Object> acc, Function<Object, Object> cur) {
-			return ((v) -> cur.apply(acc.apply(v)));
-		}
-		
-		public static final <A, B> Builder<A, B> of(Function<A, B> mapper) {
-			return new Builder<>(mapper);
+		public static final <A, B> OptMapper<A, B> of(Function<A, B> mapper) {
+			return new OptMapper<>(mapper);
 		}
 		
 		@Override
-		public B apply(A t) {
-			return OptMapper.<A, B>typeCast(mappers.stream().reduce(Function.identity(), OptMapper::combiner)).apply(t);
+		public B apply(A a) {
+			return mapper.apply(a);
 		}
 		
-		public static final class Builder<A, B> {
-			
-			private final List<Function<?, ?>> mappers = new ArrayList<>();
-			
-			public Builder(Function<A, B> mapper) {
-				mappers.add(Objects.requireNonNull(mapper));
-			}
-			
-			@SuppressWarnings("unchecked")
-			private final <U, V> Builder<U, V> self() { return (Builder<U, V>) this; }
-			
-			public final <R> Builder<A, R> join(Function<B, R> mapper) {
-				mappers.add(Objects.requireNonNull(mapper));
-				return self();
-			}
-			
-			public final <I extends A, R extends B> Function<I, R> build() {
-				return new OptMapper<>(mappers);
-			}
+		/** @since 00.02.09 */
+		public <C> OptMapper<A, C> then(Function<B, C> then) {
+			return new OptMapper<>((a) -> then.apply(mapper.apply(a)));
 		}
 	}
 }

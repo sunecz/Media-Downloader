@@ -49,8 +49,8 @@ public interface Media {
 				  .ifTrue((v) -> v.isSingle() && v.type().is(mediaType)).map(List::of)
 				  .<Media>or((opt) -> opt.ifTrue(Media::isContainer)
 				                         .map(OptMapper.of(Media::mapToContainer)
-				                                       .join((v) -> v.allOfType(mediaType))
-				                                       .build()))
+				                                       .then((v) -> v.allOfType(mediaType))
+				                         ))
 				  .<List<T>>castAny().orElseGet(List::of);
 	}
 	
@@ -59,10 +59,10 @@ public interface Media {
 				  .ifTrue((v) -> v.isContainer() && v.type().is(mediaType)).map(List::of)
 				  .<Media>or((opt) -> opt.ifTrue(Media::isContainer)
 				                         .map(OptMapper.of(Media::mapToContainer)
-				                                       .join((v) -> v.allContainersOfType(mediaType).stream()
+				                                       .then((v) -> v.allContainersOfType(mediaType).stream()
 				                                                     .map((m) -> (Media) m)
 				                                                     .collect(Collectors.toList()))
-				                                       .build()))
+				                         ))
 				  .<List<T>>castAny().orElseGet(List::of);
 	}
 	
@@ -71,8 +71,8 @@ public interface Media {
 				  .ifTrue((v) -> v.isSingle() && v.type().is(mediaType))
 				  .<Media>or((opt) -> opt.ifTrue(Media::isContainer)
 				                         .map(OptMapper.of(Media::mapToContainer)
-				                                       .join((v) -> v.ofType(mediaType))
-				                                       .build()))
+				                                       .then((v) -> v.ofType(mediaType))
+				                         ))
 				  .<T>cast().get();
 	}
 	
@@ -81,8 +81,8 @@ public interface Media {
 				  .ifTrue((v) -> v.isContainer() && v.type().is(mediaType))
 				  .<Media>or((opt) -> opt.ifTrue(Media::isContainer)
 				                         .map(OptMapper.of(Media::mapToContainer)
-				                                       .join((v) -> v.containerOfType(mediaType))
-				                                       .build()))
+				                                       .then((v) -> v.containerOfType(mediaType))
+				                         ))
 				  .<T>cast().get();
 	}
 	
