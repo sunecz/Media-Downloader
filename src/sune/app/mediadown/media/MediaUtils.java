@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -123,38 +124,68 @@ public final class MediaUtils {
 	}
 	
 	public static final boolean isSegmentedMedia(Media media) {
-		return Opt.of(media).ifTrue(Media::isSingle).filter(Media::isSegmented)
-				  .<Media>or((opt) -> opt.ifTrue(Media::isContainer)
-				                         .map(Media::mapToContainer)
-				                         .filter((m) -> m.media().stream()
-				                                                 .filter(MediaUtils::isSegmentedMedia)
-				                                                 .findAny().isPresent())
-				                         .<Media>castAny())
-				  .isPresent();
+		return streamFilterRecursive(media, OptCondition.of(Media::isSegmented))
+					.anyMatch(OptCondition.ofTrue());
 	}
 	
 	public static final List<FileSegmentsHolder<?>> segments(Media media) {
-		return Opt.of(media).ifTrue(OptCondition.of(Media::isSingle).and(Media::isSegmented))
-				            .map((m) -> ((SegmentedMedia) m).segments())
-				  .<Media>or((opt) -> opt.ifTrue(Media::isContainer)
-				                         .map(OptMapper.of(Media::mapToContainer).then(MediaContainer::media))
-				                         .map((l) -> l.stream()
-				                                      .map(MediaUtils::segments)
-				                                      .flatMap(List::stream)
-				                                      .collect(Collectors.toList())))
-				  .orElse(List.of());
+		return streamFilterRecursive(media, OptCondition.ofAll(Media::isSegmented))
+					.map((m) -> ((SegmentedMedia) m).segments())
+					.flatMap(List::stream)
+					.collect(Collectors.toList());
 	}
 	
 	public static final List<Media> solids(Media media) {
-		return Opt.of(media).ifTrue(OptCondition.of(Media::isSingle).and(Media::isSolid))
-	                        .map((m) -> List.of(m))
-				  .<Media>or((opt) -> opt.ifTrue(Media::isContainer)
-				                         .map(OptMapper.of(Media::mapToContainer).then(MediaContainer::media))
-				                         .map((l) -> l.stream()
-				                                      .map(MediaUtils::solids)
-				                                      .flatMap(List::stream)
-				                                      .collect(Collectors.toList())))
-				  .orElse(List.of());
+		return filterRecursive(media, OptCondition.ofAll(Media::isSolid));
+	}
+	
+	/** @since 00.02.09 */
+	public static final Stream<Media> streamFilterDirect(Media media, OptCondition<Media> condition) {
+		return streamFilter(media, MediaContainer::direct, condition);
+	}
+	
+	/** @since 00.02.09 */
+	public static final Stream<Media> streamFilterRecursive(Media media, OptCondition<Media> condition) {
+		return streamFilter(media, MediaContainer::recursive, condition);
+	}
+	
+	/** @since 00.02.09 */
+	public static final Stream<Media> streamFilter(
+			Media media, Function<MediaContainer, MediaAccessor> accessorMapper,
+			OptCondition<Media> condition
+	) {
+		Objects.requireNonNull(accessorMapper);
+		Objects.requireNonNull(condition);
+		return Opt.of(media)
+						.ifTrue(Media::isSingle)
+						.filter(condition)
+						.map(Stream::of)
+				  .<Media>or((opt) -> opt
+						.ifTrue(Media::isContainer)
+						.map(OptMapper.of(Media::asContainer)
+							          .then(accessorMapper)
+							          .then(MediaAccessor::media)
+							          .then(List::stream))
+						.map((s) -> s.filter(condition)))
+				  .orElseGet(Stream::empty);
+	}
+	
+	/** @since 00.02.09 */
+	public static final List<Media> filterDirect(Media media, OptCondition<Media> condition) {
+		return filter(media, MediaContainer::direct, condition);
+	}
+	
+	/** @since 00.02.09 */
+	public static final List<Media> filterRecursive(Media media, OptCondition<Media> condition) {
+		return filter(media, MediaContainer::recursive, condition);
+	}
+	
+	/** @since 00.02.09 */
+	public static final List<Media> filter(
+			Media media, Function<MediaContainer, MediaAccessor> accessorMapper,
+			OptCondition<Media> condition
+	) {
+		return streamFilter(media, accessorMapper, condition).collect(Collectors.toList());
 	}
 	
 	public static final MediaContainer.Builder<?, ?> appendMedia(MediaContainer.Builder<?, ?> container,

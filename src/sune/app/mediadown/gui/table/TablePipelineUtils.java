@@ -134,7 +134,7 @@ public final class TablePipelineUtils {
 			Function<MediaContainer, Media> mapperMediaContainer, Supplier<T> defaultValueSupplier) {
 		return Opt.of(media).ifTrue(OptCondition.of(Media::isSingle).andOpt(isTrueSingle))
 				  .<Media>or((opt) -> opt.ifTrue(OptCondition.of(Media::isContainer).andOpt(isTrueContainer))
-				                         .map(OptMapper.of(Media::mapToContainer)
+				                         .map(OptMapper.of(Media::asContainer)
 				                                       .then(mapperMediaContainer)
 				                         ))
 				  .<C>cast().map(mapperMedia)

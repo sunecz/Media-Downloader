@@ -28,8 +28,9 @@ public interface Media {
 		return !isSegmented();
 	}
 	
-	public static MediaContainer mapToContainer(Media media) {
-		return media.isContainer() ? (MediaContainer) media : null;
+	/** @since 00.02.09 */
+	public static MediaContainer asContainer(Media media) {
+		return media.isContainer() || media instanceof MediaContainer ? (MediaContainer) media : null;
 	}
 	
 	/** @since 00.02.08 */
@@ -48,7 +49,7 @@ public interface Media {
 		return Opt.of(media)
 				  .ifTrue((v) -> v.isSingle() && v.type().is(mediaType)).map(List::of)
 				  .<Media>or((opt) -> opt.ifTrue(Media::isContainer)
-				                         .map(OptMapper.of(Media::mapToContainer)
+				                         .map(OptMapper.of(Media::asContainer)
 				                                       .then((v) -> v.allOfType(mediaType))
 				                         ))
 				  .<List<T>>castAny().orElseGet(List::of);
@@ -58,7 +59,7 @@ public interface Media {
 		return Opt.of(media)
 				  .ifTrue((v) -> v.isContainer() && v.type().is(mediaType)).map(List::of)
 				  .<Media>or((opt) -> opt.ifTrue(Media::isContainer)
-				                         .map(OptMapper.of(Media::mapToContainer)
+				                         .map(OptMapper.of(Media::asContainer)
 				                                       .then((v) -> v.allContainersOfType(mediaType).stream()
 				                                                     .map((m) -> (Media) m)
 				                                                     .collect(Collectors.toList()))
@@ -70,7 +71,7 @@ public interface Media {
 		return Opt.of(media)
 				  .ifTrue((v) -> v.isSingle() && v.type().is(mediaType))
 				  .<Media>or((opt) -> opt.ifTrue(Media::isContainer)
-				                         .map(OptMapper.of(Media::mapToContainer)
+				                         .map(OptMapper.of(Media::asContainer)
 				                                       .then((v) -> v.ofType(mediaType))
 				                         ))
 				  .<T>cast().get();
@@ -80,7 +81,7 @@ public interface Media {
 		return Opt.of(media)
 				  .ifTrue((v) -> v.isContainer() && v.type().is(mediaType))
 				  .<Media>or((opt) -> opt.ifTrue(Media::isContainer)
-				                         .map(OptMapper.of(Media::mapToContainer)
+				                         .map(OptMapper.of(Media::asContainer)
 				                                       .then((v) -> v.containerOfType(mediaType))
 				                         ))
 				  .<T>cast().get();

@@ -331,7 +331,7 @@ public final class Opt<T> {
 	}
 	
 	@FunctionalInterface
-	public static interface OptPredicate<T> {
+	public static interface OptPredicate<T> extends Predicate<T> {
 		
 		boolean test(T value);
 		
@@ -340,7 +340,7 @@ public final class Opt<T> {
 		}
 		
 		default Predicate<T> predicate() {
-			return ((t) -> test(t));
+			return this::test;
 		}
 	}
 	
@@ -349,16 +349,34 @@ public final class Opt<T> {
 		private static final Predicate<?> TRUE  = ((t) -> true);
 		private static final Predicate<?> FALSE = ((t) -> false);
 		
-		private Predicate<T> condition;
+		private Predicate<? super T> condition;
 		private boolean result;
 		private boolean evaluated;
 		
-		private OptCondition(Predicate<T> condition) {
+		private OptCondition(Predicate<? super T> condition) {
 			this.condition = Objects.requireNonNull(condition);
 		}
 		
-		public static final <T> OptCondition<T> of(Predicate<T> condition) {
+		public static final <T> OptCondition<T> of(Predicate<? super T> condition) {
 			return new OptCondition<>(condition);
+		}
+		
+		/** @since 00.02.09 */
+		@SafeVarargs
+		public static final <T> OptCondition<T> ofAll(Predicate<? super T>... conditions) {
+			if(conditions.length == 0) return ofTrue();
+			OptCondition<T> opt = new OptCondition<>(conditions[0]);
+			for(int i = 1, l = conditions.length; i < l; ++i) opt = opt.and(conditions[i]);
+			return opt;
+		}
+		
+		/** @since 00.02.09 */
+		@SafeVarargs
+		public static final <T> OptCondition<T> ofAny(Predicate<? super T>... conditions) {
+			if(conditions.length == 0) return ofFalse();
+			OptCondition<T> opt = new OptCondition<>(conditions[0]);
+			for(int i = 1, l = conditions.length; i < l; ++i) opt = opt.or(conditions[i]);
+			return opt;
 		}
 		
 		public static final <T> OptCondition<T> ofTrue() {
@@ -388,26 +406,28 @@ public final class Opt<T> {
 				throw new IllegalStateException("Not evaluated yet");
 		}
 		
-		private final OptCondition<T> merge(Predicate<T> condition,
-				BiFunction<Predicate<T>, Predicate<T>, Predicate<T>> merger) {
-			final Predicate<T> ref = this.condition;
+		private final OptCondition<T> merge(
+				Predicate<? super T> condition,
+				BiFunction<Predicate<? super T>, Predicate<? super T>, Predicate<? super T>> merger
+		) {
+			final Predicate<? super T> ref = this.condition;
 			this.condition = merger.apply(ref, condition);
 			return this;
 		}
 		
-		public final OptCondition<T> and(Predicate<T> condition) {
+		public final OptCondition<T> and(Predicate<? super T> condition) {
 			return merge(Objects.requireNonNull(condition), (a, b) -> ((t) -> a.test(t) && b.test(t)));
 		}
 		
-		public final OptCondition<T> andOpt(OptPredicate<T> condition) {
+		public final OptCondition<T> andOpt(OptPredicate<? super T> condition) {
 			return and(condition.predicate());
 		}
 		
-		public final OptCondition<T> or(Predicate<T> condition) {
+		public final OptCondition<T> or(Predicate<? super T> condition) {
 			return merge(Objects.requireNonNull(condition), (a, b) -> ((t) -> a.test(t) || b.test(t)));
 		}
 		
-		public final OptCondition<T> orOpt(OptPredicate<T> condition) {
+		public final OptCondition<T> orOpt(OptPredicate<? super T> condition) {
 			return or(condition.predicate());
 		}
 		
@@ -466,6 +486,7 @@ public final class Opt<T> {
 		
 		/** @since 00.02.09 */
 		public <C> OptMapper<A, C> then(Function<B, C> then) {
+			Objects.requireNonNull(then);
 			return new OptMapper<>((a) -> then.apply(mapper.apply(a)));
 		}
 	}

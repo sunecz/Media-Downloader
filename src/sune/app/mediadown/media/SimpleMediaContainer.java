@@ -107,7 +107,7 @@ public class SimpleMediaContainer implements MediaContainer {
 	
 	@Override
 	public MediaAccessor direct() {
-		return Singleton.of(this, () -> accessor.direct());
+		return Singleton.of(this, accessor::direct);
 	}
 	
 	@Override
