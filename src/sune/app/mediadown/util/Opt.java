@@ -83,10 +83,6 @@ public final class Opt<T> {
 		return new Opt<>(supplier);
 	}
 	
-	public static final <T> OptCondition<T> condition(Predicate<T> condition) {
-		return OptCondition.of(condition);
-	}
-	
 	private final void ensureEvaluated() {
 		if(!isEvaluated) {
 			value = pipeline.apply(supplier.get());
