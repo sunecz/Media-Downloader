@@ -12,6 +12,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import sune.app.mediadown.MediaDownloader;
+import sune.app.mediadown.download.segment.FileSegment;
 import sune.app.mediadown.download.segment.FileSegmentsHolder;
 import sune.app.mediadown.language.Translation;
 import sune.app.mediadown.media.MediaQuality.QualityValue;
@@ -157,12 +158,12 @@ public final class MediaUtils {
 	}
 	
 	public static final MediaContainer.Builder<?, ?> appendMedia(MediaContainer.Builder<?, ?> container,
-			Stream<Media.Builder<?, ?>> media) {
+			Stream<? extends Media.Builder<?, ?>> media) {
 		return container.media(Stream.concat(container.media().stream(), media).collect(Collectors.toList()));
 	}
 	
 	public static final MediaContainer.Builder<?, ?> appendMedia(MediaContainer.Builder<?, ?> container,
-			List<Media.Builder<?, ?>> media) {
+			List<? extends Media.Builder<?, ?>> media) {
 		return appendMedia(container, media.stream());
 	}
 	
@@ -272,10 +273,11 @@ public final class MediaUtils {
 			M3UCombinedFile result = parserData.result();
 			M3UFile video = result.video();
 			MediaMetadata metadata = parserData.mediaData().add(parserData.data()).title(title).build();
-			
 			MediaQuality videoQuality = MediaQuality.fromResolution(video.resolution());
-			if(videoQuality.is(MediaQuality.UNKNOWN) && video.attributes() != null) {
-				String qualityName = video.attributes().get("estimatedQuality");
+			MediaContainer.Builder<?, ?> builder;
+			
+			if(videoQuality.is(MediaQuality.UNKNOWN)) {
+				String qualityName = video.attribute("estimatedQuality");
 				
 				if(qualityName != null) {
 					videoQuality = MediaQuality.ofName(qualityName);
@@ -284,12 +286,12 @@ public final class MediaUtils {
 			
 			if(result.hasSeparateAudio()) {
 				M3UFile audio = result.audio();
-				MediaLanguage extractedLanguage = MediaLanguage.ofCode(audio.attributes().getOrDefault("language", ""));
+				MediaLanguage extractedLanguage = MediaLanguage.ofCode(audio.attribute("language", ""));
 				MediaLanguage audioLanguage = Opt.of(extractedLanguage)
 					.ifFalse((l) -> l.is(MediaLanguage.UNKNOWN))
 					.orElse(language);
 				
-				return VideoMediaContainer.separated().format(MediaFormat.M3U8).media(
+				builder = VideoMediaContainer.separated().format(MediaFormat.M3U8).media(
 					VideoMedia.segmented().source(source)
 						.uri(video.uri()).format(MediaFormat.MP4)
 						.quality(videoQuality)
@@ -303,21 +305,58 @@ public final class MediaUtils {
 						.language(audioLanguage).duration(audio.duration())
 						.metadata(metadata)
 				);
+			} else {
+				builder = VideoMediaContainer.combined().format(MediaFormat.M3U8).media(
+					VideoMedia.segmented().source(source)
+						.uri(video.uri()).format(MediaFormat.MP4)
+						.quality(videoQuality)
+						.segments(Utils.<List<FileSegmentsHolder<?>>>cast(video.segmentsHolders()))
+						.resolution(video.resolution()).duration(video.duration())
+						.metadata(metadata),
+					AudioMedia.simple().source(source)
+						.uri(video.uri()).format(MediaFormat.M4A)
+						.quality(MediaQuality.UNKNOWN)
+						.language(language).duration(video.duration())
+						.metadata(metadata)
+				);
 			}
 			
-			return VideoMediaContainer.combined().format(MediaFormat.M3U8).media(
-				VideoMedia.segmented().source(source)
-					.uri(video.uri()).format(MediaFormat.MP4)
-					.quality(videoQuality)
-					.segments(Utils.<List<FileSegmentsHolder<?>>>cast(video.segmentsHolders()))
-					.resolution(video.resolution()).duration(video.duration())
-					.metadata(metadata),
-				AudioMedia.simple().source(source)
-					.uri(video.uri()).format(MediaFormat.M4A)
-					.quality(MediaQuality.UNKNOWN)
-					.language(language).duration(video.duration())
-					.metadata(metadata)
-			);
+			if(result.hasSubtitles()) {
+				List<M3UFile> m3uSubtitles = result.subtitles();
+				List<SubtitlesMedia.Builder<?, ?>> subtitlesBuilders = new ArrayList<>(m3uSubtitles.size());
+				
+				for(M3UFile file : m3uSubtitles) {
+					URI uri = file.uri();
+					MediaFormat format = MediaFormat.fromPath(uri.getPath());
+					
+					if(!format.mediaType().is(MediaType.SUBTITLES)) {
+						FileSegment segment = file.segmentsHolders().get(0).segments().get(0);
+						format = MediaFormat.fromPath(segment.uri().getPath());
+						
+						if(!format.mediaType().is(MediaType.SUBTITLES)) {
+							format = MediaFormat.UNKNOWN;
+						}
+					}
+					
+					MediaLanguage language = Opt.of(file.attribute("language"))
+						.ifTrue(Objects::nonNull)
+						.map(MediaLanguage::ofCode)
+						.orElse(MediaLanguage.UNKNOWN);
+					
+					SubtitlesMedia.Builder<?, ?> subtitles = SubtitlesMedia.segmented()
+						.source(source)
+						.uri(uri)
+						.format(format)
+						.segments(file.segmentsHolders())
+						.language(language);
+					
+					subtitlesBuilders.add(subtitles);
+				}
+				
+				appendMedia(builder, subtitlesBuilders);
+			}
+			
+			return builder;
 		}
 	}
 	

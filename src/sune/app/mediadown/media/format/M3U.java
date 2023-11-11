@@ -47,36 +47,42 @@ public final class M3U {
 	
 	/** @since 00.02.09 */
 	private static final List<M3UCombinedFile> build(M3UReaderResult result) {
-		List<M3UFileBuilder> files = result.files();
-		boolean needCombine = files.stream().anyMatch((f) -> f.attribute("audio") != null);
-		
-		if(!needCombine) {
-			return files.stream()
-				.map(M3UFileBuilder::build)
-				.map(M3UCombinedFile::ofCombined)
-				.collect(Collectors.toList());
-		}
-		
 		Map<String, List<M3UFileBuilder>> groups = result.groups();
 		List<M3UCombinedFile> combinedFiles = new ArrayList<>();
 		
-		for(M3UFileBuilder file : files) {
+		for(M3UFileBuilder file : result.files()) {
+			List<M3UCombinedFileBuilder> builders = new ArrayList<>();
 			String audioGroup = file.attribute("audio");
+			String subtitlesGroup = file.attribute("subtitles");
 			
-			if(audioGroup == null) {
-				combinedFiles.add(M3UCombinedFile.ofCombined(file.build()));
-				continue;
+			if(audioGroup != null) {
+				List<M3UFileBuilder> groupFiles = groups.get(audioGroup);
+				
+				if(groupFiles != null) {
+					for(M3UFileBuilder audio : groupFiles) {
+						builders.add((new M3UCombinedFileBuilder()).video(file).audio(audio));
+					}
+				}
 			}
 			
-			List<M3UFileBuilder> groupFiles = groups.get(audioGroup);
-			
-			if(groupFiles == null) {
-				combinedFiles.add(M3UCombinedFile.ofCombined(file.build()));
-				continue;
+			if(builders.isEmpty()) {
+				builders.add((new M3UCombinedFileBuilder()).video(file));
 			}
 			
-			for(M3UFileBuilder groupFile : groupFiles) {
-				combinedFiles.add(M3UCombinedFile.ofSeparate(file.copy().build(), groupFile.build()));
+			if(subtitlesGroup != null) {
+				List<M3UFileBuilder> groupFiles = groups.get(subtitlesGroup);
+				
+				if(groupFiles != null) {
+					for(M3UFileBuilder subtitles : groupFiles) {
+						for(M3UCombinedFileBuilder builder : builders) {
+							builder.addSubtitles(subtitles);
+						}
+					}
+				}
+			}
+			
+			for(M3UCombinedFileBuilder builder : builders) {
+				combinedFiles.add(builder.build());
 			}
 		}
 		
@@ -127,7 +133,7 @@ public final class M3U {
 	/** @since 00.02.09 */
 	public static enum M3UFileType {
 		
-		VIDEO, AUDIO;
+		VIDEO, AUDIO, SUBTITLES;
 	}
 	
 	public static final class M3UFile implements RemoteFileSegmentable {
@@ -188,6 +194,16 @@ public final class M3U {
 		public Map<String, String> attributes() {
 			return attributes;
 		}
+		
+		/** @since 00.02.09 */
+		public String attribute(String name) {
+			return attributes.get(name);
+		}
+		
+		/** @since 00.02.09 */
+		public String attribute(String name, String defaultValue) {
+			return attributes.getOrDefault(name, defaultValue);
+		}
 	}
 	
 	/** @since 00.02.09 */
@@ -195,18 +211,32 @@ public final class M3U {
 		
 		private final M3UFile video;
 		private final M3UFile audio;
+		private final List<M3UFile> subtitles;
 		
-		private M3UCombinedFile(M3UFile video, M3UFile audio) {
+		private M3UCombinedFile(M3UFile video, M3UFile audio, List<M3UFile> subtitles) {
 			this.video = video;
 			this.audio = audio;
+			this.subtitles = subtitles;
 		}
 		
 		public static final M3UCombinedFile ofCombined(M3UFile videoAndAudio) {
-			return new M3UCombinedFile(Objects.requireNonNull(videoAndAudio), null);
+			return new M3UCombinedFile(Objects.requireNonNull(videoAndAudio), null, null);
+		}
+		
+		public static final M3UCombinedFile ofCombined(M3UFile videoAndAudio, List<M3UFile> subtitles) {
+			return new M3UCombinedFile(Objects.requireNonNull(videoAndAudio), null, Objects.requireNonNull(subtitles));
 		}
 		
 		public static final M3UCombinedFile ofSeparate(M3UFile video, M3UFile audio) {
-			return new M3UCombinedFile(Objects.requireNonNull(video), Objects.requireNonNull(audio));
+			return new M3UCombinedFile(Objects.requireNonNull(video), Objects.requireNonNull(audio), null);
+		}
+		
+		public static final M3UCombinedFile ofSeparate(M3UFile video, M3UFile audio, List<M3UFile> subtitles) {
+			return new M3UCombinedFile(
+				Objects.requireNonNull(video),
+				Objects.requireNonNull(audio),
+				Objects.requireNonNull(subtitles)
+			);
 		}
 		
 		public M3UFile video() {
@@ -217,12 +247,115 @@ public final class M3U {
 			return audio;
 		}
 		
+		public List<M3UFile> subtitles() {
+			return subtitles;
+		}
+		
 		public boolean hasSeparateAudio() {
 			return audio != null;
 		}
+		
+		public boolean hasSubtitles() {
+			return subtitles != null && !subtitles.isEmpty();
+		}
 	}
 	
-	private static final class M3USegmentBuilder {
+	public static final class M3UKey {
+		
+		private final String method;
+		private final String uri;
+		private final String iv;
+		private final String keyFormat;
+		private final String keyFormatVersions;
+		
+		public M3UKey(String method, String uri, String iv, String keyFormat, String keyFormatVersions) {
+			this.method = Objects.requireNonNull(method);
+			this.uri = uri;
+			this.iv = iv;
+			this.keyFormat = keyFormat;
+			this.keyFormatVersions = keyFormatVersions;
+		}
+		
+		public static final M3UKey none() {
+			return new M3UKey("NONE", null, null, null, null);
+		}
+		
+		public String method() {
+			return method;
+		}
+		
+		public String uri() {
+			return uri;
+		}
+		
+		public String iv() {
+			return iv;
+		}
+		
+		public String keyFormat() {
+			return keyFormat;
+		}
+		
+		public String keyFormatVersions() {
+			return keyFormatVersions;
+		}
+		
+		public boolean isPresent() {
+			return !method.equals("NONE");
+		}
+	}
+	
+	/** @since 00.02.09 */
+	protected static final class M3UCombinedFileBuilder {
+		
+		private M3UFileBuilder video;
+		private M3UFileBuilder audio;
+		private List<M3UFileBuilder> subtitles;
+		
+		public M3UCombinedFileBuilder() {
+		}
+		
+		public M3UCombinedFile build() {
+			if(video == null && audio == null && (subtitles == null || subtitles.isEmpty())) {
+				throw new IllegalArgumentException("All files are null or empty");
+			}
+			
+			return new M3UCombinedFile(
+				video == null ? null : video.build(),
+				audio == null ? null : audio.build(),
+				subtitles == null ? null : subtitles.stream().map(M3UFileBuilder::build).collect(Collectors.toList())
+			);
+		}
+		
+		public M3UCombinedFileBuilder video(M3UFileBuilder video) {
+			this.video = video;
+			return this;
+		}
+		
+		public M3UCombinedFileBuilder audio(M3UFileBuilder audio) {
+			this.audio = audio;
+			return this;
+		}
+		
+		public M3UCombinedFileBuilder addSubtitles(List<M3UFileBuilder> subtitles) {
+			if(subtitles == null) {
+				return this;
+			}
+			
+			if(this.subtitles == null) {
+				this.subtitles = new ArrayList<>(subtitles.size());
+			}
+			
+			this.subtitles.addAll(subtitles);
+			return this;
+		}
+		
+		public M3UCombinedFileBuilder addSubtitles(M3UFileBuilder... subtitles) {
+			return subtitles.length == 0 ? this : addSubtitles(List.of(subtitles));
+		}
+	}
+	
+	protected static final class M3USegmentBuilder {
 		
 		private int index;
 		private URI uri;
@@ -264,7 +397,7 @@ public final class M3U {
 		}
 	}
 	
-	private static final class M3UFileBuilder {
+	protected static final class M3UFileBuilder {
 		
 		private M3UFileType type = M3UFileType.VIDEO;
 		private URI uri;
@@ -402,7 +535,7 @@ public final class M3U {
 	}
 	
 	/** @since 00.02.09 */
-	private static final class M3UReaderResult {
+	protected static final class M3UReaderResult {
 		
 		private final List<M3UFileBuilder> files;
 		private final Map<String, List<M3UFileBuilder>> groups;
@@ -421,7 +554,7 @@ public final class M3U {
 		}
 	}
 	
-	private static final class M3UReader implements AutoCloseable {
+	protected static final class M3UReader implements AutoCloseable {
 		
 		private static final char CHAR_META                    = '#';
 		private static final char CHAR_META_DELIMITER_KEYVALUE = ':';
@@ -535,6 +668,9 @@ public final class M3U {
 					case "audio":
 						fileBuilder.addAttribute("audio", Utils.unquote(partValue));
 						break;
+					case "subtitles":
+						fileBuilder.addAttribute("subtitles", Utils.unquote(partValue));
+						break;
 					case "bandwidth":
 						int bandwidth = Integer.valueOf(partValue);
 						MediaQuality quality = MediaUtils.estimateMediaQualityFromBandwidth(bandwidth);
@@ -601,6 +737,23 @@ public final class M3U {
 					for(M3UFileBuilder file : files) {
 						file.type(M3UFileType.AUDIO);
 						file.addAttribute("channels", String.valueOf(channels));
+						file.addAttribute("language", String.valueOf(language));
+					}
+					
+					break;
+				}
+				case "subtitles": {
+					String language = attrs.get("LANGUAGE");
+					String uri = attrs.get("URI");
+					URI resolvedURI = resolveURI(uri);
+					URI resolvedBaseURI = Net.isRelativeURI(uri) ? resolveURI(uri) : Net.baseURI(Net.uri(uri));
+					
+					try(M3UReader reader = new M3UReader(resolvedBaseURI, resolvedURI, streamResolver, null)) {
+						files = reader.read().files();
+					}
+					
+					for(M3UFileBuilder file : files) {
+						file.type(M3UFileType.SUBTITLES);
 						file.addAttribute("language", String.valueOf(language));
 					}
 					
@@ -707,51 +860,6 @@ public final class M3U {
 			if(response != null) {
 				response.close();
 			}
-		}
-	}
-	
-	public static final class M3UKey {
-		
-		private final String method;
-		private final String uri;
-		private final String iv;
-		private final String keyFormat;
-		private final String keyFormatVersions;
-		
-		public M3UKey(String method, String uri, String iv, String keyFormat, String keyFormatVersions) {
-			this.method = Objects.requireNonNull(method);
-			this.uri = uri;
-			this.iv = iv;
-			this.keyFormat = keyFormat;
-			this.keyFormatVersions = keyFormatVersions;
-		}
-		
-		public static final M3UKey none() {
-			return new M3UKey("NONE", null, null, null, null);
-		}
-		
-		public String method() {
-			return method;
-		}
-		
-		public String uri() {
-			return uri;
-		}
-		
-		public String iv() {
-			return iv;
-		}
-		
-		public String keyFormat() {
-			return keyFormat;
-		}
-		
-		public String keyFormatVersions() {
-			return keyFormatVersions;
-		}
-		
-		public boolean isPresent() {
-			return !method.equals("NONE");
 		}
 	}
 }

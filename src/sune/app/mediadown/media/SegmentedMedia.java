@@ -46,8 +46,8 @@ public class SegmentedMedia extends SimpleMedia {
 			));
 		}
 		
-		public B segments(List<FileSegmentsHolder<?>> segments) {
-			this.segments = Objects.requireNonNull(Utils.nonNullContent(segments));
+		public B segments(List<? extends FileSegmentsHolder<?>> segments) {
+			this.segments = Utils.cast(Objects.requireNonNull(Utils.nonNullContent(segments)));
 			return b(this);
 		}
 		
