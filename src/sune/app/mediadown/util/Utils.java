@@ -151,16 +151,6 @@ public final class Utils {
 		return fileName.replaceAll(REGEX_INVALID_FILE_NAME_CHARS, "");
 	}
 	
-	@Deprecated
-	public static final String dirname(String url) {
-		return OfPath.dirName(url);
-	}
-	
-	@Deprecated
-	public static final String basename(String url) {
-		return OfPath.baseName(url);
-	}
-	
 	public static final double convertToSeconds(String string) {
 		double val  = 0.0;
 		double mult = 60.0 * 60.0;
@@ -203,21 +193,6 @@ public final class Utils {
 			}
 		} catch(IOException ex) {
 		}
-	}
-	
-	@Deprecated
-	public static final String fileName(String path) {
-		return OfPath.baseName(path);
-	}
-	
-	@Deprecated
-	public static final String fileType(String path) {
-		return OfPath.fileType(beforeFirst(path, "?"));
-	}
-	
-	@Deprecated
-	public static final String fileNameNoType(String path) {
-		return OfPath.fileName(path);
 	}
 	
 	// Provides realtively fast method for converting a string into an integer
