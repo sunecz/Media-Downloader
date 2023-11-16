@@ -1147,7 +1147,7 @@ public final class MediaDownloader {
 		FileChecker checker = Resources.etcFileChecker(dirName, (path) -> true);
 		
 		if(checker != null) {
-			NIO.save(NIO.localPath("list_resources_" + Utils.fileName(dirName) + ".sha1"), checker.toString());
+			NIO.save(NIO.localPath("list_resources_" + Utils.OfPath.baseName(dirName) + ".sha1"), checker.toString());
 		}
 	}
 	
@@ -2137,8 +2137,8 @@ public final class MediaDownloader {
 				.sorted((a, b) -> {
 					// Check whether the files are in the same directory
 					if(a.getParent().equals(b.getParent())) {
-						String[] aNames = Utils.fileNameNoType(a.getFileName().toString()).split("-");
-						String[] bNames = Utils.fileNameNoType(b.getFileName().toString()).split("-");
+						String[] aNames = Utils.OfPath.fileName(a).split("-");
+						String[] bNames = Utils.OfPath.fileName(b).split("-");
 						int cmp, i = 0, l = Math.min(aNames.length, bNames.length);
 						
 						do {

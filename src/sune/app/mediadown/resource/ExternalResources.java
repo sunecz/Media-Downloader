@@ -170,7 +170,7 @@ public final class ExternalResources {
 				try(InputStream stream = Files.newInputStream(path, StandardOpenOption.READ)) {
 					SSDCollection ssdf = SSDF.read(stream);
 					if(!ssdf.hasDirectString("name")) // Fix missing name
-						ssdf.setDirect("name", Utils.fileNameNoType(path.getFileName().toString()).toLowerCase());
+						ssdf.setDirect("name", Utils.OfPath.fileName(path).toLowerCase());
 					if(!ssdf.hasDirectString("version")) // Fix missing version
 						ssdf.setDirect("version", "0");
 					if(!ssdf.hasDirectString("title")) // Fix missing title

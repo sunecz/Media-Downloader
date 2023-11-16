@@ -157,6 +157,16 @@ public final class Net {
 		return uriDirname(uri(uri));
 	}
 	
+	/** @since 00.02.09 */
+	public static final String removeQuery(URI uri) {
+		return uri != null ? Utils.beforeFirst(uri.toString(), "?") : null;
+	}
+	
+	/** @since 00.02.09 */
+	public static final String removeQuery(String uri) {
+		return uri != null ? Utils.beforeFirst(uri, "?") : null;
+	}
+	
 	public static final InputStream stream(URI uri, Duration timeout) throws IOException {
 		return stream(url(uri), timeout);
 	}

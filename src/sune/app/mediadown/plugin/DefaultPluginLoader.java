@@ -46,11 +46,11 @@ final class DefaultPluginLoader implements PluginLoader {
 	}
 	
 	private static final boolean isLanguageFile(String entryName) {
-		return entryName.endsWith(".ssdf") && Utils.dirname(entryName).endsWith("language");
+		return entryName.endsWith(".ssdf") && Utils.OfPath.dirPath(entryName).endsWith("language");
 	}
 	
 	private static final BinaryOperator<String> languageFileReducer(String langName) {
-		return ((r, f) -> Utils.fileNameNoType(f).equals(langName) ? f : r);
+		return ((r, f) -> Utils.OfPath.fileName(f).equals(langName) ? f : r);
 	}
 	
 	private static final void initPluginMemory(PluginFile file) throws Exception {
@@ -86,7 +86,7 @@ final class DefaultPluginLoader implements PluginLoader {
 					}
 					
 					MemoryPointer pointer = new MemoryPointer(pos, size);
-					MemoryFile memoryFile = new MemoryFile(pointer, path, Utils.basename(path));
+					MemoryFile memoryFile = new MemoryFile(pointer, path, Utils.OfPath.baseName(path));
 					memory.addFile(memoryFile);
 				}
 			}

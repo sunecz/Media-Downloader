@@ -274,7 +274,7 @@ public final class Choosers {
 						if(ext != null) {
 							filter = filters.stream()
 								.filter((f) -> f.getExtensions().stream()
-								                   .map(Utils::fileType)
+								                   .map(Utils.OfPath::fileType)
 								                   .anyMatch(ext::equalsIgnoreCase))
 								.findFirst().orElse(filter);
 						}

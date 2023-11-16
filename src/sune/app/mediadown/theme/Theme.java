@@ -324,7 +324,7 @@ public class Theme implements Extractable {
 		}
 		
 		private static final void readEmptyInfoNoFiles(String path, Builder builder) {
-			String name = Utils.basename(path);
+			String name = Utils.OfPath.baseName(path);
 			String title = Utils.titlize(name);
 			builder.name(name.toLowerCase());
 			builder.version(Version.UNKNOWN);
