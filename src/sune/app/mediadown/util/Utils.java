@@ -49,6 +49,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.stream.Collectors;
@@ -150,14 +151,14 @@ public final class Utils {
 		return fileName.replaceAll(REGEX_INVALID_FILE_NAME_CHARS, "");
 	}
 	
+	@Deprecated
 	public static final String dirname(String url) {
-		int index = url.lastIndexOf('/');
-		return index >= 0 ? url.substring(0, index) : url;
+		return OfPath.dirName(url);
 	}
 	
+	@Deprecated
 	public static final String basename(String url) {
-		int index = url.lastIndexOf('/');
-		return index >= 0 ? url.substring(index+1) : url;
+		return OfPath.baseName(url);
 	}
 	
 	public static final double convertToSeconds(String string) {
@@ -204,20 +205,19 @@ public final class Utils {
 		}
 	}
 	
+	@Deprecated
 	public static final String fileName(String path) {
-		return basename(path.replace('\\', '/'));
+		return OfPath.baseName(path);
 	}
 	
+	@Deprecated
 	public static final String fileType(String path) {
-		String name = beforeFirst(fileName(path), "?");
-		int index = name.lastIndexOf('.');
-		return index >= 0 ? name.substring(index+1) : null;
+		return OfPath.fileType(beforeFirst(path, "?"));
 	}
 	
+	@Deprecated
 	public static final String fileNameNoType(String path) {
-		String name = fileName(path);
-		int index = name.lastIndexOf('.');
-		return index >= 0 ? name.substring(0, index) : name;
+		return OfPath.fileName(path);
 	}
 	
 	// Provides realtively fast method for converting a string into an integer
@@ -1717,6 +1717,51 @@ public final class Utils {
 			Objects.requireNonNull(extractor);
 			return (a, b) -> compareNormalized(extractor.apply(a), extractor.apply(b));
 		}
+		
+		public static final boolean nonEmpty(String value) {
+			return value != null && !value.isEmpty();
+		}
+		
+		public static final boolean nonBlank(String value) {
+			return value != null && !value.isBlank();
+		}
+		
+		public static final String concat(String separator, String... values) {
+			return concat(separator, null, values);
+		}
+		
+		public static final String concat(String separator, Predicate<String> include, String... values) {
+			Objects.requireNonNull(separator);
+			
+			if(values.length == 0) {
+				return "";
+			}
+			
+			StringBuilder string = new StringBuilder();
+			boolean first = true;
+			
+			if(include == null) {
+				for(String value : values) {
+					if(first) first = false;
+					else string.append(separator);
+					
+					string.append(value);
+				}
+			} else {
+				for(String value : values) {
+					if(!include.test(value)) {
+						continue;
+					}
+					
+					if(first) first = false;
+					else string.append(separator);
+					
+					string.append(value);
+				}
+			}
+			
+			return string.toString();
+		}
 	}
 	
 	/** @since 00.02.09 */
@@ -2361,6 +2406,71 @@ public final class Utils {
 		
 		public static final Info info(Path path) {
 			return Info.of(path);
+		}
+		
+		/** @since 00.02.09 */
+		public static final String string(Path path) {
+			return path != null ? path.toAbsolutePath().toString() : null;
+		}
+		
+		/** @since 00.02.09 */
+		public static final String normalize(Path path) {
+			return normalize(string(path));
+		}
+		
+		/** @since 00.02.09 */
+		public static final String normalize(String path) {
+			return path != null ? path.replace('\\', '/') : null;
+		}
+		
+		/** @since 00.02.09 */
+		public static final String dirName(Path path) {
+			Path dir; return (dir = path.getParent()) != null ? baseName(dir) : null;
+		}
+		
+		/** @since 00.02.09 */
+		public static final String dirName(String path) {
+			return afterLast(beforeLast(normalize(path), "/"), "/");
+		}
+		
+		/** @since 00.02.09 */
+		public static final String dirPath(Path path) {
+			Path dir; return (dir = path.getParent()) != null ? normalize(string(dir)) : null;
+		}
+		
+		/** @since 00.02.09 */
+		public static final String dirPath(String path) {
+			return beforeLast(path, "/");
+		}
+		
+		/** @since 00.02.09 */
+		public static final String baseName(Path path) {
+			return path != null ? path.getFileName().toString() : null;
+		}
+		
+		/** @since 00.02.09 */
+		public static final String baseName(String path) {
+			return afterLast(normalize(path), "/");
+		}
+		
+		/** @since 00.02.09 */
+		public static final String fileName(Path path) {
+			return beforeLast(baseName(path), ".");
+		}
+		
+		/** @since 00.02.09 */
+		public static final String fileName(String path) {
+			return beforeLast(baseName(path), ".");
+		}
+		
+		/** @since 00.02.09 */
+		public static final String fileType(Path path) {
+			return afterLast(baseName(path), ".");
+		}
+		
+		/** @since 00.02.09 */
+		public static final String fileType(String path) {
+			return afterLast(baseName(path), ".");
 		}
 		
 		public static final class Info {
