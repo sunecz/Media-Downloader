@@ -4,12 +4,11 @@ import java.util.List;
 
 import sune.app.mediadown.gui.window.TableWindow;
 import sune.app.mediadown.pipeline.Pipeline;
-import sune.app.mediadown.pipeline.PipelineResult;
 import sune.app.mediadown.pipeline.PipelineTask;
 import sune.app.mediadown.pipeline.TerminatingPipelineTask;
 
 /** @since 00.01.27 */
-public final class ResolvedMediaPipelineResult implements TablePipelineResult<ResolvedMedia, PipelineResult<?>> {
+public final class ResolvedMediaPipelineResult implements TablePipelineResult<ResolvedMedia> {
 	
 	private final TableWindow window;
 	private final List<ResolvedMedia> media;
@@ -20,12 +19,10 @@ public final class ResolvedMediaPipelineResult implements TablePipelineResult<Re
 	}
 	
 	@Override
-	public final PipelineTask<PipelineResult<?>> process(Pipeline pipeline) throws Exception {
+	public final PipelineTask process(Pipeline pipeline) throws Exception {
 		if(!isTerminating()) {
 			// Return to the previous task, so it can be run again
-			@SuppressWarnings("unchecked")
-			PipelineTask<PipelineResult<?>> casted
-				= (PipelineTask<PipelineResult<?>>) pipeline.getTasksHistory().backwardAndGet();
+			PipelineTask casted = pipeline.getTasksHistory().backwardAndGet();
 			pipeline.getTasksHistory().backward(); // Add the next task to the correct position in the future
 			window.goBack(); // Must be called if the Go Back button should work correctly
 			return casted;

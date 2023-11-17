@@ -9,7 +9,7 @@ import sune.app.mediadown.media.Media;
 import sune.app.mediadown.pipeline.Pipeline;
 
 /** @since 00.01.27 */
-public final class EpisodePipelineResult implements TablePipelineResult<Media, ResolvedMediaPipelineResult> {
+public final class EpisodePipelineResult implements TablePipelineResult<Media> {
 	
 	private final TableWindow window;
 	private final MediaEngine engine;

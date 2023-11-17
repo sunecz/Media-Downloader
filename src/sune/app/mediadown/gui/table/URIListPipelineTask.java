@@ -14,8 +14,7 @@ import sune.app.mediadown.task.ListTask;
 import sune.app.mediadown.util.Pair;
 
 /** @since 00.02.07 */
-public final class URIListPipelineTask
-		extends ProgressPipelineTaskBase<Pair<MediaGetter, List<Media>>, URIListPipelineResult, Window<?>> {
+public final class URIListPipelineTask extends ProgressPipelineTaskBase<Pair<MediaGetter, List<Media>>, Window<?>> {
 	
 	private final List<URI> uris;
 	private final List<URI> errors = new ArrayList<>();

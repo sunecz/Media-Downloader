@@ -8,7 +8,7 @@ import sune.app.mediadown.gui.window.TableWindow;
 import sune.app.mediadown.pipeline.Pipeline;
 
 /** @since 00.01.27 */
-public final class MediaEnginePipelineResult implements TablePipelineResult<Program, ProgramPipelineResult> {
+public final class MediaEnginePipelineResult implements TablePipelineResult<Program> {
 	
 	private final TableWindow window;
 	private final MediaEngine engine;

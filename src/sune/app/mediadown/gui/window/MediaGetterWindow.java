@@ -151,7 +151,7 @@ public class MediaGetterWindow extends DraggableWindow<VBox> {
 	private final void doTask(Window<?> parent, MediaGetter getter, URI uri, Consumer<Boolean> onFinish) {
 		boolean shouldClose = Ignore.defaultValue(() -> {
 			TableWindow tableWindow = MediaDownloader.window(TableWindow.NAME);
-			TablePipelineResult<?, ?> result = tableWindow.show(parent, getter, uri);
+			TablePipelineResult<?> result = tableWindow.show(parent, getter, uri);
 			boolean isTerminating = result.isTerminating() && result instanceof ResolvedMediaPipelineResult;
 			
 			if(isTerminating) {
@@ -177,7 +177,7 @@ public class MediaGetterWindow extends DraggableWindow<VBox> {
 			pipeline.addTask(task);
 			pipeline.start();
 			pipeline.waitFor();
-			PipelineResult<?> result = pipeline.getResult();
+			PipelineResult result = pipeline.getResult();
 			boolean isTerminating = result.isTerminating() && result instanceof URIListPipelineResult;
 			
 			List<URI> errors = task.errors();

@@ -9,6 +9,7 @@ import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.concurrent.PositionAwareQueueTaskExecutor;
 import sune.app.mediadown.concurrent.PositionAwareQueueTaskExecutor.PositionAwareQueueTaskResult;
 import sune.app.mediadown.concurrent.QueueTaskExecutor.QueueTask;
+import sune.app.mediadown.concurrent.VarLoader;
 import sune.app.mediadown.download.DownloadConfiguration;
 import sune.app.mediadown.download.DownloadResult;
 import sune.app.mediadown.download.MediaDownloadConfiguration;
@@ -25,25 +26,13 @@ import sune.app.mediadown.util.QueueContext;
 public final class DownloadManager implements QueueContext {
 	
 	/** @since 00.02.08 */
-	private static DownloadManager instance;
+	private static final VarLoader<DownloadManager> instance = VarLoader.of(DownloadManager::new);
 	
-	private volatile PositionAwareQueueTaskExecutor<Long> executor;
+	private final PositionAwareQueueTaskExecutor<Long> executor;
 	
-	// Forbid anyone to create an instance of this class
 	private DownloadManager() {
-	}
-	
-	private final PositionAwareQueueTaskExecutor<Long> executor() {
-		if(executor == null) {
-			synchronized(this) {
-				if(executor == null) {
-					executor = new PositionAwareQueueTaskExecutor<>(MediaDownloader.configuration().parallelDownloads());
-					Disposables.add(this::dispose);
-				}
-			}
-		}
-		
-		return executor;
+		executor = new PositionAwareQueueTaskExecutor<>(MediaDownloader.configuration().parallelDownloads());
+		Disposables.add(this::dispose);
 	}
 	
 	private final DownloadResult createDownloadResult(Media media, Path destination,
@@ -64,7 +53,7 @@ public final class DownloadManager implements QueueContext {
 	
 	/** @since 00.02.08 */
 	public static final DownloadManager instance() {
-		return instance == null ? instance = new DownloadManager() : instance;
+		return instance.value();
 	}
 	
 	public final PositionAwareManagerSubmitResult<DownloadResult, Long> submit(Media media, Path destination,
@@ -75,25 +64,21 @@ public final class DownloadManager implements QueueContext {
 		
 		DownloadResult result = createDownloadResult(media, destination, mediaConfiguration);
 		DownloadManagerTask task = createTask(result, media, destination, mediaConfiguration, configuration);
-		PositionAwareQueueTaskResult<Long> taskResult = executor().submit(task);
+		PositionAwareQueueTaskResult<Long> taskResult = executor.submit(task);
 		
 		return new PositionAwareManagerSubmitResult<>(result, taskResult, this);
 	}
 	
 	public final void dispose() throws Exception {
-		if(executor != null) {
-			synchronized(this) {
-				if(executor != null) {
-					executor.stop();
-				}
-			}
+		if(!isRunning()) {
+			return; // Nothing to do
 		}
+		
+		executor.stop();
 	}
 	
 	public final boolean isRunning() {
-		synchronized(this) {
-			return executor != null && executor.isRunning();
-		}
+		return executor.isRunning();
 	}
 	
 	/** @since 00.02.08 */

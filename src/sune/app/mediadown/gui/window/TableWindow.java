@@ -55,12 +55,12 @@ public final class TableWindow extends DraggableWindow<BorderPane> {
 	private Button btnReload;
 	
 	private final SyncObject lockSelect = new SyncObject();
-	private final History<PipelineTask<?>> history = new History<>();
+	private final History<PipelineTask> history = new History<>();
 	private final ObservableList<Object> items = FXCollections.observableArrayList();
 	private final List<Object> selection = new ArrayList<>();
 	private Pipeline pipeline;
 	private ProgressWindow progressWindow;
-	private TableWindowPipelineTaskBase<?, ?> prevTask;
+	private TableWindowPipelineTaskBase<?> prevTask;
 	
 	public TableWindow() {
 		super(NAME, new BorderPane(), 650.0, 470.0);
@@ -99,15 +99,14 @@ public final class TableWindow extends DraggableWindow<BorderPane> {
 	}
 	
 	/** @since 00.02.07 */
-	private final TableWindowPipelineTaskBase<Object, PipelineResult<?>> currentTask() {
+	private final TableWindowPipelineTaskBase<Object> currentTask() {
 		return Utils.cast(pipeline.getTask());
 	}
 	
-	private final void pipelineOnUpdate(Pair<Pipeline, PipelineTask<?>> pair) {
+	private final void pipelineOnUpdate(Pair<Pipeline, PipelineTask> pair) {
 		if(prevTask != null)
 			FXUtils.unreflectChanges(prevTask.getResultList());
-		TableWindowPipelineTaskBase<?, ?> task
-			= (TableWindowPipelineTaskBase<?, ?>) pair.b;
+		TableWindowPipelineTaskBase<?> task = (TableWindowPipelineTaskBase<?>) pair.b;
 		history.add(task);
 		clearSearchResults();
 		setCanGoBack();
@@ -173,7 +172,7 @@ public final class TableWindow extends DraggableWindow<BorderPane> {
 	}
 	
 	public final void goBack() {
-		PipelineTask<?> result = history.backwardAndGet();
+		PipelineTask result = history.backwardAndGet();
 		history.backward(); // Add the result to the correct position
 		setCanGoBack();
 		pipeline.reset(result);
@@ -182,7 +181,7 @@ public final class TableWindow extends DraggableWindow<BorderPane> {
 	
 	/** @since 00.02.07 */
 	public final void reload() {
-		TableWindowPipelineTaskBase<Object, PipelineResult<?>> task = currentTask();
+		TableWindowPipelineTaskBase<Object> task = currentTask();
 		// Allow tasks to do some stuff before the reload (such as clear cache)
 		task.beforeReload();
 		
@@ -277,7 +276,7 @@ public final class TableWindow extends DraggableWindow<BorderPane> {
 	}
 	
 	private final void updateSearchResults(String text) {
-		TableWindowPipelineTaskBase<Object, PipelineResult<?>> task = currentTask();
+		TableWindowPipelineTaskBase<Object> task = currentTask();
 		String normalizedText = Utils.normalize(text).toLowerCase();
 		List<Object> filtered;
 		
@@ -319,7 +318,7 @@ public final class TableWindow extends DraggableWindow<BorderPane> {
 		prevTask = null;
 	}
 	
-	public final <R extends PipelineResult<?>> R show(Stage parent, PipelineTask<?> task) throws Exception {
+	public final <R extends PipelineResult> R show(Stage parent, PipelineTask task) throws Exception {
 		resetAndInit();
 		pipeline.addTask(task);
 		pipeline.start();
@@ -333,12 +332,12 @@ public final class TableWindow extends DraggableWindow<BorderPane> {
 		return result;
 	}
 	
-	public final <R extends PipelineResult<?>> R show(Stage parent, MediaEngine engine) throws Exception {
+	public final <R extends PipelineResult> R show(Stage parent, MediaEngine engine) throws Exception {
 		return show(parent, new MediaEnginePipelineTask(this, engine));
 	}
 	
 	/** @since 00.02.07 */
-	public final <R extends PipelineResult<?>> R show(Stage parent, MediaGetter getter, URI uri) throws Exception {
+	public final <R extends PipelineResult> R show(Stage parent, MediaGetter getter, URI uri) throws Exception {
 		return show(parent, new MediaGetterPipelineTask(this, getter, uri));
 	}
 }

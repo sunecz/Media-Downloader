@@ -15,7 +15,7 @@ import sune.app.mediadown.task.Tasks;
 import sune.app.mediadown.util.Utils;
 
 /** @since 00.01.27 */
-public final class MediaGetterPipelineTask extends TableWindowPipelineTaskBase<Media, MediaGetterPipelineResult> {
+public final class MediaGetterPipelineTask extends TableWindowPipelineTaskBase<Media> {
 	
 	private final MediaGetter getter;
 	/** @since 00.02.07 */

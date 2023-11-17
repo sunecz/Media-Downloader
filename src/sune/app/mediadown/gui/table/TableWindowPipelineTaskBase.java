@@ -3,11 +3,9 @@ package sune.app.mediadown.gui.table;
 import javafx.scene.control.TableView;
 import sune.app.mediadown.gui.ProgressWindow.ProgressAction;
 import sune.app.mediadown.gui.window.TableWindow;
-import sune.app.mediadown.pipeline.PipelineResult;
 
 /** @since 00.01.27 */
-public abstract class TableWindowPipelineTaskBase<T, R extends PipelineResult<?>>
-		extends ProgressPipelineTaskBase<T, R, TableWindow> {
+public abstract class TableWindowPipelineTaskBase<T> extends ProgressPipelineTaskBase<T, TableWindow> {
 	
 	public TableWindowPipelineTaskBase(TableWindow window) {
 		super(window);

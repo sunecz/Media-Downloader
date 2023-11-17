@@ -25,8 +25,7 @@ import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Utils.Ignore;
 
 /** @since 00.02.07 */
-public abstract class ProgressPipelineTaskBase<T, R extends PipelineResult<?>, W extends Window<?>>
-		implements PipelineTask<R> {
+public abstract class ProgressPipelineTaskBase<T, W extends Window<?>> implements PipelineTask {
 	
 	protected final W window;
 	
@@ -49,7 +48,7 @@ public abstract class ProgressPipelineTaskBase<T, R extends PipelineResult<?>, W
 	}
 	
 	protected abstract ListTask<T> getTask();
-	protected abstract R getResult(W window, List<T> result);
+	protected abstract PipelineResult getResult(W window, List<T> result);
 	protected abstract String getProgressText(W window);
 	
 	// ----- "Default" abstract methods
@@ -78,7 +77,7 @@ public abstract class ProgressPipelineTaskBase<T, R extends PipelineResult<?>, W
 	}
 	
 	@Override
-	public R run(Pipeline pipeline) throws Exception {
+	public PipelineResult run(Pipeline pipeline) throws Exception {
 		state.clear(TaskStates.STARTED);
 		state.set(TaskStates.RUNNING);
 		
@@ -205,6 +204,11 @@ public abstract class ProgressPipelineTaskBase<T, R extends PipelineResult<?>, W
 	@Override
 	public boolean isStopped() {
 		return state.is(TaskStates.STOPPED);
+	}
+	
+	@Override
+	public boolean isError() {
+		return state.is(TaskStates.ERROR);
 	}
 	
 	public final ObservableList<Object> getResultList() {

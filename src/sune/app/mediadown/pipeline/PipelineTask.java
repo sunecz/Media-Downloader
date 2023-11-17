@@ -1,16 +1,13 @@
 package sune.app.mediadown.pipeline;
 
+import sune.app.mediadown.HasTaskState;
+
 /** @since 00.01.26 */
-public interface PipelineTask<R extends PipelineResult<?>> {
+public interface PipelineTask extends HasTaskState {
 	
-	R run(Pipeline pipeline) throws Exception;
+	PipelineResult run(Pipeline pipeline) throws Exception;
 	
 	void stop() throws Exception;
 	void pause() throws Exception;
 	void resume() throws Exception;
-	boolean isRunning() throws Exception;
-	boolean isStarted() throws Exception;
-	boolean isDone() throws Exception;
-	boolean isPaused() throws Exception;
-	boolean isStopped() throws Exception;
 }

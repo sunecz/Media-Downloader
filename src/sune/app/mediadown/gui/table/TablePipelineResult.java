@@ -5,7 +5,7 @@ import java.util.List;
 import sune.app.mediadown.pipeline.PipelineResult;
 
 /** @since 00.01.27 */
-public interface TablePipelineResult<V, R extends PipelineResult<?>> extends PipelineResult<R> {
+public interface TablePipelineResult<V> extends PipelineResult {
 	
 	List<V> getValue();
 }

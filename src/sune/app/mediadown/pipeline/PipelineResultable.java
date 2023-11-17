@@ -1,7 +1,7 @@
 package sune.app.mediadown.pipeline;
 
 /** @since 00.02.08 */
-public interface PipelineResultable<R extends PipelineResult<?>> {
+public interface PipelineResultable {
 	
-	PipelineResult<R> pipelineResult();
+	PipelineResult pipelineResult();
 }

@@ -2,6 +2,7 @@ package sune.app.mediadown.pipeline;
 
 import java.nio.file.Path;
 import java.util.Objects;
+import java.util.function.Function;
 
 import sune.app.mediadown.concurrent.PositionAwareQueueTaskExecutor.PositionAwareQueueTaskResult;
 import sune.app.mediadown.download.Download;
@@ -19,13 +20,14 @@ import sune.app.mediadown.manager.DownloadManager;
 import sune.app.mediadown.manager.PositionAwareManagerSubmitResult;
 import sune.app.mediadown.media.Media;
 import sune.app.mediadown.media.MediaDownloadContext;
+import sune.app.mediadown.util.CheckedConsumer;
 import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.QueueContext;
 import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Utils.Ignore;
 
 /** @since 00.01.26 */
-public final class DownloadPipelineTask implements PipelineTask<DownloadPipelineResult>, MediaDownloadContext {
+public final class DownloadPipelineTask implements PipelineTask, MediaDownloadContext {
 	
 	/** @since 00.02.08 */
 	private final PipelineMedia media;
@@ -53,14 +55,41 @@ public final class DownloadPipelineTask implements PipelineTask<DownloadPipeline
 		}
 	}
 	
-	private final Download download() {
-		return result.value().download();
+	/** @since 00.02.09 */
+	private final <T> T downloadAction(Function<Download, T> action, T defaultValue) {
+		DownloadResult downloadResult;
+		Download download;
+		
+		// Check the chain of values to avoid NPE
+		if(result == null
+				|| (downloadResult = result.value()) == null
+				|| (download = downloadResult.download()) == null) {
+			return defaultValue;
+		}
+		
+		return action.apply(download);
+	}
+	
+	/** @since 00.02.09 */
+	private final void downloadAction(CheckedConsumer<Download> action) throws Exception {
+		DownloadResult downloadResult;
+		Download download;
+		
+		// Check the chain of values to avoid NPE
+		if(result == null
+				|| (downloadResult = result.value()) == null
+				|| (download = downloadResult.download()) == null) {
+			return;
+		}
+		
+		action.accept(download);
 	}
 	
 	@Override
-	public final DownloadPipelineResult run(Pipeline pipeline) throws Exception {
-		result = DownloadManager.instance().submit(media.media(), media.destination(), media.mediaConfiguration(),
-			media.configuration());
+	public DownloadPipelineResult run(Pipeline pipeline) throws Exception {
+		result = DownloadManager.instance().submit(
+			media.media(), media.destination(), media.mediaConfiguration(), media.configuration()
+		);
 		DownloadResult downloadResult = result.value();
 		QueueContext context = result.context();
 		
@@ -91,44 +120,52 @@ public final class DownloadPipelineTask implements PipelineTask<DownloadPipeline
 	}
 	
 	@Override
-	public final void stop() throws Exception {
-		download().stop();
-		result.cancel();
+	public void stop() throws Exception {
+		downloadAction(Download::stop);
+		
+		if(result != null) {
+			result.cancel();
+		}
 	}
 	
 	@Override
-	public final void pause() throws Exception {
-		download().pause();
+	public void pause() throws Exception {
+		downloadAction(Download::pause);
 	}
 	
 	@Override
-	public final void resume() throws Exception {
-		download().resume();
+	public void resume() throws Exception {
+		downloadAction(Download::resume);
 	}
 	
 	@Override
-	public final boolean isRunning() {
-		return download().isRunning();
+	public boolean isRunning() {
+		return downloadAction(Download::isRunning, false);
 	}
 	
 	@Override
-	public final boolean isStarted() {
-		return download().isStarted();
+	public boolean isStarted() {
+		return downloadAction(Download::isStarted, false);
 	}
 	
 	@Override
-	public final boolean isDone() {
-		return download().isDone();
+	public boolean isDone() {
+		return downloadAction(Download::isDone, false);
 	}
 	
 	@Override
-	public final boolean isPaused() {
-		return download().isPaused();
+	public boolean isPaused() {
+		return downloadAction(Download::isPaused, false);
 	}
 	
 	@Override
-	public final boolean isStopped() {
-		return download().isStopped();
+	public boolean isStopped() {
+		return downloadAction(Download::isStopped, false);
+	}
+	
+	@Override
+	public boolean isError() {
+		return downloadAction(Download::isError, false);
 	}
 	
 	/** @since 00.02.09 */

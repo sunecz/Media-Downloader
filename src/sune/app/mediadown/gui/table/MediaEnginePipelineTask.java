@@ -26,7 +26,7 @@ import sune.app.mediadown.util.ClipboardUtils;
 import sune.app.mediadown.util.Utils;
 
 /** @since 00.01.27 */
-public final class MediaEnginePipelineTask extends TableWindowPipelineTaskBase<Program, MediaEnginePipelineResult> {
+public final class MediaEnginePipelineTask extends TableWindowPipelineTaskBase<Program> {
 	
 	private final MediaEngine engine;
 	

@@ -8,7 +8,7 @@ import sune.app.mediadown.media.Media;
 import sune.app.mediadown.pipeline.Pipeline;
 
 /** @since 00.01.27 */
-public final class MediaGetterPipelineResult implements TablePipelineResult<Media, ResolvedMediaPipelineResult> {
+public final class MediaGetterPipelineResult implements TablePipelineResult<Media> {
 	
 	private final TableWindow window;
 	private final MediaGetter getter;

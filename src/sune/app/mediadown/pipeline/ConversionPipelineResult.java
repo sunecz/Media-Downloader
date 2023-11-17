@@ -8,7 +8,7 @@ import sune.app.mediadown.gui.table.ResolvedMedia;
 import sune.app.mediadown.util.Metadata;
 
 /** @since 00.01.26 */
-public final class ConversionPipelineResult implements PipelineResult<ConversionPipelineResult> {
+public final class ConversionPipelineResult implements PipelineResult {
 	
 	private final boolean needConversion;
 	/** @since 00.02.08 */
@@ -47,7 +47,7 @@ public final class ConversionPipelineResult implements PipelineResult<Conversion
 	}
 	
 	@Override
-	public final PipelineTask<ConversionPipelineResult> process(Pipeline pipeline) throws Exception {
+	public PipelineTask process(Pipeline pipeline) throws Exception {
 		if(needConversion) {
 			return ConversionPipelineTask.of(output, inputs, metadata);
 		}
@@ -56,7 +56,7 @@ public final class ConversionPipelineResult implements PipelineResult<Conversion
 	}
 	
 	@Override
-	public final boolean isTerminating() {
+	public boolean isTerminating() {
 		return !needConversion;
 	}
 }

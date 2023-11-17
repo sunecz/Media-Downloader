@@ -1,6 +1,7 @@
 package sune.app.mediadown.pipeline;
 
 import java.util.List;
+import java.util.function.Function;
 
 import sune.app.mediadown.concurrent.PositionAwareQueueTaskExecutor.PositionAwareQueueTaskResult;
 import sune.app.mediadown.conversion.ConversionMedia;
@@ -16,6 +17,7 @@ import sune.app.mediadown.gui.table.ResolvedMedia;
 import sune.app.mediadown.manager.ConversionManager;
 import sune.app.mediadown.manager.ManagerSubmitResult;
 import sune.app.mediadown.media.MediaConversionContext;
+import sune.app.mediadown.util.CheckedConsumer;
 import sune.app.mediadown.util.Metadata;
 import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.QueueContext;
@@ -23,7 +25,7 @@ import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Utils.Ignore;
 
 /** @since 00.01.26 */
-public final class ConversionPipelineTask implements PipelineTask<ConversionPipelineResult>, MediaConversionContext {
+public final class ConversionPipelineTask implements PipelineTask, MediaConversionContext {
 	
 	/** @since 00.02.08 */
 	private final ResolvedMedia output;
@@ -63,12 +65,34 @@ public final class ConversionPipelineTask implements PipelineTask<ConversionPipe
 		}
 	}
 	
-	private final Converter converter() {
-		return result.value();
+	/** @since 00.02.09 */
+	private final <T> T converterAction(Function<Converter, T> action, T defaultValue) {
+		Converter converter;
+		
+		// Check the chain of values to avoid NPE
+		if(result == null
+				|| (converter = result.value()) == null) {
+			return defaultValue;
+		}
+		
+		return action.apply(converter);
+	}
+	
+	/** @since 00.02.09 */
+	private final void converterAction(CheckedConsumer<Converter> action) throws Exception {
+		Converter converter;
+		
+		// Check the chain of values to avoid NPE
+		if(result == null
+				|| (converter = result.value()) == null) {
+			return;
+		}
+		
+		action.accept(converter);
 	}
 	
 	@Override
-	public final ConversionPipelineResult run(Pipeline pipeline) throws Exception {
+	public ConversionPipelineResult run(Pipeline pipeline) throws Exception {
 		// Ensure that the input formats are not explicitly stated in the command
 		Metadata altered = metadata.copy();
 		altered.set("noExplicitInputFormat", true);
@@ -100,44 +124,52 @@ public final class ConversionPipelineTask implements PipelineTask<ConversionPipe
 	}
 	
 	@Override
-	public final void stop() throws Exception {
-		converter().stop();
-		result.cancel();
+	public void stop() throws Exception {
+		converterAction(Converter::stop);
+		
+		if(result != null) {
+			result.cancel();
+		}
 	}
 	
 	@Override
-	public final void pause() throws Exception {
-		converter().pause();
+	public void pause() throws Exception {
+		converterAction(Converter::pause);
 	}
 	
 	@Override
-	public final void resume() throws Exception {
-		converter().resume();
+	public void resume() throws Exception {
+		converterAction(Converter::resume);
 	}
 	
 	@Override
-	public final boolean isRunning() {
-		return converter().isRunning();
+	public boolean isRunning() {
+		return converterAction(Converter::isRunning, false);
 	}
 	
 	@Override
-	public final boolean isStarted() {
-		return converter().isStarted();
+	public boolean isStarted() {
+		return converterAction(Converter::isStarted, false);
 	}
 	
 	@Override
-	public final boolean isDone() {
-		return converter().isDone();
+	public boolean isDone() {
+		return converterAction(Converter::isDone, false);
 	}
 	
 	@Override
-	public final boolean isPaused() {
-		return converter().isPaused();
+	public boolean isPaused() {
+		return converterAction(Converter::isPaused, false);
 	}
 	
 	@Override
-	public final boolean isStopped() {
-		return converter().isStopped();
+	public boolean isStopped() {
+		return converterAction(Converter::isStopped, false);
+	}
+	
+	@Override
+	public boolean isError() {
+		return converterAction(Converter::isError, false);
 	}
 	
 	/** @since 00.02.09 */

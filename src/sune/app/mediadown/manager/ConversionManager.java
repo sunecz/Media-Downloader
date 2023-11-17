@@ -8,6 +8,7 @@ import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.concurrent.PositionAwareQueueTaskExecutor;
 import sune.app.mediadown.concurrent.PositionAwareQueueTaskExecutor.PositionAwareQueueTaskResult;
 import sune.app.mediadown.concurrent.QueueTaskExecutor.QueueTask;
+import sune.app.mediadown.concurrent.VarLoader;
 import sune.app.mediadown.conversion.ConversionMedia;
 import sune.app.mediadown.entity.Converter;
 import sune.app.mediadown.event.tracker.PipelineStates;
@@ -26,27 +27,14 @@ import sune.app.mediadown.util.QueueContext;
 public final class ConversionManager implements QueueContext {
 	
 	/** @since 00.02.08 */
-	private static ConversionManager instance;
+	private static final VarLoader<ConversionManager> instance = VarLoader.of(ConversionManager::new);
 	
 	/** @since 00.02.08 */
-	private volatile PositionAwareQueueTaskExecutor<Void> executor;
+	private final PositionAwareQueueTaskExecutor<Void> executor;
 	
-	// Forbid anyone to create an instance of this class
 	private ConversionManager() {
-	}
-	
-	/** @since 00.02.08 */
-	private final PositionAwareQueueTaskExecutor<Void> executor() {
-		if(executor == null) {
-			synchronized(this) {
-				if(executor == null) {
-					executor = new PositionAwareQueueTaskExecutor<>(MediaDownloader.configuration().parallelConversions());
-					Disposables.add(this::dispose);
-				}
-			}
-		}
-		
-		return executor;
+		executor = new PositionAwareQueueTaskExecutor<>(MediaDownloader.configuration().parallelConversions());
+		Disposables.add(this::dispose);
 	}
 	
 	/** @since 00.02.08 */
@@ -62,7 +50,7 @@ public final class ConversionManager implements QueueContext {
 	
 	/** @since 00.02.08 */
 	public static final ConversionManager instance() {
-		return instance == null ? instance = new ConversionManager() : instance;
+		return instance.value();
 	}
 	
 	/** @since 00.02.08 */
@@ -73,25 +61,21 @@ public final class ConversionManager implements QueueContext {
 		}
 		
 		Converter converter = createConverter();
-		PositionAwareQueueTaskResult<Void> taskResult = executor().submit(createTask(converter, output, inputs, metadata));
+		PositionAwareQueueTaskResult<Void> taskResult = executor.submit(createTask(converter, output, inputs, metadata));
 		
 		return new PositionAwareManagerSubmitResult<>(converter, taskResult, this);
 	}
 	
 	public final void dispose() throws Exception {
-		if(executor != null) {
-			synchronized(this) {
-				if(executor != null) {
-					executor.stop();
-				}
-			}
+		if(!isRunning()) {
+			return; // Nothing to do
 		}
+		
+		executor.stop();
 	}
 	
 	public final boolean isRunning() {
-		synchronized(this) {
-			return executor != null && executor.isRunning();
-		}
+		return executor.isRunning();
 	}
 	
 	/** @since 00.02.08 */

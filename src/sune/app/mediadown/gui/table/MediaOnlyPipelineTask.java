@@ -14,7 +14,7 @@ import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.Utils;
 
 /** @since 00.01.27 */
-public final class MediaOnlyPipelineTask extends MediaEnginePipelineTaskBase<Media, Pair<MediaGetter, Media>, ResolvedMediaPipelineResult> {
+public final class MediaOnlyPipelineTask extends MediaEnginePipelineTaskBase<Media, Pair<MediaGetter, Media>> {
 	
 	private final MediaGetter getter;
 	

@@ -12,7 +12,7 @@ import sune.app.mediadown.task.Tasks;
 import sune.app.mediadown.util.Pair;
 
 /** @since 00.01.27 */
-public final class MediaPipelineTask extends MediaEnginePipelineTaskBase<Media, Pair<Episode, Media>, ResolvedMediaPipelineResult> {
+public final class MediaPipelineTask extends MediaEnginePipelineTaskBase<Media, Pair<Episode, Media>> {
 	
 	private final Episode episode;
 	

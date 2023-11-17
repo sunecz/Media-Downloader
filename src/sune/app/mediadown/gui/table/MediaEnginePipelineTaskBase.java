@@ -8,8 +8,7 @@ import sune.app.mediadown.pipeline.PipelineResult;
 import sune.app.mediadown.task.ListTask;
 
 /** @since 00.01.27 */
-public abstract class MediaEnginePipelineTaskBase<A, B, R extends PipelineResult<?>>
-		extends TableWindowPipelineTaskBase<B, R> {
+public abstract class MediaEnginePipelineTaskBase<A, B> extends TableWindowPipelineTaskBase<B> {
 	
 	protected final MediaEngine engine;
 	protected final List<A> items;
@@ -21,7 +20,7 @@ public abstract class MediaEnginePipelineTaskBase<A, B, R extends PipelineResult
 	}
 	
 	protected abstract ListTask<B> getFunction(A item, MediaEngine engine);
-	protected abstract R getResult(TableWindow window, MediaEngine engine, List<B> result);
+	protected abstract PipelineResult getResult(TableWindow window, MediaEngine engine, List<B> result);
 	
 	@Override
 	protected ListTask<B> getTask() {
@@ -35,7 +34,7 @@ public abstract class MediaEnginePipelineTaskBase<A, B, R extends PipelineResult
 	}
 	
 	@Override
-	protected R getResult(TableWindow window, List<B> result) {
+	protected PipelineResult getResult(TableWindow window, List<B> result) {
 		return getResult(window, engine, result);
 	}
 }

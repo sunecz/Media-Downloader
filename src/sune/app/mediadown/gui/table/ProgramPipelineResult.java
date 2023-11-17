@@ -10,7 +10,7 @@ import sune.app.mediadown.pipeline.PipelineTask;
 import sune.app.mediadown.util.TriFunction;
 
 /** @since 00.01.27 */
-public final class ProgramPipelineResult implements TablePipelineResult<Episode, TablePipelineResult<?, ?>> {
+public final class ProgramPipelineResult implements TablePipelineResult<Episode> {
 	
 	private final TableWindow window;
 	private final MediaEngine engine;
@@ -23,10 +23,9 @@ public final class ProgramPipelineResult implements TablePipelineResult<Episode,
 	}
 	
 	@Override
-	public final PipelineTask<? extends TablePipelineResult<?, ?>> process(Pipeline pipeline) throws Exception {
+	public final PipelineTask process(Pipeline pipeline) throws Exception {
 		List<Episode> selected = window.waitAndGetSelection(episodes);
-		TriFunction<TableWindow, MediaEngine, List<Episode>,
-				PipelineTask<? extends TablePipelineResult<?, ?>>> function
+		TriFunction<TableWindow, MediaEngine, List<Episode>, PipelineTask> function
 			= selected.size() > 1
 				? MultipleEpisodePipelineTask::new
 				: EpisodePipelineTask::new;

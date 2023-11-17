@@ -91,12 +91,15 @@ import sune.app.mediadown.pipeline.ConversionPipelineTask;
 import sune.app.mediadown.pipeline.DownloadPipelineTask;
 import sune.app.mediadown.pipeline.Pipeline;
 import sune.app.mediadown.pipeline.PipelineTask;
+import sune.app.mediadown.pipeline.PipelineTransformer;
 import sune.app.mediadown.plugin.PluginFile;
 import sune.app.mediadown.plugin.PluginUpdater;
 import sune.app.mediadown.plugin.Plugins;
 import sune.app.mediadown.report.Report;
 import sune.app.mediadown.report.Report.Reason;
 import sune.app.mediadown.report.ReportContext;
+import sune.app.mediadown.transformer.Transformer;
+import sune.app.mediadown.transformer.Transformers;
 import sune.app.mediadown.util.ClipboardUtils;
 import sune.app.mediadown.util.FXUtils;
 import sune.app.mediadown.util.MathUtils;
@@ -661,7 +664,7 @@ public final class MainWindow extends Window<BorderPane> {
 						return;
 					}
 					
-					PipelineTask<?> task = info.pipeline().getTask();
+					PipelineTask task = info.pipeline().getTask();
 					ReportContext reportContext = null;
 					
 					if(task instanceof DownloadPipelineTask) {
@@ -1005,7 +1008,10 @@ public final class MainWindow extends Window<BorderPane> {
 	
 	/** @since 00.02.08 */
 	private final PipelineInfo createPipelineInfo(ResolvedMedia media) {
-		Pipeline pipeline = Pipeline.create();
+		List<Transformer> transformers = Transformers.allFrom(media);
+		PipelineTransformer pipelineTransformer = Transformer.of(transformers).pipelineTransformer();
+		
+		Pipeline pipeline = Pipeline.create(pipelineTransformer);
 		PipelineInfo info = new PipelineInfo(pipeline, media);
 		TrackerVisitor visitor = new DefaultTrackerVisitor(info);
 		
@@ -1082,7 +1088,7 @@ public final class MainWindow extends Window<BorderPane> {
 		
 		Threads.execute(() -> {
 			Ignore.callVoid(() -> {
-				TablePipelineResult<?, ?> result = window.show(this, engine);
+				TablePipelineResult<?> result = window.show(this, engine);
 				
 				if(!result.isTerminating()) {
 					return;

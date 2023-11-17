@@ -2,7 +2,7 @@ package sune.app.mediadown.pipeline;
 
 import java.util.Objects;
 
-public final class MediaPipelineResult implements PipelineResult<DownloadPipelineResult> {
+public final class MediaPipelineResult implements PipelineResult {
 	
 	/** @since 00.02.08 */
 	private final PipelineMedia media;
@@ -17,7 +17,7 @@ public final class MediaPipelineResult implements PipelineResult<DownloadPipelin
 	}
 	
 	@Override
-	public final PipelineTask<DownloadPipelineResult> process(Pipeline pipeline) throws Exception {
+	public final DownloadPipelineTask process(Pipeline pipeline) throws Exception {
 		return DownloadPipelineTask.of(media);
 	}
 	

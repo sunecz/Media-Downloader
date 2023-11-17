@@ -1054,7 +1054,7 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 			ResolvedMedia media = resolvedMedia();
 			PipelineMedia pipelineMedia = PipelineMedia.of(media.media(), media.path(), media.configuration(),
 				DownloadConfiguration.ofDefault());
-			PipelineResult<?> input = MediaPipelineResult.of(pipelineMedia);
+			PipelineResult input = MediaPipelineResult.of(pipelineMedia);
 			
 			try {
 				media(pipelineMedia);

@@ -31,7 +31,7 @@ import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.Utils;
 
 /** @since 00.01.27 */
-public final class MultipleEpisodePipelineTask extends MediaEnginePipelineTaskBase<Episode, Pair<Episode, List<Media>>, ResolvedMediaPipelineResult> {
+public final class MultipleEpisodePipelineTask extends MediaEnginePipelineTaskBase<Episode, Pair<Episode, List<Media>>> {
 	
 	public MultipleEpisodePipelineTask(TableWindow window, MediaEngine engine, List<Episode> items) {
 		super(window, engine, items);

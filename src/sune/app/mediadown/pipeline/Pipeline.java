@@ -29,28 +29,36 @@ public final class Pipeline implements EventBindable<EventType>, HasTaskState {
 	private final SyncObject lockPause = new SyncObject();
 	private final SyncObject lockDone = new SyncObject();
 	
-	private final Queue<PipelineTask<?>> tasks = new LinkedList<>();
-	private final AtomicReference<PipelineTask<?>> task = new AtomicReference<>();
+	private final Queue<PipelineTask> tasks = new LinkedList<>();
+	private final AtomicReference<PipelineTask> task = new AtomicReference<>();
 	private final AtomicReference<Exception> exception = new AtomicReference<>();
 	private Thread thread;
-	private PipelineResult<?> input;
+	private PipelineResult input;
+	
+	/** @since 00.02.09 */
+	private final PipelineTransformer transformer;
 	
 	/** @since 00.01.27 */
-	private final AtomicReference<PipelineResult<?>> resetInput = new AtomicReference<>();
+	private final AtomicReference<PipelineResult> resetInput = new AtomicReference<>();
 	/** @since 00.01.27 */
-	private final AtomicReference<PipelineTask<?>> resetTask = new AtomicReference<>();
+	private final AtomicReference<PipelineTask> resetTask = new AtomicReference<>();
 	/** @since 00.01.27 */
-	private final History<PipelineResult<?>> historyInputs = new History<>();
+	private final History<PipelineResult> historyInputs = new History<>();
 	/** @since 00.01.27 */
-	private final History<PipelineTask<?>> historyTasks = new History<>();
+	private final History<PipelineTask> historyTasks = new History<>();
 	
 	// Hide the constructor for possible future changes
-	private Pipeline() {
+	private Pipeline(PipelineTransformer transformer) {
+		this.transformer = Objects.requireNonNull(transformer);
 	}
 	
 	public static final Pipeline create() {
-		// Make the constructor accessible through factory method
-		return new Pipeline();
+		return new Pipeline(PipelineTransformer.ofDefault());
+	}
+	
+	/** @since 00.02.09 */
+	public static final Pipeline create(PipelineTransformer transformer) {
+		return new Pipeline(transformer);
 	}
 	
 	private final void waitIfPaused() {
@@ -59,8 +67,8 @@ public final class Pipeline implements EventBindable<EventType>, HasTaskState {
 		}
 	}
 	
-	private final PipelineTask<?> getNextTask() throws Exception {
-		return input.process(this);
+	private final PipelineTask getNextTask() throws Exception {
+		return transformTask(input.process(this));
 	}
 	
 	private final void addNextTask() throws Exception {
@@ -72,6 +80,16 @@ public final class Pipeline implements EventBindable<EventType>, HasTaskState {
 		state.set(TaskStates.ERROR);
 		exception.set(ex);
 		eventRegistry.call(PipelineEvent.ERROR, new Pair<>(this, ex));
+	}
+	
+	/** @since 00.02.09 */
+	private final PipelineResult transformInput(PipelineResult input) {
+		return transformer.transform(input);
+	}
+	
+	/** @since 00.02.09 */
+	private final PipelineTask transformTask(PipelineTask task) {
+		return transformer.transform(task);
 	}
 	
 	private final void invoke() throws Exception {
@@ -86,7 +104,8 @@ public final class Pipeline implements EventBindable<EventType>, HasTaskState {
 					}
 				} else {
 					// Otherwise process the next task
-					PipelineTask<?> localTask = tasks.poll();
+					PipelineTask localTask = tasks.poll();
+					
 					// Allow pipeline to end, if the next task is null
 					if(localTask == null) {
 						break;
@@ -121,8 +140,8 @@ public final class Pipeline implements EventBindable<EventType>, HasTaskState {
 		}
 	}
 	
-	private final void doWithTask(CheckedConsumer<PipelineTask<?>> consumer) throws Exception {
-		PipelineTask<?> localTask;
+	private final void doWithTask(CheckedConsumer<PipelineTask> consumer) throws Exception {
+		PipelineTask localTask;
 		if((localTask = task.get()) == null) {
 			return;
 		}
@@ -144,7 +163,7 @@ public final class Pipeline implements EventBindable<EventType>, HasTaskState {
 	
 	/** @since 00.01.27 */
 	private final void loopEnd() {
-		PipelineResult<?> input;
+		PipelineResult input;
 		if((input = resetInput.getAndSet(null)) != null) {
 			this.tasks.clear();
 			this.task.set(null);
@@ -152,7 +171,7 @@ public final class Pipeline implements EventBindable<EventType>, HasTaskState {
 			return; // Do not continue
 		}
 		
-		PipelineTask<?> task;
+		PipelineTask task;
 		if((task = resetTask.getAndSet(null)) != null) {
 			this.tasks.clear();
 			this.task.set(null);
@@ -161,10 +180,11 @@ public final class Pipeline implements EventBindable<EventType>, HasTaskState {
 	}
 	
 	/** @since 00.01.27 */
-	private final void setTask(PipelineTask<?> task) {
-		this.task.set(task);
-		historyTasks.add(task);
-		eventRegistry.call(PipelineEvent.UPDATE, new Pair<>(this, task));
+	private final void setTask(PipelineTask task) {
+		PipelineTask transformed = transformTask(task);
+		this.task.set(transformed);
+		historyTasks.add(transformed);
+		eventRegistry.call(PipelineEvent.UPDATE, new Pair<>(this, transformed));
 	}
 	
 	/** @since 00.02.08 */
@@ -184,25 +204,26 @@ public final class Pipeline implements EventBindable<EventType>, HasTaskState {
 		}
 	}
 	
-	public final void setInput(PipelineResult<?> input) {
-		this.input = input;
-		historyInputs.add(input);
-		eventRegistry.call(PipelineEvent.INPUT, new Pair<>(this, input));
+	public final void setInput(PipelineResult input) {
+		PipelineResult transformed = transformInput(input);
+		this.input = transformed;
+		historyInputs.add(transformed);
+		eventRegistry.call(PipelineEvent.INPUT, new Pair<>(this, transformed));
 	}
 	
 	/** @since 00.01.27 */
-	public final void addTask(PipelineTask<?> task) {
-		tasks.add(Objects.requireNonNull(task));
+	public final void addTask(PipelineTask task) {
+		tasks.add(Objects.requireNonNull(transformTask(task)));
 	}
 	
 	/** @since 00.01.27 */
-	public final void reset(PipelineResult<?> input) {
-		resetInput.set(input);
+	public final void reset(PipelineResult input) {
+		resetInput.set(transformInput(input));
 	}
 	
 	/** @since 00.01.27 */
-	public final void reset(PipelineTask<?> task) {
-		resetTask.set(Objects.requireNonNull(task));
+	public final void reset(PipelineTask task) {
+		resetTask.set(Objects.requireNonNull(transformTask(task)));
 	}
 	
 	/** @since 00.02.09 */
@@ -330,12 +351,12 @@ public final class Pipeline implements EventBindable<EventType>, HasTaskState {
 		eventRegistry.remove(event, listener);
 	}
 	
-	public final PipelineTask<?> getTask() {
+	public final PipelineTask getTask() {
 		return task.get();
 	}
 	
 	/** @since 00.01.27 */
-	public final PipelineResult<?> getResult() {
+	public final PipelineResult getResult() {
 		return input;
 	}
 	
@@ -348,12 +369,12 @@ public final class Pipeline implements EventBindable<EventType>, HasTaskState {
 	}
 	
 	/** @since 00.01.27 */
-	public final History<PipelineResult<?>> getInputsHistory() {
+	public final History<PipelineResult> getInputsHistory() {
 		return historyInputs;
 	}
 	
 	/** @since 00.01.27 */
-	public final History<PipelineTask<?>> getTasksHistory() {
+	public final History<PipelineTask> getTasksHistory() {
 		return historyTasks;
 	}
 }
