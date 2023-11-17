@@ -2,6 +2,8 @@ package sune.app.mediadown.plugin;
 
 import java.io.File;
 import java.io.InputStream;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.nio.MappedByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -28,6 +30,7 @@ import sune.app.mediadown.language.Translation;
 import sune.app.mediadown.plugin.PluginMemory.MemoryFile;
 import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.Pair;
+import sune.app.mediadown.util.Reflection;
 import sune.app.mediadown.util.Utils;
 import sune.util.load.ModuleLazyLoader;
 import sune.util.load.RootAnalyzingClassLoader;
@@ -51,6 +54,29 @@ final class DefaultPluginLoader implements PluginLoader {
 	
 	private static final BinaryOperator<String> languageFileReducer(String langName) {
 		return ((r, f) -> Utils.OfPath.fileName(f).equals(langName) ? f : r);
+	}
+	
+	/** @since 00.02.09 */
+	private static final <T> T newInstance(String className)
+			throws InstantiationException,
+			       IllegalAccessException,
+			       IllegalArgumentException,
+			       InvocationTargetException,
+			       NoSuchMethodException,
+			       SecurityException,
+			       ClassNotFoundException,
+			       NoSuchFieldException {
+		Class<?> clazz = Class.forName(className);
+		Constructor<?> constructor = clazz.getDeclaredConstructor();
+		
+		try {
+			Reflection.setAccessible(constructor, true);
+			@SuppressWarnings("unchecked")
+			T instance = (T) constructor.newInstance();
+			return instance;
+		} finally {
+			Reflection.setAccessible(constructor, false);
+		}
 	}
 	
 	private static final void initPluginMemory(PluginFile file) throws Exception {
@@ -122,7 +148,7 @@ final class DefaultPluginLoader implements PluginLoader {
 	}
 	
 	private static final void initPluginInstance(PluginFile file) throws Exception {
-		file.setInstance((PluginBase) Class.forName(file.getPlugin().className()).getConstructor().newInstance());
+		file.setInstance(newInstance(file.getPlugin().className()));
 	}
 	
 	private static final void initPlugin(PluginFile file) throws Exception {
@@ -235,8 +261,7 @@ final class DefaultPluginLoader implements PluginLoader {
 					String bootstrapClassName = plugin.getPluginBootstrap().className();
 					loadClassFromZIP(loader, path, bootstrapClassName);
 					
-					PluginBootstrapBase instanceBootstrap = 
-						(PluginBootstrapBase) Class.forName(bootstrapClassName).getConstructor().newInstance();
+					PluginBootstrapBase instanceBootstrap = newInstance(bootstrapClassName);
 					plugin.setBootstrapInstance(instanceBootstrap);
 					
 					// Try to initialize configuration early (before init()), it can be null
