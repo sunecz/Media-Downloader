@@ -181,21 +181,6 @@ public final class MediaUtils {
 		return streamFilter(media, accessorMapper, condition).collect(Collectors.toList());
 	}
 	
-	public static final MediaContainer.Builder<?, ?> appendMedia(MediaContainer.Builder<?, ?> container,
-			Stream<? extends Media.Builder<?, ?>> media) {
-		return container.media(Stream.concat(container.media().stream(), media).collect(Collectors.toList()));
-	}
-	
-	public static final MediaContainer.Builder<?, ?> appendMedia(MediaContainer.Builder<?, ?> container,
-			List<? extends Media.Builder<?, ?>> media) {
-		return appendMedia(container, media.stream());
-	}
-	
-	public static final MediaContainer.Builder<?, ?> appendMedia(MediaContainer.Builder<?, ?> container,
-			Media.Builder<?, ?>... media) {
-		return appendMedia(container, Stream.of(media));
-	}
-	
 	/** @since 00.02.09 */
 	public static final MediaQuality estimateMediaQualityFromBandwidth(int bandwidth) {
 		return MediaQualityEstimator.fromBandwidth(bandwidth);
@@ -473,7 +458,7 @@ public final class MediaUtils {
 					subtitlesBuilders.add(subtitles);
 				}
 				
-				appendMedia(builder, subtitlesBuilders);
+				builder.addMedia(subtitlesBuilders);
 			}
 			
 			return builder;

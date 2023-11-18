@@ -269,8 +269,8 @@ public class SimpleMediaContainer implements MediaContainer {
 		}
 		
 		@Override
-		public B media(List<Media.Builder<?, ?>> media) {
-			this.media = Objects.requireNonNull(Utils.nonNullContent(media));
+		public B media(List<? extends Media.Builder<?, ?>> media) {
+			this.media = Utils.cast(Objects.requireNonNull(Utils.nonNullContent(media)));
 			return b(this);
 		}
 		
@@ -280,7 +280,7 @@ public class SimpleMediaContainer implements MediaContainer {
 		}
 		
 		@Override
-		public B addMedia(List<Media.Builder<?, ?>> media) {
+		public B addMedia(List<? extends Media.Builder<?, ?>> media) {
 			if(this.media == null) {
 				this.media = new ArrayList<>();
 			}
@@ -295,7 +295,7 @@ public class SimpleMediaContainer implements MediaContainer {
 		}
 		
 		@Override
-		public B removeMedia(List<Media.Builder<?, ?>> media) {
+		public B removeMedia(List<? extends Media.Builder<?, ?>> media) {
 			if(this.media != null) {
 				this.media.removeAll(media);
 			}
