@@ -213,6 +213,11 @@ public final class MediaUtils {
 	}
 	
 	/** @since 00.02.09 */
+	public static final double estimateTotalSize(Media media) {
+		return TotalSizeEstimator.estimate(media);
+	}
+	
+	/** @since 00.02.09 */
 	private static final class MediaQualityEstimator {
 		
 		/*
@@ -283,6 +288,92 @@ public final class MediaUtils {
 			int diffPrev = Math.abs(vqvPrev.height() - height);
 			int diffLast = Math.abs(vqvLast.height() - height);
 			return diffPrev <= diffLast ? prev : last;
+		}
+	}
+	
+	/** @since 00.02.09 */
+	private static final class TotalSizeEstimator {
+		
+		/*
+		 * [1] BitRate approximation table for video with aspect ratio 16:9.
+		 * Source: https://www.circlehd.com/blog/how-to-calculate-video-file-size
+		 * +---------+----------+
+		 * | Quality | BitRate  |
+		 * +---------+----------+
+		 * | 2160p   |  20 Mbps |
+		 * | 1080p   |   5 Mbps |
+		 * |  720p   |   1 Mbps |
+		 * |  480p   | 0.5 Mbps |
+		 * +---------+----------+
+		 * 
+		 * [2] BitRate approximation table for audio with 2 channels and bit depth of 16.
+		 * Source: https://www.omnicalculator.com/other/audio-file-size
+		 * +-------------+-------------+
+		 * | Sample rate | BitRate     |
+		 * +-------------+-------------+
+		 * | 96.00 kHz   | 3072.0 kbps |
+		 * | 48.00 kHz   | 1536.0 kbps |
+		 * | 44.10 kHz   | 1411.2 kbps |
+		 * | 22.05 kHz   |  705.6 kbps |
+		 * +-------------+-------------+
+		 */
+		
+		// Forbid anyone to create an instance of this class
+		private TotalSizeEstimator() {
+		}
+		
+		// Returns values in bps
+		private static final int bitRateMbpsToBandwidth(double bitRate) {
+			return Math.max(0, (int) Math.ceil(bitRate * 1024.0 * 1024.0));
+		}
+		
+		// Returns values in Mbps
+		private static final int approximateBandwidthFromVideoHeight(int height) {
+			final double x = height / 120.0;
+			// Handle special cases where the monotonicity of quadratic regression
+			// is not preserved, i.e. in the range of <0, 1).
+			if(height <= 120) return bitRateMbpsToBandwidth(0.125 * x); // Use linear interpolation
+			// Quadratic regression for the approximation table [1] and some additional values
+			// to ensure the positivity of resulting values.
+			// Values {x,y} used: {0,0},{1,0.125},{2,0.25},{3,0.375},{4,0.5},{6,1},{9,5},{18,20}.
+			return bitRateMbpsToBandwidth(0.069617 * x * x - 0.142703 * x + 0.0745748);
+		}
+		
+		// Returns values in Mbps
+		private static final int approximateBandwidthFromAudioSampleRate(int sampleRate) {
+			// Approximation based on the approximation table [2].
+			return bitRateMbpsToBandwidth(sampleRate / 1000.0 * 32.0 / 1024.0);
+		}
+		
+		private static final int approximateBandwidth(VideoMediaBase video) {
+			return approximateBandwidthFromVideoHeight(video.resolution().height());
+		}
+		
+		private static final int approximateBandwidth(AudioMediaBase audio) {
+			return approximateBandwidthFromAudioSampleRate(audio.sampleRate());
+		}
+		
+		private static final double fromBandwidth(int bandwidth, double duration) {
+			return bandwidth / 8 * duration;
+		}
+		
+		public static final double estimate(VideoMediaBase video) {
+			return video.bandwidth() <= 0
+						? fromBandwidth(approximateBandwidth(video), video.duration())
+						: fromBandwidth(video.bandwidth(), video.duration());
+		}
+		
+		public static final double estimate(AudioMediaBase audio) {
+			return audio.bandwidth() <= 0
+						? fromBandwidth(approximateBandwidth(audio), audio.duration())
+						: fromBandwidth(audio.bandwidth(), audio.duration());
+		}
+		
+		public static final double estimate(Media media) {
+			MediaType type = media.type();
+			if(type.is(MediaType.VIDEO)) return estimate((VideoMediaBase) media);
+			if(type.is(MediaType.AUDIO)) return estimate((AudioMediaBase) media);
+			return MediaConstants.UNKNOWN_SIZE;
 		}
 	}
 	
