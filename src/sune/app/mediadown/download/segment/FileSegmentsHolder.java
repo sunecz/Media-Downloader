@@ -3,9 +3,9 @@ package sune.app.mediadown.download.segment;
 import java.util.List;
 
 /** @since 00.02.05 */
-public interface FileSegmentsHolder<T extends FileSegment> {
+public interface FileSegmentsHolder {
 	
-	List<T> segments();
+	List<? extends FileSegment> segments();
 	int count();
 	double duration();
 }

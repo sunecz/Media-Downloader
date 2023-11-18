@@ -9,7 +9,7 @@ import java.util.Objects;
 import sune.app.mediadown.media.MediaConstants;
 
 /** @since 00.02.05 */
-public final class RemoteFileSegmentsHolder implements FileSegmentsHolder<RemoteFileSegment> {
+public final class RemoteFileSegmentsHolder implements FileSegmentsHolder {
 	
 	private static final RemoteFileSegmentsHolder EMPTY = new RemoteFileSegmentsHolder();
 	

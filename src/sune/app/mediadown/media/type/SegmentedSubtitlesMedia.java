@@ -1,7 +1,6 @@
 package sune.app.mediadown.media.type;
 
 import java.net.URI;
-import java.util.List;
 import java.util.Objects;
 
 import sune.app.mediadown.download.segment.FileSegmentsHolder;
@@ -23,7 +22,7 @@ public class SegmentedSubtitlesMedia extends SegmentedMedia implements Subtitles
 	protected final MediaLanguage language;
 	
 	protected SegmentedSubtitlesMedia(MediaSource source, URI uri, MediaFormat format, long size,
-			MediaMetadata metadata, Media parent, List<FileSegmentsHolder<?>> segments, MediaLanguage language) {
+			MediaMetadata metadata, Media parent, FileSegmentsHolder segments, MediaLanguage language) {
 		super(source, uri, MEDIA_TYPE, checkFormat(format), MediaQuality.UNKNOWN, size, metadata, parent,
 		      Objects.requireNonNull(segments));
 		this.language = Objects.requireNonNull(language);

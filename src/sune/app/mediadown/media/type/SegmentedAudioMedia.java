@@ -28,7 +28,7 @@ public class SegmentedAudioMedia extends SegmentedMedia implements AudioMedia {
 	protected final int sampleRate;
 	
 	protected SegmentedAudioMedia(MediaSource source, URI uri, MediaType type, MediaFormat format, MediaQuality quality,
-			long size, MediaMetadata metadata, Media parent, List<FileSegmentsHolder<?>> segments,
+			long size, MediaMetadata metadata, Media parent, FileSegmentsHolder segments,
 			MediaLanguage language, double duration, List<String> codecs, int bandwidth, int sampleRate) {
 		super(source, uri, MEDIA_TYPE, checkFormat(format), checkQuality(quality), size, metadata, parent,
 		      Objects.requireNonNull(segments));

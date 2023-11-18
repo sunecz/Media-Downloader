@@ -1,25 +1,22 @@
 package sune.app.mediadown.media;
 
 import java.net.URI;
-import java.util.Collections;
-import java.util.List;
 import java.util.Objects;
 
 import sune.app.mediadown.download.segment.FileSegmentsHolder;
-import sune.app.mediadown.util.Utils;
 
 /** @since 00.02.05 */
 public class SegmentedMedia extends SimpleMedia {
 	
-	protected final List<FileSegmentsHolder<?>> segments;
+	protected final FileSegmentsHolder segments;
 	
 	public SegmentedMedia(MediaSource source, URI uri, MediaType type, MediaFormat format, MediaQuality quality,
-			long size, MediaMetadata metadata, Media parent, List<FileSegmentsHolder<?>> segments) {
+			long size, MediaMetadata metadata, Media parent, FileSegmentsHolder segments) {
 		super(source, uri, type, format, quality, size, metadata, parent);
-		this.segments = Collections.unmodifiableList(Objects.requireNonNull(segments));
+		this.segments = Objects.requireNonNull(segments);
 	}
 	
-	public List<FileSegmentsHolder<?>> segments() {
+	public FileSegmentsHolder segments() {
 		return segments;
 	}
 	
@@ -31,10 +28,9 @@ public class SegmentedMedia extends SimpleMedia {
 	public static class Builder<T extends SegmentedMedia, B extends Builder<T, B>>
 			extends SimpleMedia.Builder<T, B> {
 		
-		protected List<FileSegmentsHolder<?>> segments;
+		protected FileSegmentsHolder segments;
 		
 		protected Builder() {
-			segments = List.of();
 		}
 		
 		@Override
@@ -46,16 +42,12 @@ public class SegmentedMedia extends SimpleMedia {
 			));
 		}
 		
-		public B segments(List<? extends FileSegmentsHolder<?>> segments) {
-			this.segments = Utils.cast(Objects.requireNonNull(Utils.nonNullContent(segments)));
+		public B segments(FileSegmentsHolder segments) {
+			this.segments = Objects.requireNonNull(segments);
 			return b(this);
 		}
 		
-		public B segments(FileSegmentsHolder<?>... segments) {
-			return segments(List.of(Objects.requireNonNull(segments)));
-		}
-		
-		public List<FileSegmentsHolder<?>> segments() {
+		public FileSegmentsHolder segments() {
 			return segments;
 		}
 	}

@@ -12,7 +12,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.regex.MatchResult;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Attribute;
@@ -23,7 +22,6 @@ import org.jsoup.select.Elements;
 
 import sune.app.mediadown.Shared;
 import sune.app.mediadown.download.segment.RemoteFileSegment;
-import sune.app.mediadown.download.segment.RemoteFileSegmentable;
 import sune.app.mediadown.download.segment.RemoteFileSegmentsHolder;
 import sune.app.mediadown.media.MediaFormat;
 import sune.app.mediadown.media.MediaProtection;
@@ -576,13 +574,13 @@ public final class MPD {
 		}
 	}
 	
-	public static final class MPDFile implements RemoteFileSegmentable {
+	public static final class MPDFile {
 		
 		private final List<MPDSegment> segments;
 		private final MediaFormat format;
 		private final MediaResolution resolution;
 		private final double duration;
-		private List<RemoteFileSegmentsHolder> segmentsHolders;
+		private RemoteFileSegmentsHolder segmentsHolder;
 		private final ContentProtection protection;
 		private final Map<String, String> attributes;
 		
@@ -624,15 +622,15 @@ public final class MPD {
 			return Singleton.of(this, () -> Integer.valueOf(attributes.getOrDefault("bandwidth", "0")));
 		}
 		
-		@Override
-		public final List<RemoteFileSegmentsHolder> segmentsHolders() {
-			if(segmentsHolders == null) {
+		public final RemoteFileSegmentsHolder segmentsHolder() {
+			if(segmentsHolder == null) {
 				List<RemoteFileSegment> fileSegments = segments.stream()
 					.map((seg) -> new RemoteFileSegment(seg.uri(), -1L))
 					.collect(Collectors.toList());
-				segmentsHolders = List.of(new RemoteFileSegmentsHolder(fileSegments, duration));
+				segmentsHolder = new RemoteFileSegmentsHolder(fileSegments, duration);
 			}
-			return segmentsHolders;
+			
+			return segmentsHolder;
 		}
 		
 		public ContentProtection protection() {
@@ -640,11 +638,10 @@ public final class MPD {
 		}
 	}
 	
-	public static final class MPDCombinedFile implements RemoteFileSegmentable {
+	public static final class MPDCombinedFile {
 		
 		private final MPDFile video;
 		private final MPDFile audio;
-		private List<RemoteFileSegmentsHolder> segmentsHolders;
 		private List<MPDFile> files;
 		
 		protected MPDCombinedFile(MPDFile video, MPDFile audio) {
@@ -664,17 +661,8 @@ public final class MPD {
 			if(files == null) {
 				files = List.of(video, audio);
 			}
+			
 			return files;
-		}
-		
-		@Override
-		public final List<RemoteFileSegmentsHolder> segmentsHolders() {
-			if(segmentsHolders == null) {
-				segmentsHolders = Stream.of(video, audio)
-					.flatMap((f) -> f.segmentsHolders().stream())
-					.collect(Collectors.toList());
-			}
-			return segmentsHolders;
 		}
 	}
 }

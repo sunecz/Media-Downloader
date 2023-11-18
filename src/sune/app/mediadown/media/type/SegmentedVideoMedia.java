@@ -28,7 +28,7 @@ public class SegmentedVideoMedia extends SegmentedMedia implements VideoMedia {
 	protected final double frameRate;
 	
 	protected SegmentedVideoMedia(MediaSource source, URI uri, MediaType type, MediaFormat format, MediaQuality quality,
-			long size, MediaMetadata metadata, Media parent, List<FileSegmentsHolder<?>> segments,
+			long size, MediaMetadata metadata, Media parent, FileSegmentsHolder segments,
 			MediaResolution resolution, double duration, List<String> codecs, int bandwidth, double frameRate) {
 		super(source, uri, MEDIA_TYPE, checkFormat(format), checkQuality(quality), size, metadata, parent,
 		      Objects.requireNonNull(segments));

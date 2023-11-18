@@ -14,7 +14,6 @@ import java.util.stream.Stream;
 
 import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.download.segment.FileSegment;
-import sune.app.mediadown.download.segment.FileSegmentsHolder;
 import sune.app.mediadown.language.Translation;
 import sune.app.mediadown.media.MediaQuality.QualityValue;
 import sune.app.mediadown.media.MediaQuality.VideoQualityValue;
@@ -126,13 +125,6 @@ public final class MediaUtils {
 	public static final boolean isSegmentedMedia(Media media) {
 		return streamFilterRecursive(media, OptCondition.of(Media::isSegmented))
 					.anyMatch(OptCondition.ofTrue());
-	}
-	
-	public static final List<FileSegmentsHolder<?>> segments(Media media) {
-		return streamFilterRecursive(media, OptCondition.ofAll(Media::isSegmented))
-					.map((m) -> ((SegmentedMedia) m).segments())
-					.flatMap(List::stream)
-					.collect(Collectors.toList());
 	}
 	
 	public static final List<Media> solids(Media media) {
@@ -417,13 +409,13 @@ public final class MediaUtils {
 					VideoMedia.segmented().source(source)
 						.uri(video.uri()).format(MediaFormat.MP4)
 						.quality(videoQuality)
-						.segments(Utils.<List<FileSegmentsHolder<?>>>cast(video.segmentsHolders()))
+						.segments(video.segmentsHolder())
 						.resolution(video.resolution()).duration(video.duration())
 						.metadata(metadata),
 					AudioMedia.segmented().source(source)
 						.uri(audio.uri()).format(MediaFormat.M4A)
 						.quality(MediaQuality.UNKNOWN)
-						.segments(Utils.<List<FileSegmentsHolder<?>>>cast(audio.segmentsHolders()))
+						.segments(audio.segmentsHolder())
 						.language(audioLanguage).duration(audio.duration())
 						.metadata(metadata)
 				);
@@ -432,7 +424,7 @@ public final class MediaUtils {
 					VideoMedia.segmented().source(source)
 						.uri(video.uri()).format(MediaFormat.MP4)
 						.quality(videoQuality)
-						.segments(Utils.<List<FileSegmentsHolder<?>>>cast(video.segmentsHolders()))
+						.segments(video.segmentsHolder())
 						.resolution(video.resolution()).duration(video.duration())
 						.metadata(metadata),
 					AudioMedia.virtual().source(source)
@@ -452,7 +444,7 @@ public final class MediaUtils {
 					MediaFormat format = MediaFormat.fromPath(uri.getPath());
 					
 					if(!format.mediaType().is(MediaType.SUBTITLES)) {
-						FileSegment segment = file.segmentsHolders().get(0).segments().get(0);
+						FileSegment segment = file.segmentsHolder().segments().get(0);
 						format = MediaFormat.fromPath(segment.uri().getPath());
 						
 						if(!format.mediaType().is(MediaType.SUBTITLES)) {
@@ -469,7 +461,7 @@ public final class MediaUtils {
 						.source(source)
 						.uri(uri)
 						.format(format)
-						.segments(file.segmentsHolders())
+						.segments(file.segmentsHolder())
 						.language(language);
 					
 					subtitlesBuilders.add(subtitles);
@@ -537,14 +529,14 @@ public final class MediaUtils {
 				VideoMedia.segmented().source(source)
 					.uri(parserData.uri()).format(video.format())
 					.quality(videoQuality)
-					.segments(Utils.<List<FileSegmentsHolder<?>>>cast(video.segmentsHolders()))
+					.segments(video.segmentsHolder())
 					.resolution(video.resolution()).duration(video.duration())
 					.codecs(video.codecs()).bandwidth(video.bandwidth()).frameRate(frameRate)
 					.metadata(metadataVideo),
 				AudioMedia.segmented().source(source)
 					.uri(parserData.uri()).format(audio.format())
 					.quality(MediaQuality.fromSampleRate(sampleRate).withValue(audioValue))
-					.segments(Utils.<List<FileSegmentsHolder<?>>>cast(audio.segmentsHolders()))
+					.segments(audio.segmentsHolder())
 					.language(audioLanguage).duration(audio.duration())
 					.codecs(audio.codecs()).bandwidth(audio.bandwidth()).sampleRate(sampleRate)
 					.metadata(metadataAudio)
@@ -580,9 +572,7 @@ public final class MediaUtils {
 		}
 		
 		private static final FormatParser defaultFormatParser(MediaFormat format) {
-			if(format == MediaFormat.M3U8) return new DefaultM3U8FormatParser(); else
-			if(format == MediaFormat.DASH) return new DefaultDASHFormatParser();
-			else                           return new DefaultFormatParser();
+			return new DefaultFormatParser();
 		}
 		
 		private final List<Media.Builder<?, ?>> parseFormat(URI uri, MediaFormat format, Request request,
@@ -729,36 +719,6 @@ public final class MediaUtils {
 					if(m != null) media.add(m);
 				}
 				return media;
-			}
-		}
-		
-		private static final class DefaultM3U8FormatParser extends M3U8FormatParser {
-			
-			public DefaultM3U8FormatParser() {
-			}
-			
-			@Override
-			protected final Media.Builder<?, ?> map(FormatParserData<M3UCombinedFile> parserData) {
-				return VideoMedia.segmented()
-							.uri(parserData.uri()).format(parserData.format())
-							.quality(MediaQuality.fromResolution(parserData.result().video().resolution()))
-							.segments(Utils.<List<FileSegmentsHolder<?>>>cast(parserData.result().video().segmentsHolders()))
-							.metadata(parserData.mediaData().add(parserData.data()).build());
-			}
-		}
-		
-		private static final class DefaultDASHFormatParser extends DASHFormatParser {
-			
-			public DefaultDASHFormatParser() {
-			}
-			
-			@Override
-			protected final Media.Builder<?, ?> map(FormatParserData<MPDCombinedFile> parserData) {
-				return VideoMedia.segmented()
-							.uri(parserData.uri()).format(parserData.format())
-							.quality(MediaQuality.fromResolution(parserData.result().video().resolution()))
-							.segments(Utils.<List<FileSegmentsHolder<?>>>cast(parserData.result().segmentsHolders()))
-							.metadata(parserData.mediaData().add(parserData.data()).build());
 			}
 		}
 		

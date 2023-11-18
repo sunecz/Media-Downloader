@@ -15,7 +15,6 @@ import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 
 import sune.app.mediadown.download.segment.RemoteFileSegment;
-import sune.app.mediadown.download.segment.RemoteFileSegmentable;
 import sune.app.mediadown.download.segment.RemoteFileSegmentsHolder;
 import sune.app.mediadown.media.MediaConstants;
 import sune.app.mediadown.media.MediaQuality;
@@ -136,12 +135,12 @@ public final class M3U {
 		VIDEO, AUDIO, SUBTITLES;
 	}
 	
-	public static final class M3UFile implements RemoteFileSegmentable {
+	public static final class M3UFile {
 		
 		/** @since 00.02.09 */
 		private final M3UFileType type;
 		private final URI uri;
-		private final List<RemoteFileSegmentsHolder> segmentsHolders;
+		private final RemoteFileSegmentsHolder segmentsHolder;
 		private final double duration;
 		private final MediaResolution resolution;
 		private final String version;
@@ -149,11 +148,11 @@ public final class M3U {
 		/** @since 00.02.09 */
 		private final Map<String, String> attributes;
 		
-		protected M3UFile(M3UFileType type, URI uri, List<RemoteFileSegmentsHolder> segmentsHolders, double duration,
+		protected M3UFile(M3UFileType type, URI uri, RemoteFileSegmentsHolder segmentsHolder, double duration,
 				MediaResolution resolution, String version, M3UKey key, Map<String, String> attributes) {
 			this.type = Objects.requireNonNull(type);
 			this.uri = Objects.requireNonNull(uri);
-			this.segmentsHolders = Objects.requireNonNull(segmentsHolders);
+			this.segmentsHolder = Objects.requireNonNull(segmentsHolder);
 			this.duration = duration;
 			this.resolution = Objects.requireNonNull(resolution);
 			this.version = version; // May be null
@@ -181,9 +180,8 @@ public final class M3U {
 			return version;
 		}
 		
-		@Override
-		public List<RemoteFileSegmentsHolder> segmentsHolders() {
-			return segmentsHolders;
+		public RemoteFileSegmentsHolder segmentsHolder() {
+			return segmentsHolder;
 		}
 		
 		public M3UKey key() {
@@ -479,13 +477,13 @@ public final class M3U {
 		}
 		
 		/** @since 00.02.09 */
-		private List<RemoteFileSegmentsHolder> segmentsHolders() {
-			return List.of(new RemoteFileSegmentsHolder(
+		private RemoteFileSegmentsHolder segmentsHolder() {
+			return new RemoteFileSegmentsHolder(
 				Objects.requireNonNull(segments).stream()
 					.map((seg) -> new RemoteFileSegment(seg.uri(), MediaConstants.UNKNOWN_SIZE))
 					.collect(Collectors.toList()),
 				duration
-			));
+			);
 		}
 		
 		/** @since 00.02.09 */
@@ -494,7 +492,7 @@ public final class M3U {
 		}
 		
 		public M3UFile build() {
-			return new M3UFile(type, uri, segmentsHolders(), duration, resolution, version, key, attributes());
+			return new M3UFile(type, uri, segmentsHolder(), duration, resolution, version, key, attributes());
 		}
 		
 		/** @since 00.02.09 */
