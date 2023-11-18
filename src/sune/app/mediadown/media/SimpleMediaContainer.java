@@ -1,6 +1,7 @@
 package sune.app.mediadown.media;
 
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -197,7 +198,7 @@ public class SimpleMediaContainer implements MediaContainer {
 			size = MediaConstants.UNKNOWN_SIZE;
 			metadata = MediaMetadata.empty();
 			parent = null;
-			media = List.of();
+			media = null;
 		}
 		
 		@SuppressWarnings("unchecked")
@@ -211,7 +212,7 @@ public class SimpleMediaContainer implements MediaContainer {
 				Objects.requireNonNull(source), uri, Objects.requireNonNull(type),
 				Objects.requireNonNull(format), Objects.requireNonNull(quality), size,
 				Objects.requireNonNull(metadata), parent,
-				new SimpleChildMediaBuilderContext(media)
+				new SimpleChildMediaBuilderContext(media == null ? List.of() : media)
 			));
 		}
 		
@@ -276,6 +277,35 @@ public class SimpleMediaContainer implements MediaContainer {
 		@Override
 		public B media(Media.Builder<?, ?>... media) {
 			return media(List.of(media));
+		}
+		
+		@Override
+		public B addMedia(List<Media.Builder<?, ?>> media) {
+			if(this.media == null) {
+				this.media = new ArrayList<>();
+			}
+			
+			this.media.addAll(media);
+			return b(this);
+		}
+		
+		@Override
+		public B addMedia(Media.Builder<?, ?>... media) {
+			return addMedia(List.of(media));
+		}
+		
+		@Override
+		public B removeMedia(List<Media.Builder<?, ?>> media) {
+			if(this.media != null) {
+				this.media.removeAll(media);
+			}
+			
+			return b(this);
+		}
+		
+		@Override
+		public B removeMedia(Media.Builder<?, ?>... media) {
+			return removeMedia(List.of(media));
 		}
 		
 		@Override

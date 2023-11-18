@@ -14,6 +14,14 @@ public interface MediaContainer extends Media, MediaAccessor {
 		
 		B media(List<Media.Builder<?, ?>> media);
 		B media(Media.Builder<?, ?>... media);
+		/** @since 00.02.09 */
+		B addMedia(List<Media.Builder<?, ?>> media);
+		/** @since 00.02.09 */
+		B addMedia(Media.Builder<?, ?>... media);
+		/** @since 00.02.09 */
+		B removeMedia(List<Media.Builder<?, ?>> media);
+		/** @since 00.02.09 */
+		B removeMedia(Media.Builder<?, ?>... media);
 		
 		List<Media.Builder<?, ?>> media();
 	}
