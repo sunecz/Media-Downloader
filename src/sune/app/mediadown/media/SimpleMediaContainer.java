@@ -212,7 +212,9 @@ public class SimpleMediaContainer implements MediaContainer {
 				Objects.requireNonNull(source), uri, Objects.requireNonNull(type),
 				Objects.requireNonNull(format), Objects.requireNonNull(quality), size,
 				Objects.requireNonNull(metadata), parent,
-				new SimpleChildMediaBuilderContext(media == null ? List.of() : media)
+				new SimpleChildMediaBuilderContext(
+					media == null ? List.of() : List.copyOf(media)
+				)
 			));
 		}
 		
@@ -270,7 +272,11 @@ public class SimpleMediaContainer implements MediaContainer {
 		
 		@Override
 		public B media(List<? extends Media.Builder<?, ?>> media) {
-			this.media = Utils.cast(Objects.requireNonNull(Utils.nonNullContent(media)));
+			if(this.media == null) {
+				this.media = new ArrayList<>();
+			}
+			
+			this.media.addAll(Objects.requireNonNull(Utils.nonNullContent(media)));
 			return b(this);
 		}
 		
