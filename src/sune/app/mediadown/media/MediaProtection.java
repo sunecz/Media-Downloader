@@ -33,6 +33,10 @@ public final class MediaProtection {
 		return of(MediaProtectionType.DRM_FAIRPLAY);
 	}
 	
+	public static final Builder ofUnknown() {
+		return of(MediaProtectionType.UNKNOWN);
+	}
+	
 	public MediaProtectionType type() {
 		return type;
 	}

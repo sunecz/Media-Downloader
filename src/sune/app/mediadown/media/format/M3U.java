@@ -17,6 +17,7 @@ import java.util.stream.Collectors;
 import sune.app.mediadown.download.segment.RemoteFileSegment;
 import sune.app.mediadown.download.segment.RemoteFileSegmentsHolder;
 import sune.app.mediadown.media.MediaConstants;
+import sune.app.mediadown.media.MediaProtection;
 import sune.app.mediadown.media.MediaQuality;
 import sune.app.mediadown.media.MediaResolution;
 import sune.app.mediadown.media.MediaUtils;
@@ -147,6 +148,8 @@ public final class M3U {
 		private final M3UKey key;
 		/** @since 00.02.09 */
 		private final Map<String, String> attributes;
+		/** @since 00.02.09 */
+		private MediaProtection protection;
 		
 		protected M3UFile(M3UFileType type, URI uri, RemoteFileSegmentsHolder segmentsHolder, double duration,
 				MediaResolution resolution, String version, M3UKey key, Map<String, String> attributes) {
@@ -158,6 +161,11 @@ public final class M3U {
 			this.version = version; // May be null
 			this.key = Objects.requireNonNull(key);
 			this.attributes = attributes; // May be null
+		}
+		
+		/** @since 00.02.09 */
+		private static final String emptyIfNull(String value) {
+			return value != null ? value : "";
 		}
 		
 		public M3UFileType type() {
@@ -201,6 +209,19 @@ public final class M3U {
 		/** @since 00.02.09 */
 		public String attribute(String name, String defaultValue) {
 			return attributes.getOrDefault(name, defaultValue);
+		}
+		
+		/** @since 00.02.09 */
+		public MediaProtection protection() {
+			if(protection == null && key.isPresent()) {
+				protection = MediaProtection.ofUnknown()
+					.content(emptyIfNull(key.uri()))
+					.contentType(emptyIfNull(key.keyFormat()))
+					.scheme(emptyIfNull(key.method()))
+					.build();
+			}
+			
+			return protection;
 		}
 	}
 	

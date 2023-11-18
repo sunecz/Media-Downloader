@@ -61,9 +61,10 @@ public final class MediaUtils {
 	
 	public static final List<Media.Builder<?, ?>> createMediaBuilders(MediaSource source, URI uri, URI sourceURI,
 			String title, MediaLanguage language, MediaMetadata data) throws Exception {
-		MediaUtils.Parser parser = MediaUtils.parser();
+		Parser parser = new Parser();
 		parser.format(MediaFormat.M3U8, new SimpleM3U8FormatParser(source, title, language));
 		parser.format(MediaFormat.DASH, new SimpleDASHFormatParser(source, title, language));
+		parser.defaultParser(new DefaultFormatParser());
 		return parser.parse(uri, sourceURI, data.data());
 	}
 	
@@ -193,10 +194,6 @@ public final class MediaUtils {
 	public static final MediaContainer.Builder<?, ?> appendMedia(MediaContainer.Builder<?, ?> container,
 			Media.Builder<?, ?>... media) {
 		return appendMedia(container, Stream.of(media));
-	}
-	
-	public static final Parser parser() {
-		return new Parser();
 	}
 	
 	/** @since 00.02.09 */
@@ -384,11 +381,16 @@ public final class MediaUtils {
 		
 		@Override
 		protected final Media.Builder<?, ?> map(Parser.FormatParserData<M3UCombinedFile> parserData) {
-			M3UCombinedFile result = parserData.result();
-			M3UFile video = result.video();
-			MediaMetadata metadata = parserData.mediaData().add(parserData.data()).title(title).build();
-			MediaQuality videoQuality = MediaQuality.fromResolution(video.resolution());
 			MediaContainer.Builder<?, ?> builder;
+			MediaMetadata.Builder metadataBuilder = parserData.mediaData().add(parserData.data()).title(title);
+			M3UCombinedFile result = parserData.result();
+			
+			M3UFile video = result.video();
+			MediaQuality videoQuality = MediaQuality.fromResolution(video.resolution());
+			MediaProtection protectionVideo = video.protection();
+			MediaMetadata metadataVideo = protectionVideo != null
+				? metadataBuilder.addProtections(protectionVideo).build()
+				: metadataBuilder.build();
 			
 			if(videoQuality.is(MediaQuality.UNKNOWN)) {
 				String qualityName = video.attribute("estimatedQuality");
@@ -404,6 +406,10 @@ public final class MediaUtils {
 				MediaLanguage audioLanguage = Opt.of(extractedLanguage)
 					.ifFalse((l) -> l.is(MediaLanguage.UNKNOWN))
 					.orElse(language);
+				MediaProtection protectionAudio = audio.protection();
+				MediaMetadata metadataAudio = protectionAudio != null
+					? metadataBuilder.addProtections(protectionAudio).build()
+					: metadataBuilder.build();
 				
 				builder = VideoMediaContainer.separated().format(MediaFormat.M3U8).media(
 					VideoMedia.segmented().source(source)
@@ -411,13 +417,13 @@ public final class MediaUtils {
 						.quality(videoQuality)
 						.segments(video.segmentsHolder())
 						.resolution(video.resolution()).duration(video.duration())
-						.metadata(metadata),
+						.metadata(metadataVideo),
 					AudioMedia.segmented().source(source)
 						.uri(audio.uri()).format(MediaFormat.M4A)
 						.quality(MediaQuality.UNKNOWN)
 						.segments(audio.segmentsHolder())
 						.language(audioLanguage).duration(audio.duration())
-						.metadata(metadata)
+						.metadata(metadataAudio)
 				);
 			} else {
 				builder = VideoMediaContainer.combined().format(MediaFormat.M3U8).media(
@@ -426,12 +432,12 @@ public final class MediaUtils {
 						.quality(videoQuality)
 						.segments(video.segmentsHolder())
 						.resolution(video.resolution()).duration(video.duration())
-						.metadata(metadata),
+						.metadata(metadataVideo),
 					AudioMedia.virtual().source(source)
 						.uri(video.uri()).format(MediaFormat.M4A)
 						.quality(MediaQuality.UNKNOWN)
 						.language(language).duration(video.duration())
-						.metadata(metadata)
+						.metadata(metadataVideo)
 				);
 			}
 			
@@ -493,20 +499,16 @@ public final class MediaUtils {
 			MPDFile video = result.video();
 			MPDFile audio = result.audio();
 			
-			MediaMetadata.Builder metadataBuilder = parserData.mediaData().add(parserData.data()).title(title);
-			MediaMetadata metadataVideo;
-			MediaMetadata metadataAudio;
+			ContentProtection protectionVideo = video.protection();
+			ContentProtection protectionAudio = audio.protection();
 			
-			if(metadataBuilder.isProtected()) {
-				ContentProtection protectionVideo = video.protection();
-				ContentProtection protectionAudio = audio.protection();
-				metadataVideo = metadataBuilder.addProtections(protectionVideo.protections()).build();
-				metadataAudio = metadataBuilder.addProtections(protectionAudio.protections()).build();
-			} else {
-				MediaMetadata metadata = metadataBuilder.build();
-				metadataVideo = metadata;
-				metadataAudio = metadata;
-			}
+			MediaMetadata.Builder metadataBuilder = parserData.mediaData().add(parserData.data()).title(title);
+			MediaMetadata metadataVideo = protectionVideo.isPresent()
+				? metadataBuilder.addProtections(protectionVideo.protections()).build()
+				: metadataBuilder.build();
+			MediaMetadata metadataAudio = protectionAudio.isPresent()
+				? metadataBuilder.addProtections(protectionAudio.protections()).build()
+				: metadataBuilder.build();
 			
 			double frameRate = Double.valueOf(video.attributes().getOrDefault("framerate", "0.0"));
 			int sampleRate = Integer.valueOf(audio.attributes().getOrDefault("audiosamplingrate", "0"));
@@ -544,9 +546,28 @@ public final class MediaUtils {
 		}
 	}
 	
-	public static final class Parser {
+	/** @since 00.02.09 */
+	private static final class DefaultFormatParser implements Parser.FormatParser {
+		
+		@Override
+		public List<Media.Builder<?, ?>> parse(
+				URI uri, MediaFormat format, Request request, URI sourceURI, Map<String, Object> data, long size
+		) throws Exception {
+			MediaMetadata.Builder mediaData = MediaMetadata.builder().sourceURI(sourceURI);
+			
+			return List.of(
+				VideoMedia.simple()
+					.uri(uri).format(format).quality(MediaQuality.UNKNOWN)
+					.metadata(mediaData.add(data).build())
+			);
+		}
+	}
+	
+	private static final class Parser {
 		
 		private final Map<MediaFormat, FormatParser> parsers;
+		/** @since 00.02.09 */
+		private FormatParser defaultParser;
 		
 		private Parser() {
 			parsers = new HashMap<>();
@@ -571,16 +592,12 @@ public final class MediaUtils {
 			return MediaFormat.fromPath(uri.getPath());
 		}
 		
-		private static final FormatParser defaultFormatParser(MediaFormat format) {
-			return new DefaultFormatParser();
-		}
-		
 		private final List<Media.Builder<?, ?>> parseFormat(URI uri, MediaFormat format, Request request,
 				URI sourceURI, Map<String, Object> data, long size) throws Exception {
 			Property<Exception> ex = new Property<>();
 			Exception exception;
 			List<Media.Builder<?, ?>> media = Opt.of(parsers.get(format)).ifTrue(Objects::nonNull)
-					  .or(() -> Opt.of(defaultFormatParser(format)))
+					  .or(() -> Opt.of(defaultParser))
 					  .map((p) -> Ignore.defaultValue(() -> p.parse(uri, format, request, sourceURI, data, size), null, ex::setValue))
 					  .orElseGet(List::of);
 			if((exception = ex.getValue()) != null) throw exception;
@@ -602,6 +619,12 @@ public final class MediaUtils {
 		
 		public final <T> Parser format(MediaFormat format, FormatParser parser) {
 			parsers.put(Objects.requireNonNull(format), Objects.requireNonNull(parser));
+			return this;
+		}
+		
+		/** @since 00.02.09 */
+		public final Parser defaultParser(FormatParser parser) {
+			defaultParser = Objects.requireNonNull(parser);
 			return this;
 		}
 		
@@ -647,14 +670,17 @@ public final class MediaUtils {
 				return uri;
 			}
 			
+			@SuppressWarnings("unused")
 			public MediaFormat format() {
 				return format;
 			}
 			
+			@SuppressWarnings("unused")
 			public Request request() {
 				return request;
 			}
 			
+			@SuppressWarnings("unused")
 			public URI sourceURI() {
 				return sourceURI;
 			}
@@ -663,6 +689,7 @@ public final class MediaUtils {
 				return data;
 			}
 			
+			@SuppressWarnings("unused")
 			public long size() {
 				return size;
 			}
@@ -690,8 +717,7 @@ public final class MediaUtils {
 				FormatParserData<M3UCombinedFile> parserData = new FormatParserData<>(uri, format, request, sourceURI, data, size);
 				List<Media.Builder<?, ?>> media = new ArrayList<>();
 				for(M3UCombinedFile result : M3U.parse(request)) {
-					boolean isProtected = result.video().key().isPresent();
-					MediaMetadata.Builder mediaData = MediaMetadata.builder().isProtected(isProtected).sourceURI(sourceURI);
+					MediaMetadata.Builder mediaData = MediaMetadata.builder().sourceURI(sourceURI);
 					Media.Builder<?, ?> m = map(parserData.result(result).mediaData(mediaData));
 					if(m != null) media.add(m);
 				}
@@ -713,25 +739,11 @@ public final class MediaUtils {
 				FormatParserData<MPDCombinedFile> parserData = new FormatParserData<>(uri, format, request, sourceURI, data, size);
 				List<Media.Builder<?, ?>> media = new ArrayList<>();
 				for(MPDCombinedFile result : MPD.reduce(MPD.parse(request))) {
-					boolean isProtected = result.files().stream().filter((f) -> f.protection().isPresent()).findFirst().isPresent();
-					MediaMetadata.Builder mediaData = MediaMetadata.builder().isProtected(isProtected).sourceURI(sourceURI);
+					MediaMetadata.Builder mediaData = MediaMetadata.builder().sourceURI(sourceURI);
 					Media.Builder<?, ?> m = map(parserData.result(result).mediaData(mediaData));
 					if(m != null) media.add(m);
 				}
 				return media;
-			}
-		}
-		
-		private static final class DefaultFormatParser implements FormatParser {
-			
-			@Override
-			public List<Media.Builder<?, ?>> parse(URI uri, MediaFormat format, Request request, URI sourceURI,
-					Map<String, Object> data, long size) throws Exception {
-				MediaMetadata.Builder mediaData = MediaMetadata.builder().isProtected(false).sourceURI(sourceURI);
-				return List.of(VideoMedia.simple()
-							.uri(uri).format(format)
-							.quality(MediaQuality.UNKNOWN)
-							.metadata(mediaData.add(data).build()));
 			}
 		}
 	}

@@ -83,7 +83,7 @@ public final class MediaMetadata {
 	}
 	
 	public final boolean isProtected() {
-		return get(Properties.isProtected, false);
+		return has(Properties.protections);
 	}
 	
 	/** @since 00.02.09 */
@@ -117,7 +117,6 @@ public final class MediaMetadata {
 		
 		public static final String sourceURI = "sourceURI";
 		public static final String title = "title";
-		public static final String isProtected = "isProtected";
 		/** @since 00.02.09 */
 		public static final String protections = "protection";
 	}
@@ -170,11 +169,6 @@ public final class MediaMetadata {
 			return this;
 		}
 		
-		public final Builder isProtected(boolean isProtected) {
-			this.data.put(Properties.isProtected, isProtected);
-			return this;
-		}
-		
 		/** @since 00.02.09 */
 		public final Builder addProtections(MediaProtection... protections) {
 			return addProtections(List.of(protections));
@@ -207,6 +201,11 @@ public final class MediaMetadata {
 			return this;
 		}
 		
+		/** @since 00.02.09 */
+		public final boolean has(String name) {
+			return this.data.containsKey(name);
+		}
+		
 		public final <T> T get(String name) {
 			@SuppressWarnings("unchecked")
 			T value = (T) this.data.get(name);
@@ -222,7 +221,7 @@ public final class MediaMetadata {
 		}
 		
 		public final boolean isProtected() {
-			return get(Properties.isProtected);
+			return has(Properties.protections);
 		}
 		
 		/** @since 00.02.09 */
