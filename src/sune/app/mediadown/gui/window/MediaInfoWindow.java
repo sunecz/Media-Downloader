@@ -365,7 +365,9 @@ public class MediaInfoWindow extends DraggableWindow<StackPane> {
 				newChild("isContainer", media.isContainer()),
 				newChild("isSingle", media.isSingle()),
 				newChild("isSegmented", media.isSegmented()),
-				newChild("isSolid", media.isSolid())
+				newChild("isSolid", media.isSolid()),
+				newChild("isVirtual", media.isVirtual()),
+				newChild("isPhysical", media.isPhysical())
 			);
 			
 			loadBeforeMetadata(media, root);
