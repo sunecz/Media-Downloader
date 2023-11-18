@@ -38,15 +38,15 @@ public class SimpleSubtitlesMedia extends SimpleMedia implements SubtitlesMedia 
 		return quality;
 	}
 	
-	public static final boolean isValidFormat(MediaFormat format) {
+	protected static final boolean isValidFormat(MediaFormat format) {
 		return format.is(MediaFormat.UNKNOWN) || format.mediaType().is(MEDIA_TYPE);
 	}
 	
-	public static final boolean isValidQuality(MediaQuality quality) {
+	protected static final boolean isValidQuality(MediaQuality quality) {
 		return quality.is(MediaQuality.UNKNOWN) || quality.mediaType().is(MEDIA_TYPE);
 	}
 	
-	public static final Builder builder() {
+	public static Builder builder() {
 		return new Builder();
 	}
 	
@@ -55,12 +55,12 @@ public class SimpleSubtitlesMedia extends SimpleMedia implements SubtitlesMedia 
 		return language;
 	}
 	
-	public static final class Builder extends SimpleMedia.Builder<SimpleSubtitlesMedia, Builder>
+	public static class Builder extends SimpleMedia.Builder<SimpleSubtitlesMedia, Builder>
 			implements SubtitlesMedia.Builder<SimpleSubtitlesMedia, Builder> {
 		
-		private MediaLanguage language;
+		protected MediaLanguage language;
 		
-		public Builder() {
+		protected Builder() {
 			type = MEDIA_TYPE;
 			language = MediaLanguage.UNKNOWN;
 		}

@@ -35,11 +35,11 @@ public class SegmentedSubtitlesMedia extends SegmentedMedia implements Subtitles
 		return format;
 	}
 	
-	public static final boolean isValidFormat(MediaFormat format) {
+	protected static final boolean isValidFormat(MediaFormat format) {
 		return format.is(MediaFormat.UNKNOWN) || format.mediaType().is(MEDIA_TYPE);
 	}
 	
-	public static final Builder builder() {
+	public static Builder builder() {
 		return new Builder();
 	}
 	
@@ -48,12 +48,12 @@ public class SegmentedSubtitlesMedia extends SegmentedMedia implements Subtitles
 		return language;
 	}
 	
-	public static final class Builder extends SegmentedMedia.Builder<SegmentedSubtitlesMedia, Builder>
+	public static class Builder extends SegmentedMedia.Builder<SegmentedSubtitlesMedia, Builder>
 			implements SubtitlesMedia.Builder<SegmentedSubtitlesMedia, Builder> {
 		
-		private MediaLanguage language;
+		protected MediaLanguage language;
 		
-		public Builder() {
+		protected Builder() {
 			type = MEDIA_TYPE;
 			language = MediaLanguage.UNKNOWN;
 		}

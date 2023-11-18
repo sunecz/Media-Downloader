@@ -84,6 +84,16 @@ public class SimpleMedia implements Media {
 	}
 	
 	@Override
+	public boolean isVirtual() {
+		return false;
+	}
+	
+	@Override
+	public boolean isPhysical() {
+		return true;
+	}
+	
+	@Override
 	public String toString() {
 		return "Media["
 					+ "class=" + getClass().getSimpleName() + ", "
@@ -110,7 +120,7 @@ public class SimpleMedia implements Media {
 		/** @since 00.02.08 */
 		protected Media parent;
 		
-		public Builder() {
+		protected Builder() {
 			source = MediaSource.none();
 			type = MediaType.UNKNOWN;
 			format = MediaFormat.UNKNOWN;

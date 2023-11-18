@@ -435,7 +435,7 @@ public final class MediaUtils {
 						.segments(Utils.<List<FileSegmentsHolder<?>>>cast(video.segmentsHolders()))
 						.resolution(video.resolution()).duration(video.duration())
 						.metadata(metadata),
-					AudioMedia.simple().source(source)
+					AudioMedia.virtual().source(source)
 						.uri(video.uri()).format(MediaFormat.M4A)
 						.quality(MediaQuality.UNKNOWN)
 						.language(language).duration(video.duration())

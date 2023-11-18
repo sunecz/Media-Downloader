@@ -33,7 +33,7 @@ public class SegmentedMedia extends SimpleMedia {
 		
 		protected List<FileSegmentsHolder<?>> segments;
 		
-		public Builder() {
+		protected Builder() {
 			segments = List.of();
 		}
 		

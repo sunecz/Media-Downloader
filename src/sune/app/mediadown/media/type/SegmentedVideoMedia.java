@@ -51,15 +51,15 @@ public class SegmentedVideoMedia extends SegmentedMedia implements VideoMedia {
 		return quality;
 	}
 	
-	public static final boolean isValidFormat(MediaFormat format) {
+	protected static final boolean isValidFormat(MediaFormat format) {
 		return format.is(MediaFormat.UNKNOWN) || format.mediaType().is(MEDIA_TYPE);
 	}
 	
-	public static final boolean isValidQuality(MediaQuality quality) {
+	protected static final boolean isValidQuality(MediaQuality quality) {
 		return quality.is(MediaQuality.UNKNOWN) || quality.mediaType().is(MEDIA_TYPE);
 	}
 	
-	public static final Builder builder() {
+	public static Builder builder() {
 		return new Builder();
 	}
 	
@@ -88,16 +88,16 @@ public class SegmentedVideoMedia extends SegmentedMedia implements VideoMedia {
 		return frameRate;
 	}
 	
-	public static final class Builder extends SegmentedMedia.Builder<SegmentedVideoMedia, Builder>
+	public static class Builder extends SegmentedMedia.Builder<SegmentedVideoMedia, Builder>
 			implements VideoMedia.Builder<SegmentedVideoMedia, Builder> {
 		
-		private MediaResolution resolution;
-		private double duration;
-		private List<String> codecs;
-		private int bandwidth;
-		private double frameRate;
+		protected MediaResolution resolution;
+		protected double duration;
+		protected List<String> codecs;
+		protected int bandwidth;
+		protected double frameRate;
 		
-		public Builder() {
+		protected Builder() {
 			type = MEDIA_TYPE;
 			resolution = MediaResolution.UNKNOWN;
 			duration = MediaConstants.UNKNOWN_DURATION;

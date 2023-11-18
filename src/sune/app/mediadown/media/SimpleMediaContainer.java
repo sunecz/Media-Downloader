@@ -101,6 +101,16 @@ public class SimpleMediaContainer implements MediaContainer {
 	}
 	
 	@Override
+	public boolean isVirtual() {
+		return false;
+	}
+	
+	@Override
+	public boolean isPhysical() {
+		return true;
+	}
+	
+	@Override
 	public MediaAccessor recursive() {
 		return this;
 	}
@@ -179,7 +189,7 @@ public class SimpleMediaContainer implements MediaContainer {
 		protected Media parent;
 		protected List<Media.Builder<?, ?>> media;
 		
-		public Builder() {
+		protected Builder() {
 			source = MediaSource.none();
 			type = MediaType.UNKNOWN;
 			format = MediaFormat.UNKNOWN;

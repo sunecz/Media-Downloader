@@ -30,6 +30,9 @@ public class SeparatedMediaContainer extends SimpleMediaContainer {
 	public static class Builder<T extends SeparatedMediaContainer, B extends Builder<T, B>>
 			extends SimpleMediaContainer.Builder<T, B> {
 		
+		protected Builder() {
+		}
+		
 		protected void imprintSelf(Media.Builder<?, ?> media) {
 			if(media == null) return; // Nothing to imprint from
 			if(source.isEmpty() && !media.source().isEmpty()) source(media.source());

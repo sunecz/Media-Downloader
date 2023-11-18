@@ -52,15 +52,15 @@ public class CombinedAudioMediaContainer extends CombinedMediaContainer implemen
 		return quality;
 	}
 	
-	public static final boolean isValidFormat(MediaFormat format) {
+	protected static final boolean isValidFormat(MediaFormat format) {
 		return format.is(MediaFormat.UNKNOWN) || format.mediaType().is(MEDIA_TYPE);
 	}
 	
-	public static final boolean isValidQuality(MediaQuality quality) {
+	protected static final boolean isValidQuality(MediaQuality quality) {
 		return quality.is(MediaQuality.UNKNOWN) || quality.mediaType().is(MEDIA_TYPE);
 	}
 	
-	public static final Builder builder() {
+	public static Builder builder() {
 		return new Builder();
 	}
 	
@@ -92,13 +92,13 @@ public class CombinedAudioMediaContainer extends CombinedMediaContainer implemen
 	public static class Builder extends CombinedMediaContainer.Builder<CombinedAudioMediaContainer, Builder>
 			implements AudioMediaContainer.Builder<CombinedAudioMediaContainer, Builder> {
 		
-		private MediaLanguage language;
-		private double duration;
-		private List<String> codecs;
-		private int bandwidth;
-		private int sampleRate;
+		protected MediaLanguage language;
+		protected double duration;
+		protected List<String> codecs;
+		protected int bandwidth;
+		protected int sampleRate;
 		
-		public Builder() {
+		protected Builder() {
 			type = MEDIA_TYPE;
 			language = MediaLanguage.UNKNOWN;
 			duration = MediaConstants.UNKNOWN_DURATION;

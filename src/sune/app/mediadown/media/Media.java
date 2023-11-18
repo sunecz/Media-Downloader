@@ -27,6 +27,12 @@ public interface Media {
 	default boolean isSolid() {
 		return !isSegmented();
 	}
+	/** @since 00.02.09 */
+	boolean isVirtual();
+	/** @since 00.02.09 */
+	default boolean isPhysical() {
+		return !isVirtual();
+	}
 	
 	/** @since 00.02.09 */
 	public static MediaContainer asContainer(Media media) {

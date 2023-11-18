@@ -52,15 +52,15 @@ public class SeparatedVideoMediaContainer extends SeparatedMediaContainer implem
 		return quality;
 	}
 	
-	public static final boolean isValidFormat(MediaFormat format) {
+	protected static final boolean isValidFormat(MediaFormat format) {
 		return format.is(MediaFormat.UNKNOWN) || format.mediaType().is(MEDIA_TYPE);
 	}
 	
-	public static final boolean isValidQuality(MediaQuality quality) {
+	protected static final boolean isValidQuality(MediaQuality quality) {
 		return quality.is(MediaQuality.UNKNOWN) || quality.mediaType().is(MEDIA_TYPE);
 	}
 	
-	public static final Builder builder() {
+	public static Builder builder() {
 		return new Builder();
 	}
 	
@@ -92,13 +92,13 @@ public class SeparatedVideoMediaContainer extends SeparatedMediaContainer implem
 	public static class Builder extends SeparatedMediaContainer.Builder<SeparatedVideoMediaContainer, Builder>
 			implements VideoMediaContainer.Builder<SeparatedVideoMediaContainer, Builder> {
 
-		private MediaResolution resolution;
-		private double duration;
-		private List<String> codecs;
-		private int bandwidth;
-		private double frameRate;
+		protected MediaResolution resolution;
+		protected double duration;
+		protected List<String> codecs;
+		protected int bandwidth;
+		protected double frameRate;
 		
-		public Builder() {
+		protected Builder() {
 			type = MEDIA_TYPE;
 			resolution = MediaResolution.UNKNOWN;
 			duration = MediaConstants.UNKNOWN_DURATION;
