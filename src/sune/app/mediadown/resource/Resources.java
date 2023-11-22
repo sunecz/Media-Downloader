@@ -12,7 +12,7 @@ import java.util.stream.Collectors;
 
 import sune.app.mediadown.download.DownloadConfiguration;
 import sune.app.mediadown.download.FileDownloader;
-import sune.app.mediadown.download.InputStreamChannelFactory;
+import sune.app.mediadown.download.InputStreamFactory;
 import sune.app.mediadown.event.CheckEvent;
 import sune.app.mediadown.event.DownloadEvent;
 import sune.app.mediadown.event.FileCheckEvent;
@@ -51,7 +51,7 @@ public final class Resources {
 		NIO.deleteFile(destination);
 		
 		FileDownloader downloader = new FileDownloader(new TrackerManager());
-		downloader.setResponseChannelFactory(InputStreamChannelFactory.GZIP.ofDefault());
+		downloader.setResponseStreamFactory(InputStreamFactory.GZIP.ofDefault());
 		
 		final String fileName = destination.getFileName().toString();
 		final long minTime = 500000000L; // 500ms

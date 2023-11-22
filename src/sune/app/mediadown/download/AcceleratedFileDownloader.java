@@ -292,8 +292,8 @@ public class AcceleratedFileDownloader implements InternalDownloader {
 	}
 	
 	@Override
-	public void setResponseChannelFactory(InputStreamChannelFactory factory) {
-		Ignore.callVoid(() -> doAction((downloader) -> downloader.setResponseChannelFactory(factory)));
+	public void setResponseStreamFactory(InputStreamFactory factory) {
+		Ignore.callVoid(() -> doAction((downloader) -> downloader.setResponseStreamFactory(factory)));
 	}
 	
 	@Override

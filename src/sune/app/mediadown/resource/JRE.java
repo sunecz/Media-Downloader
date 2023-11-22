@@ -13,7 +13,7 @@ import java.util.function.Predicate;
 
 import sune.app.mediadown.download.DownloadConfiguration;
 import sune.app.mediadown.download.FileDownloader;
-import sune.app.mediadown.download.InputStreamChannelFactory;
+import sune.app.mediadown.download.InputStreamFactory;
 import sune.app.mediadown.event.CheckEvent;
 import sune.app.mediadown.event.DownloadEvent;
 import sune.app.mediadown.event.Event;
@@ -226,7 +226,7 @@ public final class JRE implements EventBindable<JREEvent> {
 			NIO.createDir(destination.getParent());
 			
 			FileDownloader downloader = new FileDownloader(manager);
-			downloader.setResponseChannelFactory(InputStreamChannelFactory.GZIP.ofDefault());
+			downloader.setResponseStreamFactory(InputStreamFactory.GZIP.ofDefault());
 			
 			DownloadTracker tracker = new DownloadTracker();
 			downloader.setTracker(tracker);

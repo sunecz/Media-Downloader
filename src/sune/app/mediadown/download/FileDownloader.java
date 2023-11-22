@@ -14,6 +14,7 @@ import java.nio.file.Path;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Predicate;
+import java.util.zip.GZIPInputStream;
 
 import sune.app.mediadown.InternalState;
 import sune.app.mediadown.TaskStates;
@@ -29,6 +30,7 @@ import sune.app.mediadown.net.Web;
 import sune.app.mediadown.net.Web.Request;
 import sune.app.mediadown.net.Web.Response;
 import sune.app.mediadown.util.Range;
+import sune.app.mediadown.util.Utils;
 
 /** @since 00.02.08 */
 public class FileDownloader implements InternalDownloader {
@@ -58,48 +60,48 @@ public class FileDownloader implements InternalDownloader {
 	 *               offset = e -1
 	 */
 	
-	private static final Range<Long> RANGE_UNSET = new Range<>(-1L, -1L);
-	private static final int DEFAULT_BUFFER_SIZE = 8192;
-	private static final int FILE_STORE_BLOCKS_COUNT = 16;
+	protected static final Range<Long> RANGE_UNSET = new Range<>(-1L, -1L);
+	protected static final int DEFAULT_BUFFER_SIZE = 8192;
+	protected static final int FILE_STORE_BLOCKS_COUNT = 16;
 	
-	private final InternalState state = new InternalState(TaskStates.INITIAL);
-	private final EventRegistry<DownloadEvent> eventRegistry = new EventRegistry<>();
-	private final SyncObject lockPause = new SyncObject();
-	private final TrackerManager trackerManager;
+	protected final InternalState state = new InternalState(TaskStates.INITIAL);
+	protected final EventRegistry<DownloadEvent> eventRegistry = new EventRegistry<>();
+	protected final SyncObject lockPause = new SyncObject();
+	protected final TrackerManager trackerManager;
 	
-	private Request request;
-	private Path output;
-	private DownloadConfiguration configuration;
+	protected Request request;
+	protected Path output;
+	protected DownloadConfiguration configuration;
 	
-	private DownloadTracker tracker;
-	private InputStreamChannelFactory responseChannelFactory;
+	protected DownloadTracker tracker;
+	protected InputStreamFactory responseStreamFactory;
 	
-	private String identifier;
-	private AtomicLong bytes = new AtomicLong();
+	protected String identifier;
+	protected final AtomicLong bytes = new AtomicLong();
 	
-	private long totalBytes;
-	private Range<Long> rangeRequest;
-	private Range<Long> rangeOutput;
+	protected long totalBytes;
+	protected Range<Long> rangeRequest;
+	protected Range<Long> rangeOutput;
 	
-	private FileChannel channel;
-	private Response.OfStream response;
-	private ByteBuffer buffer;
+	protected FileChannel channel;
+	protected Response.OfStream response;
+	protected ByteBuffer buffer;
 	
-	private Exception exception;
+	protected Exception exception;
 	
 	public FileDownloader(TrackerManager trackerManager) {
 		this.trackerManager = Objects.requireNonNull(trackerManager);
 	}
 	
-	private static final Range<Long> newRange(long from, long to) {
+	protected static final Range<Long> newRange(long from, long to) {
 		return from < 0L && to < 0L ? RANGE_UNSET : new Range<>(from, to);
 	}
 	
-	private static final boolean isValidRange(Range<Long> range) {
+	protected static final boolean isValidRange(Range<Long> range) {
 		return range.from() >= 0L && range.to() >= 0L;
 	}
 	
-	private static final Range<Long> checkRange(Range<Long> range, long limit) {
+	protected static final Range<Long> checkRange(Range<Long> range, long limit) {
 		long from = range.from(), to = range.to();
 		
 		if(from < 0L && to < 0L) {
@@ -117,15 +119,15 @@ public class FileDownloader implements InternalDownloader {
 		}
 	}
 	
-	private static final Range<Long> offsetRange(Range<Long> range, long start, long end) {
+	protected static final Range<Long> offsetRange(Range<Long> range, long start, long end) {
 		return range.setFrom(range.from() + start).setTo(end);
 	}
 	
-	private static final long rangeLength(Range<Long> range) {
+	protected static final long rangeLength(Range<Long> range) {
 		return range.from() < 0L || range.to() < 0L ? -1L : range.to() - range.from();
 	}
 	
-	private static final int bufferSize(Path path) {
+	protected static final int bufferSize(Path path) {
 		try {
 			return (int) (FILE_STORE_BLOCKS_COUNT * Files.getFileStore(path).getBlockSize());
 		} catch(IOException ex) {
@@ -135,12 +137,12 @@ public class FileDownloader implements InternalDownloader {
 		return DEFAULT_BUFFER_SIZE;
 	}
 	
-	private final void openFile(Path output, Range<Long> range) throws IOException {
+	protected void openFile(Path output, Range<Long> range) throws IOException {
 		channel = FileChannel.open(output, CREATE, WRITE);
 		channel.position(Math.max(0L, range.from()));
 	}
 	
-	private final void closeFile() throws IOException {
+	protected void closeFile() throws IOException {
 		if(channel == null) {
 			return;
 		}
@@ -149,11 +151,42 @@ public class FileDownloader implements InternalDownloader {
 		channel = null;
 	}
 	
-	private final void write(ByteBuffer buffer) throws IOException {
+	protected void write(ByteBuffer buffer) throws IOException {
 		while(buffer.hasRemaining()) channel.write(buffer);
 	}
 	
-	private final ReadableByteChannel doRequest(Range<Long> range) throws Exception {
+	/** @since 00.02.09 */
+	protected String[] responseEncodings() {
+		return response.headers()
+			.firstValue("Content-Encoding")
+			.map((s) -> Utils.OfString.split(s, ","))
+			.orElse(null);
+	}
+	
+	/** @since 00.02.09 */
+	protected InputStream decodeResponseStream(InputStream stream) throws Exception {
+		String[] encodings;
+		
+		if((encodings = responseEncodings()) == null) {
+			return stream;
+		}
+		
+		for(int i = encodings.length - 1; i >= 0; --i) {
+			String encoding = encodings[i];
+			
+			switch(encoding) {
+				case "gzip":
+					stream = new GZIPInputStream(stream);
+					break;
+				default:
+					throw new IllegalStateException("Unsupported encoding: " + encoding);
+			}
+		}
+		
+		return stream;
+	}
+	
+	protected ReadableByteChannel doRequest(Range<Long> range) throws Exception {
 		Request req = request;
 		long size = totalBytes;
 		
@@ -190,36 +223,37 @@ public class FileDownloader implements InternalDownloader {
 			identifier = response.identifier();
 		}
 		
-		// Finally, convert the response to readable channel
-		ReadableByteChannel channel = null;
-		InternalInputStream iis = null;
 		InputStream stream = response.stream();
+		InputStream modifiedStream = null;
 		
-		if(responseChannelFactory != null) {
-			iis = new InternalInputStream(stream);
-			channel = responseChannelFactory.create(iis);
+		if(responseStreamFactory != null) {
+			modifiedStream = responseStreamFactory.create(stream);
 		}
 		
 		// Default case, but the factory may also return null
-		if(channel == null) {
-			iis = null;
-			channel = Channels.newChannel(stream);
+		if(modifiedStream == null) {
+			modifiedStream = decodeResponseStream(stream);
 		}
 		
-		return InternalChannel.maybeWrap(channel, iis);
+		// No decoding takes place, return the original stream's channel
+		if(stream == modifiedStream) {
+			return Channels.newChannel(stream);
+		}
+		
+		return InternalChannel.of(stream, modifiedStream);
 	}
 	
-	private final ByteBuffer buffer() {
+	protected ByteBuffer buffer() {
 		return buffer == null ? (buffer = ByteBuffer.allocate(bufferSize(output))) : buffer.clear();
 	}
 	
-	private final void update(long readBytes) {
+	protected void update(long readBytes) {
 		bytes.getAndAdd(readBytes);
 		tracker.update(readBytes);
 		eventRegistry.call(DownloadEvent.UPDATE, this);
 	}
 	
-	private final boolean doDownload() throws Exception {
+	protected boolean doDownload() throws Exception {
 		boolean reachedEOF = false;
 		long prevBytes = bytes.get();
 		
@@ -278,7 +312,7 @@ public class FileDownloader implements InternalDownloader {
 		return reachedEOF;
 	}
 	
-	private final void checkIfDone(boolean reachedEOF) {
+	protected void checkIfDone(boolean reachedEOF) {
 		Range<Long> rangeRequest = configuration.rangeRequest();
 		
 		if((isValidRange(rangeRequest) && bytes.get() >= rangeLength(rangeRequest))
@@ -287,7 +321,7 @@ public class FileDownloader implements InternalDownloader {
 		}
 	}
 	
-	private final void doStart() throws Exception {
+	protected void doStart() throws Exception {
 		while(!isDone() && !isStopped()) {
 			state.set(TaskStates.RUNNING);
 			checkIfDone(doDownload());
@@ -299,7 +333,7 @@ public class FileDownloader implements InternalDownloader {
 		}
 	}
 	
-	private final void doStop(int stopState) {
+	protected void doStop(int stopState) {
 		if(isStopped() || isDone()) {
 			return;
 		}
@@ -383,8 +417,8 @@ public class FileDownloader implements InternalDownloader {
 	}
 	
 	@Override
-	public void setResponseChannelFactory(InputStreamChannelFactory factory) {
-		this.responseChannelFactory = factory;
+	public void setResponseStreamFactory(InputStreamFactory factory) {
+		this.responseStreamFactory = factory;
 	}
 	
 	@Override
@@ -472,7 +506,7 @@ public class FileDownloader implements InternalDownloader {
 		return exception;
 	}
 	
-	private static final class InternalInputStream extends InputStream {
+	protected static final class InternalInputStream extends InputStream {
 		
 		private final InputStream stream;
 		private int lastBytesCount;
@@ -507,7 +541,7 @@ public class FileDownloader implements InternalDownloader {
 		}
 	}
 	
-	private static final class InternalChannel implements ReadableByteChannel {
+	protected static final class InternalChannel implements ReadableByteChannel {
 		
 		private final ReadableByteChannel channel;
 		private final InternalInputStream stream;
@@ -517,8 +551,8 @@ public class FileDownloader implements InternalDownloader {
 			this.stream = Objects.requireNonNull(stream);
 		}
 		
-		public static final ReadableByteChannel maybeWrap(ReadableByteChannel channel, InternalInputStream stream) {
-			return stream != null ? new InternalChannel(channel, stream) : channel;
+		public static final InternalChannel of(InputStream original, InputStream wrapped) {
+			return new InternalChannel(Channels.newChannel(wrapped), new InternalInputStream(original));
 		}
 		
 		@Override public boolean isOpen() { return channel.isOpen(); }

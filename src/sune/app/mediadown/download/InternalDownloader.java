@@ -6,7 +6,6 @@ import sune.app.mediadown.event.DownloadEvent;
 import sune.app.mediadown.event.EventCallable;
 import sune.app.mediadown.event.tracker.DownloadTracker;
 import sune.app.mediadown.net.Web.Request;
-import sune.app.mediadown.net.Web.Response;
 
 /** @since 00.02.08 */
 public interface InternalDownloader extends DownloadContext, EventCallable<DownloadEvent> {
@@ -17,11 +16,5 @@ public interface InternalDownloader extends DownloadContext, EventCallable<Downl
 	void stop() throws Exception;
 	
 	void setTracker(DownloadTracker tracker);
-	void setResponseChannelFactory(InputStreamChannelFactory factory);
-	
-	Request request();
-	Path output();
-	DownloadConfiguration configuration();
-	Response response();
-	long totalBytes();
+	void setResponseStreamFactory(InputStreamFactory factory);
 }
