@@ -625,7 +625,7 @@ public final class MPD {
 		public final RemoteFileSegmentsHolder segmentsHolder() {
 			if(segmentsHolder == null) {
 				List<RemoteFileSegment> fileSegments = segments.stream()
-					.map((seg) -> new RemoteFileSegment(seg.uri(), -1L))
+					.map((seg) -> new RemoteFileSegment(seg.uri()))
 					.collect(Collectors.toList());
 				segmentsHolder = new RemoteFileSegmentsHolder(fileSegments, duration);
 			}

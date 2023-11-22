@@ -501,7 +501,7 @@ public final class M3U {
 		private RemoteFileSegmentsHolder segmentsHolder() {
 			return new RemoteFileSegmentsHolder(
 				Objects.requireNonNull(segments).stream()
-					.map((seg) -> new RemoteFileSegment(seg.uri(), MediaConstants.UNKNOWN_SIZE))
+					.map((seg) -> new RemoteFileSegment(seg.uri(), MediaConstants.UNKNOWN_SIZE, seg.duration()))
 					.collect(Collectors.toList()),
 				duration
 			);

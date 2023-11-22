@@ -1,8 +1,6 @@
 package sune.app.mediadown.download.segment;
 
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -22,7 +20,7 @@ public final class RemoteFileSegmentsHolder implements FileSegmentsHolder {
 	}
 	
 	public RemoteFileSegmentsHolder(List<RemoteFileSegment> segments, double duration) {
-		this.segments = new ArrayList<>(Objects.requireNonNull(segments)); // List copy
+		this.segments = List.copyOf(Objects.requireNonNull(segments));
 		this.duration = duration;
 	}
 	
@@ -31,12 +29,12 @@ public final class RemoteFileSegmentsHolder implements FileSegmentsHolder {
 	}
 	
 	public static final RemoteFileSegmentsHolder ofSingle(URI uri, long size, double duration) {
-		return new RemoteFileSegmentsHolder(List.of(new RemoteFileSegment(uri, size)), duration);
+		return new RemoteFileSegmentsHolder(List.of(new RemoteFileSegment(uri, size, duration)), duration);
 	}
 	
 	@Override
 	public List<RemoteFileSegment> segments() {
-		return Collections.unmodifiableList(segments);
+		return segments;
 	}
 	
 	@Override
