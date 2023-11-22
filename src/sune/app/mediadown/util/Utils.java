@@ -53,6 +53,7 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -1736,6 +1737,119 @@ public final class Utils {
 			}
 			
 			return string.toString();
+		}
+		
+		public static final String[] split(String string) {
+			return split(string, 0, 0, string.length());
+		}
+		
+		public static final String[] split(String string, int limit) {
+			return split(string, limit, 0, string.length());
+		}
+		
+		public static final String[] split(String string, int limit, int start) {
+			return split(string, limit, start, string.length());
+		}
+		
+		public static final String[] split(String string, int limit, int start, int end) {
+			if(string == null) {
+				throw new NullPointerException();
+			}
+			
+			if(start < 0 || start >= end) {
+				return new String[0];
+			}
+			
+			IntStream stream = string.codePoints();
+			int count = end - start - 1;
+			
+			if(limit > 0) {
+				count = Math.min(count, limit - 1);
+			}
+			
+			return Stream.concat(
+				stream.skip(start).limit(count).mapToObj(Character::toString),
+				Stream.of(string.substring(start + count, end))
+			).toArray(String[]::new);
+		}
+		
+		public static final String[] split(String string, String separator) {
+			return split(string, separator, 0, 0, string.length());
+		}
+		
+		public static final String[] split(String string, String separator, int limit) {
+			return split(string, separator, limit, 0, string.length());
+		}
+		
+		public static final String[] split(String string, String separator, int limit, int start) {
+			return split(string, separator, limit, start, string.length());
+		}
+		
+		public static final String[] split(String string, String separator, int limit, int start, int end) {
+			if(string == null || separator == null) {
+				throw new NullPointerException();
+			}
+			
+			if(separator.isEmpty()) {
+				return split(string, limit, start, end);
+			}
+			
+			if(start < 0 || start >= end) {
+				return new String[0];
+			}
+			
+			int pos = start;
+			int idx = string.indexOf(separator, pos);
+			
+			// Separator not found in <start, end)
+			if(idx < 0) {
+				return new String[] { string.substring(start, end) };
+			}
+			
+			int len = separator.length();
+			
+			// Separator found outside <start, end)
+			if(idx > end - len) {
+				return new String[] { string.substring(start, end) };
+			}
+			
+			String[] parts;
+			
+			if(limit > 0) {
+				parts = new String[limit];
+				
+				for(int i = 0;
+					--limit > 0
+						&& (idx = string.indexOf(separator, pos)) >= 0
+						&& (idx) <= end - len;
+					++i, pos = idx + len) {
+					parts[i] = string.substring(pos, idx);
+				}
+				
+				parts[parts.length - 1] = string.substring(pos, end);
+			} else {
+				List<String> list = new ArrayList<>();
+				
+				do {
+					list.add(string.substring(pos, idx));
+					pos = idx + len;
+				} while((idx = string.indexOf(separator, pos)) >= 0 && (idx) <= end - len);
+				
+				if(pos <= end) {
+					list.add(string.substring(pos, end));
+				}
+				
+				int to = list.size();
+				
+				// Remove trailing empty strings
+				if(limit == 0) {
+					for(; to > 0 && list.get(to - 1).equals(""); --to);
+				}
+				
+				parts = list.subList(0, to).toArray(String[]::new);
+			}
+			
+			return parts;
 		}
 	}
 	
