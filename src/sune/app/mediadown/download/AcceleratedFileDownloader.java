@@ -38,6 +38,11 @@ public class AcceleratedFileDownloader implements InternalDownloader {
 	
 	private final AtomicBoolean flagBegin = new AtomicBoolean();
 	
+	/** @since 00.02.09 */
+	private final AtomicLong bytes = new AtomicLong();
+	/** @since 00.02.09 */
+	private final AtomicLong written = new AtomicLong();
+	
 	private Request request;
 	private Path output;
 	private DownloadConfiguration configuration;
@@ -161,12 +166,13 @@ public class AcceleratedFileDownloader implements InternalDownloader {
 	public long start(Request request, Path output, DownloadConfiguration configuration) throws Exception {
 		this.configuration = configuration;
 		flagBegin.set(false);
+		bytes.set(0L);
+		written.set(0L);
 		
 		int numOfThreads = count;
 		Range<Long> rangeOutput = configuration.rangeOutput();
 		Range<Long> rangeRequest = configuration.rangeRequest();
 		totalBytes = configuration.totalBytes();
-		AtomicLong bytes = new AtomicLong();
 		
 		if(totalBytes < 0L) {
 			totalBytes = Ignore.defaultValue(() -> Web.size(request), -1L);
@@ -200,11 +206,16 @@ public class AcceleratedFileDownloader implements InternalDownloader {
 			InternalDownloader downloader = downloaders.get(0);
 			DownloadConfiguration downloadConfiguration
 				= DownloadConfiguration.ofRanges(rangeOutput, rangeRequest, size);
-			long downloaded = downloader.start(request, output, downloadConfiguration);
+			long downloadedBytes = downloader.start(request, output, downloadConfiguration);
+			long writtenBytes = downloader.writtenBytes();
 			maybeSetResponse(downloader.response());
 			
-			if(downloaded > 0L) {
-				bytes.getAndAdd(downloaded);
+			if(downloadedBytes > 0L) {
+				bytes.getAndAdd(downloadedBytes);
+			}
+			
+			if(writtenBytes > 0L) {
+				written.getAndAdd(writtenBytes);
 			}
 		} else {
 			CounterLock lock = new CounterLock(numOfThreads);
@@ -227,11 +238,16 @@ public class AcceleratedFileDownloader implements InternalDownloader {
 					try {
 						DownloadConfiguration downloadConfiguration
 							= DownloadConfiguration.ofRanges(rangeOut, rangeReq, size);
-						long downloaded = downloader.start(request, output, downloadConfiguration);
+						long downloadedBytes = downloader.start(request, output, downloadConfiguration);
+						long writtenBytes = downloader.writtenBytes();
 						maybeSetResponse(downloader.response());
 						
-						if(downloaded > 0L) {
-							bytes.getAndAdd(downloaded);
+						if(downloadedBytes > 0L) {
+							bytes.getAndAdd(downloadedBytes);
+						}
+						
+						if(writtenBytes > 0L) {
+							written.getAndAdd(writtenBytes);
 						}
 					} catch(Exception ex) {
 						exception = ex;
@@ -294,6 +310,11 @@ public class AcceleratedFileDownloader implements InternalDownloader {
 	@Override
 	public void setResponseStreamFactory(InputStreamFactory factory) {
 		Ignore.callVoid(() -> doAction((downloader) -> downloader.setResponseStreamFactory(factory)));
+	}
+	
+	@Override
+	public long writtenBytes() {
+		return written.get();
 	}
 	
 	@Override

@@ -17,4 +17,7 @@ public interface InternalDownloader extends DownloadContext, EventCallable<Downl
 	
 	void setTracker(DownloadTracker tracker);
 	void setResponseStreamFactory(InputStreamFactory factory);
+	
+	/** @since 00.02.09 */
+	long writtenBytes();
 }

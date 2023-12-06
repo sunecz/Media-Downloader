@@ -78,6 +78,8 @@ public class FileDownloader implements InternalDownloader {
 	
 	protected String identifier;
 	protected final AtomicLong bytes = new AtomicLong();
+	/** @since 00.02.09 */
+	protected final AtomicLong written = new AtomicLong();
 	
 	protected long totalBytes;
 	protected Range<Long> rangeRequest;
@@ -151,8 +153,14 @@ public class FileDownloader implements InternalDownloader {
 		channel = null;
 	}
 	
-	protected void write(ByteBuffer buffer) throws IOException {
-		while(buffer.hasRemaining()) channel.write(buffer);
+	protected int write(ByteBuffer buffer) throws IOException {
+		int count = 0;
+		
+		while(buffer.hasRemaining()) {
+			count += channel.write(buffer);
+		}
+		
+		return count;
 	}
 	
 	/** @since 00.02.09 */
@@ -164,13 +172,7 @@ public class FileDownloader implements InternalDownloader {
 	}
 	
 	/** @since 00.02.09 */
-	protected InputStream decodeResponseStream(InputStream stream) throws Exception {
-		String[] encodings;
-		
-		if((encodings = responseEncodings()) == null) {
-			return stream;
-		}
-		
+	protected InputStream decodeResponseStream(InputStream stream, String[] encodings) throws Exception {
 		for(int i = encodings.length - 1; i >= 0; --i) {
 			String encoding = encodings[i];
 			
@@ -186,6 +188,17 @@ public class FileDownloader implements InternalDownloader {
 		return stream;
 	}
 	
+	/** @since 00.02.09 */
+	protected boolean shouldModifyResponseStream(InputStream stream) throws Exception {
+		return false; // By default do not modify
+	}
+	
+	/** @since 00.02.09 */
+	protected InputStream modifyResponseStream(InputStream stream) throws Exception {
+		return stream; // By default do not modify
+	}
+	
+	@SuppressWarnings("resource")
 	protected ReadableByteChannel doRequest(Range<Long> range) throws Exception {
 		Request req = request;
 		long size = totalBytes;
@@ -227,16 +240,53 @@ public class FileDownloader implements InternalDownloader {
 		InputStream modifiedStream = null;
 		
 		if(responseStreamFactory != null) {
+			// Always wrap the original stream to correctly calculate progress
+			stream = new InternalInputStream(stream);
 			modifiedStream = responseStreamFactory.create(stream);
 		}
 		
 		// Default case, but the factory may also return null
 		if(modifiedStream == null) {
-			modifiedStream = decodeResponseStream(stream);
+			String[] encodings;
+			
+			if((encodings = responseEncodings()) != null) {
+				if(!(stream instanceof InternalInputStream)) {
+					// Always wrap the original stream to correctly calculate progress
+					stream = new InternalInputStream(stream);
+				}
+				
+				modifiedStream = decodeResponseStream(stream, encodings);
+			} else {
+				modifiedStream = stream;
+			}
+		}
+		
+		// Allow modification of the response stream
+		if(shouldModifyResponseStream(modifiedStream)) {
+			// No decoding or modification took place
+			if(stream == modifiedStream
+					&& !(stream instanceof InternalInputStream)) {
+				// Always wrap the original stream to correctly calculate progress
+				stream = new InternalInputStream(stream);
+				modifiedStream = stream;
+			}
+			
+			modifiedStream = modifyResponseStream(modifiedStream);
+		}
+		
+		// Final check of the modified stream to avoid null value and to allow it
+		// to ignore the response content altogether.
+		if(modifiedStream == null) {
+			modifiedStream = InputStream.nullInputStream();
 		}
 		
 		// No decoding takes place, return the original stream's channel
 		if(stream == modifiedStream) {
+			// Unwrap the internal stream, since it is not needed
+			if(stream instanceof InternalInputStream) {
+				stream = ((InternalInputStream) stream).stream;
+			}
+			
 			return Channels.newChannel(stream);
 		}
 		
@@ -247,8 +297,9 @@ public class FileDownloader implements InternalDownloader {
 		return buffer == null ? (buffer = ByteBuffer.allocate(bufferSize(output))) : buffer.clear();
 	}
 	
-	protected void update(long readBytes) {
+	protected void update(long readBytes, long writtenByes) {
 		bytes.getAndAdd(readBytes);
+		written.getAndAdd(writtenByes);
 		tracker.update(readBytes);
 		eventRegistry.call(DownloadEvent.UPDATE, this);
 	}
@@ -256,6 +307,7 @@ public class FileDownloader implements InternalDownloader {
 	protected boolean doDownload() throws Exception {
 		boolean reachedEOF = false;
 		long prevBytes = bytes.get();
+		long prevWritten = written.get();
 		
 		rangeOutput = checkRange(rangeOutput, -1L);
 		rangeRequest = checkRange(rangeRequest, rangeLength(rangeOutput));
@@ -284,17 +336,17 @@ public class FileDownloader implements InternalDownloader {
 			openFile(output, rangeOutput);
 			ByteBuffer buffer = buffer();
 			
-			for(int read; isRunning()
+			for(int read, written; isRunning()
 					// Read the bytes to the buffer
 					&& ((read = input.read(buffer)) >= 0L 
 							// If read < 0L bytes, set the EOF flag and exit the loop
 							|| !(reachedEOF = true));) {
 				// Write the buffer to the output
 				buffer.flip();
-				write(buffer);
+				written = write(buffer);
 				buffer.clear();
 				
-				update(read);
+				update(read, written);
 			}
 		} finally {
 			if(response != null) {
@@ -303,8 +355,9 @@ public class FileDownloader implements InternalDownloader {
 			
 			// Update the ranges, used when the download is resumed
 			long downloadedBytes = bytes.get() - prevBytes;
+			long writtenBytes = written.get() - prevWritten;
 			rangeRequest = offsetRange(rangeRequest, downloadedBytes, totalBytes);
-			rangeOutput = offsetRange(rangeOutput, downloadedBytes, -1L);
+			rangeOutput = offsetRange(rangeOutput, writtenBytes, -1L);
 			
 			closeFile();
 		}
@@ -358,6 +411,7 @@ public class FileDownloader implements InternalDownloader {
 		rangeOutput        = configuration.rangeOutput();
 		buffer             = null;
 		bytes.set(0L);
+		written.set(0L);
 		state.clear(TaskStates.STARTED);
 		
 		try {
@@ -419,6 +473,11 @@ public class FileDownloader implements InternalDownloader {
 	@Override
 	public void setResponseStreamFactory(InputStreamFactory factory) {
 		this.responseStreamFactory = factory;
+	}
+	
+	@Override
+	public long writtenBytes() {
+		return written.get();
 	}
 	
 	@Override
@@ -509,35 +568,61 @@ public class FileDownloader implements InternalDownloader {
 	protected static final class InternalInputStream extends InputStream {
 		
 		private final InputStream stream;
-		private int lastBytesCount;
+		private int count;
+		private boolean reset = true;
 		
 		public InternalInputStream(InputStream stream) {
 			this.stream = Objects.requireNonNull(stream);
 		}
 		
+		private final void add(int n) {
+			count += n;
+			reset = false;
+		}
+		
 		@Override
 		public int read() throws IOException {
-			int b = stream.read();
-			lastBytesCount = 1;
+			int b;
+			if((b = stream.read()) >= 0) {
+				add(1);
+			}
+			
 			return b;
 		}
 		
 		@Override
 		public int read(byte[] b) throws IOException {
-			return lastBytesCount = stream.read(b);
+			int v;
+			if((v = stream.read(b)) >= 0) {
+				add(v);
+			}
+			
+			return v;
 		}
 		
 		@Override
 		public int read(byte[] b, int off, int len) throws IOException {
-			return lastBytesCount = stream.read(b, off, len);
+			int v;
+			if((v = stream.read(b, off, len)) >= 0) {
+				add(v);
+			}
+			
+			return v;
 		}
 		
-		public void resetLastBytesCount() {
-			lastBytesCount = 0;
+		public void reset() {
+			count = 0;
+			reset = true;
 		}
 		
-		public int lastBytesCount() {
-			return lastBytesCount;
+		public int count() {
+			return reset ? -1 : count;
+		}
+		
+		public int countAndReset() {
+			int n = count();
+			reset();
+			return n;
 		}
 	}
 	
@@ -552,7 +637,12 @@ public class FileDownloader implements InternalDownloader {
 		}
 		
 		public static final InternalChannel of(InputStream original, InputStream wrapped) {
-			return new InternalChannel(Channels.newChannel(wrapped), new InternalInputStream(original));
+			return new InternalChannel(
+				Channels.newChannel(wrapped),
+				original instanceof InternalInputStream
+					? (InternalInputStream) original
+					: new InternalInputStream(original)
+			);
 		}
 		
 		@Override public boolean isOpen() { return channel.isOpen(); }
@@ -560,13 +650,8 @@ public class FileDownloader implements InternalDownloader {
 		
 		@Override
 		public int read(ByteBuffer dst) throws IOException {
-			stream.resetLastBytesCount();
-			
-			if(channel.read(dst) < 0) {
-				return -1; // Forward EOS
-			}
-			
-			return stream.lastBytesCount();
+			channel.read(dst); // Delegate
+			return stream.countAndReset();
 		}
 	}
 }
