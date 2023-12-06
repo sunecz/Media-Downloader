@@ -28,6 +28,22 @@ public final class MediaMetadata {
 		return new Builder();
 	}
 	
+	/** @since 00.02.09 */
+	public static final Builder builder(Builder... builders) {
+		Objects.requireNonNull(builders);
+		Builder builder = new Builder();
+		for(Builder b : builders) builder.add(b);
+		return builder;
+	}
+	
+	/** @since 00.02.09 */
+	public static final Builder builder(MediaMetadata... metadata) {
+		Objects.requireNonNull(metadata);
+		Builder builder = new Builder();
+		for(MediaMetadata m : metadata) builder.add(m);
+		return builder;
+	}
+	
 	public static final MediaMetadata empty() {
 		return EMPTY;
 	}
@@ -38,6 +54,16 @@ public final class MediaMetadata {
 	
 	public static final MediaMetadata of(Map<String, Object> data) {
 		return Objects.requireNonNull(data).isEmpty() ? empty() : new MediaMetadata(new LinkedHashMap<>(data));
+	}
+	
+	/** @since 00.02.09 */
+	public static final MediaMetadata of(Builder... builders) {
+		return Objects.requireNonNull(builders).length == 0 ? empty() : builder(builders).build();
+	}
+	
+	/** @since 00.02.09 */
+	public static final MediaMetadata of(MediaMetadata... metadata) {
+		return Objects.requireNonNull(metadata).length == 0 ? empty() : builder(metadata).build();
 	}
 	
 	public final boolean has(String name) {
@@ -140,6 +166,16 @@ public final class MediaMetadata {
 		
 		public final Builder add(Object... data) {
 			return add(Utils.stringKeyMap(Objects.requireNonNull(data)));
+		}
+		
+		/** @since 00.02.09 */
+		public final Builder add(Builder builder) {
+			return add(Objects.requireNonNull(builder).data);
+		}
+		
+		/** @since 00.02.09 */
+		public final Builder add(MediaMetadata metadata) {
+			return add(Objects.requireNonNull(metadata).data);
 		}
 		
 		public final Builder remove(List<String> names) {
