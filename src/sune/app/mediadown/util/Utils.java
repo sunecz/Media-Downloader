@@ -1435,10 +1435,10 @@ public final class Utils {
 	public static final String transformEachWord(String string, BiFunction<String, Integer, String> transformer) {
 		if(string == null || string.isEmpty()) return string;
 		Objects.requireNonNull(transformer);
-		Property<Integer> ctr = new Property<>(0);
+		Ref.Mutable<Integer> ctr = new Ref.Mutable<>(0);
 		return regexUnicodeWord().replaceAll(string, (matches) -> {
-			String value = transformer.apply(matches.group(0), ctr.getValue());
-			ctr.setValue(ctr.getValue() + 1);
+			String value = transformer.apply(matches.group(0), ctr.get());
+			ctr.set(ctr.get() + 1);
 			return value;
 		});
 	}

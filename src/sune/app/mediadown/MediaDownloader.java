@@ -113,7 +113,7 @@ import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.OSUtils;
 import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.PathSystem;
-import sune.app.mediadown.util.Property;
+import sune.app.mediadown.util.Ref;
 import sune.app.mediadown.util.Reflection2;
 import sune.app.mediadown.util.Reflection3;
 import sune.app.mediadown.util.SelfProcess;
@@ -446,14 +446,14 @@ public final class MediaDownloader {
 			public InitializationState run(Arguments args) {
 				if(AppArguments.isUpdateEnabled()) {
 					final Path rootDir = Path.of(PathSystem.getCurrentDirectory());
-					final Property<Double> progressValue = new Property<>(0.0);
+					final Ref.Mutable<Double> progressValue = new Ref.Mutable<>(0.0);
 					FileDownloader downloader = new FileDownloader(new TrackerManager());
 					
 					downloader.addEventListener(DownloadEvent.BEGIN, (context) -> {
 						Path file = context.output();
 						String path = file.subpath(rootDir.getNameCount(), file.getNameCount()).toString();
 						
-						progressValue.setValue(getProgress());
+						progressValue.set(getProgress());
 						setText(String.format("Downloading library %s...", path));
 						setProgress(0.0);
 					});
@@ -476,12 +476,12 @@ public final class MediaDownloader {
 						String path = file.subpath(rootDir.getNameCount(), file.getNameCount()).toString();
 						
 						setText(String.format("Downloading library %s... Done", path));
-						setProgress(progressValue.getValue());
+						setProgress(progressValue.get());
 					});
 					
 					downloader.addEventListener(DownloadEvent.ERROR, (pair) -> {
 						setText(String.format("Downloading library... Error"));
-						setProgress(progressValue.getValue());
+						setProgress(progressValue.get());
 					});
 					
 					try {

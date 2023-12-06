@@ -30,7 +30,7 @@ import sune.app.mediadown.net.Web.Response;
 import sune.app.mediadown.util.Opt;
 import sune.app.mediadown.util.Opt.OptCondition;
 import sune.app.mediadown.util.Opt.OptMapper;
-import sune.app.mediadown.util.Property;
+import sune.app.mediadown.util.Ref;
 import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Utils.Ignore;
 
@@ -579,13 +579,13 @@ public final class MediaUtils {
 		
 		private final List<Media.Builder<?, ?>> parseFormat(URI uri, MediaFormat format, Request request,
 				URI sourceURI, Map<String, Object> data, long size) throws Exception {
-			Property<Exception> ex = new Property<>();
+			Ref.Mutable<Exception> ex = new Ref.Mutable<>();
 			Exception exception;
 			List<Media.Builder<?, ?>> media = Opt.of(parsers.get(format)).ifTrue(Objects::nonNull)
 					  .or(() -> Opt.of(defaultParser))
-					  .map((p) -> Ignore.defaultValue(() -> p.parse(uri, format, request, sourceURI, data, size), null, ex::setValue))
+					  .map((p) -> Ignore.defaultValue(() -> p.parse(uri, format, request, sourceURI, data, size), null, ex::set))
 					  .orElseGet(List::of);
-			if((exception = ex.getValue()) != null) throw exception;
+			if((exception = ex.get()) != null) throw exception;
 			return media;
 		}
 		

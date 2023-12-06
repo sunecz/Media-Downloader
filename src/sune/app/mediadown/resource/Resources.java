@@ -26,7 +26,7 @@ import sune.app.mediadown.update.Updater;
 import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.OSUtils;
 import sune.app.mediadown.util.Pair;
-import sune.app.mediadown.util.Property;
+import sune.app.mediadown.util.Ref;
 
 public final class Resources {
 	
@@ -55,7 +55,7 @@ public final class Resources {
 		
 		final String fileName = destination.getFileName().toString();
 		final long minTime = 500000000L; // 500ms
-		final Property<Long> lastTime = new Property<>(0L);
+		final Ref.Mutable<Long> lastTime = new Ref.Mutable<>(0L);
 		
 		downloader.addEventListener(DownloadEvent.BEGIN, (context) -> {
 			if(receiver != null) {
@@ -66,13 +66,13 @@ public final class Resources {
 		downloader.addEventListener(DownloadEvent.UPDATE, (context) -> {
 			if(receiver != null
 					// Throttle to remove flickering
-					&& System.nanoTime() - lastTime.getValue() >= minTime) {
+					&& System.nanoTime() - lastTime.get() >= minTime) {
 				DownloadTracker tracker = (DownloadTracker) context.trackerManager().tracker();
 				long current = tracker.current();
 				long total = tracker.total();
 				double percent = current * 100.0 / total;
 				receiver.receive(String.format(Locale.US, "Downloading %s... %.2f%%", fileName, percent));
-				lastTime.setValue(System.nanoTime());
+				lastTime.set(System.nanoTime());
 			}
 		});
 		
