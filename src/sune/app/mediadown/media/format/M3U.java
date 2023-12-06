@@ -105,28 +105,25 @@ public final class M3U {
 		}
 	}
 	
-	public static final class M3USegment {
+	public static final class M3USegment extends RemoteFileSegment {
 		
 		private final int index;
-		private final URI uri;
-		private final double duration;
+		/** @since 00.02.09 */
+		private final String dateTime;
 		
-		protected M3USegment(int index, URI uri, double duration) {
+		protected M3USegment(int index, URI uri, double duration, String dateTime) {
+			super(uri, MediaConstants.UNKNOWN_SIZE, duration);
 			this.index = index;
-			this.uri = Objects.requireNonNull(uri);
-			this.duration = duration;
+			this.dateTime = dateTime;
 		}
 		
 		public int index() {
 			return index;
 		}
 		
-		public URI uri() {
-			return uri;
-		}
-		
-		public double duration() {
-			return duration;
+		/** @since 00.02.09 */
+		public String dateTime() {
+			return dateTime;
 		}
 	}
 	
@@ -203,12 +200,12 @@ public final class M3U {
 		
 		/** @since 00.02.09 */
 		public String attribute(String name) {
-			return attributes.get(name);
+			return attributes == null ? null : attributes.get(name);
 		}
 		
 		/** @since 00.02.09 */
 		public String attribute(String name, String defaultValue) {
-			return attributes.getOrDefault(name, defaultValue);
+			return attributes == null ? defaultValue : attributes.getOrDefault(name, defaultValue);
 		}
 		
 		/** @since 00.02.09 */
@@ -379,6 +376,8 @@ public final class M3U {
 		private int index;
 		private URI uri;
 		private double duration;
+		/** @since 00.02.09 */
+		private String dateTime;
 		private boolean dirty;
 		
 		private void markDirty() {
@@ -400,15 +399,22 @@ public final class M3U {
 			markDirty();
 		}
 		
+		/** @since 00.02.09 */
+		public void dateTime(String dateTime) {
+			this.dateTime = dateTime;
+			markDirty();
+		}
+		
 		public void reset() {
 			index = 0;
 			uri = null;
 			duration = 0.0;
+			dateTime = null;
 			dirty = false;
 		}
 		
 		public M3USegment build() {
-			return new M3USegment(index, uri, duration);
+			return new M3USegment(index, uri, duration, dateTime);
 		}
 		
 		public boolean isDirty() {
@@ -499,12 +505,7 @@ public final class M3U {
 		
 		/** @since 00.02.09 */
 		private RemoteFileSegmentsHolder segmentsHolder() {
-			return new RemoteFileSegmentsHolder(
-				Objects.requireNonNull(segments).stream()
-					.map((seg) -> new RemoteFileSegment(seg.uri(), MediaConstants.UNKNOWN_SIZE, seg.duration()))
-					.collect(Collectors.toList()),
-				duration
-			);
+			return new RemoteFileSegmentsHolder(segments, duration);
 		}
 		
 		/** @since 00.02.09 */
@@ -580,14 +581,17 @@ public final class M3U {
 		private static final char CHAR_META_DELIMITER_INFO     = ',';
 		private static final char CHAR_META_DELIMITER_ASSIGN   = '=';
 		
-		private static final String NAME_HEADER      = "EXTM3U";
-		private static final String NAME_VERSION     = "EXT-X-VERSION";
-		private static final String NAME_SEQUENCE    = "EXT-X-MEDIA-SEQUENCE";
-		private static final String NAME_STREAM_INFO = "EXT-X-STREAM-INF";
-		private static final String NAME_KEY         = "EXT-X-KEY";
+		private static final String NAME_HEADER           = "EXTM3U";
+		private static final String NAME_VERSION          = "EXT-X-VERSION";
+		private static final String NAME_SEQUENCE         = "EXT-X-MEDIA-SEQUENCE";
+		private static final String NAME_STREAM_INFO      = "EXT-X-STREAM-INF";
+		private static final String NAME_KEY              = "EXT-X-KEY";
 		/** @since 00.02.09 */
-		private static final String NAME_MEDIA       = "EXT-X-MEDIA";
-		private static final String NAME_SEGMENT     = "EXTINF";
+		private static final String NAME_MEDIA            = "EXT-X-MEDIA";
+		/** @since 00.02.09 */
+		private static final String NAME_SEGMENT_INFO     = "EXTINF";
+		/** @since 00.02.09 */
+		private static final String NAME_SEGMENT_DATETIME = "EXT-X-PROGRAM-DATE-TIME";
 		
 		private static final Regex PATTERN_ATTRIBUTE_LIST
 			= Regex.of("([A-Z0-9\\-]+)=([^,\\x0A\\x0D]+|\"[^\"\\x0A\\x0D]+\")");
@@ -652,7 +656,8 @@ public final class M3U {
 			return new Pair<>(name, value);
 		}
 		
-		private final void parseSegmentMetaData(String value) throws IOException {
+		/** @since 00.02.09 */
+		private final void parseSegmentInfo(String value) throws IOException {
 			String duration = value;
 			
 			int index;
@@ -664,7 +669,13 @@ public final class M3U {
 			segmentBuilder.index(sequenceIndex++);
 		}
 		
-		private final void parseStreamInfoMetaData(String value) throws IOException {
+		/** @since 00.02.09 */
+		private final void parseSegmentDateTime(String value) throws IOException {
+			segmentBuilder.dateTime(value);
+		}
+		
+		/** @since 00.02.09 */
+		private final void parseStreamInfo(String value) throws IOException {
 			String[] values = value.split("" + CHAR_META_DELIMITER_INFO);
 			
 			if(values.length <= 0) {
@@ -799,8 +810,9 @@ public final class M3U {
 			switch(name) {
 				case NAME_VERSION: version = value; break;
 				case NAME_SEQUENCE: sequenceIndex = Integer.valueOf(value); break;
-				case NAME_SEGMENT: parseSegmentMetaData(value); break;
-				case NAME_STREAM_INFO: parseStreamInfoMetaData(value); break;
+				case NAME_SEGMENT_INFO: parseSegmentInfo(value); break;
+				case NAME_SEGMENT_DATETIME: parseSegmentDateTime(value); break;
+				case NAME_STREAM_INFO: parseStreamInfo(value); break;
 				case NAME_MEDIA: parseMedia(value); break;
 				case NAME_KEY: parseKey(value); break;
 				default: /* Do nothing */ break;
@@ -834,10 +846,6 @@ public final class M3U {
 			// Parse the content
 			for(String line; (line = nextLine()) != null;) {
 				if(isMetaLine(line)) {
-					if(segmentBuilder.isDirty()) {
-						throwExceptionInvalid("Segment URI is missing");
-					}
-					
 					Pair<String, String> data = parseMetaLine(line);
 					updateMetaData(data.a, data.b);
 				} else if(segmentBuilder.isDirty()) { // Segment URI

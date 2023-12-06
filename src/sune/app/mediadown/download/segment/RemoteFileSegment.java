@@ -6,11 +6,11 @@ import java.util.Objects;
 import sune.app.mediadown.media.MediaConstants;
 
 /** @since 00.02.05 */
-public final class RemoteFileSegment implements FileSegment {
+public class RemoteFileSegment implements FileSegment {
 	
-	private final URI uri;
-	private final long size;
-	private final double duration;
+	protected final URI uri;
+	protected final long size;
+	protected final double duration;
 	
 	/** @since 00.02.09 */
 	public RemoteFileSegment(URI uri) {
@@ -29,12 +29,12 @@ public final class RemoteFileSegment implements FileSegment {
 	}
 	
 	@Override
-	public final URI uri() {
+	public URI uri() {
 		return uri;
 	}
 	
 	@Override
-	public final long size() {
+	public long size() {
 		return size;
 	}
 	

@@ -19,7 +19,7 @@ public final class RemoteFileSegmentsHolder implements FileSegmentsHolder {
 		this.duration = MediaConstants.UNKNOWN_DURATION;
 	}
 	
-	public RemoteFileSegmentsHolder(List<RemoteFileSegment> segments, double duration) {
+	public RemoteFileSegmentsHolder(List<? extends RemoteFileSegment> segments, double duration) {
 		this.segments = List.copyOf(Objects.requireNonNull(segments));
 		this.duration = duration;
 	}
