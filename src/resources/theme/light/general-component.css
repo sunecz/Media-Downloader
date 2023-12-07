@@ -35,12 +35,16 @@
 	-fx-font-size: 18px;
 }
 
-.button {
+.button, .toggle-button {
 	-fx-focus-traversable: false;
 }
 
-.button:hover {
+.button:hover, .toggle-button:hover {
 	-fx-text-fill: rgb(0, 0, 0);
+}
+
+.button:default, .toggle-button:default {
+	-fx-base: -fx-accent;
 }
 
 .separator *.line {
@@ -51,10 +55,6 @@
 
 .scroll-bar {
 	-fx-background-color: derive(-fx-base, 45%);
-}
-
-.button:default {
-	-fx-base: -fx-accent;
 }
 
 .table-view, .tree-table-view {
@@ -95,7 +95,7 @@
 	-fx-background-insets: 0, 0 0 1 0;
 }
 
-.button:focused, .combo-box:focused {
+.button:focused, .combo-box:focused, .toggle-button:focused {
 	-fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
 	-fx-background-insets: 0 0 -1 0, 0, 1, 2;
 	-fx-background-radius: 3, 3, 2, 1;

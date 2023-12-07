@@ -1665,6 +1665,8 @@ public final class MediaDownloader {
 			addTheme(Theme.ofDark(), true);
 			// Icons
 			addIcon("automatic.png", false);
+			addIcon("show.png", false);
+			addIcon("hide.png", false);
 		}
 		
 		private static final <T> List<String> extract(ResourceNamedRegistry<T> registry, String prefix, String suffix,

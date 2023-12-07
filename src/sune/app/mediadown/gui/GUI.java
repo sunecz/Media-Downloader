@@ -7,7 +7,6 @@ import java.util.Objects;
 import java.util.function.Supplier;
 
 import javafx.scene.control.Label;
-import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.layout.GridPane;
@@ -19,6 +18,7 @@ import sune.app.mediadown.authentication.Credentials;
 import sune.app.mediadown.authentication.CredentialsManager;
 import sune.app.mediadown.authentication.EmailCredentials;
 import sune.app.mediadown.authentication.UsernameCredentials;
+import sune.app.mediadown.gui.control.PasswordFieldPane;
 import sune.app.mediadown.gui.window.ReportWindow;
 import sune.app.mediadown.language.Translation;
 import sune.app.mediadown.report.Report;
@@ -153,7 +153,7 @@ public final class GUI {
 					TextField txtUsername = new TextField();
 					txtUsername.getStyleClass().add("field-username");
 					Label lblPassword = new Label(tr.getSingle("password"));
-					PasswordField txtPassword = new PasswordField();
+					PasswordFieldPane txtPassword = new PasswordFieldPane();
 					txtPassword.getStyleClass().add("field-password");
 					grid.getChildren().addAll(
 						lblUsername, txtUsername,
@@ -172,7 +172,7 @@ public final class GUI {
 				public void load(Pane pane, UsernameCredentials credentials) {
 					GridPane grid = (GridPane) pane;
 					TextField txtUsername = (TextField) grid.lookup(".field-username");
-					PasswordField txtPassword = (PasswordField) grid.lookup(".field-password");
+					PasswordFieldPane txtPassword = (PasswordFieldPane) grid.lookup(".field-password");
 					txtUsername.setText(credentials.username());
 					txtPassword.setText(credentials.password());
 				}
@@ -181,7 +181,7 @@ public final class GUI {
 				public UsernameCredentials save(Pane pane) {
 					GridPane grid = (GridPane) pane;
 					TextField txtUsername = (TextField) grid.lookup(".field-username");
-					PasswordField txtPassword = (PasswordField) grid.lookup(".field-password");
+					PasswordFieldPane txtPassword = (PasswordFieldPane) grid.lookup(".field-password");
 					String username = txtUsername.getText();
 					String password = txtPassword.getText();
 					return new UsernameCredentials(username, password);
@@ -207,7 +207,7 @@ public final class GUI {
 					TextField txtEmail = new TextField();
 					txtEmail.getStyleClass().add("field-email");
 					Label lblPassword = new Label(tr.getSingle("password"));
-					PasswordField txtPassword = new PasswordField();
+					PasswordFieldPane txtPassword = new PasswordFieldPane();
 					txtPassword.getStyleClass().add("field-password");
 					grid.getChildren().addAll(
 						lblEmail, txtEmail,
@@ -226,7 +226,7 @@ public final class GUI {
 				public void load(Pane pane, EmailCredentials credentials) {
 					GridPane grid = (GridPane) pane;
 					TextField txtEmail = (TextField) grid.lookup(".field-email");
-					PasswordField txtPassword = (PasswordField) grid.lookup(".field-password");
+					PasswordFieldPane txtPassword = (PasswordFieldPane) grid.lookup(".field-password");
 					txtEmail.setText(credentials.email());
 					txtPassword.setText(credentials.password());
 				}
@@ -235,7 +235,7 @@ public final class GUI {
 				public EmailCredentials save(Pane pane) {
 					GridPane grid = (GridPane) pane;
 					TextField txtEmail = (TextField) grid.lookup(".field-email");
-					PasswordField txtPassword = (PasswordField) grid.lookup(".field-password");
+					PasswordFieldPane txtPassword = (PasswordFieldPane) grid.lookup(".field-password");
 					String email = txtEmail.getText();
 					String password = txtPassword.getText();
 					return new EmailCredentials(email, password);
