@@ -261,7 +261,9 @@
 					title:       "Vybrat epizodu",
 					placeholder: "Nebyly nalezeny žádné epizody",
 					columns: {
-						title: "Název epizody"
+						season: "Sezóna",
+						number: "Epizoda",
+						title:  "Název"
 					},
 					context_menu: {
 						copy_url:      "Zkopírovat URL",

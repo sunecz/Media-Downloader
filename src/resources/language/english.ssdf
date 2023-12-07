@@ -261,7 +261,9 @@
 					title:       "Select episode",
 					placeholder: "No episodes were found",
 					columns: {
-						title: "Episode name"
+						season: "Season",
+						number: "Episode",
+						title:  "Title"
 					},
 					context_menu: {
 						copy_url:      "Copy URL",

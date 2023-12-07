@@ -1,12 +1,15 @@
 package sune.app.mediadown.gui.table;
 
+import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SelectionMode;
+import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import sune.app.mediadown.entity.Episode;
@@ -85,12 +88,29 @@ public final class ProgramPipelineTask extends MediaEnginePipelineTaskBase<Progr
 	public final TableView<Episode> getTable(TableWindow window) {
 		TableView<Episode> table = new TableView<>();
 		Translation translation = window.getTranslation();
+		String titleSeason = translation.getSingle("tables.episodes.columns.season");
+		String titleNumber = translation.getSingle("tables.episodes.columns.number");
 		String titleTitle = translation.getSingle("tables.episodes.columns.title");
+		TableColumn<Episode, Integer> columnSeason = new TableColumn<>(titleSeason);
+		TableColumn<Episode, Integer> columnNumber = new TableColumn<>(titleNumber);
 		TableColumn<Episode, String> columnTitle = new TableColumn<>(titleTitle);
-		columnTitle.setCellValueFactory((c) -> new SimpleObjectProperty<>(c.getValue().title()));
-		columnTitle.setPrefWidth(530);
+		columnSeason.setCellFactory((c) -> new IntegerTableCell());
+		columnNumber.setCellFactory((c) -> new IntegerTableCell());
+		columnSeason.setPrefWidth(65);
+		columnNumber.setPrefWidth(65);
+		columnTitle.setPrefWidth(400);
+		columnSeason.setCellValueFactory((v) -> new SimpleObjectProperty<>(v.getValue().season()));
+		columnNumber.setCellValueFactory((v) -> new SimpleObjectProperty<>(v.getValue().number()));
+		columnTitle.setCellValueFactory((v) -> new SimpleObjectProperty<>(v.getValue().title()));
+		columnSeason.setComparator(Comparator.reverseOrder());
+		columnNumber.setComparator(Comparator.reverseOrder());
 		columnTitle.setComparator(Utils::compareNatural);
+		table.getColumns().add(columnSeason);
+		table.getColumns().add(columnNumber);
 		table.getColumns().add(columnTitle);
+		table.getSortOrder().add(columnSeason);
+		table.getSortOrder().add(columnNumber);
+		table.getSortOrder().add(columnTitle);
 		table.setPlaceholder(new Label(translation.getSingle("tables.episodes.placeholder")));
 		table.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 		table.setContextMenu(newContextMenu(window, table));
@@ -122,5 +142,29 @@ public final class ProgramPipelineTask extends MediaEnginePipelineTaskBase<Progr
 	@Override
 	protected void onCancelled() throws Exception {
 		beforeReload();
+	}
+	
+	/** @since 00.02.09 */
+	private static final class IntegerTableCell extends TableCell<Episode, Integer> {
+		
+		private static final String string(int value) {
+			return value == 0 ? "-" : String.valueOf(value);
+		}
+		
+		@Override
+		protected void updateItem(Integer value, boolean empty) {
+			if(Objects.equals(value, getItem())) {
+				return;
+			}
+			
+			super.updateItem(value, empty);
+			
+			if(value == null) {
+				setText(null);
+				setGraphic(null);
+			} else {
+				setText(string(value));
+			}
+		}
 	}
 }
