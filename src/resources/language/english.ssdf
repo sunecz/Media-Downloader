@@ -75,9 +75,7 @@
 					item: {
 						information:   "Information",
 						configuration: "Configuration",
-						credentials:   "Login credentials",
-						messages:      "Messages",
-						about:         "About"
+						credentials:   "Login credentials"
 					}
 				},
 				tools: {
@@ -92,7 +90,9 @@
 					item: {
 						report_issue:  "Report issue",
 						feedback:      "Feedback",
-						documentation: "Documentation"
+						documentation: "Documentation",
+						messages:      "Messages",
+						about:         "About"
 					}
 				}
 			},

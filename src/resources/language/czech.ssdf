@@ -75,9 +75,7 @@
 					item: {
 						information:   "Informace",
 						configuration: "Nastavení",
-						credentials:   "Přihlašovací údaje",
-						messages:      "Zprávy",
-						about:         "O programu"
+						credentials:   "Přihlašovací údaje"
 					}
 				},
 				tools: {
@@ -92,7 +90,9 @@
 					item: {
 						report_issue:  "Nahlásit problém",
 						feedback:      "Zpětná vazba",
-						documentation: "Dokumentace"
+						documentation: "Dokumentace",
+						messages:      "Zprávy",
+						about:         "O programu"
 					}
 				}
 			},

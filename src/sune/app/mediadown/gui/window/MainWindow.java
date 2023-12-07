@@ -141,9 +141,6 @@ public final class MainWindow extends Window<BorderPane> {
 	private MenuItem menuItemConfiguration;
 	/** @since 00.02.09 */
 	private MenuItem menuItemCredentials;
-	private MenuItem menuItemMessages;
-	/** @since 00.02.08 */
-	private MenuItem menuItemAbout;
 	private Menu menuTools;
 	private MenuItem menuItemClipboardWatcher;
 	private MenuItem menuItemUpdateResources;
@@ -155,6 +152,9 @@ public final class MainWindow extends Window<BorderPane> {
 	private MenuItem menuItemFeedback;
 	/** @since 00.02.09 */
 	private MenuItem menuItemDocumentation;
+	private MenuItem menuItemMessages;
+	/** @since 00.02.08 */
+	private MenuItem menuItemAbout;
 	
 	public MainWindow() {
 		super(NAME, new BorderPane(), DEFAULT_WIDTH, DEFAULT_HEIGHT);
@@ -713,10 +713,10 @@ public final class MainWindow extends Window<BorderPane> {
 			showCredentialsWindow();
 		});
 		
-		menuItemMessages = new MenuItem(tr("menu_bar.application.item.messages"));
+		menuItemMessages = new MenuItem(tr("menu_bar.help.item.messages"));
 		menuItemMessages.setOnAction((e) -> resetAndShowMessagesAsync());
 		
-		menuItemAbout = new MenuItem(tr("menu_bar.application.item.about"));
+		menuItemAbout = new MenuItem(tr("menu_bar.help.item.about"));
 		menuItemAbout.setOnAction((e) -> {
 			showAboutWindow();
 		});
@@ -763,10 +763,12 @@ public final class MainWindow extends Window<BorderPane> {
 		});
 		
 		menuApplication.getItems().addAll(
-			menuItemInformation, menuItemConfiguration, menuItemCredentials, menuItemMessages, menuItemAbout
+			menuItemInformation, menuItemConfiguration, menuItemCredentials
 		);
 		menuTools.getItems().addAll(menuItemClipboardWatcher, menuItemUpdateResources);
-		menuHelp.getItems().addAll(menuItemReportIssue, menuItemFeedback, menuItemDocumentation);
+		menuHelp.getItems().addAll(
+			menuItemReportIssue, menuItemFeedback, menuItemDocumentation, menuItemMessages, menuItemAbout
+		);
 		menuBar.getMenus().addAll(menuApplication, menuTools, menuHelp);
 		
 		return menuBar;
