@@ -35,6 +35,7 @@ public final class CredentialsEditDialogWindow extends DialogWindow<VBox, Creden
 	public CredentialsEditDialogWindow() {
 		super(NAME, new VBox(5.0), 350.0, 250.0);
 		initModality(Modality.APPLICATION_MODAL);
+		setCloseButtonVisible(false);
 		
 		boxButtons = new HBox(5.0);
 		btnSave = new Button(tr("button.save"));

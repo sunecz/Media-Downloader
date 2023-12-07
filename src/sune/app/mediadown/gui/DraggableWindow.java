@@ -115,6 +115,11 @@ public class DraggableWindow<T extends Pane> extends Window<StackPane> {
 		close();
 	}
 	
+	/** @since 00.02.09 */
+	protected void setCloseButtonVisible(boolean value) {
+		btnHeaderClose.setVisible(value);
+	}
+	
 	public void centerWindow(Stage parent) {
 		FXUtils.centerWindow(this, parent, 0.0, -4.0);
 	}
