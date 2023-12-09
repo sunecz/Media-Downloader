@@ -96,6 +96,7 @@ public final class ProgramPipelineTask extends MediaEnginePipelineTaskBase<Progr
 		TableColumn<Episode, String> columnTitle = new TableColumn<>(titleTitle);
 		columnSeason.setCellFactory((c) -> new IntegerTableCell());
 		columnNumber.setCellFactory((c) -> new IntegerTableCell());
+		columnTitle.setCellFactory((c) -> new NullableStringTableCell());
 		columnSeason.setPrefWidth(65);
 		columnNumber.setPrefWidth(65);
 		columnTitle.setPrefWidth(400);
@@ -165,6 +166,31 @@ public final class ProgramPipelineTask extends MediaEnginePipelineTaskBase<Progr
 			} else {
 				setText(string(value));
 			}
+		}
+	}
+	
+	/** @since 00.02.09 */
+	private static final class NullableStringTableCell extends TableCell<Episode, String> {
+		
+		private static final String string(String value) {
+			return value == null ? "-" : value;
+		}
+		
+		@Override
+		protected void updateItem(String value, boolean empty) {
+			if(Objects.equals(value, getItem())
+					// Ensure that non-empty null values have the "null-text"
+					&& (value == null && (empty || getText() != null))) {
+				return;
+			}
+			
+			super.updateItem(value, empty);
+			
+			if(value == null) {
+				setGraphic(null);
+			}
+			
+			setText(string(value));
 		}
 	}
 }
