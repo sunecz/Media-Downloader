@@ -10,37 +10,37 @@ public class Episode extends SimpleDataStorable implements Comparable<Episode> {
 	
 	private final Program program;
 	private final URI uri;
+	private final String title;
 	/** @since 00.02.09 */
 	private final int number;
 	/** @since 00.02.09 */
 	private final int season;
-	private final String title;
 	
 	public Episode(Program program, URI uri, String title) {
-		this(program, uri, 0, 0, title);
+		this(program, uri, title, 0, 0);
 	}
 	
 	public Episode(Program program, URI uri, String title, Object... data) {
-		this(program, uri, 0, 0, title, data);
+		this(program, uri, title, 0, 0, data);
 	}
 	
 	/** @since 00.02.09 */
-	public Episode(Program program, URI uri, int number, int season, String title) {
+	public Episode(Program program, URI uri, String title, int number, int season) {
 		this.program = Objects.requireNonNull(program);
 		this.uri     = Objects.requireNonNull(uri).normalize();
+		this.title   = title;
 		this.number  = number;
 		this.season  = season;
-		this.title   = title;
 	}
 	
 	/** @since 00.02.09 */
-	public Episode(Program program, URI uri, int number, int season, String title, Object... data) {
+	public Episode(Program program, URI uri, String title, int number, int season, Object... data) {
 		super(Utils.toMap(data));
 		this.program = Objects.requireNonNull(program);
 		this.uri     = Objects.requireNonNull(uri).normalize();
+		this.title   = title;
 		this.number  = number;
 		this.season  = season;
-		this.title   = title;
 	}
 	
 	public Program program() {
@@ -51,6 +51,10 @@ public class Episode extends SimpleDataStorable implements Comparable<Episode> {
 		return uri;
 	}
 	
+	public String title() {
+		return title;
+	}
+	
 	/** @since 00.02.09 */
 	public int number() {
 		return number;
@@ -59,10 +63,6 @@ public class Episode extends SimpleDataStorable implements Comparable<Episode> {
 	/** @since 00.02.09 */
 	public int season() {
 		return season;
-	}
-	
-	public String title() {
-		return title;
 	}
 	
 	@Override
@@ -106,9 +106,9 @@ public class Episode extends SimpleDataStorable implements Comparable<Episode> {
 	public String toString() {
 		return "Episode["
 			+ "uri=" + uri + ", "
+			+ "title=" + title + ", "
 			+ "number=" + number + ", "
 			+ "season=" + season + ", "
-			+ "title=" + title + ", "
 			+ "program=" + program
 		+ "]";
 	}
