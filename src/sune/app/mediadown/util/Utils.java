@@ -1681,6 +1681,148 @@ public final class Utils {
 			return collator;
 		}
 		
+		private static final int intCharOrSign(int c, int radix) {
+			int v;
+			return (v = Character.digit(c, radix)) != -1
+						|| (v = c) == '-' || (v = c) == '+'
+					? v : -1;
+		}
+		
+		private static final int intCharOrSignOrRoman(int c, int radix) {
+			int v;
+			return (v = Character.digit(c, radix)) != -1
+						|| (v = c) == '-' || (v = c) == '+'
+						|| (v = ROMAN_NUMERALS.getOrDefault((char) c, -1)) != -1
+					? v : -1;
+		}
+		
+		private static final int intChar(int c, int radix) {
+			int v;
+			return (v = Character.digit(c, radix)) != -1 ? v : -1;
+		}
+		
+		private static final int intCharOrRoman(int c, int radix) {
+			int v;
+			return (v = Character.digit(c, radix)) != -1
+						|| (v = ROMAN_NUMERALS.getOrDefault((char) c, -1)) != -1
+					? v : -1;
+		}
+		
+		private static final int intCharRadix(int c, int radix) {
+			int v;
+			return (v = Character.digit(c, radix)) != -1 ? v : -1;
+		}
+		
+		private static final int intCharRoman(int c) {
+			return ROMAN_NUMERALS.getOrDefault((char) c, -1);
+		}
+		
+		private static final boolean isIntSign(int c) {
+			return c == '-' || c == '+';
+		}
+		
+		private static final boolean isIntRoman(int c) {
+			return ROMAN_NUMERALS.containsKey((char) c);
+		}
+		
+		private static final Integer asInteger(String string, int radix, boolean romanNumerals, int start, int end,
+				Integer defaultValue) {
+			if(string == null) {
+				throw new NullPointerException();
+			}
+			
+			do {
+				int i, c = 0, v = 0, value = 0;
+				boolean isNegative = false;
+				
+				if(romanNumerals) {
+					// Skip to the first integer character or a sign symbol
+					for(i = start;
+						i < end && (v = intCharOrSignOrRoman(c = string.codePointAt(i), radix)) == -1;
+						i += charCount(c));
+				} else {
+					// Skip to the first integer character or a sign symbol
+					for(i = start;
+						i < end && (v = intCharOrSign(c = string.codePointAt(i), radix)) == -1;
+						i += charCount(c));
+				}
+				
+				// No integer character or sign symbol found
+				if(i >= end) {
+					return defaultValue;
+				}
+				
+				// Sign symbol can only be the first character
+				if(isIntSign(c)) {
+					isNegative = c == '-';
+					i += charCount(c);
+					
+					if(romanNumerals) {
+						// Move to the next character and check
+						if((v = intCharOrRoman(c = string.codePointAt(i), radix)) == -1) {
+							// Cannot have just the sign symbol, try to find the next integer
+							start = i + 1;
+							continue;
+						}
+					} else {
+						// Move to the next character and check
+						if((v = intChar(c = string.codePointAt(i), radix)) == -1) {
+							// Cannot have just the sign symbol, try to find the next integer
+							start = i + 1;
+							continue;
+						}
+					}
+				}
+				
+				if(romanNumerals && isIntRoman(c)) {
+					value -= v;
+					i += charCount(c);
+					
+					// Roman integer
+					for(int t, u = v;
+						i < end && (v = intCharRoman(c = string.codePointAt(i))) != -1;
+						i += charCount(c), value = t, u = v) {
+						t = value - (v > u ? v - 2 * u : v);
+						
+						// Check of integer overflow
+						if(t > value) {
+							throw new ArithmeticException("Integer overflow");
+						}
+					}
+				} else {
+					value -= v;
+					i += charCount(c);
+					
+					// Radix integer
+					for(int t;
+						i < end && (v = intCharRadix(c = string.codePointAt(i), radix)) != -1;
+						i += charCount(c), value = t) {
+						t = value * radix - v;
+						
+						// Check of integer overflow
+						if(t > value) {
+							throw new ArithmeticException("Integer overflow");
+						}
+					}
+				}
+				
+				// Check for non-negatable integer minimum value
+				if(!isNegative && value == Integer.MIN_VALUE) {
+					throw new ArithmeticException("Integer overflow");
+				}
+				
+				return isNegative ? value : -value;
+			} while(true);
+		}
+		
+		private static final int checkInt(Integer v) {
+			if(v == null) {
+				throw new IllegalStateException("No integer present");
+			}
+			
+			return (int) v;
+		}
+		
 		public static final int compareNormalized(String a, String b) {
 			return collatorNormalized.value().compare(a, b);
 		}
@@ -1850,6 +1992,106 @@ public final class Utils {
 			}
 			
 			return parts;
+		}
+		
+		public static final Integer asInteger(String string) {
+			return asInteger(string, 10, true, 0, string.length(), null);
+		}
+		
+		public static final Integer asInteger(String string, int radix) {
+			return asInteger(string, radix, true, 0, string.length(), null);
+		}
+		
+		public static final Integer asInteger(String string, int radix, boolean romanNumerals) {
+			return asInteger(string, radix, romanNumerals, 0, string.length(), null);
+		}
+		
+		public static final Integer asInteger(String string, int start, int end) {
+			return asInteger(string, 10, true, start, end, null);
+		}
+		
+		public static final Integer asInteger(String string, int radix, int start, int end) {
+			return asInteger(string, radix, true, start, end, null);
+		}
+		
+		public static final Integer asInteger(String string, int radix, boolean romanNumerals, int start, int end) {
+			return asInteger(string, radix, romanNumerals, start, end, null);
+		}
+		
+		public static final Integer asIntegerOrDefault(String string, Integer defaultValue) {
+			return asInteger(string, 10, true, 0, string.length(), defaultValue);
+		}
+		
+		public static final Integer asIntegerOrDefault(String string, int radix, Integer defaultValue) {
+			return asInteger(string, radix, true, 0, string.length(), defaultValue);
+		}
+		
+		public static final Integer asIntegerOrDefault(String string, int radix, boolean romanNumerals,
+				Integer defaultValue) {
+			return asInteger(string, radix, romanNumerals, 0, string.length(), defaultValue);
+		}
+		
+		public static final Integer asIntegerOrDefault(String string, int start, int end, Integer defaultValue) {
+			return asInteger(string, 10, true, start, end, defaultValue);
+		}
+		
+		public static final Integer asIntegerOrDefault(String string, int radix, int start, int end,
+				Integer defaultValue) {
+			return asInteger(string, radix, true, start, end, defaultValue);
+		}
+		
+		public static final Integer asIntegerOrDefault(String string, int radix, boolean romanNumerals, int start,
+				int end, Integer defaultValue) {
+			return asInteger(string, radix, romanNumerals, start, end, defaultValue);
+		}
+		
+		public static final int asInt(String string) {
+			return checkInt(asInteger(string, 10, true, 0, string.length(), null));
+		}
+		
+		public static final int asInt(String string, int radix) {
+			return checkInt(asInteger(string, radix, true, 0, string.length(), null));
+		}
+		
+		public static final int asInt(String string, int radix, boolean romanNumerals) {
+			return checkInt(asInteger(string, radix, romanNumerals, 0, string.length(), null));
+		}
+		
+		public static final int asInt(String string, int start, int end) {
+			return checkInt(asInteger(string, 10, true, start, end, null));
+		}
+		
+		public static final int asInt(String string, int radix, int start, int end) {
+			return checkInt(asInteger(string, radix, true, start, end, null));
+		}
+		
+		public static final int asInt(String string, int radix, boolean romanNumerals, int start, int end) {
+			return checkInt(asInteger(string, radix, romanNumerals, start, end, null));
+		}
+		
+		public static final int asIntOrDefault(String string, int defaultValue) {
+			return asInteger(string, 10, true, 0, string.length(), defaultValue);
+		}
+		
+		public static final int asIntOrDefault(String string, int radix, int defaultValue) {
+			return asInteger(string, radix, true, 0, string.length(), defaultValue);
+		}
+		
+		public static final int asIntOrDefault(String string, int radix, boolean romanNumerals, int defaultValue) {
+			return asInteger(string, radix, romanNumerals, 0, string.length(), defaultValue);
+		}
+		
+		public static final int asIntOrDefault(String string, int start, int end, int defaultValue) {
+			return asInteger(string, 10, true, start, end, defaultValue);
+		}
+		
+		public static final int asIntOrDefault(String string, int radix, int start, int end, int defaultValue) {
+			return asInteger(string, radix, true, start, end, defaultValue);
+		}
+		
+		public static final int asIntOrDefault(String string, int radix, boolean romanNumerals, int start, int end,
+				int defaultValue) {
+			return asInteger(string, radix, romanNumerals, start, end, defaultValue);
 		}
 	}
 	
