@@ -35,6 +35,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -1550,6 +1551,31 @@ public final class Utils {
 		}
 		
 		return builder.toString();
+	}
+	
+	/** @since 00.02.09 */
+	public static final <T> Iterator<T> reversed(List<T> list) {
+		Objects.requireNonNull(list);
+		return new ReversedListIterator<>(list.listIterator(list.size()));
+	}
+	
+	/** @since 00.02.09 */
+	public static final <T> Iterable<T> asReversed(List<T> list) {
+		Objects.requireNonNull(list);
+		return iterable(reversed(list));
+	}
+	
+	/** @since 00.02.09 */
+	private static final class ReversedListIterator<T> implements Iterator<T> {
+		
+		private final ListIterator<T> iterator;
+		
+		public ReversedListIterator(ListIterator<T> iterator) {
+			this.iterator = iterator;
+		}
+		
+		@Override public boolean hasNext() { return iterator.hasPrevious(); }
+		@Override public T next() { return iterator.previous(); }
 	}
 	
 	/** @since 00.02.05 */

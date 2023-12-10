@@ -44,7 +44,6 @@ import java.util.stream.Stream;
 
 import sune.app.mediadown.Shared;
 import sune.app.mediadown.concurrent.VarLoader;
-import sune.app.mediadown.media.MediaConstants;
 import sune.app.mediadown.util.Opt;
 import sune.app.mediadown.util.Range;
 import sune.app.mediadown.util.Regex;
@@ -66,6 +65,9 @@ public final class Web {
 	private static final VarLoader<HttpRequest.Builder> httpRequestBuilder = VarLoader.of(Web::newHttpRequestBuilder);
 	
 	private static final AtomicInteger clientId = new AtomicInteger();
+	
+	/** @since 00.02.09 */
+	public static final long UNKNOWN_SIZE = -1L;
 	
 	// Forbid anyone to create an instance of this class
 	private Web() {
@@ -200,7 +202,7 @@ public final class Web {
 	}
 	
 	public static final long size(Response response) throws Exception {
-		return response.statusCode() != 200 ? MediaConstants.UNKNOWN_SIZE : size(response.headers());
+		return response.statusCode() != 200 ? UNKNOWN_SIZE : size(response.headers());
 	}
 	
 	public static final long size(HttpHeaders headers) {
@@ -232,7 +234,7 @@ public final class Web {
 			}
 		}
 		
-		return headers.firstValueAsLong("content-length").orElse(MediaConstants.UNKNOWN_SIZE);
+		return headers.firstValueAsLong("content-length").orElse(UNKNOWN_SIZE);
 	}
 	
 	public static final void clear() {
