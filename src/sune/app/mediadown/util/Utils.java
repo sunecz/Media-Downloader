@@ -77,6 +77,10 @@ public final class Utils {
 	private static final Map<Character, Integer> ROMAN_NUMERALS = Map.of(
 		'I', 1, 'V', 5, 'X', 10, 'L', 50, 'C', 100, 'D', 500, 'M', 1000
 	);
+	/** @since 00.02.09 */
+	private static final Regex REGEX_FORMAT = Regex.of("%\\{\\s*([^\\}]+)\\s*\\}");
+	/** @since 00.02.09 */
+	private static final Object UNSET = new Object();
 	
 	static {
 		StringBuilder sb = new StringBuilder();
@@ -117,36 +121,73 @@ public final class Utils {
 		return validateFileName(url);
 	}
 	
+	/** @since 00.02.09 */
+	public static final Locale defaultLocale() {
+		return Locale.getDefault(Locale.Category.FORMAT);
+	}
+	
 	public static final String format(String string, Object... values) {
-		if((values.length & 1) != 0) return null;
-		Map<String, Object> map = new LinkedHashMap<>();
-		String  n = null;
-		boolean f = false;
-		for(int i = 0, l = values.length; i < l; ++i) {
-			Object v = values[i];
-			if(f = !f) n = v.toString();
-			else       map.put(n, v);
-		}
-		return format(string, map);
+		return format(defaultLocale(), string, stringKeyMap(values));
 	}
 	
 	public static final String format(String string, Map<String, Object> values) {
-		StringBuilder sb   = new StringBuilder(string);
-		Set<String>   keys = values.keySet();
-		List<Object>  list = new ArrayList<>();
-		int pos = 1;
-		for(String key : keys) {
-			String fkey = "%{" + key + "}";
-			String fpos = "%"  + pos + "$";
-			int index = -1;
-			while((index = sb.indexOf(fkey, index)) != -1) {
-				sb.replace(index, index + fkey.length(), fpos);
-				index += fpos.length();
+		return format(defaultLocale(), string, values);
+	}
+	
+	/** @since 00.02.09 */
+	public static final String format(Locale locale, String string, Object... values) {
+		return format(locale, string, stringKeyMap(values));
+	}
+	
+	/** @since 00.02.09 */
+	public static final String format(Locale locale, String string, Map<String, Object> values) {
+		StringBuilder builder = null;
+		List<Object> args = null;
+		int offset = 0, index = 1, start, end;
+		
+		for(Matcher matcher = REGEX_FORMAT.matcher(string); matcher.find(); offset = end) {
+			String key = matcher.group(1);
+			start = matcher.start();
+			end = matcher.end();
+			Object value = values.getOrDefault(key, UNSET);
+			
+			if(builder == null) {
+				builder = new StringBuilder(string.length());
 			}
-			list.add(values.get(key));
-			++pos;
+			
+			if(offset < start) {
+				builder.append(string, offset, start);
+			}
+			
+			if(value == UNSET) {
+				builder.append('%'); // Escape
+				builder.append(matcher.group());
+			} else {
+				builder.append('%');
+				builder.append(index++);
+				builder.append('$');
+				
+				if(args == null) {
+					args = new ArrayList<>();
+				}
+				
+				args.add(value);
+			}
 		}
-		return String.format(sb.toString(), list.toArray());
+		
+		if(builder == null) {
+			return string;
+		}
+		
+		if(offset < (end = string.length())) {
+			builder.append(string, offset, end);
+		}
+		
+		if(args == null) {
+			return builder.toString();
+		}
+		
+		return String.format(locale, builder.toString(), args.toArray());
 	}
 	
 	public static final String validateFileName(String fileName) {
@@ -296,12 +337,16 @@ public final class Utils {
 	}
 	
 	public static final Map<String, Object> stringKeyMap(Object... data) {
-		if((data == null))
-			throw new IllegalArgumentException("Data cannot be null");
-		Map<String, Object> map = new LinkedHashMap<>();
-		for(int i = 0, l = data.length; i < l; i+=2) {
-			map.put(data[i] != null ? data[i].toString() : null, data[i+1]);
+		if(data == null || (data.length & 1) != 0) {
+			throw new IllegalArgumentException("Data must be non-null and of even length");
 		}
+		
+		Map<String, Object> map = new LinkedHashMap<>();
+		
+		for(int i = 0, l = data.length; i < l; i += 2) {
+			map.put(data[i] != null ? data[i].toString() : null, data[i + 1]);
+		}
+		
 		return map;
 	}
 	
