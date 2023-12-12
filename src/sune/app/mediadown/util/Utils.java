@@ -2065,6 +2065,44 @@ public final class Utils {
 			return parts;
 		}
 		
+		public static final String delete(String string, int start, int end) {
+			return replace(string, start, end, null);
+		}
+		
+		public static final String replace(String string, int start, int end, String replacement) {
+			if(string == null) {
+				throw new IllegalArgumentException();
+			}
+			
+			int length = string.length();
+			
+			if(start < 0 || start >= length || end < start || end > length) {
+				throw new StringIndexOutOfBoundsException();
+			}
+			
+			int newLength = string.length() - (end - start);
+			
+			if(replacement != null) {
+				newLength += replacement.length();
+			}
+			
+			StringBuilder builder = new StringBuilder(newLength);
+			
+			if(start > 0) {
+				builder.append(string, 0, start);
+			}
+			
+			if(replacement != null) {
+				builder.append(replacement);
+			}
+			
+			if(end < length) {
+				builder.append(string, end, length);
+			}
+			
+			return builder.toString();
+		}
+		
 		public static final Integer asInteger(String string) {
 			return asInteger(string, 10, true, 0, string.length(), null);
 		}
