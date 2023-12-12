@@ -6,6 +6,7 @@ import java.net.CookieManager;
 import java.net.CookiePolicy;
 import java.net.CookieStore;
 import java.net.HttpCookie;
+import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpClient.Redirect;
@@ -128,9 +129,11 @@ public final class Web {
 		}
 	}
 	
-	private static final <T, R extends Response> R doRequest(Request request,
-			BiFunction<Request, HttpResponse<T>, R> constructor, BodyHandler<T> handler, int retryAttempt)
-			throws Exception {
+	/** @since 00.02.09 */
+	private static final <T, R extends Response> R doRequest(
+			Request request, BiFunction<Request, HttpResponse<T>, R> constructor, BodyHandler<T> handler,
+			int retryInternalAttempt, int retryExternalAttempt
+	) throws Exception {
 		do {
 			try {
 				return constructor.apply(
@@ -140,24 +143,37 @@ public final class Web {
 						.get(request.timeout().toNanos(), TimeUnit.NANOSECONDS)
 				);
 			} catch(ExecutionException ex) {
-				if(retryAttempt++ >= MAX_RETRY_ATTEMPT) {
-					throw ex; // Propagate
-				}
-				
 				Throwable cause = ex.getCause();
 				
+				// Handle HTTP/2 GOAWAY internally
 				if(cause instanceof IOException
 						&& cause.getMessage() != null
 						&& cause.getMessage().contains("GOAWAY received")) {
+					if(retryInternalAttempt++ >= MAX_RETRY_ATTEMPT) {
+						throw ex; // Propagate
+					}
+					
 					continue; // Retry the request
 				}
+				
+				// Allow retries when the request times out
+				if(cause instanceof SocketTimeoutException) {
+					if(retryExternalAttempt++ >= request.retry()) {
+						throw ex; // Propagate
+					}
+					
+					continue; // Retry the request
+				}
+				
+				throw ex; // Propagate
 			}
 		} while(true);
 	}
 	
-	private static final <T, R extends Response> R doRequest(Request request,
-			BiFunction<Request, HttpResponse<T>, R> constructor, BodyHandler<T> handler) throws Exception {
-		return doRequest(request, constructor, handler, 0);
+	private static final <T, R extends Response> R doRequest(
+			Request request, BiFunction<Request, HttpResponse<T>, R> constructor, BodyHandler<T> handler
+	) throws Exception {
+		return doRequest(request, constructor, handler, 0, 0);
 	}
 	
 	private static final Regex regexContentRange() {
@@ -334,6 +350,8 @@ public final class Web {
 		protected final String identifier;
 		protected final Range<Long> range;
 		protected final Duration timeout;
+		/** @since 00.02.09 */
+		protected final int retry;
 		
 		protected Request(String method, Builder builder) {
 			this.method = Objects.requireNonNull(method);
@@ -345,6 +363,7 @@ public final class Web {
 			this.identifier = builder.identifier();
 			this.range = builder.range();
 			this.timeout = Objects.requireNonNull(builder.timeout());
+			this.retry = builder.retry();
 		}
 		
 		public static Builder of(URI uri) {
@@ -413,6 +432,8 @@ public final class Web {
 		public String identifier() { return identifier; }
 		public Range<Long> range() { return range; }
 		public Duration timeout() { return timeout; }
+		/** @since 00.02.09 */
+		public int retry() { return retry; }
 		
 		protected static class GET extends Request {
 			
@@ -515,6 +536,8 @@ public final class Web {
 			private String identifier;
 			private Range<Long> range;
 			private Duration timeout;
+			/** @since 00.02.09 */
+			private int retry;
 			
 			private Builder(URI uri) {
 				this.uri = Objects.requireNonNull(uri);
@@ -630,6 +653,8 @@ public final class Web {
 			public Builder identifier(String identifier) { this.identifier = identifier; return this; }
 			public Builder range(Range<Long> range) { this.range = range; return this; }
 			public Builder timeout(Duration timeout) { this.timeout = timeout; return this; }
+			/** @since 00.02.09 */
+			public Builder retry(int retry) { this.retry = retry; return this; }
 			
 			public URI uri() { return uri; }
 			public String userAgent() { return userAgent; }
@@ -639,6 +664,8 @@ public final class Web {
 			public String identifier() { return identifier; }
 			public Range<Long> range() { return range; }
 			public Duration timeout() { return timeout; }
+			/** @since 00.02.09 */
+			public int retry() { return retry; }
 		}
 	}
 	
