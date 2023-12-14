@@ -44,6 +44,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.Spliterator;
 import java.util.Spliterators;
+import java.util.WeakHashMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.TimeUnit;
@@ -1578,6 +1579,63 @@ public final class Utils {
 	}
 	
 	/** @since 00.02.09 */
+	public static final boolean isSimpleDateTime(String string) {
+		return Detections.OfSimpleDateTime.matches(string);
+	}
+	
+	/** @since 00.02.09 */
+	private static final int compareSimpleDateTime(Matcher ma, Matcher mb) {
+		final int[] idx = { 3, 2, 1, 4, 5, 6 };
+		int i = 0, l = idx.length, cmp, a, b;
+		String sa = ma.group(idx[i]); // Non-null
+		String sb = mb.group(idx[i]); // Non-null
+		
+		do {
+			a = Integer.parseInt(sa);
+			b = Integer.parseInt(sb);
+		} while((cmp = Integer.compare(a, b)) == 0
+					&& ++i < l
+					&& (sa = ma.group(idx[i])) != null
+					&& (sb = mb.group(idx[i])) != null);
+		
+		return cmp;
+	}
+	
+	/** @since 00.02.09 */
+	public static final int compareSimpleDateTime(String a, String b) {
+		Matcher ma = Detections.OfSimpleDateTime.match(a);
+		Matcher mb = Detections.OfSimpleDateTime.match(b);
+		int cmp = compareSimpleDateTime(ma, mb);
+		Detections.OfSimpleDateTime.unmatch(ma);
+		Detections.OfSimpleDateTime.unmatch(mb);
+		return cmp;
+	}
+	
+	/** @since 00.02.09 */
+	public static final int compareNaturalWithDateTime(String a, String b) {
+		return compareNaturalWithDateTime(a, b, false);
+	}
+	
+	/** @since 00.02.09 */
+	public static final int compareNaturalWithDateTimeIgnoreCase(String a, String b) {
+		return compareNaturalWithDateTime(a, b, true);
+	}
+	
+	/** @since 00.02.09 */
+	private static final int compareNaturalWithDateTime(String a, String b, boolean ignoreCase) {
+		Matcher ma, mb;
+		if((ma = Detections.OfSimpleDateTime.match(a)).matches()
+				&& (mb = Detections.OfSimpleDateTime.match(b)).matches()) {
+			int cmp = compareSimpleDateTime(ma, mb);
+			Detections.OfSimpleDateTime.unmatch(ma);
+			Detections.OfSimpleDateTime.unmatch(mb);
+			return cmp;
+		}
+		
+		return compareNatural(a, b, ignoreCase);
+	}
+	
+	/** @since 00.02.09 */
 	public static final StringBuilder utf16StringBuilder() {
 		return OfStringBuilder.newUTF16();
 	}
@@ -1734,6 +1792,108 @@ public final class Utils {
 			// Now the builder is using the UTF16 coder and has the desired
 			// capacity.
 			return builder;
+		}
+	}
+	
+	/** @since 00.02.09 */
+	private static final class Detections {
+		
+		private Detections() {
+		}
+		
+		private static final Matcher matcher(String key, Regex regex) {
+			return ThreadLocals.getOrSupply(key, MatcherPool::new).create(regex);
+		}
+		
+		private static final void dispose(String key, Matcher matcher) {
+			ThreadLocals.getOrSupply(key, MatcherPool::new).dispose(matcher);
+		}
+		
+		private static final class OfSimpleDateTime {
+			
+			private static final String KEY = "simpleDateTime";
+			
+			private static final Regex REGEX_SIMPLE_DATE_TIME = Regex.of(
+				  "(0?[1-9]|[1-2][0-9]|3[01])\\.\\s*" // Day (optional leading zero)
+				+ "(0?[1-9]|1[0-2])\\.\\s*" // Month (optional leading zero)
+				+ "(19[7-9][0-9]|[2-9][0-9]{3}|[1-9][0-9]{4,})" // Year (1970+)
+				+ "(?:T|\\s+)" // Time separator (T or whitespaces characters)
+				+ "(0?[0-9]|1[0-9]|2[0-3]):" // Hours (0-24 with optional leading zero)
+				+ "(0?[0-9]|[1-5][0-9])" // Minutes (0-59 with optional leading zero)
+				+ "(?::(0?[0-9]|[1-5][0-9]))?" // Seconds (optional, 0-59 with optional leading zero)
+			);
+			
+			public static final Matcher match(String string) {
+				return matcher(KEY, REGEX_SIMPLE_DATE_TIME).reset(string);
+			}
+			
+			public static final boolean matches(String string) {
+				Matcher matcher = match(string);
+				boolean result = matcher.matches();
+				unmatch(matcher);
+				return result;
+			}
+			
+			public static final void unmatch(Matcher matcher) {
+				dispose(KEY, matcher);
+			}
+		}
+		
+		private static final class MatcherPool {
+			
+			private Map<Matcher, Boolean> matchers;
+			
+			private final Matcher emptyMatcher(Regex regex) {
+				return regex.matcher("");
+			}
+			
+			public Matcher create(Regex regex) {
+				if(matchers == null) {
+					matchers = new WeakHashMap<>(4);
+				}
+				
+				for(Entry<Matcher, Boolean> entry : matchers.entrySet()) {
+					if(!entry.getValue()) {
+						entry.setValue(true);
+						return entry.getKey();
+					}
+				}
+				
+				Matcher matcher = emptyMatcher(regex);
+				matchers.put(matcher, true);
+				
+				return matcher;
+			}
+			
+			public void dispose(Matcher matcher) {
+				if(matchers == null) {
+					return;
+				}
+				
+				matchers.put(matcher, false);
+			}
+		}
+		
+		private static final class ThreadLocals {
+			
+			private static final ThreadLocal<Map<String, Object>> map = ThreadLocal.withInitial(HashMap::new);
+			
+			private ThreadLocals() {
+			}
+			
+			public static final <T> T getOrSupply(String key, Supplier<T> supplier) {
+				Map<String, Object> values = map.get();
+				Object value = values.getOrDefault(key, UNSET);
+				
+				if(value == UNSET) {
+					value = supplier.get();
+					values.put(key, value);
+				}
+				
+				@SuppressWarnings("unchecked")
+				T casted = (T) value;
+				return casted;
+			}
 		}
 	}
 	
