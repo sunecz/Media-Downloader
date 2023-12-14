@@ -105,7 +105,7 @@ public final class ProgramPipelineTask extends MediaEnginePipelineTaskBase<Progr
 		columnTitle.setCellValueFactory((v) -> new SimpleObjectProperty<>(v.getValue().title()));
 		columnSeason.setComparator(Comparator.reverseOrder());
 		columnNumber.setComparator(Comparator.reverseOrder());
-		columnTitle.setComparator(Utils::compareNatural);
+		columnTitle.setComparator(Utils::compareNaturalWithDateTime);
 		table.getColumns().add(columnSeason);
 		table.getColumns().add(columnNumber);
 		table.getColumns().add(columnTitle);
