@@ -55,7 +55,12 @@ public final class Web {
 	
 	private static final String USER_AGENT = Shared.USER_AGENT;
 	private static final Charset CHARSET = Shared.CHARSET;
-	private static final int MAX_RETRY_ATTEMPT = 3;
+	/** @since 00.02.09 */
+	private static final int INTERNAL_RETRY_MAX_ATTEMPT = 5;
+	/** @since 00.02.09 */
+	private static final int INTERNAL_RETRY_WAIT_BASE_MS = 1000;
+	/** @since 00.02.09 */
+	private static final int INTERNAL_RETRY_MAX_WAIT_MS = 10000;
 	
 	private static Duration defaultConnectTimeout = Duration.ofMillis(5000);
 	private static Duration defaultReadTimeout = Duration.ofMillis(20000);
@@ -130,6 +135,36 @@ public final class Web {
 	}
 	
 	/** @since 00.02.09 */
+	private static final boolean isInternallyRetryableError(Throwable cause) {
+		if(!(cause instanceof IOException)) {
+			return false;
+		}
+		
+		String message = cause.getMessage();
+		
+		if(message == null) {
+			return false;
+		}
+		
+		return message.contains("GOAWAY received")
+					|| message.contains("too many concurrent streams");
+	}
+	
+	/** @since 00.02.09 */
+	private static final boolean isExternallyRetryableError(Throwable cause) {
+		return cause instanceof SocketTimeoutException;
+	}
+	
+	/** @since 00.02.09 */
+	private static final void waitInternalRetry(int retry) throws InterruptedException {
+		int millis = Math.min(
+			(int) (INTERNAL_RETRY_WAIT_BASE_MS * Math.pow(retry, 4.0 / 3.0)),
+			INTERNAL_RETRY_MAX_WAIT_MS
+		);
+		Thread.sleep(millis);
+	}
+	
+	/** @since 00.02.09 */
 	private static final <T, R extends Response> R doRequest(
 			Request request, BiFunction<Request, HttpResponse<T>, R> constructor, BodyHandler<T> handler,
 			int retryInternalAttempt, int retryExternalAttempt
@@ -145,19 +180,18 @@ public final class Web {
 			} catch(ExecutionException ex) {
 				Throwable cause = ex.getCause();
 				
-				// Handle HTTP/2 GOAWAY internally
-				if(cause instanceof IOException
-						&& cause.getMessage() != null
-						&& cause.getMessage().contains("GOAWAY received")) {
-					if(retryInternalAttempt++ >= MAX_RETRY_ATTEMPT) {
+				// Handle HTTP/2 GOAWAY and other causes internally
+				if(isInternallyRetryableError(cause)) {
+					if(retryInternalAttempt++ >= INTERNAL_RETRY_MAX_ATTEMPT) {
 						throw ex; // Propagate
 					}
 					
+					waitInternalRetry(retryInternalAttempt); // Wait a little
 					continue; // Retry the request
 				}
 				
 				// Allow retries when the request times out
-				if(cause instanceof SocketTimeoutException) {
+				if(isExternallyRetryableError(cause)) {
 					if(retryExternalAttempt++ >= request.retry()) {
 						throw ex; // Propagate
 					}
