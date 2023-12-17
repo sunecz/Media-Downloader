@@ -1603,12 +1603,16 @@ public final class Utils {
 	
 	/** @since 00.02.09 */
 	public static final int compareSimpleDateTime(String a, String b) {
-		Matcher ma = Detections.OfSimpleDateTime.match(a);
-		Matcher mb = Detections.OfSimpleDateTime.match(b);
-		int cmp = compareSimpleDateTime(ma, mb);
-		Detections.OfSimpleDateTime.unmatch(ma);
-		Detections.OfSimpleDateTime.unmatch(mb);
-		return cmp;
+		Matcher ma, mb;
+		if((ma = Detections.OfSimpleDateTime.match(a)).find() && ma.start() == 0
+				&& (mb = Detections.OfSimpleDateTime.match(b)).find() && mb.start() == 0) {
+			int cmp = compareSimpleDateTime(ma, mb);
+			Detections.OfSimpleDateTime.unmatch(ma);
+			Detections.OfSimpleDateTime.unmatch(mb);
+			return cmp;
+		}
+		
+		return a.compareTo(b);
 	}
 	
 	/** @since 00.02.09 */
