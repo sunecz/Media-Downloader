@@ -1624,8 +1624,8 @@ public final class Utils {
 	/** @since 00.02.09 */
 	private static final int compareNaturalWithDateTime(String a, String b, boolean ignoreCase) {
 		Matcher ma, mb;
-		if((ma = Detections.OfSimpleDateTime.match(a)).matches()
-				&& (mb = Detections.OfSimpleDateTime.match(b)).matches()) {
+		if((ma = Detections.OfSimpleDateTime.match(a)).find() && ma.start() == 0
+				&& (mb = Detections.OfSimpleDateTime.match(b)).find() && mb.start() == 0) {
 			int cmp = compareSimpleDateTime(ma, mb);
 			Detections.OfSimpleDateTime.unmatch(ma);
 			Detections.OfSimpleDateTime.unmatch(mb);
@@ -1817,10 +1817,12 @@ public final class Utils {
 				  "(0?[1-9]|[1-2][0-9]|3[01])\\.\\s*" // Day (optional leading zero)
 				+ "(0?[1-9]|1[0-2])\\.\\s*" // Month (optional leading zero)
 				+ "(19[7-9][0-9]|[2-9][0-9]{3}|[1-9][0-9]{4,})" // Year (1970+)
+				+ "(?:" // Start of optional group for time
 				+ "(?:T|\\s+)" // Time separator (T or whitespaces characters)
 				+ "(0?[0-9]|1[0-9]|2[0-3]):" // Hours (0-24 with optional leading zero)
 				+ "(0?[0-9]|[1-5][0-9])" // Minutes (0-59 with optional leading zero)
 				+ "(?::(0?[0-9]|[1-5][0-9]))?" // Seconds (optional, 0-59 with optional leading zero)
+				+ ")?" // End of optional group for time
 			);
 			
 			public static final Matcher match(String string) {
