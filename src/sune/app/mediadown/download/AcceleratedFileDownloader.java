@@ -19,6 +19,7 @@ import sune.app.mediadown.event.EventRegistry;
 import sune.app.mediadown.event.Listener;
 import sune.app.mediadown.event.tracker.DownloadTracker;
 import sune.app.mediadown.event.tracker.TrackerManager;
+import sune.app.mediadown.media.MediaConstants;
 import sune.app.mediadown.net.Web;
 import sune.app.mediadown.net.Web.Request;
 import sune.app.mediadown.net.Web.Response;
@@ -48,7 +49,7 @@ public class AcceleratedFileDownloader implements InternalDownloader {
 	private DownloadConfiguration configuration;
 	
 	private volatile Response response;
-	private long totalBytes;
+	private volatile long totalBytes;
 	
 	private Exception exception;
 	
@@ -125,6 +126,19 @@ public class AcceleratedFileDownloader implements InternalDownloader {
 	}
 	
 	private final void onUpdate(DownloadContext context) {
+		if(totalBytes <= 0L) {
+			long contextTotal = context.totalBytes();
+			
+			// Update the total size if it is unknown and the context knows it
+			if(contextTotal > 0L) {
+				totalBytes = contextTotal;
+				
+				// Also, update the total for the tracker
+				DownloadTracker tracker = (DownloadTracker) trackerManager.tracker();
+				tracker.updateTotal(totalBytes);
+			}
+		}
+		
 		// Update events are always propagated
 		eventRegistry.call(DownloadEvent.UPDATE, this);
 	}
@@ -175,7 +189,7 @@ public class AcceleratedFileDownloader implements InternalDownloader {
 		totalBytes = configuration.totalBytes();
 		
 		if(totalBytes < 0L) {
-			totalBytes = Ignore.defaultValue(() -> Web.size(request), -1L);
+			totalBytes = Ignore.defaultValue(() -> Web.size(request), MediaConstants.UNKNOWN_SIZE);
 		}
 		
 		// If the total size is still unknown, we cannot split the file into chunks,
@@ -200,7 +214,9 @@ public class AcceleratedFileDownloader implements InternalDownloader {
 			downloaders.add(downloader);
 		}
 		
-		long size = rangeRequest.to() - rangeRequest.from();
+		long size = rangeRequest == RANGE_UNSET
+			? MediaConstants.UNKNOWN_SIZE // Ensure unknown size when unset
+			: rangeRequest.to() - rangeRequest.from();
 		
 		if(numOfThreads == 1) {
 			InternalDownloader downloader = downloaders.get(0);
