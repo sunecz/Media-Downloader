@@ -328,6 +328,10 @@ public final class MediaUtils {
 		}
 		
 		private static final double fromBandwidth(int bandwidth, double duration) {
+			if(duration < 0.0) {
+				return MediaConstants.UNKNOWN_SIZE;
+			}
+			
 			return bandwidth / 8 * duration;
 		}
 		
