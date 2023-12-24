@@ -1249,7 +1249,7 @@ public final class MediaDownloader {
 	private static final class ResourcesUpdater {
 		
 		private static final Set<String> keepFiles = Set.of(
-			"log.txt", "log.txt.lck", "versions.ssdf", "messages.ssdf"
+			"versions.ssdf", "messages.ssdf", "cm.store", "crd.store"
 		);
 		
 		public static final void configuration(Version previousVersion) {
