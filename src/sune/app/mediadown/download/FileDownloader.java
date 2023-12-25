@@ -6,6 +6,7 @@ import static java.nio.file.StandardOpenOption.WRITE;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
@@ -293,8 +294,13 @@ public class FileDownloader implements InternalDownloader {
 		return InternalChannel.of(stream, modifiedStream);
 	}
 	
+	/** @since 00.02.09 */
+	protected ByteBuffer createBuffer() {
+		return ByteBuffer.allocateDirect(bufferSize(output)).order(ByteOrder.nativeOrder());
+	}
+	
 	protected ByteBuffer buffer() {
-		return buffer == null ? (buffer = ByteBuffer.allocate(bufferSize(output))) : buffer.clear();
+		return buffer == null ? (buffer = createBuffer()) : buffer.clear();
 	}
 	
 	protected void update(long readBytes, long writtenByes) {
