@@ -650,8 +650,32 @@ public class FileDownloader implements InternalDownloader {
 		
 		@Override
 		public int read(ByteBuffer dst) throws IOException {
-			channel.read(dst); // Delegate
-			return stream.countAndReset();
+			// Since the stream may be either an inflating or deflating (or, in general,
+			// any) stream, the number of bytes read from the channel may not be the same
+			// as the number of bytes read from the actual original stream. Therefore,
+			// we must take extra care to not return EOS (-1) when there are still data
+			// available.
+			
+			// Delegate the read to the channel and load the actual data to the buffer.
+			int read = channel.read(dst);
+			// Read the actual number of bytes read from the original stream.
+			int count = stream.countAndReset();
+			
+			// Check whether we actually read from the orignal stream.
+			if(count < 0) {
+				// Send EOS if and only if both of the channel and the stream return EOS.
+				if(read < 0) {
+					return -1;
+				}
+				
+				// Since we did not read from the original stream at this point, return
+				// zero but not EOS. This may happen when the wrapped stream is an inflating
+				// stream.
+				return 0;
+			}
+			
+			// We read from the original stream, just return the actual bytes count.
+			return count;
 		}
 	}
 }
