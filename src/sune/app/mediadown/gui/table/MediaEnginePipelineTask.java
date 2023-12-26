@@ -106,7 +106,7 @@ public final class MediaEnginePipelineTask extends TableWindowPipelineTaskBase<P
 	
 	@Override
 	public final boolean filter(Program item, String text) {
-		return Utils.normalize(item.title()).toLowerCase().contains(text);
+		return item.title() != null && Utils.normalize(item.title()).toLowerCase().contains(text);
 	}
 	
 	/** @since 00.02.07 */
