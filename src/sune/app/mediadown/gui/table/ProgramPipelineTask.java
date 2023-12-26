@@ -1,6 +1,5 @@
 package sune.app.mediadown.gui.table;
 
-import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
@@ -11,6 +10,7 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableColumn.SortType;
 import javafx.scene.control.TableView;
 import sune.app.mediadown.entity.Episode;
 import sune.app.mediadown.entity.MediaEngine;
@@ -103,9 +103,12 @@ public final class ProgramPipelineTask extends MediaEnginePipelineTaskBase<Progr
 		columnSeason.setCellValueFactory((v) -> new SimpleObjectProperty<>(v.getValue().season()));
 		columnNumber.setCellValueFactory((v) -> new SimpleObjectProperty<>(v.getValue().number()));
 		columnTitle.setCellValueFactory((v) -> new SimpleObjectProperty<>(v.getValue().title()));
-		columnSeason.setComparator(Comparator.reverseOrder());
-		columnNumber.setComparator(Comparator.reverseOrder());
+		columnSeason.setSortType(SortType.DESCENDING);
+		columnNumber.setSortType(SortType.DESCENDING);
 		columnTitle.setComparator(Utils::compareNaturalWithDateTime);
+		columnSeason.setReorderable(false);
+		columnNumber.setReorderable(false);
+		columnTitle.setReorderable(false);
 		table.getColumns().add(columnSeason);
 		table.getColumns().add(columnNumber);
 		table.getColumns().add(columnTitle);
@@ -148,19 +151,22 @@ public final class ProgramPipelineTask extends MediaEnginePipelineTaskBase<Progr
 	/** @since 00.02.09 */
 	private static final class IntegerTableCell extends TableCell<Episode, Integer> {
 		
+		private static final String EMPTY_TEXT = "-";
+		private static final int EMPTY_VALUE = 0;
+		
 		private static final String string(int value) {
-			return value == 0 ? "-" : String.valueOf(value);
+			return value == EMPTY_VALUE ? EMPTY_TEXT : String.valueOf(value);
 		}
 		
 		@Override
 		protected void updateItem(Integer value, boolean empty) {
-			if(Objects.equals(value, getItem())) {
+			if(Objects.equals(value, getItem()) && (empty || ((int) value) != EMPTY_VALUE)) {
 				return;
 			}
 			
 			super.updateItem(value, empty);
 			
-			if(value == null) {
+			if(empty || value == null) {
 				setText(null);
 				setGraphic(null);
 			} else {
@@ -172,25 +178,27 @@ public final class ProgramPipelineTask extends MediaEnginePipelineTaskBase<Progr
 	/** @since 00.02.09 */
 	private static final class NullableStringTableCell extends TableCell<Episode, String> {
 		
+		private static final String EMPTY_TEXT = "-";
+		private static final String EMPTY_VALUE = null;
+		
 		private static final String string(String value) {
-			return value == null ? "-" : value;
+			return value == EMPTY_VALUE ? EMPTY_TEXT : value;
 		}
 		
 		@Override
 		protected void updateItem(String value, boolean empty) {
-			if(Objects.equals(value, getItem())
-					// Ensure that non-empty null values have the "null-text"
-					&& (value == null && (empty || getText() != null))) {
+			if(Objects.equals(value, getItem()) && (empty || value != EMPTY_VALUE)) {
 				return;
 			}
 			
 			super.updateItem(value, empty);
 			
-			if(value == null) {
+			if(empty) { // Don't check for null
+				setText(null);
 				setGraphic(null);
+			} else {
+				setText(string(value));
 			}
-			
-			setText(string(value));
 		}
 	}
 }
