@@ -112,6 +112,6 @@ public final class CredentialsEditDialogWindow extends DialogWindow<VBox, Creden
 	}
 	
 	public final Credentials showAndGet(Stage parent, CredentialsEntry entry) {
-		return setArgs("parent", this,"entry", entry).showAndGet();
+		return setArgs("parent", parent, "entry", entry).showAndGet();
 	}
 }

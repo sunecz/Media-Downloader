@@ -113,7 +113,7 @@ public class CredentialsWindow extends DraggableWindow<VBox> {
 		}
 		
 		CredentialsEditDialogWindow window = MediaDownloader.window(CredentialsEditDialogWindow.NAME);
-		Credentials credentials = window.showAndGet(this, item.entry);
+		Credentials credentials = window.showAndGet(this, item.entry());
 		
 		if(credentials == null) {
 			return; // Cancelled
