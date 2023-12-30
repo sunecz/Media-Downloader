@@ -144,6 +144,11 @@ public class ClipboardWatcherWindow extends DraggableWindow<VBox> {
 		DataFormat format = contents.format();
 		Object value = contents.value();
 		
+		// The value may actually be null at this point, check for it
+		if(value == null) {
+			return; // Nothing to do
+		}
+		
 		if(format == DataFormat.URL) {
 			ensureWindowIsShowing();
 			appendURI((URI) value);
