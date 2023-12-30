@@ -34,7 +34,6 @@ import sune.app.mediadown.net.Web.Request;
 import sune.app.mediadown.net.Web.Response;
 import sune.app.mediadown.util.CheckedFunction;
 import sune.app.mediadown.util.Regex;
-import sune.app.mediadown.util.Singleton;
 import sune.app.mediadown.util.Utils;
 
 /** @since 00.02.05 */
@@ -584,6 +583,9 @@ public final class MPD {
 		private final ContentProtection protection;
 		private final Map<String, String> attributes;
 		
+		private List<String> codecs;
+		private Integer bandwidth;
+		
 		protected MPDFile(List<MPDSegment> segments, MediaFormat format, MediaResolution resolution, double duration,
 				ContentProtection protection, Map<String, String> attributes) {
 			this.segments = Objects.requireNonNull(segments);
@@ -615,11 +617,19 @@ public final class MPD {
 		}
 		
 		public final List<String> codecs() {
-			return Singleton.of(this, () -> List.of(attributes.getOrDefault("codecs", "").split(",")));
+			if(codecs == null) {
+				codecs = List.of(attributes.getOrDefault("codecs", "").split(","));
+			}
+			
+			return codecs;
 		}
 		
 		public final int bandwidth() {
-			return Singleton.of(this, () -> Integer.valueOf(attributes.getOrDefault("bandwidth", "0")));
+			if(bandwidth == null) {
+				bandwidth = Integer.valueOf(attributes.getOrDefault("bandwidth", "0"));
+			}
+			
+			return bandwidth;
 		}
 		
 		public final RemoteFileSegmentsHolder segmentsHolder() {
