@@ -147,6 +147,11 @@ public class SimpleMediaContainer implements MediaContainer {
 	}
 	
 	@Override
+	public List<Media> allMedia() {
+		return accessor.allMedia();
+	}
+	
+	@Override
 	public String toString() {
 		return "MediaContainer["
 					+ "class=" + getClass().getSimpleName() + ", "

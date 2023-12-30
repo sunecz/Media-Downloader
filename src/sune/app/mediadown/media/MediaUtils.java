@@ -157,7 +157,7 @@ public final class MediaUtils {
 						.ifTrue(Media::isContainer)
 						.map(OptMapper.of(Media::asContainer)
 							          .then(accessorMapper)
-							          .then(MediaAccessor::media)
+							          .then(MediaAccessor::allMedia)
 							          .then(List::stream))
 						.map((s) -> s.filter(condition)))
 				  .orElseGet(Stream::empty);

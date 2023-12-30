@@ -63,4 +63,9 @@ public class DirectMediaAccessor implements MediaAccessor {
 	public List<Media> media() {
 		return Collections.unmodifiableList(media);
 	}
+	
+	@Override
+	public List<Media> allMedia() {
+		return media();
+	}
 }

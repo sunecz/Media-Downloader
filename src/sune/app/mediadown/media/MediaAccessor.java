@@ -36,4 +36,7 @@ public interface MediaAccessor {
 	}
 	
 	List<Media> media();
+	
+	/** @since 00.02.09 */
+	List<Media> allMedia();
 }

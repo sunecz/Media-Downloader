@@ -3,6 +3,7 @@ package sune.app.mediadown.media;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import sune.app.mediadown.util.Singleton;
@@ -72,5 +73,14 @@ public class RecursiveMediaAccessor implements MediaAccessor {
 	@Override
 	public List<Media> media() {
 		return Collections.unmodifiableList(media);
+	}
+	
+	@Override
+	public List<Media> allMedia() {
+		return media.stream().flatMap(
+			(m) -> m.isContainer()
+						? Stream.concat(Stream.of(m), Media.asContainer(m).recursive().allMedia().stream())
+						: Stream.of(m)
+		).collect(Collectors.toList());
 	}
 }
