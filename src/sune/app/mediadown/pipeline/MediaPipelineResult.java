@@ -25,4 +25,9 @@ public final class MediaPipelineResult implements PipelineResult {
 	public final boolean isTerminating() {
 		return false;
 	}
+	
+	/** @since 00.02.09 */
+	public PipelineMedia media() {
+		return media;
+	}
 }
