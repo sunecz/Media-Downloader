@@ -325,7 +325,7 @@ public final class Choosers {
 			
 			public T directory(Path directory) {
 				this.directory = directory;
-				if(directory != null) {
+				if(directory != null && NIO.isDirectory(directory)) {
 					chooser.setInitialDirectory(directory.toFile());
 				}
 				return self();
@@ -449,7 +449,7 @@ public final class Choosers {
 			
 			public T directory(Path directory) {
 				this.directory = directory;
-				if(directory != null) {
+				if(directory != null && NIO.isDirectory(directory)) {
 					chooser.setInitialDirectory(directory.toFile());
 				}
 				return self();
