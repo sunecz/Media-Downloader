@@ -594,7 +594,7 @@ public final class M3U {
 		private static final String NAME_SEGMENT_DATETIME = "EXT-X-PROGRAM-DATE-TIME";
 		
 		private static final Regex PATTERN_ATTRIBUTE_LIST
-			= Regex.of("([A-Z0-9\\-]+)=([^,\\x0A\\x0D]+|\"[^\"\\x0A\\x0D]+\")");
+			= Regex.of("([A-Z0-9\\-]+)=(\"[^\"\\x0A\\x0D]+\"|[^,\\x0A\\x0D]+)");
 		
 		private final URI baseURI;
 		private final URI uri;
