@@ -132,7 +132,7 @@ public final class MediaQuality implements Comparable<MediaQuality> {
 	
 	// Shortcut for constructing a video quality
 	private static final VideoQualityValue vqv(int height) {
-		return new VideoQualityValue(height);
+		return new VideoQualityValue(height, 0);
 	}
 	
 	// Shortcut for constructing a audio quality
@@ -211,7 +211,7 @@ public final class MediaQuality implements Comparable<MediaQuality> {
 		if(resolution == null || resolution == MediaResolution.UNKNOWN)
 			return UNKNOWN;
 		// Try to match with progressive scan qualities
-		QualityValue value = new VideoQualityValue(resolution.height());
+		QualityValue value = new VideoQualityValue(resolution.height(), 0);
 		return Stream.of(validQualities())
 				     .filter((q) -> q.mediaType().is(MediaType.VIDEO))
 				     .sorted(reversedComparatorKeepOrder())
@@ -471,14 +471,19 @@ public final class MediaQuality implements Comparable<MediaQuality> {
 	public static class VideoQualityValue extends QualityValue {
 		
 		private final int height;
+		/** @since 00.02.09 */
+		private final int bandwidth;
 		private final boolean deferComparison;
 		
-		public VideoQualityValue(int height) {
-			this(height, false);
+		/** @since 00.02.09 */
+		public VideoQualityValue(int height, int bandwidth) {
+			this(height, bandwidth, false);
 		}
 		
-		public VideoQualityValue(int height, boolean deferComparison) {
+		/** @since 00.02.09 */
+		public VideoQualityValue(int height, int bandwidth, boolean deferComparison) {
 			this.height = height;
+			this.bandwidth = bandwidth;
 			this.deferComparison = deferComparison;
 		}
 		
@@ -496,17 +501,22 @@ public final class MediaQuality implements Comparable<MediaQuality> {
 			return height;
 		}
 		
+		/** @since 00.02.09 */
+		public int bandwidth() {
+			return bandwidth;
+		}
+		
 		@Override
 		public int compareTo(QualityValue qv) {
 			if(this == qv || !(qv instanceof VideoQualityValue))
 				return 0;
 			VideoQualityValue other = (VideoQualityValue) qv;
-			return Integer.compare(height, other.height);
+			return Utils.compare(height, other.height, bandwidth, other.bandwidth);
 		}
 		
 		@Override
 		public int hashCode() {
-			return Objects.hash(height);
+			return Objects.hash(height, bandwidth);
 		}
 		
 		@Override
@@ -518,7 +528,7 @@ public final class MediaQuality implements Comparable<MediaQuality> {
 			if(getClass() != obj.getClass())
 				return false;
 			VideoQualityValue other = (VideoQualityValue) obj;
-			return height == other.height;
+			return height == other.height && bandwidth == other.bandwidth;
 		}
 	}
 	
@@ -607,7 +617,7 @@ public final class MediaQuality implements Comparable<MediaQuality> {
 			MediaQuality parsed = null;
 			Matcher matcher = REGEX.matcher(string);
 			if(matcher.matches()) {
-				QualityValue value = new VideoQualityValue(Integer.valueOf(matcher.group(1)));
+				QualityValue value = new VideoQualityValue(Integer.valueOf(matcher.group(1)), 0);
 				parsed = Stream.of(validQualities())
 					.filter((q) -> q.mediaType().is(MediaType.VIDEO)
 					                    && q.name().startsWith("P")

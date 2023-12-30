@@ -236,7 +236,7 @@ public final class MediaUtils {
 			final int height = approximateVideoHeightFromBandwidth(bandwidth);
 			
 			// Try to match with progressive scan qualities
-			QualityValue value = new VideoQualityValue(height);
+			QualityValue value = new VideoQualityValue(height, 0);
 			MediaQuality prev = null;
 			MediaQuality last = null;
 			
@@ -514,6 +514,12 @@ public final class MediaUtils {
 				if(qualityName != null) {
 					videoQuality = MediaQuality.ofName(qualityName);
 				}
+			}
+			
+			if(videoQuality.is(MediaQuality.UNKNOWN)) {
+				int bandwidth = video.bandwidth();
+				videoQuality = MediaUtils.estimateMediaQualityFromBandwidth(bandwidth)
+					.withValue(new MediaQuality.VideoQualityValue(0, bandwidth));
 			}
 			
 			return VideoMediaContainer.separated().format(MediaFormat.DASH).media(
