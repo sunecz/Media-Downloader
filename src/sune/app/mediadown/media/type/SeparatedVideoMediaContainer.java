@@ -105,20 +105,23 @@ public class SeparatedVideoMediaContainer extends SeparatedMediaContainer implem
 			codecs = List.of();
 		}
 		
+		@Override
 		protected void imprintSelf(Media.Builder<?, ?> media) {
-			if(media == null) return; // Nothing to imprint from
 			super.imprintSelf(media);
-			VideoMediaBase.Builder<?, ?> video = (VideoMediaBase.Builder<?, ?>) media;
-			if(resolution == MediaResolution.UNKNOWN && video.resolution() != MediaResolution.UNKNOWN) resolution(video.resolution());
-			if(duration == MediaConstants.UNKNOWN_DURATION && video.duration() != MediaConstants.UNKNOWN_DURATION) duration(video.duration());
-			if(codecs.isEmpty() && !video.codecs().isEmpty()) codecs(video.codecs());
-			if(bandwidth == 0 && video.bandwidth() != 0) bandwidth(video.bandwidth());
-			if(frameRate == 0.0 && video.frameRate() != 0.0) frameRate(video.frameRate());
+			
+			if(media.type().is(type)) {
+				VideoMediaBase.Builder<?, ?> video = (VideoMediaBase.Builder<?, ?>) media;
+				if(resolution == MediaResolution.UNKNOWN && video.resolution() != MediaResolution.UNKNOWN) resolution(video.resolution());
+				if(duration == MediaConstants.UNKNOWN_DURATION && video.duration() != MediaConstants.UNKNOWN_DURATION) duration(video.duration());
+				if(codecs.isEmpty() && !video.codecs().isEmpty()) codecs(video.codecs());
+				if(bandwidth == 0 && video.bandwidth() != 0) bandwidth(video.bandwidth());
+				if(frameRate == 0.0 && video.frameRate() != 0.0) frameRate(video.frameRate());
+			}
 		}
 		
 		@Override
 		public SeparatedVideoMediaContainer build() {
-			imprintSelf(media.stream().filter((m) -> m.type().is(type)).findFirst().orElse(null));
+			media.stream().forEach(this::imprintSelf);
 			return new SeparatedVideoMediaContainer(
 				Objects.requireNonNull(source), uri, Objects.requireNonNull(type),
 				Objects.requireNonNull(format), Objects.requireNonNull(quality),

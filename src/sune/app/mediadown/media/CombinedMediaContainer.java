@@ -52,17 +52,20 @@ public class CombinedMediaContainer extends SimpleMediaContainer {
 		}
 		
 		protected void imprintSelf(Media.Builder<?, ?> media) {
-			if(media == null) return; // Nothing to imprint from
 			if(source.isEmpty() && !media.source().isEmpty()) source(media.source());
 			if(uri == null && media.uri() != null) uri(media.uri());
-			if(format.is(MediaFormat.UNKNOWN) && !media.format().is(MediaFormat.UNKNOWN)) format(media.format());
-			if(quality.is(MediaQuality.UNKNOWN) && !media.quality().is(MediaQuality.UNKNOWN)) quality(media.quality());
-			if(metadata.isEmpty() && !media.metadata().isEmpty()) metadata(media.metadata());
+			
+			if(media.type().is(type)) {
+				if(format.is(MediaFormat.UNKNOWN) && !media.format().is(MediaFormat.UNKNOWN)) format(media.format());
+				if(quality.is(MediaQuality.UNKNOWN) && !media.quality().is(MediaQuality.UNKNOWN)) quality(media.quality());
+			}
+			
+			metadata(MediaUtils.mergeMetadata(metadata, media.metadata()));
 		}
 		
 		@Override
 		public T build() {
-			imprintSelf(media.stream().filter((m) -> m.type().is(type)).findFirst().orElse(null));
+			media.stream().forEach(this::imprintSelf);
 			return t(new CombinedMediaContainer(
 				Objects.requireNonNull(source), uri, Objects.requireNonNull(type),
 				Objects.requireNonNull(format), Objects.requireNonNull(quality),

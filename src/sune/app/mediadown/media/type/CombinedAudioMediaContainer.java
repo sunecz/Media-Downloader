@@ -105,20 +105,23 @@ public class CombinedAudioMediaContainer extends CombinedMediaContainer implemen
 			codecs = List.of();
 		}
 		
+		@Override
 		protected void imprintSelf(Media.Builder<?, ?> media) {
-			if(media == null) return; // Nothing to imprint from
 			super.imprintSelf(media);
-			AudioMediaBase.Builder<?, ?> audio = (AudioMediaBase.Builder<?, ?>) media;
-			if(language.is(MediaLanguage.UNKNOWN) && !audio.language().is(MediaLanguage.UNKNOWN)) language(audio.language());
-			if(duration == MediaConstants.UNKNOWN_DURATION && audio.duration() != MediaConstants.UNKNOWN_DURATION) duration(audio.duration());
-			if(codecs.isEmpty() && !audio.codecs().isEmpty()) codecs(audio.codecs());
-			if(bandwidth == 0 && audio.bandwidth() != 0) bandwidth(audio.bandwidth());
-			if(sampleRate == 0 && audio.sampleRate() != 0) sampleRate(audio.sampleRate());
+			
+			if(media.type().is(type)) {
+				AudioMediaBase.Builder<?, ?> audio = (AudioMediaBase.Builder<?, ?>) media;
+				if(language.is(MediaLanguage.UNKNOWN) && !audio.language().is(MediaLanguage.UNKNOWN)) language(audio.language());
+				if(duration == MediaConstants.UNKNOWN_DURATION && audio.duration() != MediaConstants.UNKNOWN_DURATION) duration(audio.duration());
+				if(codecs.isEmpty() && !audio.codecs().isEmpty()) codecs(audio.codecs());
+				if(bandwidth == 0 && audio.bandwidth() != 0) bandwidth(audio.bandwidth());
+				if(sampleRate == 0 && audio.sampleRate() != 0) sampleRate(audio.sampleRate());
+			}
 		}
 		
 		@Override
 		public CombinedAudioMediaContainer build() {
-			imprintSelf(media.stream().filter((m) -> m.type().is(type)).findFirst().orElse(null));
+			media.stream().forEach(this::imprintSelf);
 			return new CombinedAudioMediaContainer(
 				Objects.requireNonNull(source), uri, Objects.requireNonNull(type),
 				Objects.requireNonNull(format), Objects.requireNonNull(quality),

@@ -59,6 +59,21 @@ public final class MediaUtils {
 		return mediaTitleTranslation;
 	}
 	
+	/** @since 00.02.09 */
+	private static final MediaMetadata.Builder mergeMetadataBuilder(MediaMetadata a, MediaMetadata b) {
+		MediaMetadata.Builder builder = MediaMetadata.builder();
+		builder.add(a);
+		builder.addIfAbsent(b); // Do not replace existing values
+		
+		// Merge protections if present in both metadata
+		if(a.isProtected() && b.isProtected()) {
+			// Only protections from A are present, add protections from B
+			builder.addProtections(b.protections());
+		}
+		
+		return builder;
+	}
+	
 	public static final List<Media.Builder<?, ?>> createMediaBuilders(MediaSource source, URI uri, URI sourceURI,
 			String title, MediaLanguage language, MediaMetadata data) throws Exception {
 		Parser parser = new Parser();
@@ -189,6 +204,11 @@ public final class MediaUtils {
 	/** @since 00.02.09 */
 	public static final double estimateTotalSize(Media media) {
 		return TotalSizeEstimator.estimate(media);
+	}
+	
+	/** @since 00.02.09 */
+	public static final MediaMetadata mergeMetadata(MediaMetadata a, MediaMetadata b) {
+		return a == null || a.isEmpty() ? b : (b == null || b.isEmpty() ? a : mergeMetadataBuilder(a, b).build());
 	}
 	
 	/** @since 00.02.09 */

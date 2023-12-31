@@ -188,6 +188,28 @@ public final class MediaMetadata {
 			return add(Objects.requireNonNull(metadata).data);
 		}
 		
+		/** @since 00.02.09 */
+		public final Builder addIfAbsent(Map<String, Object> data) {
+			Objects.requireNonNull(data);
+			data.forEach(this.data::putIfAbsent);
+			return this;
+		}
+		
+		/** @since 00.02.09 */
+		public final Builder addIfAbsent(Object... data) {
+			return addIfAbsent(Utils.stringKeyMap(Objects.requireNonNull(data)));
+		}
+		
+		/** @since 00.02.09 */
+		public final Builder addIfAbsent(Builder builder) {
+			return addIfAbsent(Objects.requireNonNull(builder).data);
+		}
+		
+		/** @since 00.02.09 */
+		public final Builder addIfAbsent(MediaMetadata metadata) {
+			return addIfAbsent(Objects.requireNonNull(metadata).data);
+		}
+		
 		public final Builder remove(List<String> names) {
 			Objects.requireNonNull(names).forEach(this.data::remove);
 			return this;
