@@ -631,6 +631,8 @@ public final class M3U {
 		private static final String NAME_SEGMENT_INFO     = "EXTINF";
 		/** @since 00.02.09 */
 		private static final String NAME_SEGMENT_DATETIME = "EXT-X-PROGRAM-DATE-TIME";
+		/** @since 00.02.09 */
+		private static final String NAME_MAP              = "EXT-X-MAP";
 		
 		private static final Regex PATTERN_ATTRIBUTE_LIST
 			= Regex.of("([A-Z0-9\\-]+)=(\"[^\"\\x0A\\x0D]+\"|[^,\\x0A\\x0D]+)");
@@ -797,6 +799,20 @@ public final class M3U {
 		}
 		
 		/** @since 00.02.09 */
+		// Reference: https://datatracker.ietf.org/doc/html/rfc8216#section-4.3.2.5
+		private final void parseMap(String value) {
+			Map<String, String> attrs = parseAttributeList(value);
+			String uri = attrs.get("URI");
+			
+			if(uri == null) {
+				throw new IllegalStateException("URI is not present");
+			}
+			
+			M3USegment initSegment = new M3USegment(sequenceIndex++, resolveURI(uri), 0.0, null);
+			fileBuilder.addSegment(initSegment);
+		}
+		
+		/** @since 00.02.09 */
 		private final void parseMedia(String value) throws Exception {
 			Map<String, String> attrs = parseAttributeList(value);
 			String type = attrs.get("TYPE");
@@ -867,6 +883,7 @@ public final class M3U {
 				case NAME_STREAM_INFO: parseStreamInfo(value); break;
 				case NAME_MEDIA: parseMedia(value); break;
 				case NAME_KEY: parseKey(value); break;
+				case NAME_MAP: parseMap(value); break;
 				default: /* Do nothing */ break;
 			}
 		}
