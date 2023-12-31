@@ -378,7 +378,7 @@ public final class MediaUtils {
 			MediaQuality videoQuality = MediaQuality.fromResolution(video.resolution());
 			MediaProtection protectionVideo = video.protection();
 			MediaMetadata metadataVideo = protectionVideo != null
-				? metadataBuilder.addProtections(protectionVideo).build()
+				? metadataBuilder.copy().addProtections(protectionVideo).build()
 				: metadataBuilder.build();
 			
 			if(videoQuality.is(MediaQuality.UNKNOWN)) {
@@ -397,7 +397,7 @@ public final class MediaUtils {
 					.orElse(language);
 				MediaProtection protectionAudio = audio.protection();
 				MediaMetadata metadataAudio = protectionAudio != null
-					? metadataBuilder.addProtections(protectionAudio).build()
+					? metadataBuilder.copy().addProtections(protectionAudio).build()
 					: metadataBuilder.build();
 				
 				builder = VideoMediaContainer.separated().format(MediaFormat.M3U8).media(
@@ -493,10 +493,10 @@ public final class MediaUtils {
 			
 			MediaMetadata.Builder metadataBuilder = parserData.mediaData().add(parserData.data()).title(title);
 			MediaMetadata metadataVideo = protectionVideo.isPresent()
-				? metadataBuilder.addProtections(protectionVideo.protections()).build()
+				? metadataBuilder.copy().addProtections(protectionVideo.protections()).build()
 				: metadataBuilder.build();
 			MediaMetadata metadataAudio = protectionAudio.isPresent()
-				? metadataBuilder.addProtections(protectionAudio.protections()).build()
+				? metadataBuilder.copy().addProtections(protectionAudio.protections()).build()
 				: metadataBuilder.build();
 			
 			double frameRate = Double.valueOf(video.attributes().getOrDefault("framerate", "0.0"));
