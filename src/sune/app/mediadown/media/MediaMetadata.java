@@ -24,6 +24,11 @@ public final class MediaMetadata {
 		this.data = Objects.requireNonNull(data);
 	}
 	
+	/** @since 00.02.09 */
+	private static final MediaMetadata ofRaw(Map<String, Object> data) {
+		return data.isEmpty() ? empty() : new MediaMetadata(data);
+	}
+	
 	public static final Builder builder() {
 		return new Builder();
 	}
@@ -161,7 +166,7 @@ public final class MediaMetadata {
 		}
 		
 		public final MediaMetadata build() {
-			return of(data);
+			return ofRaw(data);
 		}
 		
 		public final Builder add(Map<String, Object> data) {
