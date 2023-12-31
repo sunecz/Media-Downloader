@@ -249,7 +249,7 @@ public final class MediaMetadata {
 		
 		/** @since 00.02.09 */
 		public final Builder copy() {
-			return new Builder(Map.copyOf(data));
+			return new Builder(new LinkedHashMap<>(data));
 		}
 		
 		/** @since 00.02.09 */
