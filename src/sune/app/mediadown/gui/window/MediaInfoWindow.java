@@ -270,7 +270,7 @@ public class MediaInfoWindow extends DraggableWindow<StackPane> {
 		}
 		
 		protected <T> TreeItem<MediaInfoRow> newChild(String title, T value) {
-			return new TreeItem<>(MediaInfoRow.ofChild(title, Objects.toString(value)));
+			return new TreeItem<>(MediaInfoRow.ofChild(title, String.valueOf(value)));
 		}
 		
 		/** @since 00.02.09 */
@@ -333,7 +333,8 @@ public class MediaInfoWindow extends DraggableWindow<StackPane> {
 					newChild("type", protection.type()),
 					newChild("scheme", protection.scheme()),
 					newChild("contentType", protection.contentType()),
-					newChild("content", protection.content())
+					newChild("content", protection.content()),
+					newChild("keyId", protection.keyId())
 				);
 				
 				addChildren(rootProtection, rootItem);

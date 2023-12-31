@@ -18,6 +18,7 @@ import sune.app.mediadown.download.segment.RemoteFileSegment;
 import sune.app.mediadown.download.segment.RemoteFileSegmentsHolder;
 import sune.app.mediadown.media.MediaConstants;
 import sune.app.mediadown.media.MediaProtection;
+import sune.app.mediadown.media.MediaProtectionType;
 import sune.app.mediadown.media.MediaQuality;
 import sune.app.mediadown.media.MediaResolution;
 import sune.app.mediadown.media.MediaUtils;
@@ -165,6 +166,40 @@ public final class M3U {
 			return value != null ? value : "";
 		}
 		
+		/** @since 00.02.09 */
+		private static final MediaProtection mediaProtectionOf(M3UKey key) {
+			MediaProtection.Builder builder = null;
+			
+			MediaProtectionType type = MediaProtectionType.ofUUID(key.keyFormat());
+			String scheme = key.method();
+			String content = key.uri();
+			String contentType = key.keyFormat();
+			
+			// Support only Widevine for now
+			if(type == MediaProtectionType.DRM_WIDEVINE) {
+				final String prefix = "data:text/plain;base64,";
+				
+				if(content.startsWith(prefix)) {
+					content = content.substring(prefix.length());
+				}
+				
+				builder = MediaProtection.of(type)
+					.content(content)
+					.contentType("pssh")
+					.scheme("cenc")
+					.keyId(key.keyId());
+			}
+			
+			if(builder == null) {
+				builder = MediaProtection.ofUnknown()
+					.content(emptyIfNull(content))
+					.contentType(emptyIfNull(contentType))
+					.scheme(emptyIfNull(scheme));
+			}
+			
+			return builder.build();
+		}
+		
 		public M3UFileType type() {
 			return type;
 		}
@@ -211,11 +246,7 @@ public final class M3U {
 		/** @since 00.02.09 */
 		public MediaProtection protection() {
 			if(protection == null && key.isPresent()) {
-				protection = MediaProtection.ofUnknown()
-					.content(emptyIfNull(key.uri()))
-					.contentType(emptyIfNull(key.keyFormat()))
-					.scheme(emptyIfNull(key.method()))
-					.build();
+				protection = mediaProtectionOf(key);
 			}
 			
 			return protection;
@@ -283,17 +314,20 @@ public final class M3U {
 		private final String iv;
 		private final String keyFormat;
 		private final String keyFormatVersions;
+		/** @since 00.02.09 */
+		private final String keyId;
 		
-		public M3UKey(String method, String uri, String iv, String keyFormat, String keyFormatVersions) {
+		public M3UKey(String method, String uri, String iv, String keyFormat, String keyFormatVersions, String keyId) {
 			this.method = Objects.requireNonNull(method);
 			this.uri = uri;
 			this.iv = iv;
 			this.keyFormat = keyFormat;
 			this.keyFormatVersions = keyFormatVersions;
+			this.keyId = keyId;
 		}
 		
 		public static final M3UKey none() {
-			return new M3UKey("NONE", null, null, null, null);
+			return new M3UKey("NONE", null, null, null, null, null);
 		}
 		
 		public String method() {
@@ -314,6 +348,11 @@ public final class M3U {
 		
 		public String keyFormatVersions() {
 			return keyFormatVersions;
+		}
+		
+		/** @since 00.02.09 */
+		public String keyId() {
+			return keyId;
 		}
 		
 		public boolean isPresent() {
@@ -740,8 +779,21 @@ public final class M3U {
 			String iv = attrs.get("IV");
 			String keyFormat = attrs.get("KEYFORMAT");
 			String keyFormatVersions = attrs.get("KEYFORMATVERSIONS");
-			if(method == null) method = "NONE";
-			key = new M3UKey(method, uri, iv, keyFormat, keyFormatVersions);
+			String keyId = attrs.get("KEYID");
+			
+			if(method == null) {
+				method = "UNKNOWN";
+			}
+			
+			if(keyId != null) {
+				final String prefix = "0x";
+				
+				if(keyId.startsWith(prefix)) {
+					keyId = keyId.substring(prefix.length());
+				}
+			}
+			
+			key = new M3UKey(method, uri, iv, keyFormat, keyFormatVersions, keyId);
 		}
 		
 		/** @since 00.02.09 */

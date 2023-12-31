@@ -9,12 +9,14 @@ public final class MediaProtection {
 	private final String scheme;
 	private final String contentType;
 	private final String content;
+	private final String keyId;
 	
-	private MediaProtection(MediaProtectionType type, String scheme, String contentType, String content) {
+	private MediaProtection(MediaProtectionType type, String scheme, String contentType, String content, String keyId) {
 		this.type = Objects.requireNonNull(type);
 		this.scheme = Objects.requireNonNull(scheme);
 		this.contentType = Objects.requireNonNull(contentType);
 		this.content = Objects.requireNonNull(content);
+		this.keyId = keyId; // May be null
 	}
 	
 	public static final Builder of(MediaProtectionType type) {
@@ -53,9 +55,13 @@ public final class MediaProtection {
 		return content;
 	}
 	
+	public String keyId() {
+		return keyId;
+	}
+	
 	@Override
 	public int hashCode() {
-		return Objects.hash(content, contentType, scheme, type);
+		return Objects.hash(type, scheme, contentType, content, keyId);
 	}
 	
 	@Override
@@ -67,10 +73,11 @@ public final class MediaProtection {
 		if(getClass() != obj.getClass())
 			return false;
 		MediaProtection other = (MediaProtection) obj;
-		return Objects.equals(content, other.content)
-		        && Objects.equals(contentType, other.contentType)
-		        && Objects.equals(scheme, other.scheme)
-		        && type == other.type;
+		return type == other.type
+				&& Objects.equals(scheme, other.scheme)
+				&& Objects.equals(contentType, other.contentType)
+				&& Objects.equals(content, other.content)
+				&& Objects.equals(keyId, other.keyId);
 	}
 	
 	@Override
@@ -79,7 +86,8 @@ public final class MediaProtection {
 					+ "type=" + type + ", "
 					+ "scheme=" + scheme + ", "
 					+ "contentType=" + contentType + ", "
-					+ "content=" + content
+					+ "content=" + content + ", "
+					+ "keyId=" + keyId
 		        + "]";
 	}
 	
@@ -89,13 +97,14 @@ public final class MediaProtection {
 		private String scheme;
 		private String contentType;
 		private String content;
+		private String keyId;
 		
 		public Builder(MediaProtectionType type) {
 			this.type = Objects.requireNonNull(type);
 		}
 		
 		public MediaProtection build() {
-			return new MediaProtection(type, scheme, contentType, content);
+			return new MediaProtection(type, scheme, contentType, content, keyId);
 		}
 		
 		public Builder scheme(String scheme) {
@@ -113,6 +122,11 @@ public final class MediaProtection {
 			return this;
 		}
 		
+		public Builder keyId(String keyId) {
+			this.keyId = keyId;
+			return this;
+		}
+		
 		public MediaProtectionType type() {
 			return type;
 		}
@@ -127,6 +141,10 @@ public final class MediaProtection {
 		
 		public String content() {
 			return content;
+		}
+		
+		public String keyId() {
+			return keyId;
 		}
 	}
 }
