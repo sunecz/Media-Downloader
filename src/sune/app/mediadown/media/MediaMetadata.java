@@ -152,7 +152,12 @@ public final class MediaMetadata {
 		private final Map<String, Object> data;
 		
 		private Builder() {
-			data = new LinkedHashMap<>();
+			this(new LinkedHashMap<>());
+		}
+		
+		/** @since 00.02.09 */
+		private Builder(Map<String, Object> data) {
+			this.data = data;
 		}
 		
 		public final MediaMetadata build() {
@@ -235,6 +240,11 @@ public final class MediaMetadata {
 				return list;
 			});
 			return this;
+		}
+		
+		/** @since 00.02.09 */
+		public final Builder copy() {
+			return new Builder(Map.copyOf(data));
 		}
 		
 		/** @since 00.02.09 */
