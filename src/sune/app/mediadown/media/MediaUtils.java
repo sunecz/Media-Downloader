@@ -339,11 +339,17 @@ public final class MediaUtils {
 			return bitRateMbpsToBandwidth(sampleRate / 1000.0 * 32.0 / 1024.0);
 		}
 		
-		private static final int approximateBandwidth(VideoMediaBase video) {
-			return approximateBandwidthFromVideoHeight(video.resolution().height());
+		private static final int approximateBandwidth(VideoMedia video) {
+			int height = video.resolution().height();
+			
+			if(height <= 0) {
+				height = ((VideoQualityValue) video.quality().value()).height();
+			}
+			
+			return approximateBandwidthFromVideoHeight(height);
 		}
 		
-		private static final int approximateBandwidth(AudioMediaBase audio) {
+		private static final int approximateBandwidth(AudioMedia audio) {
 			return approximateBandwidthFromAudioSampleRate(audio.sampleRate());
 		}
 		
@@ -355,13 +361,13 @@ public final class MediaUtils {
 			return bandwidth / 8 * duration;
 		}
 		
-		public static final double estimate(VideoMediaBase video) {
+		public static final double estimate(VideoMedia video) {
 			return video.bandwidth() <= 0
 						? fromBandwidth(approximateBandwidth(video), video.duration())
 						: fromBandwidth(video.bandwidth(), video.duration());
 		}
 		
-		public static final double estimate(AudioMediaBase audio) {
+		public static final double estimate(AudioMedia audio) {
 			return audio.bandwidth() <= 0
 						? fromBandwidth(approximateBandwidth(audio), audio.duration())
 						: fromBandwidth(audio.bandwidth(), audio.duration());
@@ -369,8 +375,8 @@ public final class MediaUtils {
 		
 		public static final double estimate(Media media) {
 			MediaType type = media.type();
-			if(type.is(MediaType.VIDEO)) return estimate((VideoMediaBase) media);
-			if(type.is(MediaType.AUDIO)) return estimate((AudioMediaBase) media);
+			if(type.is(MediaType.VIDEO)) return estimate((VideoMedia) media);
+			if(type.is(MediaType.AUDIO)) return estimate((AudioMedia) media);
 			return MediaConstants.UNKNOWN_SIZE;
 		}
 	}
