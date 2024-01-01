@@ -116,7 +116,16 @@
 				error:          "Chyba",
 				paused:         "Pozastaveno",
 				retry:          "Opakování",
-				queued:         "Ve frontě: %{context}s (%{position}d)"
+				queued:         "Ve frontě: %{context}s (%{position}d)",
+				media_fix:      "Oprava média",
+				media_fix_step: {
+					video: {
+						fix_timestamps: "Video: Oprava časových značek"
+					},
+					audio: {
+						fix_timestamps: "Audio: Oprava časových značek"
+					}
+				}
 			},
 			dialogs: {
 				messages_empty: {

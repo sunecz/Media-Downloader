@@ -116,7 +116,16 @@
 				error:          "Error",
 				paused:         "Paused",
 				retry:          "Retry",
-				queued:         "Queued: %{context}s (%{position}d)"
+				queued:         "Queued: %{context}s (%{position}d)",
+				media_fix:      "Fix media",
+				media_fix_step: {
+					video: {
+						fix_timestamps: "Video: Fix timestamps"
+					},
+					audio: {
+						fix_timestamps: "Audio: Fix timestamps"
+					}
+				}
 			},
 			dialogs: {
 				messages_empty: {

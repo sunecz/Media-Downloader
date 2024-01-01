@@ -1,31 +1,20 @@
 package sune.app.mediadown.pipeline;
 
 import java.util.List;
-import java.util.function.Function;
 
-import sune.app.mediadown.concurrent.PositionAwareQueueTaskExecutor.PositionAwareQueueTaskResult;
 import sune.app.mediadown.conversion.ConversionMedia;
 import sune.app.mediadown.entity.Converter;
 import sune.app.mediadown.event.ConversionEvent;
-import sune.app.mediadown.event.Event;
-import sune.app.mediadown.event.EventRegistry;
-import sune.app.mediadown.event.EventType;
-import sune.app.mediadown.event.QueueEvent;
-import sune.app.mediadown.event.tracker.Trackable;
-import sune.app.mediadown.event.tracker.TrackerEvent;
 import sune.app.mediadown.gui.table.ResolvedMedia;
 import sune.app.mediadown.manager.ConversionManager;
-import sune.app.mediadown.manager.ManagerSubmitResult;
+import sune.app.mediadown.manager.PositionAwareManagerSubmitResult;
 import sune.app.mediadown.media.MediaConversionContext;
-import sune.app.mediadown.util.CheckedConsumer;
 import sune.app.mediadown.util.Metadata;
-import sune.app.mediadown.util.Pair;
-import sune.app.mediadown.util.QueueContext;
-import sune.app.mediadown.util.Utils;
-import sune.app.mediadown.util.Utils.Ignore;
 
 /** @since 00.01.26 */
-public final class ConversionPipelineTask implements PipelineTask, MediaConversionContext {
+public final class ConversionPipelineTask
+		extends ManagerPipelineTask<Converter, Void>
+		implements MediaConversionContext {
 	
 	/** @since 00.02.08 */
 	private final ResolvedMedia output;
@@ -33,8 +22,6 @@ public final class ConversionPipelineTask implements PipelineTask, MediaConversi
 	private final List<ConversionMedia> inputs;
 	/** @since 00.02.08 */
 	private final Metadata metadata;
-	
-	private ManagerSubmitResult<Converter, Void> result;
 	
 	/** @since 00.02.08 */
 	private ConversionPipelineTask(ResolvedMedia output, List<ConversionMedia> inputs, Metadata metadata) {
@@ -47,146 +34,45 @@ public final class ConversionPipelineTask implements PipelineTask, MediaConversi
 		this.metadata = metadata;
 	}
 	
-	/** @since 00.02.09 */
-	private static final void callTrackerEventUpdate(EventRegistry<EventType> eventRegistry, Trackable trackable) {
-		eventRegistry.call(TrackerEvent.UPDATE, trackable.trackerManager().tracker());
-	}
-	
 	/** @since 00.02.08 */
 	public static final ConversionPipelineTask of(ResolvedMedia output, List<ConversionMedia> inputs,
 			Metadata metadata) {
 		return new ConversionPipelineTask(output, inputs, metadata);
 	}
 	
-	/** @since 00.02.09 */
-	private final void bindAllConversionEvents(EventRegistry<EventType> eventRegistry, Converter converter) {
-		for(Event<ConversionEvent, ?> event : ConversionEvent.values()) {
-			converter.addEventListener(event, (ctx) -> callTrackerEventUpdate(eventRegistry, (Trackable) ctx));
-		}
-	}
-	
-	/** @since 00.02.09 */
-	private final <T> T converterAction(Function<Converter, T> action, T defaultValue) {
-		Converter converter;
-		
-		// Check the chain of values to avoid NPE
-		if(result == null
-				|| (converter = result.value()) == null) {
-			return defaultValue;
-		}
-		
-		return action.apply(converter);
-	}
-	
-	/** @since 00.02.09 */
-	private final void converterAction(CheckedConsumer<Converter> action) throws Exception {
-		Converter converter;
-		
-		// Check the chain of values to avoid NPE
-		if(result == null
-				|| (converter = result.value()) == null) {
-			return;
-		}
-		
-		action.accept(converter);
-	}
-	
 	@Override
-	public ConversionPipelineResult run(Pipeline pipeline) throws Exception {
+	protected PositionAwareManagerSubmitResult<Converter, Void> submit(Pipeline pipeline) throws Exception {
 		// Ensure that the input formats are not explicitly stated in the command
 		Metadata altered = metadata.copy();
 		altered.set("noExplicitInputFormat", true);
-		
-		result = ConversionManager.instance().submit(output, inputs, altered);
-		QueueContext context = result.context();
-		
-		// Notify the pipeline if the position in a queue changed
-		PositionAwareQueueTaskResult<Long> positionAwareTaskResult = Utils.cast(result.taskResult());
-		positionAwareTaskResult.queuePositionProperty().addListener((o, ov, queuePosition) -> {
-			pipeline.getEventRegistry().call(
-				QueueEvent.POSITION_UPDATE,
-				new Pair<>(context, queuePosition.intValue())
-			);
-		});
-		
-		pipeline.getEventRegistry().call(
-			QueueEvent.POSITION_UPDATE,
-			new Pair<>(context, positionAwareTaskResult.queuePosition())
-		);
-		
-		// Bind all events from the pipeline
-		EventRegistry<EventType> eventRegistry = pipeline.getEventRegistry();
-		Converter converter = result.value();
-		bindAllConversionEvents(eventRegistry, converter);
-		
-		Ignore.Cancellation.call(result::get); // Wait for the conversion to finish
+		return ConversionManager.instance().submit(output, inputs, altered);
+	}
+	
+	@Override
+	protected void bindEvents(Pipeline pipeline) throws Exception {
+		bindAllEvents(pipeline.getEventRegistry(), result().value(), ConversionEvent::values);
+	}
+	
+	@Override
+	protected PipelineResult pipelineResult() throws Exception {
 		return ConversionPipelineResult.noConversion();
 	}
 	
-	@Override
-	public void stop() throws Exception {
-		converterAction(Converter::stop);
-		
-		if(result != null) {
-			result.cancel();
-		}
-	}
+	@Override protected void doStop() throws Exception { doAction(Converter::stop); }
+	@Override protected void doPause() throws Exception { doAction(Converter::pause); }
+	@Override protected void doResume() throws Exception { doAction(Converter::resume); }
 	
-	@Override
-	public void pause() throws Exception {
-		converterAction(Converter::pause);
-	}
-	
-	@Override
-	public void resume() throws Exception {
-		converterAction(Converter::resume);
-	}
-	
-	@Override
-	public boolean isRunning() {
-		return converterAction(Converter::isRunning, false);
-	}
-	
-	@Override
-	public boolean isStarted() {
-		return converterAction(Converter::isStarted, false);
-	}
-	
-	@Override
-	public boolean isDone() {
-		return converterAction(Converter::isDone, false);
-	}
-	
-	@Override
-	public boolean isPaused() {
-		return converterAction(Converter::isPaused, false);
-	}
-	
-	@Override
-	public boolean isStopped() {
-		return converterAction(Converter::isStopped, false);
-	}
-	
-	@Override
-	public boolean isError() {
-		return converterAction(Converter::isError, false);
-	}
+	@Override public boolean isRunning() { return doAction(Converter::isRunning, false); }
+	@Override public boolean isStarted() { return doAction(Converter::isStarted, false); }
+	@Override public boolean isDone() { return doAction(Converter::isDone, false); }
+	@Override public boolean isPaused() { return doAction(Converter::isPaused, false); }
+	@Override public boolean isStopped() { return doAction(Converter::isStopped, false); }
+	@Override public boolean isError() { return doAction(Converter::isError, false); }
 	
 	/** @since 00.02.09 */
-	@Override
-	public ResolvedMedia output() {
-		return output;
-	}
-	
+	@Override public ResolvedMedia output() { return output; }
 	/** @since 00.02.09 */
-	@Override
-	public List<ConversionMedia> inputs() {
-		return inputs;
-	}
-	
+	@Override public List<ConversionMedia> inputs() { return inputs; }
 	/** @since 00.02.09 */
-	@Override
-	public Metadata metadata() {
-		return metadata;
-	}
+	@Override public Metadata metadata() { return metadata; }
 }

@@ -48,6 +48,11 @@ public final class DownloadPipelineResult implements PipelineResult {
 	
 	@Override
 	public final PipelineTask process(Pipeline pipeline) throws Exception {
+		// Try to fix the media, if a fixing is requested, before anything else
+		if(output.media().metadata().get("media.fix.required", false)) {
+			return MediaFixPipelineTask.of(needConversion, output, inputs, metadata);
+		}
+		
 		if(needConversion) {
 			return ConversionPipelineTask.of(output, inputs, metadata);
 		}

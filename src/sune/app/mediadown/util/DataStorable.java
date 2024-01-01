@@ -9,6 +9,8 @@ public interface DataStorable {
 	boolean has(String name);
 	void set(String name, Object value);
 	<T> T get(String name);
+	/** @since 00.02.09 */
+	<T> T get(String name, T defaultValue);
 	void remove(String name);
 	/** @since 00.02.09 */
 	Set<String> keys();

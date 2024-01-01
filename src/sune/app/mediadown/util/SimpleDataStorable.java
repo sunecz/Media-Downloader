@@ -72,6 +72,14 @@ public class SimpleDataStorable implements DataStorable {
 	}
 	
 	@Override
+	public <T> T get(String name, T defaultValue) {
+		T value;
+		return (value = get(name)) != null
+					? value
+					: defaultValue;
+	}
+	
+	@Override
 	public void remove(String name) {
 		if(isEmptyData()) {
 			return;

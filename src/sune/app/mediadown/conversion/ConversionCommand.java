@@ -101,7 +101,7 @@ public abstract class ConversionCommand {
 		return string();
 	}
 	
-	private static class IOPoint {
+	public static class IOPoint {
 		
 		protected final Path path;
 		protected final MediaFormat format;
@@ -151,7 +151,7 @@ public abstract class ConversionCommand {
 			        && Objects.equals(path, other.path);
 		}
 		
-		protected static abstract class Builder {
+		public static abstract class Builder {
 			
 			protected final Path path;
 			protected Set<Option> options;
