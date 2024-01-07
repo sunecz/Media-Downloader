@@ -680,6 +680,46 @@ public final class Web {
 				return this;
 			}
 			
+			/** @since 00.02.09 */
+			public Builder addCookies(Collection<HttpCookie> cookies) {
+				this.cookies.addAll(cookies);
+				return this;
+			}
+			
+			/** @since 00.02.09 */
+			public Builder addCookies(Object... values) {
+				return addCookies(Utils.toMap(values));
+			}
+			
+			/** @since 00.02.09 */
+			public Builder addCookies(Map<String, String> values) {
+				values.entrySet().stream()
+					.map((e) -> Cookie.of(e.getKey(), e.getValue()))
+					.forEachOrdered(cookies::add);
+				return this;
+			}
+			
+			/** @since 00.02.09 */
+			public Builder cookies(Collection<HttpCookie> cookies) {
+				this.cookies.clear();
+				this.cookies.addAll(cookies);
+				return this;
+			}
+			
+			/** @since 00.02.09 */
+			public Builder cookies(Object... values) {
+				return cookies(Utils.toMap(values));
+			}
+			
+			/** @since 00.02.09 */
+			public Builder cookies(Map<String, String> values) {
+				cookies.clear();
+				values.entrySet().stream()
+					.map((e) -> Cookie.of(e.getKey(), e.getValue()))
+					.forEachOrdered(cookies::add);
+				return this;
+			}
+			
 			public Builder addHeader(String name, String... values) { return addHeader(name, List.of(values)); }
 			public Builder header(String name, String... values) { return header(name, List.of(values)); }
 			public Builder addCookie(HttpCookie cookie) { cookies.add(cookie); return this; }
@@ -700,6 +740,68 @@ public final class Web {
 			public Duration timeout() { return timeout; }
 			/** @since 00.02.09 */
 			public int retry() { return retry; }
+		}
+	}
+	
+	/** @since 00.02.09 */
+	public static final class Cookie {
+		
+		// Forbid anyone to create an instance of this class
+		private Cookie() {
+		}
+		
+		public static final HttpCookie of(String name, String value) {
+			return new HttpCookie(name, value);
+		}
+		
+		public static final Builder builder(String name) {
+			return new Builder(name);
+		}
+		
+		public static final Builder builder(String name, String value) {
+			return (new Builder(name)).value(value);
+		}
+		
+		public static final class Builder {
+			
+			private static final long MAX_AGE_UNSPECIFIED = -1;
+			
+			private final String name;
+			private String value;
+			private String domain;
+			private boolean httpOnly;
+			private long maxAge = MAX_AGE_UNSPECIFIED;
+			private String path;
+			private boolean secure;
+			
+			private Builder(String name) {
+				this.name = Objects.requireNonNull(name);
+			}
+			
+			public Builder value(String value) { this.value = value; return this; }
+			public Builder domain(String domain) { this.domain = domain; return this; }
+			public Builder httpOnly(boolean httpOnly) { this.httpOnly = httpOnly; return this; }
+			public Builder maxAge(long maxAge) { this.maxAge = maxAge; return this; }
+			public Builder path(String path) { this.path = path; return this; }
+			public Builder secure(boolean secure) { this.secure = secure; return this; }
+			
+			public String name() { return name; }
+			public String value() { return value; }
+			public String domain() { return domain; }
+			public boolean httpOnly() { return httpOnly; }
+			public long maxAge() { return maxAge; }
+			public String path() { return path; }
+			public boolean secure() { return secure; }
+			
+			public HttpCookie build() {
+				HttpCookie cookie = new HttpCookie(name, value);
+				cookie.setDomain(domain);
+				cookie.setHttpOnly(httpOnly);
+				cookie.setMaxAge(maxAge);
+				cookie.setPath(path);
+				cookie.setSecure(secure);
+				return cookie;
+			}
 		}
 	}
 	
