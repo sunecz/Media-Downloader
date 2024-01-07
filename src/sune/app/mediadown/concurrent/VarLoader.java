@@ -68,6 +68,21 @@ public final class VarLoader<T> {
 		return ref;
 	}
 	
+	/** @since 00.02.09 */
+	public void unset() {
+		Object ref = atomicGet();
+		
+		if(ref != UNSET) {
+			synchronized(this) {
+				ref = atomicGet();
+				
+				if(ref != UNSET) {
+					atomicSet(UNSET);
+				}
+			}
+		}
+	}
+	
 	public T valueChecked() throws Exception {
 		@SuppressWarnings("unchecked")
 		T casted = (T) valueRaw();
@@ -90,6 +105,17 @@ public final class VarLoader<T> {
 		}
 		
 		return defaultValue;
+	}
+	
+	/** @since 00.02.09 */
+	public final T valueOrElseGet(Supplier<T> supplier) {
+		try {
+			return valueChecked();
+		} catch(Exception ex) {
+			// Ignore
+		}
+		
+		return supplier.get();
 	}
 	
 	public final boolean isSet() {
