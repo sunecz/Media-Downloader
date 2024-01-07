@@ -34,10 +34,6 @@ public final class Regex {
 		return Pattern.quote(string);
 	}
 	
-	public static final boolean matches(String pattern, CharSequence input) {
-		return Pattern.matches(pattern, input);
-	}
-	
 	public static final Regex of(String pattern) {
 		return new Regex(compile(pattern, Flags.NONE));
 	}
@@ -84,6 +80,11 @@ public final class Regex {
 	
 	public String replaceFirst(CharSequence input, Function<MatchResult, String> replacer) {
 		return matcher(input).replaceFirst(replacer);
+	}
+	
+	/** @since 00.02.09 */
+	public boolean matches(CharSequence input) {
+		return matcher(input).matches();
 	}
 	
 	public Pattern pattern() {
