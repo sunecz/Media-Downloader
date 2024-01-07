@@ -1,6 +1,9 @@
 package sune.app.mediadown.util;
 
 import java.lang.ref.WeakReference;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.WeakHashMap;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.MatchResult;
@@ -20,10 +23,10 @@ public final class Regex {
 	private final int flags;
 	private WeakReference<Pattern> ref;
 	
-	private Regex(Pattern pattern) {
-		this.pattern = pattern.pattern();
-		this.flags = pattern.flags();
-		this.ref = new WeakReference<>(pattern);
+	private Regex(String pattern, int flags) {
+		this.pattern = pattern;
+		this.flags = flags;
+		this.ref = new WeakReference<>(null);
 	}
 	
 	private static final Pattern compile(String pattern, int flags) {
@@ -35,15 +38,20 @@ public final class Regex {
 	}
 	
 	public static final Regex of(String pattern) {
-		return new Regex(compile(pattern, Flags.NONE));
+		return new Regex(pattern, Flags.NONE);
 	}
 	
 	public static final Regex of(String pattern, int flags) {
-		return new Regex(compile(pattern, flags));
+		return new Regex(pattern, flags);
+	}
+	
+	/** @since 00.02.09 */
+	private final void dispose(Matcher matcher) {
+		Matchers.dispose(this, matcher);
 	}
 	
 	public Matcher matcher(CharSequence input) {
-		return pattern().matcher(input);
+		return Matchers.matcher(this).reset(input);
 	}
 	
 	public String[] split(CharSequence input) {
@@ -67,24 +75,39 @@ public final class Regex {
 	}
 	
 	public String replaceAll(CharSequence input, String replacement) {
-		return matcher(input).replaceAll(replacement);
+		Matcher matcher = matcher(input);
+		String result = matcher.replaceAll(replacement);
+		dispose(matcher);
+		return result;
 	}
 	
 	public String replaceAll(CharSequence input, Function<MatchResult, String> replacer) {
-		return matcher(input).replaceAll(replacer);
+		Matcher matcher = matcher(input);
+		String result = matcher.replaceAll(replacer);
+		dispose(matcher);
+		return result;
 	}
 	
 	public String replaceFirst(CharSequence input, String replacement) {
-		return matcher(input).replaceFirst(replacement);
+		Matcher matcher = matcher(input);
+		String result = matcher.replaceFirst(replacement);
+		dispose(matcher);
+		return result;
 	}
 	
 	public String replaceFirst(CharSequence input, Function<MatchResult, String> replacer) {
-		return matcher(input).replaceFirst(replacer);
+		Matcher matcher = matcher(input);
+		String result = matcher.replaceFirst(replacer);
+		dispose(matcher);
+		return result;
 	}
 	
 	/** @since 00.02.09 */
 	public boolean matches(CharSequence input) {
-		return matcher(input).matches();
+		Matcher matcher = matcher(input);
+		boolean result = matcher.matches();
+		dispose(matcher);
+		return result;
 	}
 	
 	public Pattern pattern() {
@@ -139,6 +162,80 @@ public final class Regex {
 		
 		// Forbid anyone to create an instance of this class
 		private Flags() {
+		}
+	}
+	
+	/** @since 00.02.09 */
+	private static final class Matchers {
+		
+		private static final Object UNSET = new Object();
+		private static final ThreadLocal<Map<Regex, Object>> POOLS = ThreadLocal.withInitial(WeakHashMap::new);
+		
+		private static final MatcherPool pool(Regex regex) {
+			Map<Regex, Object> values = POOLS.get();
+			Object value = values.getOrDefault(regex, UNSET);
+			
+			if(value == UNSET) {
+				value = new MatcherPool(regex);
+				values.put(regex, value);
+			}
+			
+			return (MatcherPool) value;
+		}
+		
+		public static final Matcher matcher(Regex regex) {
+			return pool(regex).create();
+		}
+		
+		public static final void dispose(Regex regex, Matcher matcher) {
+			pool(regex).dispose(matcher);
+		}
+		
+		private static final class MatcherPool {
+			
+			private final WeakReference<Regex> ref;
+			private Map<Matcher, Boolean> matchers;
+			
+			public MatcherPool(Regex regex) {
+				this.ref = new WeakReference<Regex>(regex);
+			}
+			
+			private final Matcher emptyMatcher() {
+				Regex regex;
+				if((regex = ref.get()) == null) {
+					return null;
+				}
+				
+				return regex.pattern().matcher("");
+			}
+			
+			public Matcher create() {
+				if(matchers == null) {
+					matchers = new WeakHashMap<>(4);
+				}
+				
+				for(Entry<Matcher, Boolean> entry : matchers.entrySet()) {
+					if(!entry.getValue()) {
+						entry.setValue(true);
+						return entry.getKey();
+					}
+				}
+				
+				Matcher matcher;
+				if((matcher = emptyMatcher()) != null) {
+					matchers.put(matcher, true);
+				}
+				
+				return matcher;
+			}
+			
+			public void dispose(Matcher matcher) {
+				if(matchers == null || matcher == null) {
+					return;
+				}
+				
+				matchers.put(matcher, false);
+			}
 		}
 	}
 }
