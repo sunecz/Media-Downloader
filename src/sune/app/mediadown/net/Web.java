@@ -657,7 +657,7 @@ public final class Web {
 			}
 			
 			public Builder addHeader(String name, Collection<String> values) {
-				headers.compute(name, (k, v) -> v == null ? List.copyOf(values) : merge(v, values));
+				headers.compute(name, (k, v) -> v == null ? new ArrayList<>(values) : merge(v, values));
 				return this;
 			}
 			
@@ -1004,7 +1004,11 @@ public final class Web {
 		}
 		
 		public static final void add(URI uri, HttpCookie cookie, HttpCookie... more) {
-			add(uri, more.length > 0 ? Utils.streamToList(Stream.of(List.of(cookie), more)) : List.of(cookie));
+			add(uri,
+				more.length > 0
+					? Stream.concat(Stream.of(cookie), Stream.of(more)).collect(Collectors.toList())
+					: List.of(cookie)
+			);
 		}
 		
 		public static final void add(URI uri, List<HttpCookie> cookies) {
