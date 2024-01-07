@@ -122,7 +122,7 @@ public final class FFmpegConverter implements Converter {
 		                                	altered.outputs().stream(),
 		                                	Pair::new
 		                                )) {
-			NIO.move_force(pair.b.path(), pair.a.path());
+			NIO.moveForce(pair.b.path(), pair.a.path());
 		}
 	}
 	

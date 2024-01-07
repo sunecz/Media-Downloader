@@ -152,7 +152,7 @@ public final class ExternalResources {
 				try { action.accept(path); } catch(Exception ex) { exception = ex; }
 				finally {
 					if(exception != null) {
-						NIO.move_force(tempPath, path);
+						NIO.moveForce(tempPath, path);
 						throw exception;
 					} else {
 						NIO.delete(tempPath);

@@ -19,6 +19,7 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.nio.charset.Charset;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -219,18 +220,13 @@ public final class NIO {
 		Files.move(src, dest);
 	}
 	
-	/**
-	 * More forceful method of moving a file from {@code src} to {@code dest}.
-	 * It tries to replace the file, if it already exists, and ensure that
-	 * the move is atomic. It does not copy the attributes, since it is not
-	 * supported on all platforms (e.g. Windows).
-	 * Throwing {@linkplain IOException} if the file cannot be moved.
-	 * @param src the path to the file to move
-	 * @param dest the path to the target file
-	 * @see Files#move(Path, Path, java.nio.file.CopyOption...)*/
-	public static final void move_force(Path src, Path dest)
-			throws IOException {
-		Files.move(src, dest, REPLACE_EXISTING, ATOMIC_MOVE);
+	/** @since 00.02.09 */
+	public static final void moveForce(Path src, Path dest) throws IOException {
+		try {
+			Files.move(src, dest, REPLACE_EXISTING, ATOMIC_MOVE);
+		} catch(AtomicMoveNotSupportedException ex) {
+			Files.move(src, dest, REPLACE_EXISTING);
+		}
 	}
 	
 	public static final void download(String url, Path dest)
