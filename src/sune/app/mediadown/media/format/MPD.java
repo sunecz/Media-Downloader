@@ -269,6 +269,9 @@ public final class MPD {
 	
 	private static final class MPDFileConstructor {
 		
+		/** @since 00.02.09 */
+		private static final Regex REGEX_SEGMENT_TEMPLATE = Regex.of("\\$(.*?)\\$");
+		
 		private final URI baseURI;
 		private final Representation representation;
 		private final SegmentTemplate template;
@@ -343,7 +346,7 @@ public final class MPD {
 			double timescaleMult = 1.0 / template.timescale();
 			formatMap.put("Time", String.valueOf(time));
 			formatMap.put("Number", String.valueOf(count));
-			String uri = Regex.of("\\$(.*?)\\$").replaceAll(templateURI, this::format);
+			String uri = REGEX_SEGMENT_TEMPLATE.replaceAll(templateURI, this::format);
 			URI uriObj = Net.resolve(baseURI, uri);
 			segments.add(new MPDSegment(uriObj, duration * timescaleMult, time * timescaleMult));
 			time += duration;

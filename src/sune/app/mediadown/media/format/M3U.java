@@ -634,8 +634,12 @@ public final class M3U {
 		/** @since 00.02.09 */
 		private static final String NAME_MAP              = "EXT-X-MAP";
 		
-		private static final Regex PATTERN_ATTRIBUTE_LIST
-			= Regex.of("([A-Z0-9\\-]+)=(\"[^\"\\x0A\\x0D]+\"|[^,\\x0A\\x0D]+)");
+		/** @since 00.02.09 */
+		private static final Regex REGEX_ATTRIBUTE_LIST = Regex.of(
+			"([A-Z0-9\\-]+)=(\"[^\"\\x0A\\x0D]+\"|[^,\\x0A\\x0D]+)"
+		);
+		/** @since 00.02.09 */
+		private static final Regex REGEX_ATTRIBUTE_VALUE = Regex.of("(?:^\"|\"$)");
 		
 		private final URI baseURI;
 		private final URI uri;
@@ -762,11 +766,11 @@ public final class M3U {
 		// Reference: https://datatracker.ietf.org/doc/html/rfc8216#section-4.2
 		private final Map<String, String> parseAttributeList(String value) {
 			Map<String, String> attrs = new LinkedHashMap<>();
-			Matcher matcher = PATTERN_ATTRIBUTE_LIST.matcher(value);
+			Matcher matcher = REGEX_ATTRIBUTE_LIST.matcher(value);
 			
 			while(matcher.find()) {
 				String attrName = matcher.group(1).toUpperCase();
-				String attrValue = matcher.group(2).replaceAll("(?:^\"|\"$)", "");
+				String attrValue = REGEX_ATTRIBUTE_VALUE.replaceAll(matcher.group(2), "");
 				attrs.put(attrName, attrValue);
 			}
 			
