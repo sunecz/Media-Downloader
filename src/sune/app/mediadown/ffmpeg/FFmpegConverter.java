@@ -1,6 +1,10 @@
 package sune.app.mediadown.ffmpeg;
 
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -19,7 +23,6 @@ import sune.app.mediadown.event.Listener;
 import sune.app.mediadown.event.tracker.ConversionTracker;
 import sune.app.mediadown.event.tracker.TrackerManager;
 import sune.app.mediadown.ffmpeg.FFmpeg.Options;
-import sune.app.mediadown.logging.Log;
 import sune.app.mediadown.media.MediaConstants;
 import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.Pair;
@@ -37,7 +40,6 @@ public final class FFmpegConverter implements Converter {
 	private final InternalState state = new InternalState(TaskStates.INITIAL);
 	private final EventRegistry<ConversionEvent> eventRegistry = new EventRegistry<>();
 	private final TrackerManager trackerManager;
-	private final StringBuilder processOutput = new StringBuilder();
 	
 	private ReadOnlyProcess process;
 	private ConversionTracker tracker;
@@ -45,6 +47,8 @@ public final class FFmpegConverter implements Converter {
 	
 	private Exception exception;
 	private final ReusableMatcher matcher = REGEX_LINE_PROGRESS.reusableMatcher();
+	/** @since 00.02.09 */
+	private BufferedWriter writerLog;
 	
 	public FFmpegConverter(TrackerManager trackerManager) {
 		this.trackerManager = Objects.requireNonNull(trackerManager);
@@ -68,8 +72,25 @@ public final class FFmpegConverter implements Converter {
 		return builder.build();
 	}
 	
+	/** @since 00.02.09 */
+	private final void log(String... parts) {
+		if(writerLog == null) {
+			return;
+		}
+		
+		try {
+			for(String part : parts) {
+				writerLog.write(part);
+			}
+			
+			writerLog.write('\n');
+		} catch(IOException ex) {
+			// Ignore
+		}
+	}
+	
 	private final void outputHandler(String line) {
-		processOutput.append(line).append('\n');
+		log(line); // Always log the line
 		matcher.reset(line);
 		if(!matcher.matches()) return; // Not a progress info
 		String time = matcher.group(1);
@@ -86,7 +107,7 @@ public final class FFmpegConverter implements Converter {
 		
 		Path dir = command.outputs().get(0).path().getParent();
 		String cmd = command.string();
-		processOutput.append("ffmpeg ").append(cmd).append('\n');
+		log("ffmpeg ", cmd); // Always log the line
 		process.execute(cmd, dir);
 		
 		return process.waitFor();
@@ -107,15 +128,37 @@ public final class FFmpegConverter implements Converter {
 			NIO.createFile(output.path());
 		}
 		
+		Path logPath = null;
+		
+		try {
+			Path uniquePath = NIO.uniqueFile("ffmpeg-converter-", ".log");
+			writerLog = Files.newBufferedWriter(
+				uniquePath,
+				StandardOpenOption.CREATE, StandardOpenOption.WRITE
+			);
+			logPath = uniquePath;
+		} catch(IOException ex) {
+			// Ignore
+		}
+		
 		int exitCode;
 		if((exitCode = doConversion(altered)) != 0 && !isStopped()) {
-			// Log the whole output of the process to a unique log file so that more information
-			// can be obtained, not just the exit code.
-			Path logPath = Log.toUniquePath("ffmpeg-converter-", processOutput.toString());
-			throw new IllegalStateException(String.format(
-				"FFmpeg exited with non-zero code: %d. See %s for details.",
-				exitCode, logPath.toAbsolutePath().toString()
-			));
+			String message = String.format(
+				"FFmpeg exited with non-zero code: %d.%s", exitCode,
+				logPath != null
+					? String.format("See %s for details.", logPath.toAbsolutePath().toString())
+					: ""
+			);
+			
+			throw new IllegalStateException(message);
+		}
+		
+		try {
+			writerLog.close();
+			writerLog = null;
+			NIO.deleteFile(logPath);
+		} catch(IOException ex) {
+			// Ignore
 		}
 		
 		for(Pair<Output, Output> pair : Utils.zipIterable(
@@ -141,13 +184,17 @@ public final class FFmpegConverter implements Converter {
 			process.close();
 		}
 		
+		if(writerLog != null) {
+			writerLog.close();
+			writerLog = null;
+		}
+		
 		matcher.dispose();
 	}
 	
 	@Override
 	public void start(ConversionCommand command) throws Exception {
 		this.command = (FFmpeg.Command) command;
-		processOutput.setLength(0);
 		state.clear(TaskStates.STARTED);
 		
 		try {
