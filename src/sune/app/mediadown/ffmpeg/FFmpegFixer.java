@@ -7,7 +7,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.regex.Matcher;
 import java.util.stream.IntStream;
 
 import sune.api.process.ReadOnlyProcess;
@@ -35,6 +34,7 @@ import sune.app.mediadown.util.Metadata;
 import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.ProcessUtils;
 import sune.app.mediadown.util.Regex;
+import sune.app.mediadown.util.Regex.ReusableMatcher;
 import sune.app.mediadown.util.Utils;
 
 /** @since 00.02.09 */
@@ -55,13 +55,14 @@ public final class FFmpegFixer implements MediaFixer {
 	private final Map<Integer, Path> mapInputs = new HashMap<>();
 	private final List<Path> tempPaths = new ArrayList<>();
 	private Exception exception;
+	private final ReusableMatcher matcher = REGEX_LINE_PROGRESS.reusableMatcher();
 	
 	public FFmpegFixer(TrackerManager trackerManager) {
 		this.trackerManager = Objects.requireNonNull(trackerManager);
 	}
 	
 	private final void outputHandler(String line) {
-		Matcher matcher = REGEX_LINE_PROGRESS.matcher(line);
+		matcher.reset(line);
 		if(!matcher.matches()) return; // Not a progress info
 		String time = matcher.group(1);
 		tracker.update(Utils.convertToSeconds(time));
@@ -310,6 +311,8 @@ public final class FFmpegFixer implements MediaFixer {
 		if(process != null) {
 			process.close();
 		}
+		
+		matcher.dispose();
 	}
 	
 	@Override
