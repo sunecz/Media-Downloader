@@ -50,8 +50,23 @@ public final class Regex {
 		Matchers.dispose(this, matcher);
 	}
 	
+	/** @since 00.02.09 */
+	public Matcher matcher() {
+		return Matchers.matcher(this);
+	}
+	
 	public Matcher matcher(CharSequence input) {
-		return Matchers.matcher(this).reset(input);
+		return matcher().reset(input);
+	}
+	
+	/** @since 00.02.09 */
+	public ReusableMatcher reusableMatcher() {
+		return new ReusableMatcher(this);
+	}
+	
+	/** @since 00.02.09 */
+	public ReusableMatcher reusableMatcher(CharSequence input) {
+		return reusableMatcher().reset(input);
 	}
 	
 	public String[] split(CharSequence input) {
@@ -163,6 +178,78 @@ public final class Regex {
 		// Forbid anyone to create an instance of this class
 		private Flags() {
 		}
+	}
+	
+	/** @since 00.02.09 */
+	public static final class ReusableMatcher implements MatchResult {
+		
+		private WeakReference<Regex> ref;
+		private Matcher matcher;
+		
+		private ReusableMatcher(Regex regex) {
+			this.ref = new WeakReference<>(regex);
+		}
+		
+		private final Matcher matcher() {
+			if(matcher == null) {
+				Regex regex;
+				if((regex = ref.get()) != null) {
+					matcher = regex.matcher();
+				}
+			}
+			
+			return matcher;
+		}
+		
+		public void dispose() {
+			if(matcher != null) {
+				Regex regex;
+				if((regex = ref.get()) != null) {
+					regex.dispose(matcher);
+				}
+			}
+			
+			matcher = null;
+		}
+		
+		@Override public int start() { return matcher().start(); }
+		@Override public int start(int group) { return matcher().start(group); }
+		@Override public int end() { return matcher().end(); }
+		@Override public int end(int group) { return matcher().end(group); }
+		@Override public String group() { return matcher().group(); }
+		@Override public String group(int group) { return matcher().group(group); }
+		@Override public int groupCount() { return matcher().groupCount(); }
+		
+		public Pattern pattern() { return matcher().pattern(); }
+		public MatchResult toMatchResult() { return matcher().toMatchResult(); }
+		public ReusableMatcher reset() { matcher().reset(); return this; }
+		public ReusableMatcher reset(CharSequence input) { matcher().reset(input); return this; }
+		public int start(String name) { return matcher().start(name); }
+		public int end(String name) { return matcher().end(name); }
+		public String group(String name) { return matcher().group(name); }
+		public boolean matches() { return matcher().matches(); }
+		public boolean find() { return matcher().find(); }
+		public boolean find(int start) { return matcher().find(start); }
+		public boolean lookingAt() { return matcher().lookingAt(); }
+		public ReusableMatcher appendReplacement(StringBuffer sb, String replacement) { matcher().appendReplacement(sb, replacement); return this; }
+		public ReusableMatcher appendReplacement(StringBuilder sb, String replacement) { matcher().appendReplacement(sb, replacement); return this; }
+		public StringBuffer appendTail(StringBuffer sb) { return matcher().appendTail(sb); }
+		public StringBuilder appendTail(StringBuilder sb) { return matcher().appendTail(sb); }
+		public String replaceAll(String replacement) { return matcher().replaceAll(replacement); }
+		public String replaceAll(Function<MatchResult, String> replacer) { return matcher().replaceAll(replacer); }
+		public Stream<MatchResult> results() { return matcher().results(); }
+		public String replaceFirst(String replacement) { return matcher().replaceFirst(replacement); }
+		public String replaceFirst(Function<MatchResult, String> replacer) { return matcher().replaceFirst(replacer); }
+		public ReusableMatcher region(int start, int end) { matcher().region(start, end); return this; }
+		public int regionStart() { return matcher().regionStart(); }
+		public int regionEnd() { return matcher().regionEnd(); }
+		public boolean hasTransparentBounds() { return matcher().hasTransparentBounds(); }
+		public ReusableMatcher useTransparentBounds(boolean b) { matcher().useTransparentBounds(b); return this; }
+		public boolean hasAnchoringBounds() { return matcher().hasAnchoringBounds(); }
+		public ReusableMatcher useAnchoringBounds(boolean b) { matcher().useAnchoringBounds(b); return this; }
+		public String toString() { return matcher().toString(); }
+		public boolean hitEnd() { return matcher().hitEnd(); }
+		public boolean requireEnd() { return matcher().requireEnd(); }
 	}
 	
 	/** @since 00.02.09 */
