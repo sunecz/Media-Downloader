@@ -767,6 +767,9 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 		
 		void update(PipelineInfo info);
 		
+		/** @since 00.02.09 */
+		String state();
+		
 		public static final class OfText implements PipelineInfoData {
 			
 			private final String state;
@@ -787,6 +790,11 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 				info.timeLeft(null);
 				info.information(text);
 			}
+			
+			@Override
+			public String state() {
+				return state;
+			}
 		}
 		
 		public static final class OfState implements PipelineInfoData {
@@ -804,6 +812,11 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 				info.progress(PipelineProgress.RESET);
 				info.state(state);
 				info.information(text);
+			}
+			
+			@Override
+			public String state() {
+				return state;
 			}
 		}
 		
@@ -829,6 +842,11 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 				info.timeLeft(null);
 				info.information(text);
 			}
+			
+			@Override
+			public String state() {
+				return state;
+			}
 		}
 		
 		public static final class OfTracker implements PipelineInfoData {
@@ -849,6 +867,11 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 				info.timeLeft(null);
 				info.information(tracker.textProgress());
 				tracker.view(info);
+			}
+			
+			@Override
+			public String state() {
+				return tracker.state();
 			}
 		}
 		
@@ -873,6 +896,11 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 				info.information(text);
 				tracker.view(info);
 			}
+			
+			@Override
+			public String state() {
+				return tracker.state();
+			}
 		}
 		
 		public static final class OfConversion implements PipelineInfoData {
@@ -895,6 +923,11 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 				info.timeLeft(null);
 				info.information(text);
 				tracker.view(info);
+			}
+			
+			@Override
+			public String state() {
+				return tracker.state();
 			}
 		}
 	}
@@ -1016,30 +1049,29 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 		private StringProperty informationProperty;
 		
 		private long lastUpdateTime = Long.MIN_VALUE;
-		private volatile boolean stateUpdated = false;
+		/** @since 00.02.09 */
+		private volatile String lastState = null;
 		private boolean isQueued;
 		
 		public PipelineInfo(Pipeline pipeline, ResolvedMedia resolvedMedia) {
 			this.pipeline = Objects.requireNonNull(pipeline);
 			this.resolvedMedia = Objects.requireNonNull(resolvedMedia);
-			this.pipeline.getEventRegistry().addMany((o) -> stateUpdated = true, STATE_UPDATE_EVENTS);
-		}
-		
-		private final StringProperty newStateProperty() {
-			StringProperty property = new SimpleStringProperty();
-			stateUpdated = true;
-			property.addListener((o, ov, nv) -> stateUpdated = true);
-			return property;
+			this.pipeline.getEventRegistry().addMany((o) -> lastState = null, STATE_UPDATE_EVENTS);
 		}
 		
 		public void update(PipelineInfoData data) {
+			boolean needsUpdate = true;
 			long now = System.nanoTime();
+			String prevState = lastState;
+			String newState = data.state();
 			
-			if(lastUpdateTime == Long.MIN_VALUE
-					|| stateUpdated
-					|| now - lastUpdateTime >= MIN_UPDATE_DIFF_TIME) {
+			if(prevState != null && prevState.equals(newState)) {
+				needsUpdate = now - lastUpdateTime >= MIN_UPDATE_DIFF_TIME || lastUpdateTime == Long.MIN_VALUE;
+			}
+			
+			if(needsUpdate) {
 				FXUtils.thread(() -> data.update(this));
-				stateUpdated = false;
+				lastState = newState;
 				lastUpdateTime = now;
 			}
 		}
@@ -1157,7 +1189,7 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 		
 		public StringProperty stateProperty() {
 			return stateProperty == null
-						? stateProperty = newStateProperty()
+						? stateProperty = new SimpleStringProperty()
 						: stateProperty;
 		}
 		
