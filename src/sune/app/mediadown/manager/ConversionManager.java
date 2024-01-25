@@ -10,13 +10,14 @@ import sune.app.mediadown.concurrent.PositionAwareQueueTaskExecutor.PositionAwar
 import sune.app.mediadown.concurrent.QueueTaskExecutor.QueueTask;
 import sune.app.mediadown.concurrent.VarLoader;
 import sune.app.mediadown.conversion.ConversionMedia;
+import sune.app.mediadown.conversion.ConversionProvider;
+import sune.app.mediadown.conversion.Conversions;
 import sune.app.mediadown.entity.Converter;
 import sune.app.mediadown.event.tracker.PipelineStates;
 import sune.app.mediadown.event.tracker.TrackerManager;
 import sune.app.mediadown.event.tracker.WaitTracker;
 import sune.app.mediadown.exception.WrappedReportContextException;
 import sune.app.mediadown.ffmpeg.FFmpeg;
-import sune.app.mediadown.ffmpeg.FFmpegConverter;
 import sune.app.mediadown.gui.table.ResolvedMedia;
 import sune.app.mediadown.media.MediaConversionContext;
 import sune.app.mediadown.report.ReportContext;
@@ -38,19 +39,14 @@ public final class ConversionManager implements QueueContext {
 	}
 	
 	/** @since 00.02.08 */
-	private final Converter createConverter() {
-		return new FFmpegConverter(new TrackerManager(new WaitTracker()));
-	}
-	
-	/** @since 00.02.08 */
-	private final QueueTask<Void> createTask(Converter converter, ResolvedMedia output,
-			List<ConversionMedia> inputs, Metadata metadata) {
-		return new FFmpegTask(converter, output, inputs, metadata);
-	}
-	
-	/** @since 00.02.08 */
 	public static final ConversionManager instance() {
 		return instance.value();
+	}
+	
+	/** @since 00.02.09 */
+	private final ConversionProvider conversionProvider() {
+		// TODO: Make configurable
+		return Conversions.Providers.ofName(FFmpeg.Provider.NAME);
 	}
 	
 	/** @since 00.02.08 */
@@ -60,8 +56,10 @@ public final class ConversionManager implements QueueContext {
 			throw new IllegalArgumentException();
 		}
 		
-		Converter converter = createConverter();
-		PositionAwareQueueTaskResult<Void> taskResult = executor.submit(createTask(converter, output, inputs, metadata));
+		ConversionProvider provider = conversionProvider();
+		Converter converter = provider.createConverter(new TrackerManager(new WaitTracker()));
+		ConversionTask task = new ConversionTask(provider, converter, output, inputs, metadata);
+		PositionAwareQueueTaskResult<Void> taskResult = executor.submit(task);
 		
 		return new PositionAwareManagerSubmitResult<>(converter, taskResult, this);
 	}
@@ -85,14 +83,18 @@ public final class ConversionManager implements QueueContext {
 	}
 	
 	/** @since 00.02.08 */
-	private static final class FFmpegTask implements QueueTask<Void>, MediaConversionContext {
+	private static final class ConversionTask implements QueueTask<Void>, MediaConversionContext {
 		
+		/** @since 00.02.09 */
+		private final ConversionProvider provider;
 		private final Converter converter;
 		private final ResolvedMedia output;
 		private final List<ConversionMedia> inputs;
 		private final Metadata metadata;
 		
-		public FFmpegTask(Converter converter, ResolvedMedia output, List<ConversionMedia> inputs, Metadata metadata) {
+		public ConversionTask(ConversionProvider provider, Converter converter, ResolvedMedia output,
+				List<ConversionMedia> inputs, Metadata metadata) {
+			this.provider = Objects.requireNonNull(provider);
 			this.converter = Objects.requireNonNull(converter);
 			this.output = Objects.requireNonNull(output);
 			this.inputs = Objects.requireNonNull(inputs);
@@ -107,7 +109,7 @@ public final class ConversionManager implements QueueContext {
 		@Override
 		public Void call() throws Exception {
 			try {
-				converter.start(FFmpeg.Command.of(output, inputs, metadata));
+				converter.start(provider.createCommand(output, inputs, metadata));
 				return null;
 			} catch(Exception ex) {
 				throw new WrappedReportContextException(ex, createContext());

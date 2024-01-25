@@ -40,6 +40,7 @@ import sune.app.mediadown.configuration.ApplicationConfiguration;
 import sune.app.mediadown.configuration.ApplicationConfigurationAccessor;
 import sune.app.mediadown.configuration.ApplicationConfigurationAccessor.UsePreReleaseVersions;
 import sune.app.mediadown.configuration.Configuration;
+import sune.app.mediadown.conversion.Conversions;
 import sune.app.mediadown.download.DownloadConfiguration;
 import sune.app.mediadown.download.FileDownloader;
 import sune.app.mediadown.event.CheckEvent;
@@ -679,10 +680,22 @@ public final class MediaDownloader {
 			public InitializationState run(Arguments args) {
 				if(FXUtils.isInitialized())
 					GUI.registerWindows();
-				return new InitializeDefaultPlugins();
+				return new InitializeDefaults();
 			}
 			
 			@Override public String getTitle() { return "Registering windows..."; }
+		}
+		
+		/** @since 00.02.09 */
+		private static final class InitializeDefaults implements InitializationState {
+			
+			@Override
+			public InitializationState run(Arguments args) {
+				Ignore.callVoid(MediaDownloader::initDefaults, MediaDownloader::error);
+				return new InitializeDefaultPlugins();
+			}
+			
+			@Override public String getTitle() { return "Initializing defaults..."; }
 		}
 		
 		private static final class InitializeDefaultPlugins implements InitializationState {
@@ -1879,6 +1892,11 @@ public final class MediaDownloader {
 		} catch(IOException ex) {
 			error(ex);
 		}
+	}
+	
+	/** @since 00.02.09 */
+	private static final void initDefaults() throws ClassNotFoundException {
+		Conversions.Providers.register("sune.app.mediadown.ffmpeg.FFmpeg$Provider");
 	}
 	
 	private static final class GUI {

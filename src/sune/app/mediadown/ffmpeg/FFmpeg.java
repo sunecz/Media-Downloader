@@ -1,24 +1,24 @@
 package sune.app.mediadown.ffmpeg;
 
 import java.nio.file.Path;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import sune.api.process.Processes;
 import sune.api.process.ReadOnlyProcess;
+import sune.app.mediadown.conversion.AbstractConversionProvider;
 import sune.app.mediadown.conversion.ConversionCommand;
-import sune.app.mediadown.conversion.ConversionFormat;
-import sune.app.mediadown.conversion.ConversionMedia;
 import sune.app.mediadown.conversion.ConversionCommand.Input;
 import sune.app.mediadown.conversion.ConversionCommand.Option;
 import sune.app.mediadown.conversion.ConversionCommand.Output;
+import sune.app.mediadown.conversion.ConversionFormat;
+import sune.app.mediadown.conversion.ConversionMedia;
+import sune.app.mediadown.entity.Converter;
+import sune.app.mediadown.event.tracker.TrackerManager;
 import sune.app.mediadown.gui.table.ResolvedMedia;
 import sune.app.mediadown.media.AudioMedia;
 import sune.app.mediadown.media.Media;
@@ -30,7 +30,6 @@ import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.OSUtils;
 import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.Regex;
-import sune.app.mediadown.util.Utils.Ignore;
 
 /** @since 00.02.08 */
 public final class FFmpeg {
@@ -65,7 +64,7 @@ public final class FFmpeg {
 		return Processes.createAsynchronous(path(), listener);
 	}
 	
-	public static final class Formats {
+	private static final class Formats {
 		
 		private static final String DEFAULT_AUDIO_BIT_RATE = "320k";
 		private static final String DEFAULT_AUDIO_CHANNELS = "2";
@@ -74,30 +73,6 @@ public final class FFmpeg {
 		private static final int RESULT_NONE = 0;
 		private static final int RESULT_COPY = 1;
 		private static final int RESULT_REENCODE = 2;
-		
-		private static final Map<String, ConversionFormat> formats = new HashMap<>();
-		
-		// Video formats
-		public static final ConversionFormat MP4  = new VideoConversionFormat.MP4();
-		public static final ConversionFormat FLV  = new VideoConversionFormat.FLV();
-		public static final ConversionFormat AVI  = new VideoConversionFormat.AVI();
-		public static final ConversionFormat MKV  = new VideoConversionFormat.MKV();
-		public static final ConversionFormat WMV  = new VideoConversionFormat.WMV();
-		public static final ConversionFormat WEBM = new VideoConversionFormat.WEBMV();
-		public static final ConversionFormat OGG  = new VideoConversionFormat.OGGV();
-		
-		// Audio formats
-		public static final ConversionFormat MP3 = new AudioConversionFormat(MediaFormat.MP3, "mp3");
-		public static final ConversionFormat WAV = new AudioConversionFormat(MediaFormat.WAV, "pcm_s16le");
-		public static final ConversionFormat WMA = new AudioConversionFormat(MediaFormat.WMA, "wmav2");
-		
-		static {
-			Stream.of(Formats.class.getFields())
-				.filter((f) -> ConversionFormat.class.isAssignableFrom(f.getType()))
-				.map((f) -> Ignore.call(() -> (ConversionFormat) f.get(null)))
-				.filter(Objects::nonNull)
-				.forEach((v) -> formats.put(v.format().name(), v));
-		}
 		
 		// Forbid anyone to create an instance of this class
 		private Formats() {
@@ -121,14 +96,6 @@ public final class FFmpeg {
 		
 		private static final boolean isAudioSeparated(Media root) {
 			return !root.format().is(MediaFormat.M3U8) && Media.findOfType(root, MediaType.AUDIO) != null;
-		}
-		
-		public static final ConversionFormat of(MediaFormat format) {
-			if(format == null || format.is(MediaFormat.UNKNOWN)) {
-				throw new IllegalArgumentException("Unknown format");
-			}
-			
-			return formats.get(format.name());
 		}
 		
 		private static abstract class VideoConversionFormat extends ConversionFormat {
@@ -175,13 +142,13 @@ public final class FFmpeg {
 				}
 			}
 			
-			public static final class MP4 extends VideoConversionFormat {
+			private static abstract class MP4Compatible extends VideoConversionFormat {
 				
 				private static final String DEFAULT_VIDEO_PRESET = "fast";
 				private static final String DEFAULT_VIDEO_CRF = "20";
 				
-				public MP4() {
-					super(MediaFormat.MP4);
+				protected MP4Compatible(MediaFormat format) {
+					super(format);
 				}
 				
 				@Override
@@ -254,41 +221,24 @@ public final class FFmpeg {
 				}
 			}
 			
-			public static final class FLV extends VideoConversionFormat {
+			public static final class MP4 extends MP4Compatible {
+				
+				public MP4() {
+					super(MediaFormat.MP4);
+				}
+			}
+			
+			public static final class FLV extends MP4Compatible {
 				
 				public FLV() {
 					super(MediaFormat.FLV);
 				}
-				
-				@Override
-				protected final int ensureVideo(Media media, int index, Input.Builder input, Output.Builder output,
-						Metadata metadata, boolean force) {
-					return ((VideoConversionFormat) MP4).ensureVideo(media, index, input, output, metadata, force);
-				}
-				
-				@Override
-				protected final int ensureAudio(Media media, int index, Input.Builder input, Output.Builder output,
-						Metadata metadata, boolean force) {
-					return ((VideoConversionFormat) MP4).ensureAudio(media, index, input, output, metadata, force);
-				}
 			}
 			
-			public static final class AVI extends VideoConversionFormat {
+			public static final class AVI extends MP4Compatible {
 				
 				public AVI() {
 					super(MediaFormat.AVI);
-				}
-				
-				@Override
-				protected final int ensureVideo(Media media, int index, Input.Builder input, Output.Builder output,
-						Metadata metadata, boolean force) {
-					return ((VideoConversionFormat) MP4).ensureVideo(media, index, input, output, metadata, force);
-				}
-				
-				@Override
-				protected final int ensureAudio(Media media, int index, Input.Builder input, Output.Builder output,
-						Metadata metadata, boolean force) {
-					return ((VideoConversionFormat) MP4).ensureAudio(media, index, input, output, metadata, force);
 				}
 			}
 			
@@ -313,22 +263,10 @@ public final class FFmpeg {
 				}
 			}
 			
-			public static final class WMV extends VideoConversionFormat {
+			public static final class WMV extends MP4Compatible {
 				
 				public WMV() {
 					super(MediaFormat.WMV);
-				}
-				
-				@Override
-				protected final int ensureVideo(Media media, int index, Input.Builder input, Output.Builder output,
-						Metadata metadata, boolean force) {
-					return ((VideoConversionFormat) MP4).ensureVideo(media, index, input, output, metadata, force);
-				}
-				
-				@Override
-				protected final int ensureAudio(Media media, int index, Input.Builder input, Output.Builder output,
-						Metadata metadata, boolean force) {
-					return ((VideoConversionFormat) MP4).ensureAudio(media, index, input, output, metadata, force);
 				}
 			}
 			
@@ -556,40 +494,103 @@ public final class FFmpeg {
 		}
 	}
 	
-	public static final class Command extends ConversionCommand {
+	/** @since 00.02.09 */
+	public static final class Provider extends AbstractConversionProvider {
 		
-		private String string;
+		public static final String NAME = "ffmpeg";
 		
-		protected Command(List<Input> inputs, List<Output> outputs, List<Option> options, Metadata metadata) {
-			super(inputs, outputs, options, metadata);
+		// Allow instantiation outside of this class
+		Provider() {
+			registerDefaultFormats();
 		}
 		
-		public static final Builder builder() {
-			return new Builder();
-		}
-		
-		public static final Builder builder(Command command) {
-			return new Builder(command);
-		}
-		
-		public static final Command of(ResolvedMedia output, List<ConversionMedia> inputs) {
-			return of(output, inputs, Metadata.empty());
-		}
-		
-		public static final Command of(ResolvedMedia output, List<ConversionMedia> inputs, Metadata metadata) {
-			return Creator.create(output, inputs, metadata);
-		}
-		
-		private final String construct() {
-			return (new Constructor(this)).string();
+		private final void registerDefaultFormats() {
+			// Video formats
+			register(new Formats.VideoConversionFormat.MP4());
+			register(new Formats.VideoConversionFormat.FLV());
+			register(new Formats.VideoConversionFormat.AVI());
+			register(new Formats.VideoConversionFormat.MKV());
+			register(new Formats.VideoConversionFormat.WMV());
+			register(new Formats.VideoConversionFormat.WEBMV());
+			register(new Formats.VideoConversionFormat.OGGV());
+			// Audio formats
+			register(new Formats.AudioConversionFormat(MediaFormat.MP3, "mp3"));
+			register(new Formats.AudioConversionFormat(MediaFormat.WAV, "pcm_s16le"));
+			register(new Formats.AudioConversionFormat(MediaFormat.WMA, "wmav2"));
 		}
 		
 		@Override
-		public String string() {
-			return string == null ? (string = construct()) : string;
+		public Converter createConverter(TrackerManager trackerManager) {
+			return new FFmpegConverter(trackerManager);
 		}
 		
-		private static final class Creator {
+		@Override
+		public ConversionCommand createCommand(ResolvedMedia output, List<ConversionMedia> inputs, Metadata metadata) {
+			if(output == null) {
+				throw new IllegalArgumentException("Output cannot be null.");
+			}
+			
+			if(inputs == null || inputs.isEmpty()) {
+				throw new IllegalArgumentException("Inputs cannot be neither null nor empty.");
+			}
+			
+			if(metadata == null) {
+				throw new IllegalArgumentException("Metadata cannot be null.");
+			}
+			
+			Command.Builder command = Command.builder();
+			MediaFormat formatInput = Media.root(inputs.get(0).media()).format();
+			MediaFormat formatOutput = output.configuration().outputFormat();
+			Output.Builder out = Output.ofMutable(output.path());
+			
+			command.addOptions(
+				Options.yes(),
+				Options.hideBanner(),
+				Options.logWarning(),
+				Options.stats()
+			);
+			
+			Metadata metadataInput
+				= metadata.has("noExplicitInputFormat")
+					? Metadata.of("noExplicitFormat", true).seal()
+					: Metadata.empty();
+			
+			List<Pair<Media, Input.Builder>> mutableInputs = inputs.stream()
+				.map((i) -> new Pair<>(i.media(), Input.ofMutable(i.path(), List.of(), metadataInput)))
+				.collect(Collectors.toList());
+			
+			ConversionFormat format = formatOf(formatOutput);
+			
+			if(format == null) {
+				throw new IllegalStateException(String.format(
+						"Unable to create FFmpeg command: input=%s, output=%s",
+						formatInput, formatOutput
+					));
+			}
+			
+			for(int i = 0, l = mutableInputs.size(); i < l; ++i) {
+				Pair<Media, Input.Builder> pair = mutableInputs.get(i);
+				format.from(pair.a, i, pair.b, out, metadata);
+			}
+			
+			for(Pair<Media, Input.Builder> pair : mutableInputs) {
+				command.addInputs(pair.b.asFormat(pair.a.format()));
+			}
+			
+			CommandOptimizer.optimizeOutput(out, mutableInputs.size());
+			command.addOutputs(out.asFormat(formatOutput));
+			command.addMetadata(metadata);
+			
+			return command.build();
+		}
+		
+		@Override
+		public String name() {
+			return NAME;
+		}
+		
+		/** @since 00.02.09 */
+		private static final class CommandOptimizer {
 			
 			private static final Regex REGEX_CODEC_COPY = Regex.of("^c:(?:([va]):)?(\\d+)$");
 			private static final int VALUE_TYPE_VIDEO = 0b1 << 0;
@@ -597,14 +598,14 @@ public final class FFmpeg {
 			private static final int VALUE_TYPE_ALL = VALUE_TYPE_VIDEO | VALUE_TYPE_AUDIO;
 			
 			// Forbid anyone to create an instance of this class
-			private Creator() {
+			private CommandOptimizer() {
 			}
 			
 			// Optimizes the output options in such a way that when the codec of both video and
 			// audio should be copied it replaces these two options by a single one. This will
 			// actually speed up the whole conversion process, since no stream selection will take
 			// place.
-			private static final void optimizeOutput(Output.Builder output, int numOfInputs) {
+			public static final void optimizeOutput(Output.Builder output, int numOfInputs) {
 				int[] codecCopy = new int[numOfInputs];
 				
 				for(Option option : output.options()) {
@@ -663,71 +664,39 @@ public final class FFmpeg {
 					output.addOptions(Options.streamCodecCopy(i));
 				}
 			}
-			
-			public static final Command create(ResolvedMedia output, List<ConversionMedia> inputs,
-					Metadata metadata) {
-				if(output == null) {
-					throw new IllegalArgumentException("Output cannot be null.");
-				}
-				
-				if(inputs == null || inputs.isEmpty()) {
-					throw new IllegalArgumentException("Inputs cannot be neither null nor empty.");
-				}
-				
-				if(metadata == null) {
-					throw new IllegalArgumentException("Metadata cannot be null.");
-				}
-				
-				Command.Builder command = Command.builder();
-				MediaFormat formatInput = Media.root(inputs.get(0).media()).format();
-				MediaFormat formatOutput = output.configuration().outputFormat();
-				Output.Builder out = Output.ofMutable(output.path());
-				
-				command.addOptions(
-					Options.yes(),
-					Options.hideBanner(),
-					Options.logWarning(),
-					Options.stats()
-				);
-				
-				Metadata metadataInput
-					= metadata.has("noExplicitInputFormat")
-						? Metadata.of("noExplicitFormat", true).seal()
-						: Metadata.empty();
-				
-				List<Pair<Media, Input.Builder>> mutableInputs = inputs.stream()
-					.map((i) -> new Pair<>(i.media(), Input.ofMutable(i.path(), List.of(), metadataInput)))
-					.collect(Collectors.toList());
-				
-				ConversionFormat format = Formats.of(formatOutput);
-				
-				if(format == null) {
-					throw new IllegalStateException(String.format(
-  						"Unable to create FFmpeg command: input=%s, output=%s",
-  						formatInput, formatOutput
-  					));
-				}
-				
-				for(int i = 0, l = mutableInputs.size(); i < l; ++i) {
-					Pair<Media, Input.Builder> pair = mutableInputs.get(i);
-					format.from(pair.a, i, pair.b, out, metadata);
-				}
-				
-				for(Pair<Media, Input.Builder> pair : mutableInputs) {
-					command.addInputs(pair.b.asFormat(pair.a.format()));
-				}
-				
-				optimizeOutput(out, mutableInputs.size());
-				command.addOutputs(out.asFormat(formatOutput));
-				command.addMetadata(metadata);
-				
-				return command.build();
-			}
+		}
+	}
+	
+	public static final class Command extends ConversionCommand {
+		
+		private String string;
+		
+		protected Command(List<Input> inputs, List<Output> outputs, List<Option> options, Metadata metadata) {
+			super(inputs, outputs, options, metadata);
+		}
+		
+		public static final Builder builder() {
+			return new Builder();
+		}
+		
+		public static final Builder builder(Command command) {
+			return new Builder(command);
+		}
+		
+		private final String construct() {
+			return (new Constructor(this)).string();
+		}
+		
+		@Override
+		public String string() {
+			return string == null ? (string = construct()) : string;
 		}
 		
 		private static final class Constructor {
 			
 			private static final Regex REGEX_NEEDS_QUOTES = Regex.of("[\\s\"']");
+			/** @since 00.02.09 */
+			private static final Regex REGEX_ESCAPE = Regex.of("\"");
 			
 			private final Command command;
 			
@@ -740,7 +709,7 @@ public final class FFmpeg {
 			}
 			
 			private final String escape(String value) {
-				return value.replaceAll("\"", "\\\"");
+				return REGEX_ESCAPE.replaceAll(value, "\\\"");
 			}
 			
 			private final void handle(StringBuilder builder, boolean isLong, String name, String value,
