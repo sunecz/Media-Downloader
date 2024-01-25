@@ -9,19 +9,19 @@ import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.stream.Stream;
 
-import sune.app.mediadown.concurrent.ValidableValue;
+import sune.app.mediadown.concurrent.VarLoader;
 import sune.app.mediadown.util.Utils;
 
 /** @since 00.02.05 */
 public final class MediaFormat {
 	
 	private static final Map<String, MediaFormat> registered = new LinkedHashMap<>();
-	private static final ValidableValue<MediaFormat[]> values;
-	private static final ValidableValue<MediaFormat[]> outputFormats;
+	private static final VarLoader<MediaFormat[]> values;
+	private static final VarLoader<MediaFormat[]> outputFormats;
 	
 	static {
-		values = ValidableValue.of(MediaFormat::newValues);
-		outputFormats = ValidableValue.of(MediaFormat::newOutputFormats);
+		values = VarLoader.of(MediaFormat::newValues);
+		outputFormats = VarLoader.of(MediaFormat::newOutputFormats);
 	}
 	
 	private static final BiFunction<MediaFormat, String, Boolean> PREDICATE_EXTENSIONS
@@ -133,8 +133,8 @@ public final class MediaFormat {
 				throw new IllegalStateException("Media format \"" + format.name + "\" already registered.");
 			}
 			
-			values.invalidate();
-			outputFormats.invalidate();
+			values.unset();
+			outputFormats.unset();
 		}
 	}
 	

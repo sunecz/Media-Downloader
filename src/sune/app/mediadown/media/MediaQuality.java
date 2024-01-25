@@ -10,7 +10,7 @@ import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.stream.Stream;
 
-import sune.app.mediadown.concurrent.ValidableValue;
+import sune.app.mediadown.concurrent.VarLoader;
 import sune.app.mediadown.util.ComparatorCombiner;
 import sune.app.mediadown.util.Regex;
 import sune.app.mediadown.util.Utils;
@@ -19,12 +19,12 @@ import sune.app.mediadown.util.Utils;
 public final class MediaQuality implements Comparable<MediaQuality> {
 	
 	private static final Map<String, MediaQuality> registered = new LinkedHashMap<>();
-	private static final ValidableValue<MediaQuality[]> values;
-	private static final ValidableValue<MediaQuality[]> validQualities;
+	private static final VarLoader<MediaQuality[]> values;
+	private static final VarLoader<MediaQuality[]> validQualities;
 	
 	static {
-		values = ValidableValue.of(MediaQuality::newValues);
-		validQualities = ValidableValue.of(MediaQuality::newValidQualities);
+		values = VarLoader.of(MediaQuality::newValues);
+		validQualities = VarLoader.of(MediaQuality::newValidQualities);
 	}
 	
 	private static final List<MediaQualityParser> parsers = new ArrayList<>();
@@ -107,8 +107,8 @@ public final class MediaQuality implements Comparable<MediaQuality> {
 				throw new IllegalStateException("Media quality \"" + quality.name + "\" already registered.");
 			}
 			
-			values.invalidate();
-			validQualities.invalidate();
+			values.unset();
+			validQualities.unset();
 		}
 	}
 	

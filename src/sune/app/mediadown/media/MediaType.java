@@ -6,16 +6,16 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Stream;
 
-import sune.app.mediadown.concurrent.ValidableValue;
+import sune.app.mediadown.concurrent.VarLoader;
 
 /** @since 00.02.05 */
 public final class MediaType {
 	
 	private static final Map<String, MediaType> registered = new LinkedHashMap<>();
-	private static final ValidableValue<MediaType[]> values;
+	private static final VarLoader<MediaType[]> values;
 	
 	static {
-		values = ValidableValue.of(MediaType::newValues);
+		values = VarLoader.of(MediaType::newValues);
 	}
 	
 	// Special media types
@@ -51,7 +51,7 @@ public final class MediaType {
 				throw new IllegalStateException("Media type \"" + type.name + "\" already registered.");
 			}
 			
-			values.invalidate();
+			values.unset();
 		}
 	}
 	

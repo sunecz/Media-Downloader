@@ -9,19 +9,19 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Stream;
 
-import sune.app.mediadown.concurrent.ValidableValue;
+import sune.app.mediadown.concurrent.VarLoader;
 import sune.app.mediadown.util.Utils;
 
 /** @since 00.02.05 */
 public final class MediaLanguage {
 	
 	private static final Map<String, MediaLanguage> registered = new LinkedHashMap<>();
-	private static final ValidableValue<MediaLanguage[]> values;
-	private static final ValidableValue<MediaLanguage[]> determinedLanguages;
+	private static final VarLoader<MediaLanguage[]> values;
+	private static final VarLoader<MediaLanguage[]> determinedLanguages;
 	
 	static {
-		values = ValidableValue.of(MediaLanguage::newValues);
-		determinedLanguages = ValidableValue.of(MediaLanguage::newDeterminedLanguages);
+		values = VarLoader.of(MediaLanguage::newValues);
+		determinedLanguages = VarLoader.of(MediaLanguage::newDeterminedLanguages);
 	}
 	
 	// Special media languages
@@ -159,8 +159,8 @@ public final class MediaLanguage {
 				throw new IllegalStateException("Media language \"" + language.name + "\" already registered.");
 			}
 			
-			values.invalidate();
-			determinedLanguages.invalidate();
+			values.unset();
+			determinedLanguages.unset();
 		}
 	}
 	
