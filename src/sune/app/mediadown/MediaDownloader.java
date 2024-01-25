@@ -1,5 +1,13 @@
 package sune.app.mediadown;
 
+import static sune.app.mediadown.gui.window.ConfigurationWindow.isOfEnumClass;
+import static sune.app.mediadown.gui.window.ConfigurationWindow.isOfName;
+import static sune.app.mediadown.gui.window.ConfigurationWindow.isOfTypeClass;
+import static sune.app.mediadown.gui.window.ConfigurationWindow.localValueTranslator;
+import static sune.app.mediadown.gui.window.ConfigurationWindow.predefineGroups;
+import static sune.app.mediadown.gui.window.ConfigurationWindow.registerFormField;
+import static sune.app.mediadown.gui.window.ConfigurationWindow.typeFormFieldSupplier;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -57,6 +65,12 @@ import sune.app.mediadown.event.tracker.DownloadTracker;
 import sune.app.mediadown.event.tracker.TrackerManager;
 import sune.app.mediadown.gui.Dialog;
 import sune.app.mediadown.gui.Window;
+import sune.app.mediadown.gui.form.field.PasswordField;
+import sune.app.mediadown.gui.form.field.SelectLanguageField;
+import sune.app.mediadown.gui.form.field.SelectMediaTitleFormatField;
+import sune.app.mediadown.gui.form.field.SelectThemeField;
+import sune.app.mediadown.gui.form.field.TextFieldMediaTitleFormat;
+import sune.app.mediadown.gui.form.field.TranslatableSelectField.ValueTransformer;
 import sune.app.mediadown.gui.window.AboutWindow;
 import sune.app.mediadown.gui.window.ClipboardWatcherWindow;
 import sune.app.mediadown.gui.window.ConfigurationWindow;
@@ -80,6 +94,7 @@ import sune.app.mediadown.library.NativeLibrary;
 import sune.app.mediadown.logging.Log;
 import sune.app.mediadown.media.MediaFormat;
 import sune.app.mediadown.media.MediaTitleFormat;
+import sune.app.mediadown.media.MediaTitleFormats.NamedMediaTitleFormat;
 import sune.app.mediadown.net.Net;
 import sune.app.mediadown.net.Web;
 import sune.app.mediadown.net.Web.Request;
@@ -114,6 +129,7 @@ import sune.app.mediadown.util.MathUtils;
 import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.OSUtils;
 import sune.app.mediadown.util.Pair;
+import sune.app.mediadown.util.Password;
 import sune.app.mediadown.util.PathSystem;
 import sune.app.mediadown.util.Ref;
 import sune.app.mediadown.util.Reflection2;
@@ -1897,7 +1913,44 @@ public final class MediaDownloader {
 	
 	/** @since 00.02.09 */
 	private static final void initDefaults() throws ClassNotFoundException {
+		// <---- Conversion providers
 		Conversions.Providers.register("sune.app.mediadown.ffmpeg.FFmpeg$Provider");
+		// Conversion providers ---->
+		
+		// <---- Configuration window
+		// Ensure that main groups are in a specific order
+		predefineGroups(
+			ApplicationConfigurationAccessor.GROUP_GENERAL,
+			ApplicationConfigurationAccessor.GROUP_DOWNLOAD,
+			ApplicationConfigurationAccessor.GROUP_CONVERSION,
+			ApplicationConfigurationAccessor.GROUP_NAMING,
+			ApplicationConfigurationAccessor.GROUP_PLUGINS
+		);
+		// Built-in form fields
+		registerFormField(isOfTypeClass(Password.class, PasswordField::new));
+		registerFormField(isOfTypeClass(Language.class, SelectLanguageField::new));
+		registerFormField(isOfTypeClass(Theme.class, SelectThemeField::new));
+		registerFormField(isOfEnumClass(UsePreReleaseVersions.class, UsePreReleaseVersions::validValues,
+			ValueTransformer.of(UsePreReleaseVersions::of, Enum::name, localValueTranslator(
+				ApplicationConfigurationAccessor.PROPERTY_USE_PRE_RELEASE_VERSIONS, Enum::name
+			))
+		));
+		registerFormField(isOfTypeClass(NamedMediaTitleFormat.class, SelectMediaTitleFormatField::new));
+		registerFormField(isOfName(
+			ApplicationConfigurationAccessor.PROPERTY_NAMING_CUSTOM_MEDIA_TITLE_FORMAT,
+			TextFieldMediaTitleFormat::new
+		));
+		registerFormField(isOfTypeClass(ConversionProvider.class, typeFormFieldSupplier(
+			Conversions.Providers.registry()::allValues,
+			ValueTransformer.of(
+				Conversions.Providers::ofName, ConversionProvider::name,
+				localValueTranslator(
+					ApplicationConfigurationAccessor.PROPERTY_CONVERSION_PROVIDER,
+					ConversionProvider::name
+				)
+			)
+		)));
+		// Configuration ---->
 	}
 	
 	private static final class GUI {

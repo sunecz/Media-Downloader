@@ -45,8 +45,6 @@ import sune.app.mediadown.configuration.Configuration.ConfigurationPropertyType;
 import sune.app.mediadown.configuration.Configuration.NullTypeConfigurationProperty;
 import sune.app.mediadown.configuration.Configuration.TypeConfigurationProperty;
 import sune.app.mediadown.configuration.ConfigurationReloadable;
-import sune.app.mediadown.conversion.ConversionProvider;
-import sune.app.mediadown.conversion.Conversions;
 import sune.app.mediadown.gui.Dialog;
 import sune.app.mediadown.gui.DraggableWindow;
 import sune.app.mediadown.gui.control.FixedWidthTreeView;
@@ -55,27 +53,18 @@ import sune.app.mediadown.gui.form.FormBuilder;
 import sune.app.mediadown.gui.form.FormField;
 import sune.app.mediadown.gui.form.field.CheckBoxField;
 import sune.app.mediadown.gui.form.field.IntegerField;
-import sune.app.mediadown.gui.form.field.PasswordField;
 import sune.app.mediadown.gui.form.field.SelectField;
-import sune.app.mediadown.gui.form.field.SelectLanguageField;
-import sune.app.mediadown.gui.form.field.SelectMediaTitleFormatField;
-import sune.app.mediadown.gui.form.field.SelectThemeField;
 import sune.app.mediadown.gui.form.field.TextField;
-import sune.app.mediadown.gui.form.field.TextFieldMediaTitleFormat;
 import sune.app.mediadown.gui.form.field.TranslatableSelectField;
 import sune.app.mediadown.gui.form.field.TranslatableSelectField.ValueTransformer;
-import sune.app.mediadown.language.Language;
 import sune.app.mediadown.language.Translation;
-import sune.app.mediadown.media.MediaTitleFormats.NamedMediaTitleFormat;
 import sune.app.mediadown.plugin.PluginFile;
 import sune.app.mediadown.plugin.Plugins;
 import sune.app.mediadown.resource.Resources.StringReceiver;
-import sune.app.mediadown.theme.Theme;
 import sune.app.mediadown.update.Version;
 import sune.app.mediadown.update.VersionType;
 import sune.app.mediadown.util.FXUtils;
 import sune.app.mediadown.util.NIO;
-import sune.app.mediadown.util.Password;
 import sune.app.mediadown.util.Regex;
 import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Utils.Ignore;
@@ -89,43 +78,7 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 	/** @since 00.02.07 */
 	private static final List<FormFieldSupplierFactory> formFieldSupplierFactories = new LinkedList<>();
 	/** @since 00.02.09 */
-	private static final List<String> groups;
-	
-	static {
-		// Ensure that main groups are in a specific order
-		groups = List.of(
-			ApplicationConfigurationAccessor.GROUP_GENERAL,
-			ApplicationConfigurationAccessor.GROUP_DOWNLOAD,
-			ApplicationConfigurationAccessor.GROUP_CONVERSION,
-			ApplicationConfigurationAccessor.GROUP_NAMING,
-			ApplicationConfigurationAccessor.GROUP_PLUGINS
-		);
-		
-		// Built-in form fields
-		registerFormField(isOfTypeClass(Password.class, PasswordField::new));
-		registerFormField(isOfTypeClass(Language.class, SelectLanguageField::new));
-		registerFormField(isOfTypeClass(Theme.class, SelectThemeField::new));
-		registerFormField(isOfEnumClass(UsePreReleaseVersions.class, UsePreReleaseVersions::validValues,
-			ValueTransformer.of(UsePreReleaseVersions::of, Enum::name, localValueTranslator(
-				ApplicationConfigurationAccessor.PROPERTY_USE_PRE_RELEASE_VERSIONS, Enum::name
-			))
-		));
-		registerFormField(isOfTypeClass(NamedMediaTitleFormat.class, SelectMediaTitleFormatField::new));
-		registerFormField(isOfName(
-			ApplicationConfigurationAccessor.PROPERTY_NAMING_CUSTOM_MEDIA_TITLE_FORMAT,
-			TextFieldMediaTitleFormat::new
-		));
-		registerFormField(isOfTypeClass(ConversionProvider.class, typeFormFieldSupplier(
-			Conversions.Providers.registry()::allValues,
-			ValueTransformer.of(
-				Conversions.Providers::ofName, ConversionProvider::name,
-				localValueTranslator(
-					ApplicationConfigurationAccessor.PROPERTY_CONVERSION_PROVIDER,
-					ConversionProvider::name
-				)
-			)
-		)));
-	}
+	private static final List<String> groups = new ArrayList<>();
 	
 	/** @since 00.02.07 */
 	private final Map<String, FormBuilder> formBuilders = new LinkedHashMap<>();
@@ -183,7 +136,7 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 	}
 	
 	/** @since 00.02.07 */
-	private static final <T> Function<T, String> localValueTranslator(String propertyName,
+	public static final <T> Function<T, String> localValueTranslator(String propertyName,
 			Function<T, String> stringConverter) {
 		Objects.requireNonNull(propertyName);
 		return valueTranslator("windows." + NAME + ".values." + propertyName, stringConverter);
@@ -284,6 +237,11 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 		
 		Translation tr = MediaDownloader.translation().getTranslation(translationPath);
 		return ((v) -> tr.getSingle(stringConverter.apply(v)));
+	}
+	
+	/** @since 00.02.09 */
+	public static final void predefineGroups(String... groupNames) {
+		groups.addAll(List.of(groupNames));
 	}
 	
 	/** @since 00.02.07 */
