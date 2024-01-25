@@ -4,6 +4,7 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.stream.Stream;
 
+import sune.app.mediadown.conversion.ConversionProvider;
 import sune.app.mediadown.language.Language;
 import sune.app.mediadown.media.MediaFormat;
 import sune.app.mediadown.media.MediaTitleFormat;
@@ -59,6 +60,8 @@ public interface ApplicationConfigurationAccessor extends ConfigurationLocatable
 	public static final String PROPERTY_USE_PRE_RELEASE_VERSIONS = "usePreReleaseVersions";
 	/** @since 00.02.07 */
 	public static final String PROPERTY_AUTO_ENABLE_CLIPBOARD_WATCHER = "autoEnableClipboardWatcher";
+	/** @since 00.02.09 */
+	public static final String PROPERTY_CONVERSION_PROVIDER = "conversionProvider";
 	
 	Version version();
 	Language language();
@@ -88,6 +91,8 @@ public interface ApplicationConfigurationAccessor extends ConfigurationLocatable
 	UsePreReleaseVersions usePreReleaseVersions();
 	/** @since 00.02.07 */
 	boolean autoEnableClipboardWatcher();
+	/** @since 00.02.09 */
+	ConversionProvider conversionProvider();
 	
 	SSDCollection data();
 	

@@ -40,6 +40,7 @@ import sune.app.mediadown.configuration.ApplicationConfiguration;
 import sune.app.mediadown.configuration.ApplicationConfigurationAccessor;
 import sune.app.mediadown.configuration.ApplicationConfigurationAccessor.UsePreReleaseVersions;
 import sune.app.mediadown.configuration.Configuration;
+import sune.app.mediadown.conversion.ConversionProvider;
 import sune.app.mediadown.conversion.Conversions;
 import sune.app.mediadown.download.DownloadConfiguration;
 import sune.app.mediadown.download.FileDownloader;
@@ -643,10 +644,22 @@ public final class MediaDownloader {
 			@Override
 			public InitializationState run(Arguments args) {
 				loadMiscellaneousResources(InitializationStates::setText);
-				return new FinalizeConfiguration();
+				return new InitializeDefaults();
 			}
 			
 			@Override public String getTitle() { return "Initializating miscellaneous resources..."; }
+		}
+		
+		/** @since 00.02.09 */
+		private static final class InitializeDefaults implements InitializationState {
+			
+			@Override
+			public InitializationState run(Arguments args) {
+				Ignore.callVoid(MediaDownloader::initDefaults, MediaDownloader::error);
+				return new FinalizeConfiguration();
+			}
+			
+			@Override public String getTitle() { return "Initializing defaults..."; }
 		}
 		
 		private static final class FinalizeConfiguration implements InitializationState {
@@ -680,22 +693,10 @@ public final class MediaDownloader {
 			public InitializationState run(Arguments args) {
 				if(FXUtils.isInitialized())
 					GUI.registerWindows();
-				return new InitializeDefaults();
-			}
-			
-			@Override public String getTitle() { return "Registering windows..."; }
-		}
-		
-		/** @since 00.02.09 */
-		private static final class InitializeDefaults implements InitializationState {
-			
-			@Override
-			public InitializationState run(Arguments args) {
-				Ignore.callVoid(MediaDownloader::initDefaults, MediaDownloader::error);
 				return new InitializeDefaultPlugins();
 			}
 			
-			@Override public String getTitle() { return "Initializing defaults..."; }
+			@Override public String getTitle() { return "Registering windows..."; }
 		}
 		
 		private static final class InitializeDefaultPlugins implements InitializationState {
@@ -2541,6 +2542,8 @@ public final class MediaDownloader {
 		@Override public UsePreReleaseVersions usePreReleaseVersions() { return accessor().usePreReleaseVersions(); }
 		/** @since 00.02.07 */
 		@Override public boolean autoEnableClipboardWatcher() { return accessor().autoEnableClipboardWatcher(); }
+		/** @since 00.02.09 */
+		@Override public ConversionProvider conversionProvider() { return accessor().conversionProvider(); }
 		@Override public SSDCollection data() { return accessor().data(); }
 		/** @since 00.02.07 */
 		@Override public boolean reload() { return accessor().reload(); }

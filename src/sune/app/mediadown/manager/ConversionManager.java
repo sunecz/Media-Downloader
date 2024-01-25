@@ -11,13 +11,11 @@ import sune.app.mediadown.concurrent.QueueTaskExecutor.QueueTask;
 import sune.app.mediadown.concurrent.VarLoader;
 import sune.app.mediadown.conversion.ConversionMedia;
 import sune.app.mediadown.conversion.ConversionProvider;
-import sune.app.mediadown.conversion.Conversions;
 import sune.app.mediadown.entity.Converter;
 import sune.app.mediadown.event.tracker.PipelineStates;
 import sune.app.mediadown.event.tracker.TrackerManager;
 import sune.app.mediadown.event.tracker.WaitTracker;
 import sune.app.mediadown.exception.WrappedReportContextException;
-import sune.app.mediadown.ffmpeg.FFmpeg;
 import sune.app.mediadown.gui.table.ResolvedMedia;
 import sune.app.mediadown.media.MediaConversionContext;
 import sune.app.mediadown.report.ReportContext;
@@ -45,8 +43,7 @@ public final class ConversionManager implements QueueContext {
 	
 	/** @since 00.02.09 */
 	private final ConversionProvider conversionProvider() {
-		// TODO: Make configurable
-		return Conversions.Providers.ofName(FFmpeg.Provider.NAME);
+		return MediaDownloader.configuration().conversionProvider();
 	}
 	
 	/** @since 00.02.08 */

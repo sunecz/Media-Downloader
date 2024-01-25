@@ -45,6 +45,8 @@ import sune.app.mediadown.configuration.Configuration.ConfigurationPropertyType;
 import sune.app.mediadown.configuration.Configuration.NullTypeConfigurationProperty;
 import sune.app.mediadown.configuration.Configuration.TypeConfigurationProperty;
 import sune.app.mediadown.configuration.ConfigurationReloadable;
+import sune.app.mediadown.conversion.ConversionProvider;
+import sune.app.mediadown.conversion.Conversions;
 import sune.app.mediadown.gui.Dialog;
 import sune.app.mediadown.gui.DraggableWindow;
 import sune.app.mediadown.gui.control.FixedWidthTreeView;
@@ -113,6 +115,16 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 			ApplicationConfigurationAccessor.PROPERTY_NAMING_CUSTOM_MEDIA_TITLE_FORMAT,
 			TextFieldMediaTitleFormat::new
 		));
+		registerFormField(isOfTypeClass(ConversionProvider.class, typeFormFieldSupplier(
+			Conversions.Providers.registry()::allValues,
+			ValueTransformer.of(
+				Conversions.Providers::ofName, ConversionProvider::name,
+				localValueTranslator(
+					ApplicationConfigurationAccessor.PROPERTY_CONVERSION_PROVIDER,
+					ConversionProvider::name
+				)
+			)
+		)));
 	}
 	
 	/** @since 00.02.07 */
@@ -193,6 +205,16 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 			Supplier<T[]> valuesSupplier, ValueTransformer<T> transformer) {
 		return ((property, name, title) -> new TranslatableSelectField<>(property, name, title,
 				List.of(valuesSupplier.get()), transformer));
+	}
+	
+	/** @since 00.02.09 */
+	public static final <T> FormFieldSupplier typeFormFieldSupplier(Supplier<List<T>> valuesSupplier,
+			ValueTransformer<T> transformer) {
+		return ((property, name, title) ->
+			new TranslatableSelectField<>(
+				property, name, title, valuesSupplier.get(), transformer
+			)
+		);
 	}
 	
 	/** @since 00.02.07 */

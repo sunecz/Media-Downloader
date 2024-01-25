@@ -10,7 +10,10 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import sune.app.mediadown.Defaults;
 import sune.app.mediadown.MediaDownloader;
+import sune.app.mediadown.conversion.ConversionProvider;
+import sune.app.mediadown.conversion.Conversions;
 import sune.app.mediadown.language.Language;
 import sune.app.mediadown.media.MediaFormat;
 import sune.app.mediadown.media.MediaTitleFormat;
@@ -60,6 +63,8 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 	private UsePreReleaseVersions usePreReleaseVersions;
 	/** @since 00.02.07 */
 	private boolean autoEnableClipboardWatcher;
+	/** @since 00.02.09 */
+	private ConversionProvider conversionProvider;
 	
 	private ApplicationConfiguration(Path path, String name, SSDCollection data, Map<String, ConfigurationProperty<?>> properties) {
 		super(name, data, properties);
@@ -144,6 +149,11 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 		builder.addProperty(ConfigurationProperty.ofInteger(PROPERTY_PARALLEL_CONVERSIONS)
 			.inGroup(GROUP_CONVERSION)
 			.withDefaultValue(1));
+		builder.addProperty(ConfigurationProperty.ofType(PROPERTY_CONVERSION_PROVIDER, ConversionProvider.class)
+			.inGroup(GROUP_CONVERSION)
+			.withFactory(Conversions.Providers.registry()::allNames)
+			.withTransformer(ConversionProvider::name, Conversions.Providers::ofName)
+			.withDefaultValue(Defaults.CONVERSION_PROVIDER_NAME));
 		
 		// ----- Plugins
 		builder.addProperty(ConfigurationProperty.ofBoolean(PROPERTY_PLUGINS_AUTO_UPDATE_CHECK)
@@ -225,6 +235,7 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 		
 		usePreReleaseVersions = UsePreReleaseVersions.of(stringValue(PROPERTY_USE_PRE_RELEASE_VERSIONS));
 		autoEnableClipboardWatcher = booleanValue(PROPERTY_AUTO_ENABLE_CLIPBOARD_WATCHER);
+		conversionProvider = Conversions.Providers.ofName(stringValue(PROPERTY_CONVERSION_PROVIDER));
 	}
 	
 	/** @since 00.02.07 */
@@ -342,6 +353,12 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 	@Override
 	public boolean autoEnableClipboardWatcher() {
 		return autoEnableClipboardWatcher;
+	}
+	
+	/** @since 00.02.09 */
+	@Override
+	public ConversionProvider conversionProvider() {
+		return conversionProvider;
 	}
 	
 	public static final class Builder extends Configuration.Builder implements ApplicationConfigurationAccessor {
@@ -468,6 +485,12 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 		@Override
 		public boolean autoEnableClipboardWatcher() {
 			return accessor().booleanValue(PROPERTY_AUTO_ENABLE_CLIPBOARD_WATCHER);
+		}
+		
+		/** @since 00.02.09 */
+		@Override
+		public ConversionProvider conversionProvider() {
+			return Conversions.Providers.ofName(accessor().stringValue(PROPERTY_CONVERSION_PROVIDER));
 		}
 		
 		@Override

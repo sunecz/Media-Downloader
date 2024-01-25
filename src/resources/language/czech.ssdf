@@ -389,6 +389,7 @@
 				checkResourcesIntegrity:    "Kontrola integrity prostředků",
 				usePreReleaseVersions:      "Používat předběžné verze",
 				autoEnableClipboardWatcher: "Automaticky aktivovat Sledování schránky",
+				conversionProvider:         "Poskytovatel konverzí",
 				plugins: {
 					autoUpdateCheck: "Automatická aktualizace pluginů"
 				},
@@ -413,6 +414,9 @@
 					TILL_NEXT_RELEASE: "Do další hlavní verze",
 					NEVER:             "Nikdy",
 					UNKNOWN:           "Neznámá hodnota"
+				},
+				conversionProvider: {
+					ffmpeg: "FFmpeg"
 				}
 			}
 		},

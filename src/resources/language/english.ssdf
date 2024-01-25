@@ -389,6 +389,7 @@
 				checkResourcesIntegrity:    "Check integrity of resources",
 				usePreReleaseVersions:      "Use pre-release versions",
 				autoEnableClipboardWatcher: "Automatically enable the Clipboard watcher",
+				conversionProvider:         "Conversion provider",
 				plugins: {
 					autoUpdateCheck: "Automatic plugin updates"
 				},
@@ -413,6 +414,9 @@
 					TILL_NEXT_RELEASE: "Till the next release",
 					NEVER:             "Never",
 					UNKNOWN:           "Unknown value"
+				},
+				conversionProvider: {
+					ffmpeg: "FFmpeg"
 				}
 			}
 		},
