@@ -16,6 +16,14 @@ public final class PipelineStates {
 	public static final String PAUSED         = "tr(md, windows.main.states.paused)";
 	public static final String RETRY          = "tr(md, windows.main.states.retry)";
 	public static final String QUEUED         = "tr(md, windows.main.states.queued)";
+	/** @since 00.02.09*/
+	public static final String PAUSING        = "tr(md, windows.main.states.synthetic.pausing)";
+	/** @since 00.02.09*/
+	public static final String RESUMING       = "tr(md, windows.main.states.synthetic.resuming)";
+	/** @since 00.02.09*/
+	public static final String STOPPING       = "tr(md, windows.main.states.synthetic.stopping)";
+	/** @since 00.02.09*/
+	public static final String RETRYING       = "tr(md, windows.main.states.synthetic.retrying)";
 	
 	private PipelineStates() {
 	}

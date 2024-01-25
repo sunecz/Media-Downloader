@@ -125,6 +125,12 @@
 					audio: {
 						fix_timestamps: "Audio: Oprava časových značek"
 					}
+				},
+				synthetic: {
+					pausing:  "Pozastavování",
+					resuming: "Pokračování",
+					stopping: "Zastavování",
+					retrying: "Opakování"
 				}
 			},
 			dialogs: {

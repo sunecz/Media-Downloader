@@ -125,6 +125,12 @@
 					audio: {
 						fix_timestamps: "Audio: Fix timestamps"
 					}
+				},
+				synthetic: {
+					pausing:  "Pausing",
+					resuming: "Resuming",
+					stopping: "Stopping",
+					retrying: "Retrying"
 				}
 			},
 			dialogs: {

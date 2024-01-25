@@ -46,6 +46,7 @@ import sune.app.mediadown.event.QueueEvent;
 import sune.app.mediadown.event.tracker.ConversionTracker;
 import sune.app.mediadown.event.tracker.DownloadTracker;
 import sune.app.mediadown.event.tracker.PipelineProgress;
+import sune.app.mediadown.event.tracker.PipelineStates;
 import sune.app.mediadown.event.tracker.Tracker;
 import sune.app.mediadown.event.tracker.TrackerView;
 import sune.app.mediadown.gui.control.PipelineTableView.PipelineInfo;
@@ -114,19 +115,25 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 	}
 	
 	private static final boolean anyNonPaused(List<PipelineInfo> infos) {
-		return infos.stream().map(PipelineInfo::pipeline)
-					.anyMatch((p) -> p.isStarted() && p.isRunning());
+		return infos.stream().anyMatch((i) -> {
+			Pipeline p = i.pipeline();
+			return i.isPausing() || (p.isStarted() && p.isRunning());
+		});
 	}
 	
 	private static final boolean anyTerminable(List<PipelineInfo> infos) {
-		return infos.stream().map(PipelineInfo::pipeline)
-					.anyMatch((p) -> p.isStarted() && (p.isRunning() || p.isPaused()));
+		return infos.stream().anyMatch((i) -> {
+			Pipeline p = i.pipeline();
+			return i.isStopping() || (p.isStarted() && (p.isRunning() || p.isPaused()));
+		});
 	}
 	
 	/** @since 00.02.09 */
 	private static final boolean anyRetryable(List<PipelineInfo> infos) {
-		return infos.stream().map(PipelineInfo::pipeline)
-					.anyMatch((p) -> p.isDone() || p.isStopped() || p.isError());
+		return infos.stream().anyMatch((i) -> {
+			Pipeline p = i.pipeline();
+			return i.isRetrying() || (p.isDone() || p.isStopped() || p.isError());
+		});
 	}
 	
 	private static final void showFile(PipelineInfo info) {
@@ -178,7 +185,10 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 			infos = existingOnly(infos);
 		}
 		
-		infos.stream().forEachOrdered(PipelineInfo::stop);
+		final List<PipelineInfo> finalInfos = infos;
+		Threads.executeEnsured(() -> {
+			finalInfos.stream().forEachOrdered(PipelineInfo::stop);
+		});
 	}
 	
 	/** @since 00.02.09 */
@@ -228,7 +238,9 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 	}
 	
 	public void pause(List<PipelineInfo> infos) {
-		infos.stream().forEachOrdered(PipelineInfo::pause);
+		Threads.executeEnsured(() -> {
+			infos.stream().forEachOrdered(PipelineInfo::pause);
+		});
 	}
 	
 	public void pauseAll() {
@@ -240,7 +252,9 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 	}
 	
 	public void resume(List<PipelineInfo> infos) {
-		infos.stream().forEachOrdered(PipelineInfo::resume);
+		Threads.executeEnsured(() -> {
+			infos.stream().forEachOrdered(PipelineInfo::resume);
+		});
 	}
 	
 	public void resumeAll() {
@@ -253,7 +267,9 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 	
 	/** @since 00.02.09 */
 	public void retry(List<PipelineInfo> infos) {
-		infos.stream().forEachOrdered(PipelineInfo::retry);
+		Threads.executeEnsured(() -> {
+			infos.stream().forEachOrdered(PipelineInfo::retry);
+		});
 	}
 	
 	public ObjectProperty<PipelineInfo> onItemDoubleClicked() {
@@ -801,15 +817,23 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 			
 			private final String state;
 			private final String text;
+			/** @since 00.02.09 */
+			private final double progress;
 			
 			public OfState(String state, String text) {
+				this(state, text, PipelineProgress.RESET);
+			}
+			
+			/** @since 00.02.09 */
+			public OfState(String state, String text, double progress) {
 				this.state = state;
 				this.text = text;
+				this.progress = progress;
 			}
 			
 			@Override
 			public void update(PipelineInfo info) {
-				info.progress(PipelineProgress.RESET);
+				info.progress(progress);
 				info.state(state);
 				info.information(text);
 			}
@@ -1053,6 +1077,15 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 		private volatile String lastState = null;
 		private boolean isQueued;
 		
+		/** @since 00.02.09 */
+		private volatile boolean isPausing;
+		/** @since 00.02.09 */
+		private volatile boolean isResuming;
+		/** @since 00.02.09 */
+		private volatile boolean isStopping;
+		/** @since 00.02.09 */
+		private volatile boolean isRetrying;
+		
 		public PipelineInfo(Pipeline pipeline, ResolvedMedia resolvedMedia) {
 			this.pipeline = Objects.requireNonNull(pipeline);
 			this.resolvedMedia = Objects.requireNonNull(resolvedMedia);
@@ -1105,11 +1138,18 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 				return;
 			}
 			
+			isStopping = true;
+			update(new PipelineInfoData.OfState(
+				PipelineStates.STOPPING, PipelineInfo.TEXT_NONE, PipelineProgress.INDETERMINATE
+			));
+			
 			try {
 				pipeline.stop();
 				pipeline.waitFor();
 			} catch(Exception ex) {
 				MediaDownloader.error(ex);
+			} finally {
+				isStopping = false;
 			}
 		}
 		
@@ -1120,10 +1160,17 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 				return;
 			}
 			
+			isPausing = true;
+			update(new PipelineInfoData.OfState(
+				PipelineStates.PAUSING, PipelineInfo.TEXT_NONE, PipelineProgress.INDETERMINATE
+			));
+			
 			try {
 				pipeline.pause();
 			} catch(Exception ex) {
 				MediaDownloader.error(ex);
+			} finally {
+				isPausing = false;
 			}
 		}
 		
@@ -1134,10 +1181,17 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 				return;
 			}
 			
+			isResuming = true;
+			update(new PipelineInfoData.OfState(
+				PipelineStates.RESUMING, PipelineInfo.TEXT_NONE, PipelineProgress.INDETERMINATE
+			));
+			
 			try {
 				pipeline.resume();
 			} catch(Exception ex) {
 				MediaDownloader.error(ex);
+			} finally {
+				isResuming = false;
 			}
 		}
 		
@@ -1149,6 +1203,11 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 				return;
 			}
 			
+			isRetrying = true;
+			update(new PipelineInfoData.OfState(
+				PipelineStates.RETRYING, PipelineInfo.TEXT_NONE, PipelineProgress.INDETERMINATE
+			));
+			
 			try {
 				pipeline.waitFor();
 				pipeline.reset();
@@ -1156,6 +1215,8 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 				start();
 			} catch(Exception ex) {
 				MediaDownloader.error(ex);
+			} finally {
+				isRetrying = false;
 			}
 		}
 		
@@ -1323,6 +1384,26 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 		
 		public PipelineMedia media() {
 			return media;
+		}
+		
+		/** @since 00.02.09 */
+		public boolean isPausing() {
+			return isPausing;
+		}
+		
+		/** @since 00.02.09 */
+		public boolean isResuming() {
+			return isResuming;
+		}
+		
+		/** @since 00.02.09 */
+		public boolean isStopping() {
+			return isStopping;
+		}
+		
+		/** @since 00.02.09 */
+		public boolean isRetrying() {
+			return isRetrying;
 		}
 	}
 }
