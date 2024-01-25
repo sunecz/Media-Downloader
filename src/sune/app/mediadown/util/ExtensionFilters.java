@@ -6,6 +6,8 @@ import java.util.function.BiFunction;
 import java.util.stream.Stream;
 
 import javafx.stage.FileChooser.ExtensionFilter;
+import sune.app.mediadown.MediaDownloader;
+import sune.app.mediadown.conversion.ConversionFormat;
 import sune.app.mediadown.media.MediaFormat;
 import sune.app.mediadown.media.MediaType;
 
@@ -27,6 +29,14 @@ public final class ExtensionFilters {
 	private ExtensionFilters() {
 	}
 	
+	/** @since 00.02.09 */
+	private static final MediaFormat[] supportedOutputFormats() {
+		return MediaDownloader.configuration().conversionProvider().formats().stream()
+					.map(ConversionFormat::format)
+					.filter(MediaFormat::isOutputFormat)
+					.toArray(MediaFormat[]::new);
+	}
+	
 	private static final String[] fixExtensions(List<String> extensions) {
 		return extensions.stream().map((extension) -> {
 			return (!extension.startsWith("*")
@@ -43,7 +53,7 @@ public final class ExtensionFilters {
 	}
 	
 	public static final ExtensionFilter[] outputMediaFormats() {
-		MediaFormat[] ref = MediaFormat.outputFormats();
+		MediaFormat[] ref = supportedOutputFormats();
 		if(outputMediaFormats == null || ref != refOutputFormats) {
 			outputMediaFormats = Stream.of(ref)
 					.sorted(comparatorSupplier.apply(ref, MediaType.values()))
