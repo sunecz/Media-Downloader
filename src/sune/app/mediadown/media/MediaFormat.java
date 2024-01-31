@@ -43,6 +43,8 @@ public final class MediaFormat {
 	public static final MediaFormat WEBM;
 	public static final MediaFormat OGGV;
 	public static final MediaFormat OGG;
+	/** @since 00.02.09 */
+	public static final MediaFormat TS;
 	// Audio formats
 	public static final MediaFormat MP3;
 	public static final MediaFormat WAV;
@@ -74,6 +76,8 @@ public final class MediaFormat {
 			        .fileExtensions("webm").mimeTypes("video/webm").string("WEBM-Video").build();
 		OGGV = new Builder().name("OGGV").formatType(MediaFormatType.BOTH).mediaType(MediaType.VIDEO)
 			        .fileExtensions("ogg").mimeTypes("video/ogg").string("OGG-Video").build();
+		TS = new Builder().name("TS").formatType(MediaFormatType.BOTH).mediaType(MediaType.VIDEO)
+					.fileExtensions("ts").mimeTypes("video/mp2t").string("TS").build();
 		MP3 = new Builder().name("MP3").formatType(MediaFormatType.BOTH).mediaType(MediaType.AUDIO)
 			        .fileExtensions("mp3").mimeTypes("audio/mpeg").string("MP3").build();
 		WAV = new Builder().name("WAV").formatType(MediaFormatType.BOTH).mediaType(MediaType.AUDIO)
