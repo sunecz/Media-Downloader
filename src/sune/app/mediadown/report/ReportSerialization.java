@@ -20,7 +20,6 @@ import sune.app.mediadown.media.MediaType;
 import sune.app.mediadown.util.JSON.JSONCollection;
 import sune.app.mediadown.util.JSON.JSONNode;
 import sune.app.mediadown.util.JSON.JSONObject;
-import sune.app.mediadown.util.Metadata;
 import sune.app.mediadown.util.Range;
 
 /** @since 00.02.09 */
@@ -164,9 +163,6 @@ public final class ReportSerialization {
 			item.set("duration", media.duration());
 			dataInputs.add(item);
 		}
-		
-		Metadata metadata = context.metadata();
-		data.set("metadata", ReportSerialization.serialize(metadata.data()));
 		
 		return data;
 	}

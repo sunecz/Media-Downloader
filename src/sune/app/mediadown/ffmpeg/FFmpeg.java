@@ -105,12 +105,12 @@ public final class FFmpeg {
 			}
 			
 			protected abstract int ensureVideo(Media media, int index, Input.Builder input, Output.Builder output,
-					Metadata metadata, boolean force);
+					boolean force);
 			protected abstract int ensureAudio(Media media, int index, Input.Builder input, Output.Builder output,
-					Metadata metadata, boolean force);
+					boolean force);
 			
 			@Override
-			public void from(Media media, int index, Input.Builder input, Output.Builder output, Metadata metadata) {
+			public void from(Media media, int index, Input.Builder input, Output.Builder output) {
 				if(media.parent() == null && media.format().is(format)) {
 					output.addOptions(Options.streamCodecCopy(index));
 					return;
@@ -119,19 +119,19 @@ public final class FFmpeg {
 				MediaType type = media.type();
 				
 				if(type.is(MediaType.VIDEO)) {
-					ensureVideo(media, index, input, output, metadata, false);
+					ensureVideo(media, index, input, output, false);
 					
 					Media root = Media.root(media);
-					int result = ensureAudio(root, index, input, output, metadata, false);
+					int resultAudio = ensureAudio(root, index, input, output, false);
 					
-					if(result == RESULT_NONE
+					if(resultAudio == RESULT_NONE
 							// Check whether the root media also has an audio media (e.g. inputFormat=DASH)
 							&& !isAudioSeparated(root)) {
 						// If an audio media is not present separately, force the audio from the video
-						ensureAudio(root, index, input, output, metadata, true);
+						ensureAudio(root, index, input, output, true);
 					}
 				} else if(type.is(MediaType.AUDIO)) {
-					int result = ensureAudio(media, index, input, output, metadata, false);
+					int result = ensureAudio(media, index, input, output, false);
 					
 					if(result == RESULT_COPY) {
 						output.removeOptions(Options.streamAudioCodecCopy(index));
@@ -144,16 +144,16 @@ public final class FFmpeg {
 			
 			private static abstract class MP4Compatible extends VideoConversionFormat {
 				
-				private static final String DEFAULT_VIDEO_PRESET = "fast";
-				private static final String DEFAULT_VIDEO_CRF = "20";
+				protected static final String DEFAULT_VIDEO_PRESET = "fast";
+				protected static final String DEFAULT_VIDEO_CRF = "20";
 				
 				protected MP4Compatible(MediaFormat format) {
 					super(format);
 				}
 				
 				@Override
-				protected final int ensureVideo(Media media, int index, Input.Builder input, Output.Builder output,
-						Metadata metadata, boolean force) {
+				protected int ensureVideo(Media media, int index, Input.Builder input, Output.Builder output,
+						boolean force) {
 					VideoMedia video = Media.findOfType(media, MediaType.VIDEO);
 					
 					if(video == null && !force) {
@@ -177,8 +177,8 @@ public final class FFmpeg {
 				}
 				
 				@Override
-				protected final int ensureAudio(Media media, int index, Input.Builder input, Output.Builder output,
-						Metadata metadata, boolean force) {
+				protected int ensureAudio(Media media, int index, Input.Builder input, Output.Builder output,
+						boolean force) {
 					if(!force) {
 						AudioMedia audio = Media.findOfType(media, MediaType.AUDIO);
 						
@@ -250,14 +250,14 @@ public final class FFmpeg {
 				
 				@Override
 				protected final int ensureVideo(Media media, int index, Input.Builder input, Output.Builder output,
-						Metadata metadata, boolean force) {
+						boolean force) {
 					output.addOptions(Options.streamVideoCodecCopy(index));
 					return RESULT_COPY;
 				}
 				
 				@Override
 				protected final int ensureAudio(Media media, int index, Input.Builder input, Output.Builder output,
-						Metadata metadata, boolean force) {
+						boolean force) {
 					output.addOptions(Options.streamAudioCodecCopy(index));
 					return RESULT_COPY;
 				}
@@ -281,7 +281,7 @@ public final class FFmpeg {
 				
 				@Override
 				protected final int ensureVideo(Media media, int index, Input.Builder input, Output.Builder output,
-						Metadata metadata, boolean force) {
+						boolean force) {
 					VideoMedia video = Media.findOfType(media, MediaType.VIDEO);
 					
 					if(video == null && !force) {
@@ -309,7 +309,7 @@ public final class FFmpeg {
 				
 				@Override
 				protected final int ensureAudio(Media media, int index, Input.Builder input, Output.Builder output,
-						Metadata metadata, boolean force) {
+						boolean force) {
 					if(!force) {
 						AudioMedia audio = Media.findOfType(media, MediaType.AUDIO);
 						
@@ -354,7 +354,7 @@ public final class FFmpeg {
 				
 				@Override
 				protected final int ensureVideo(Media media, int index, Input.Builder input, Output.Builder output,
-						Metadata metadata, boolean force) {
+						boolean force) {
 					VideoMedia video = Media.findOfType(media, MediaType.VIDEO);
 					
 					if(video == null && !force) {
@@ -378,7 +378,7 @@ public final class FFmpeg {
 				
 				@Override
 				protected final int ensureAudio(Media media, int index, Input.Builder input, Output.Builder output,
-						Metadata metadata, boolean force) {
+						boolean force) {
 					if(!force) {
 						AudioMedia audio = Media.findOfType(media, MediaType.AUDIO);
 						
@@ -424,7 +424,7 @@ public final class FFmpeg {
 			}
 			
 			protected int ensureAudio(Media media, int index, Input.Builder input, Output.Builder output,
-					Metadata metadata, boolean force) {
+					boolean force) {
 				if(!force) {
 					AudioMedia audio = Media.findOfType(media, MediaType.AUDIO);
 					
@@ -456,7 +456,7 @@ public final class FFmpeg {
 			}
 			
 			@Override
-			public void from(Media media, int index, Input.Builder input, Output.Builder output, Metadata metadata) {
+			public void from(Media media, int index, Input.Builder input, Output.Builder output) {
 				if(media.parent() == null && media.format().is(format)) {
 					output.addOptions(
 						Options.streamCodecCopy(index),
@@ -470,16 +470,16 @@ public final class FFmpeg {
 				
 				if(type.is(MediaType.VIDEO)) {
 					Media root = Media.root(media);
-					int result = ensureAudio(root, index, input, output, metadata, false);
+					int result = ensureAudio(root, index, input, output, false);
 					
 					if(result == RESULT_NONE
 							// Check whether the root media also has an audio media (e.g. inputFormat=DASH)
 							&& !isAudioSeparated(root)) {
 						// If an audio media is not present separately, force the audio from the video
-						ensureAudio(root, index, input, output, metadata, true);
+						ensureAudio(root, index, input, output, true);
 					}
 				} else if(type.is(MediaType.AUDIO)) {
-					int result = ensureAudio(media, index, input, output, metadata, false);
+					int result = ensureAudio(media, index, input, output, false);
 					
 					if(result == RESULT_COPY) {
 						output.removeOptions(Options.streamAudioCodecCopy(index));
@@ -525,17 +525,13 @@ public final class FFmpeg {
 		}
 		
 		@Override
-		public ConversionCommand createCommand(ResolvedMedia output, List<ConversionMedia> inputs, Metadata metadata) {
+		public ConversionCommand createCommand(List<ConversionMedia> inputs, ResolvedMedia output) {
 			if(output == null) {
 				throw new IllegalArgumentException("Output cannot be null.");
 			}
 			
 			if(inputs == null || inputs.isEmpty()) {
 				throw new IllegalArgumentException("Inputs cannot be neither null nor empty.");
-			}
-			
-			if(metadata == null) {
-				throw new IllegalArgumentException("Metadata cannot be null.");
 			}
 			
 			Command.Builder command = Command.builder();
@@ -550,10 +546,7 @@ public final class FFmpeg {
 				Options.stats()
 			);
 			
-			Metadata metadataInput
-				= metadata.has("noExplicitInputFormat")
-					? Metadata.of("noExplicitFormat", true).seal()
-					: Metadata.empty();
+			Metadata metadataInput = Metadata.of("noExplicitFormat", true).seal();
 			
 			List<Pair<Media, Input.Builder>> mutableInputs = inputs.stream()
 				.map((i) -> new Pair<>(i.media(), Input.ofMutable(i.path(), List.of(), metadataInput)))
@@ -563,14 +556,14 @@ public final class FFmpeg {
 			
 			if(format == null) {
 				throw new IllegalStateException(String.format(
-						"Unable to create FFmpeg command: input=%s, output=%s",
-						formatInput, formatOutput
-					));
+					"Unable to create FFmpeg command: input=%s, output=%s",
+					formatInput, formatOutput
+				));
 			}
 			
 			for(int i = 0, l = mutableInputs.size(); i < l; ++i) {
 				Pair<Media, Input.Builder> pair = mutableInputs.get(i);
-				format.from(pair.a, i, pair.b, out, metadata);
+				format.from(pair.a, i, pair.b, out);
 			}
 			
 			for(Pair<Media, Input.Builder> pair : mutableInputs) {
@@ -579,7 +572,6 @@ public final class FFmpeg {
 			
 			CommandOptimizer.optimizeOutput(out, mutableInputs.size());
 			command.addOutputs(out.asFormat(formatOutput));
-			command.addMetadata(metadata);
 			
 			return command.build();
 		}

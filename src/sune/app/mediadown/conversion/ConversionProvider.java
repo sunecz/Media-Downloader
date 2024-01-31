@@ -6,7 +6,6 @@ import sune.app.mediadown.entity.Converter;
 import sune.app.mediadown.event.tracker.TrackerManager;
 import sune.app.mediadown.gui.table.ResolvedMedia;
 import sune.app.mediadown.media.MediaFormat;
-import sune.app.mediadown.util.Metadata;
 
 /** @since 00.02.09 */
 public interface ConversionProvider {
@@ -15,7 +14,7 @@ public interface ConversionProvider {
 	void unregister(ConversionFormat format);
 	
 	Converter createConverter(TrackerManager trackerManager);
-	ConversionCommand createCommand(ResolvedMedia output, List<ConversionMedia> inputs, Metadata metadata);
+	ConversionCommand createCommand(List<ConversionMedia> inputs, ResolvedMedia output);
 	ConversionFormat formatOf(MediaFormat format);
 	
 	List<ConversionFormat> formats();

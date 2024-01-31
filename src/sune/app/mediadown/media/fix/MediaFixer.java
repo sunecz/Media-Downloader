@@ -4,12 +4,11 @@ import java.util.List;
 
 import sune.app.mediadown.conversion.ConversionMedia;
 import sune.app.mediadown.gui.table.ResolvedMedia;
-import sune.app.mediadown.util.Metadata;
 
 /** @since 00.02.09 */
 public interface MediaFixer extends AutoCloseable, MediaFixerContext {
 	
-	void start(ResolvedMedia output, List<ConversionMedia> inputs, Metadata metadata) throws Exception;
+	void start(List<ConversionMedia> inputs, ResolvedMedia output) throws Exception;
 	void stop() throws Exception;
 	void pause() throws Exception;
 	void resume() throws Exception;

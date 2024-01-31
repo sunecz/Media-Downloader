@@ -2,6 +2,7 @@ package sune.app.mediadown.manager;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Function;
 
 import sune.app.mediadown.Disposables;
 import sune.app.mediadown.MediaDownloader;
@@ -9,9 +10,13 @@ import sune.app.mediadown.concurrent.PositionAwareQueueTaskExecutor;
 import sune.app.mediadown.concurrent.PositionAwareQueueTaskExecutor.PositionAwareQueueTaskResult;
 import sune.app.mediadown.concurrent.QueueTaskExecutor.QueueTask;
 import sune.app.mediadown.concurrent.VarLoader;
+import sune.app.mediadown.conversion.ConversionCommand;
 import sune.app.mediadown.conversion.ConversionMedia;
 import sune.app.mediadown.conversion.ConversionProvider;
 import sune.app.mediadown.entity.Converter;
+import sune.app.mediadown.event.ConversionEvent;
+import sune.app.mediadown.event.Event;
+import sune.app.mediadown.event.Listener;
 import sune.app.mediadown.event.tracker.PipelineStates;
 import sune.app.mediadown.event.tracker.TrackerManager;
 import sune.app.mediadown.event.tracker.WaitTracker;
@@ -19,7 +24,7 @@ import sune.app.mediadown.exception.WrappedReportContextException;
 import sune.app.mediadown.gui.table.ResolvedMedia;
 import sune.app.mediadown.media.MediaConversionContext;
 import sune.app.mediadown.report.ReportContext;
-import sune.app.mediadown.util.Metadata;
+import sune.app.mediadown.util.CheckedConsumer;
 import sune.app.mediadown.util.QueueContext;
 
 /** @since 00.01.26 */
@@ -47,15 +52,16 @@ public final class ConversionManager implements QueueContext {
 	}
 	
 	/** @since 00.02.08 */
-	public final PositionAwareManagerSubmitResult<Converter, Void> submit(ResolvedMedia output,
-			List<ConversionMedia> inputs, Metadata metadata) {
-		if(output == null || inputs == null || inputs.isEmpty() || metadata == null) {
+	public final PositionAwareManagerSubmitResult<Converter, Void> submit(
+			List<ConversionMedia> inputs, ResolvedMedia output
+	) {
+		if(inputs == null || inputs.isEmpty() || output == null) {
 			throw new IllegalArgumentException();
 		}
 		
 		ConversionProvider provider = conversionProvider();
-		Converter converter = provider.createConverter(new TrackerManager(new WaitTracker()));
-		ConversionTask task = new ConversionTask(provider, converter, output, inputs, metadata);
+		ConversionTask task = new ConversionTask(provider, inputs, output);
+		ConversionDelegate converter = new ConversionDelegate(task);
 		PositionAwareQueueTaskResult<Void> taskResult = executor.submit(task);
 		
 		return new PositionAwareManagerSubmitResult<>(converter, taskResult, this);
@@ -79,23 +85,84 @@ public final class ConversionManager implements QueueContext {
 		return PipelineStates.CONVERSION;
 	}
 	
+	/** @since 00.02.09 */
+	private static final class ConversionDelegate implements Converter {
+		
+		private final ConversionTask task;
+		
+		public ConversionDelegate(ConversionTask task) {
+			this.task = task;
+		}
+		
+		private final Converter delegate() {
+			return task.converter;
+		}
+		
+		private final void doAction(CheckedConsumer<Converter> action) throws Exception {
+			Converter delegate = delegate();
+			
+			if(delegate == null) {
+				return;
+			}
+			
+			action.accept(delegate);
+		}
+		
+		private final <T> T doAction(Function<Converter, T> action, T defaultValue) {
+			Converter delegate = delegate();
+			
+			if(delegate == null) {
+				return defaultValue;
+			}
+			
+			return action.apply(delegate);
+		}
+		
+		@Override public void start(ConversionCommand command) throws Exception { doAction((c) -> c.start(command)); }
+		@Override public void stop() throws Exception { doAction(Converter::stop); }
+		@Override public void pause() throws Exception  { doAction(Converter::pause); }
+		@Override public void resume() throws Exception { doAction(Converter::resume); }
+		@Override public void close() throws Exception  { doAction(Converter::close); }
+		@Override public ConversionCommand command() { return doAction(Converter::command, null); }
+		@Override public Exception exception() { return doAction(Converter::exception, null); }
+		@Override public boolean isRunning() { return doAction(Converter::isRunning, false); }
+		@Override public boolean isDone() { return doAction(Converter::isDone, false); }
+		@Override public boolean isStarted() { return doAction(Converter::isStarted, false); }
+		@Override public boolean isPaused() { return doAction(Converter::isPaused, false); }
+		@Override public boolean isStopped() { return doAction(Converter::isStopped, false); }
+		@Override public boolean isError() { return doAction(Converter::isError, false); }
+		@Override public TrackerManager trackerManager() { return doAction(Converter::trackerManager, null); }
+		
+		@Override
+		public <V> void addEventListener(Event<? extends ConversionEvent, V> event, Listener<V> listener) {
+			Converter delegate;
+			if((delegate = delegate()) != null) {
+				delegate.addEventListener(event, listener);
+			}
+		}
+		
+		@Override
+		public <V> void removeEventListener(Event<? extends ConversionEvent, V> event, Listener<V> listener) {
+			Converter delegate;
+			if((delegate = delegate()) != null) {
+				delegate.removeEventListener(event, listener);
+			}
+		}
+	}
+	
 	/** @since 00.02.08 */
 	private static final class ConversionTask implements QueueTask<Void>, MediaConversionContext {
 		
 		/** @since 00.02.09 */
 		private final ConversionProvider provider;
-		private final Converter converter;
-		private final ResolvedMedia output;
 		private final List<ConversionMedia> inputs;
-		private final Metadata metadata;
+		private final ResolvedMedia output;
+		private Converter converter;
 		
-		public ConversionTask(ConversionProvider provider, Converter converter, ResolvedMedia output,
-				List<ConversionMedia> inputs, Metadata metadata) {
+		public ConversionTask(ConversionProvider provider, List<ConversionMedia> inputs, ResolvedMedia output) {
 			this.provider = Objects.requireNonNull(provider);
-			this.converter = Objects.requireNonNull(converter);
-			this.output = Objects.requireNonNull(output);
 			this.inputs = Objects.requireNonNull(inputs);
-			this.metadata = Objects.requireNonNull(metadata);
+			this.output = Objects.requireNonNull(output);
 		}
 		
 		/** @since 00.02.09 */
@@ -106,17 +173,13 @@ public final class ConversionManager implements QueueContext {
 		@Override
 		public Void call() throws Exception {
 			try {
-				converter.start(provider.createCommand(output, inputs, metadata));
+				ConversionCommand command = provider.createCommand(inputs, output);
+				converter = provider.createConverter(new TrackerManager(new WaitTracker()));
+				converter.start(command);
 				return null;
 			} catch(Exception ex) {
 				throw new WrappedReportContextException(ex, createContext());
 			}
-		}
-		
-		/** @since 00.02.09 */
-		@Override
-		public ResolvedMedia output() {
-			return output;
 		}
 		
 		/** @since 00.02.09 */
@@ -127,8 +190,8 @@ public final class ConversionManager implements QueueContext {
 		
 		/** @since 00.02.09 */
 		@Override
-		public Metadata metadata() {
-			return metadata;
+		public ResolvedMedia output() {
+			return output;
 		}
 	}
 }

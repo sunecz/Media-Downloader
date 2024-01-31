@@ -54,7 +54,7 @@ public final class DownloadPipelineResult implements PipelineResult {
 		}
 		
 		if(needConversion) {
-			return ConversionPipelineTask.of(output, inputs, metadata);
+			return ConversionPipelineTask.of(inputs, output);
 		}
 		
 		return TerminatingPipelineTask.getTypedInstance();

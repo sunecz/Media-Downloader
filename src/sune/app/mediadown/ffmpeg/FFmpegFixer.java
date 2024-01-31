@@ -48,9 +48,8 @@ public final class FFmpegFixer implements MediaFixer {
 	
 	private ReadOnlyProcess process;
 	private MediaFixTracker tracker;
-	private ResolvedMedia output;
 	private List<ConversionMedia> inputs;
-	private Metadata metadata;
+	private ResolvedMedia output;
 	
 	private final Map<Integer, Path> mapInputs = new HashMap<>();
 	private final List<Path> tempPaths = new ArrayList<>();
@@ -316,10 +315,9 @@ public final class FFmpegFixer implements MediaFixer {
 	}
 	
 	@Override
-	public void start(ResolvedMedia output, List<ConversionMedia> inputs, Metadata metadata) throws Exception {
-		this.output = output;
+	public void start(List<ConversionMedia> inputs, ResolvedMedia output) throws Exception {
 		this.inputs = inputs;
-		this.metadata = metadata;
+		this.output = output;
 		
 		state.clear(TaskStates.STARTED);
 		
@@ -429,18 +427,13 @@ public final class FFmpegFixer implements MediaFixer {
 	}
 	
 	@Override
-	public ResolvedMedia output() {
-		return output;
-	}
-	
-	@Override
 	public List<ConversionMedia> inputs() {
 		return inputs;
 	}
 	
 	@Override
-	public Metadata metadata() {
-		return metadata;
+	public ResolvedMedia output() {
+		return output;
 	}
 	
 	@Override

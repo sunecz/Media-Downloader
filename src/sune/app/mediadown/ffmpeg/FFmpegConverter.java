@@ -162,10 +162,10 @@ public final class FFmpegConverter implements Converter {
 		}
 		
 		for(Pair<Output, Output> pair : Utils.zipIterable(
-		                                	command.outputs().stream(),
-		                                	altered.outputs().stream(),
-		                                	Pair::new
-		                                )) {
+			command.outputs().stream(),
+			altered.outputs().stream(),
+			Pair::new
+		)) {
 			NIO.moveForce(pair.b.path(), pair.a.path());
 		}
 	}

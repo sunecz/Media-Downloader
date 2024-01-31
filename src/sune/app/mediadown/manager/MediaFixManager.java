@@ -19,7 +19,6 @@ import sune.app.mediadown.gui.table.ResolvedMedia;
 import sune.app.mediadown.media.MediaConversionContext;
 import sune.app.mediadown.media.fix.MediaFixer;
 import sune.app.mediadown.report.ReportContext;
-import sune.app.mediadown.util.Metadata;
 import sune.app.mediadown.util.QueueContext;
 
 /** @since 00.02.09 */
@@ -34,29 +33,24 @@ public final class MediaFixManager implements QueueContext {
 		Disposables.add(this::dispose);
 	}
 	
-	private final MediaFixer createFixer() {
-		return new FFmpegFixer(new TrackerManager(new WaitTracker()));
-	}
-	
-	private final QueueTask<Void> createTask(
-			MediaFixer fixer, ResolvedMedia output, List<ConversionMedia> inputs, Metadata metadata
-	) {
-		return new FFmpegTask(fixer, output, inputs, metadata);
-	}
-	
 	public static final MediaFixManager instance() {
 		return instance.value();
 	}
 	
+	private final MediaFixer mediaFixer() {
+		return new FFmpegFixer(new TrackerManager(new WaitTracker()));
+	}
+	
 	public final PositionAwareManagerSubmitResult<MediaFixer, Void> submit(
-			ResolvedMedia output, List<ConversionMedia> inputs, Metadata metadata
+			List<ConversionMedia> inputs, ResolvedMedia output
 	) {
-		if(output == null || inputs == null || inputs.isEmpty() || metadata == null) {
+		if(inputs == null || inputs.isEmpty() || output == null) {
 			throw new IllegalArgumentException();
 		}
 		
-		MediaFixer fixer = createFixer();
-		PositionAwareQueueTaskResult<Void> taskResult = executor.submit(createTask(fixer, output, inputs, metadata));
+		MediaFixer fixer = mediaFixer();
+		FFmpegTask task = new FFmpegTask(fixer, inputs, output);
+		PositionAwareQueueTaskResult<Void> taskResult = executor.submit(task);
 		
 		return new PositionAwareManagerSubmitResult<>(fixer, taskResult, this);
 	}
@@ -81,15 +75,13 @@ public final class MediaFixManager implements QueueContext {
 	private static final class FFmpegTask implements QueueTask<Void>, MediaConversionContext {
 		
 		private final MediaFixer fixer;
-		private final ResolvedMedia output;
 		private final List<ConversionMedia> inputs;
-		private final Metadata metadata;
+		private final ResolvedMedia output;
 		
-		public FFmpegTask(MediaFixer fixer, ResolvedMedia output, List<ConversionMedia> inputs, Metadata metadata) {
+		public FFmpegTask(MediaFixer fixer, List<ConversionMedia> inputs, ResolvedMedia output) {
 			this.fixer = Objects.requireNonNull(fixer);
-			this.output = Objects.requireNonNull(output);
 			this.inputs = Objects.requireNonNull(inputs);
-			this.metadata = Objects.requireNonNull(metadata);
+			this.output = Objects.requireNonNull(output);
 		}
 		
 		private final ReportContext createContext() {
@@ -100,16 +92,11 @@ public final class MediaFixManager implements QueueContext {
 		@Override
 		public Void call() throws Exception {
 			try {
-				fixer.start(output, inputs, metadata);
+				fixer.start(inputs, output);
 				return null;
 			} catch(Exception ex) {
 				throw new WrappedReportContextException(ex, createContext());
 			}
-		}
-		
-		@Override
-		public ResolvedMedia output() {
-			return output;
 		}
 		
 		@Override
@@ -118,8 +105,8 @@ public final class MediaFixManager implements QueueContext {
 		}
 		
 		@Override
-		public Metadata metadata() {
-			return metadata;
+		public ResolvedMedia output() {
+			return output;
 		}
 	}
 }

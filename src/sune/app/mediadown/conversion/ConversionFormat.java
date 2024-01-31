@@ -6,7 +6,6 @@ import sune.app.mediadown.conversion.ConversionCommand.Input;
 import sune.app.mediadown.conversion.ConversionCommand.Output;
 import sune.app.mediadown.media.Media;
 import sune.app.mediadown.media.MediaFormat;
-import sune.app.mediadown.util.Metadata;
 
 /** @since 00.02.08 */
 public abstract class ConversionFormat {
@@ -17,7 +16,7 @@ public abstract class ConversionFormat {
 		this.format = Objects.requireNonNull(format);
 	}
 	
-	public abstract void from(Media media, int index, Input.Builder input, Output.Builder output, Metadata metadata);
+	public abstract void from(Media media, int index, Input.Builder input, Output.Builder output);
 	
 	public MediaFormat format() {
 		return format;

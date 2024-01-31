@@ -9,7 +9,6 @@ import sune.app.mediadown.gui.table.ResolvedMedia;
 import sune.app.mediadown.manager.ConversionManager;
 import sune.app.mediadown.manager.PositionAwareManagerSubmitResult;
 import sune.app.mediadown.media.MediaConversionContext;
-import sune.app.mediadown.util.Metadata;
 
 /** @since 00.01.26 */
 public final class ConversionPipelineTask
@@ -17,35 +16,28 @@ public final class ConversionPipelineTask
 		implements MediaConversionContext {
 	
 	/** @since 00.02.08 */
-	private final ResolvedMedia output;
-	/** @since 00.02.08 */
 	private final List<ConversionMedia> inputs;
 	/** @since 00.02.08 */
-	private final Metadata metadata;
+	private final ResolvedMedia output;
 	
 	/** @since 00.02.08 */
-	private ConversionPipelineTask(ResolvedMedia output, List<ConversionMedia> inputs, Metadata metadata) {
-		if(output == null || inputs == null || inputs.isEmpty() || metadata == null) {
+	private ConversionPipelineTask(List<ConversionMedia> inputs, ResolvedMedia output) {
+		if(inputs == null || inputs.isEmpty() || output == null) {
 			throw new IllegalArgumentException();
 		}
 		
-		this.output = output;
 		this.inputs = inputs;
-		this.metadata = metadata;
+		this.output = output;
 	}
 	
 	/** @since 00.02.08 */
-	public static final ConversionPipelineTask of(ResolvedMedia output, List<ConversionMedia> inputs,
-			Metadata metadata) {
-		return new ConversionPipelineTask(output, inputs, metadata);
+	public static final ConversionPipelineTask of(List<ConversionMedia> inputs, ResolvedMedia output) {
+		return new ConversionPipelineTask(inputs, output);
 	}
 	
 	@Override
 	protected PositionAwareManagerSubmitResult<Converter, Void> submit(Pipeline pipeline) throws Exception {
-		// Ensure that the input formats are not explicitly stated in the command
-		Metadata altered = metadata.copy();
-		altered.set("noExplicitInputFormat", true);
-		return ConversionManager.instance().submit(output, inputs, altered);
+		return ConversionManager.instance().submit(inputs, output);
 	}
 	
 	@Override
@@ -55,7 +47,7 @@ public final class ConversionPipelineTask
 	
 	@Override
 	protected PipelineResult pipelineResult() throws Exception {
-		return ConversionPipelineResult.noConversion();
+		return TerminatingPipelineTask.getTypedInstance();
 	}
 	
 	@Override protected void doStop() throws Exception { doAction(Converter::stop); }
@@ -70,9 +62,7 @@ public final class ConversionPipelineTask
 	@Override public boolean isError() { return doAction(Converter::isError, false); }
 	
 	/** @since 00.02.09 */
-	@Override public ResolvedMedia output() { return output; }
-	/** @since 00.02.09 */
 	@Override public List<ConversionMedia> inputs() { return inputs; }
 	/** @since 00.02.09 */
-	@Override public Metadata metadata() { return metadata; }
+	@Override public ResolvedMedia output() { return output; }
 }

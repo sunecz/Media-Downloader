@@ -17,32 +17,30 @@ public final class MediaFixPipelineTask
 		implements MediaFixContext {
 	
 	private final boolean needConversion;
-	private final ResolvedMedia output;
 	private final List<ConversionMedia> inputs;
-	private final Metadata metadata;
+	private final ResolvedMedia output;
 	
 	private MediaFixPipelineTask(
-			boolean needConversion, ResolvedMedia output, List<ConversionMedia> inputs, Metadata metadata
+			boolean needConversion, List<ConversionMedia> inputs, ResolvedMedia output
 	) {
-		if(output == null || inputs == null || inputs.isEmpty() || metadata == null) {
+		if(inputs == null || inputs.isEmpty() || output == null) {
 			throw new IllegalArgumentException();
 		}
 		
 		this.needConversion = needConversion;
-		this.output = output;
 		this.inputs = inputs;
-		this.metadata = metadata;
+		this.output = output;
 	}
 	
 	public static final MediaFixPipelineTask of(
 			boolean needConversion, ResolvedMedia output, List<ConversionMedia> inputs, Metadata metadata
 	) {
-		return new MediaFixPipelineTask(needConversion, output, inputs, metadata);
+		return new MediaFixPipelineTask(needConversion, inputs, output);
 	}
 	
 	@Override
 	protected PositionAwareManagerSubmitResult<MediaFixer, Void> submit(Pipeline pipeline) throws Exception {
-		return MediaFixManager.instance().submit(output, inputs, metadata);
+		return MediaFixManager.instance().submit(inputs, output);
 	}
 	
 	@Override
@@ -53,7 +51,7 @@ public final class MediaFixPipelineTask
 	@Override
 	protected PipelineResult pipelineResult() throws Exception {
 		if(needConversion) {
-			return ConversionPipelineResult.doConversion(output, inputs, metadata);
+			return ConversionPipelineResult.doConversion(inputs, output);
 		}
 		
 		return ConversionPipelineResult.noConversion();
@@ -70,7 +68,6 @@ public final class MediaFixPipelineTask
 	@Override public boolean isStopped() { return doAction(MediaFixer::isStopped, false); }
 	@Override public boolean isError() { return doAction(MediaFixer::isError, false); }
 	
-	@Override public ResolvedMedia output() { return output; }
 	@Override public List<ConversionMedia> inputs() { return inputs; }
-	@Override public Metadata metadata() { return metadata; }
+	@Override public ResolvedMedia output() { return output; }
 }
