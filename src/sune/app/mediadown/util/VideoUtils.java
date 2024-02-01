@@ -15,7 +15,7 @@ public final class VideoUtils {
 	
 	public static final double duration(Path file) {
 		try(ReadOnlyProcess process = FFprobe.createSynchronousProcess()) {
-			String command = String.format(COMMAND_DURATION, file.getFileName().toString());
+			String command = String.format(COMMAND_DURATION, file.toAbsolutePath().toString());
 			return Double.parseDouble(process.execute(command));
 		} catch(Exception ex) {
 			// Ignore
