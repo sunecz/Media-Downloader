@@ -1530,6 +1530,10 @@ public final class Utils {
 	
 	/** @since 00.02.09 */
 	private static final int compareNatural(String a, String b, boolean ignoreCase) {
+		if(a == b)    return  0; // nulls are also equal
+		if(a == null) return  1; // null will be higher in a list
+		if(b == null) return -1; // null will be higher in a list
+		
 		final int lenA = a.length();
 		final int lenB = b.length();
 		
@@ -1603,6 +1607,10 @@ public final class Utils {
 	
 	/** @since 00.02.09 */
 	public static final int compareSimpleDateTime(String a, String b) {
+		if(a == b)    return  0; // nulls are also equal
+		if(a == null) return  1; // null will be higher in a list
+		if(b == null) return -1; // null will be higher in a list
+		
 		Matcher ma, mb;
 		if((ma = Detections.OfSimpleDateTime.match(a)).find() && ma.start() == 0
 				&& (mb = Detections.OfSimpleDateTime.match(b)).find() && mb.start() == 0) {
@@ -1627,6 +1635,10 @@ public final class Utils {
 	
 	/** @since 00.02.09 */
 	private static final int compareNaturalWithDateTime(String a, String b, boolean ignoreCase) {
+		if(a == b)    return  0; // nulls are also equal
+		if(a == null) return  1; // null will be higher in a list
+		if(b == null) return -1; // null will be higher in a list
+		
 		Matcher ma, mb;
 		if((ma = Detections.OfSimpleDateTime.match(a)).find() && ma.start() == 0
 				&& (mb = Detections.OfSimpleDateTime.match(b)).find() && mb.start() == 0) {
