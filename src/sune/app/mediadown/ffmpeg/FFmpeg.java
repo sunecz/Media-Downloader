@@ -22,6 +22,7 @@ import sune.app.mediadown.event.tracker.TrackerManager;
 import sune.app.mediadown.gui.table.ResolvedMedia;
 import sune.app.mediadown.media.AudioMedia;
 import sune.app.mediadown.media.Media;
+import sune.app.mediadown.media.MediaConstants;
 import sune.app.mediadown.media.MediaFormat;
 import sune.app.mediadown.media.MediaType;
 import sune.app.mediadown.media.VideoMedia;
@@ -591,6 +592,12 @@ public final class FFmpeg {
 			
 			CommandOptimizer.optimizeOutput(out, mutableInputs.size());
 			command.addOutputs(out.asFormat(formatOutput));
+			
+			double duration = inputs.stream()
+				.mapToDouble(ConversionMedia::duration)
+				.filter((d) -> d > 0.0)
+				.min().orElse(MediaConstants.UNKNOWN_DURATION);
+			command.addMetadata(Metadata.of("duration", duration));
 			
 			return command.build();
 		}
