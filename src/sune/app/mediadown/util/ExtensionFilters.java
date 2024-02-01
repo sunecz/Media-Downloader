@@ -14,8 +14,10 @@ import sune.app.mediadown.media.MediaType;
 public final class ExtensionFilters {
 	
 	private static ExtensionFilter[] outputMediaFormats;
-	private static MediaFormat[] refOutputFormats;
 	private static final BiFunction<MediaFormat[], MediaType[], Comparator<MediaFormat>> comparatorSupplier;
+	
+	/** @since 00.02.09 */
+	private static final Regex REGEX_FORMAT_NAME = Regex.of("(?i)-(?:video|audio)$");
 	
 	static {
 		comparatorSupplier = ((mediaFormats, mediaTypes) -> {
@@ -48,19 +50,26 @@ public final class ExtensionFilters {
 	}
 	
 	public static final ExtensionFilter extensionFilter(MediaFormat format) {
-		return new ExtensionFilter(String.format("%s %s", format.toString(), format.mediaType().toString().toLowerCase()),
-		                           fixExtensions(format.fileExtensions()));
+		return new ExtensionFilter(
+			String.format(
+				"%s %s",
+				REGEX_FORMAT_NAME.replaceFirst(format.toString(), ""),
+				format.mediaType().toString().toLowerCase()
+			),
+			fixExtensions(format.fileExtensions())
+		);
 	}
 	
 	public static final ExtensionFilter[] outputMediaFormats() {
-		MediaFormat[] ref = supportedOutputFormats();
-		if(outputMediaFormats == null || ref != refOutputFormats) {
+		if(outputMediaFormats == null) {
+			MediaFormat[] ref = supportedOutputFormats();
+			
 			outputMediaFormats = Stream.of(ref)
-					.sorted(comparatorSupplier.apply(ref, MediaType.values()))
-					.map(ExtensionFilters::extensionFilter)
-					.toArray(ExtensionFilter[]::new);
-			refOutputFormats = ref;
+				.sorted(comparatorSupplier.apply(ref, MediaType.values()))
+				.map(ExtensionFilters::extensionFilter)
+				.toArray(ExtensionFilter[]::new);
 		}
+		
 		return outputMediaFormats;
 	}
 }
