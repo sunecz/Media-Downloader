@@ -122,9 +122,9 @@ public final class FFmpeg {
 					ensureVideo(media, index, input, output, false);
 					
 					Media root = Media.root(media);
-					int resultAudio = ensureAudio(root, index, input, output, false);
+					int result = ensureAudio(root, index, input, output, false);
 					
-					if(resultAudio == RESULT_NONE
+					if(result == RESULT_NONE
 							// Check whether the root media also has an audio media (e.g. inputFormat=DASH)
 							&& !isAudioSeparated(root)) {
 						// If an audio media is not present separately, force the audio from the video
@@ -193,7 +193,7 @@ public final class FFmpeg {
 					} else {
 						Media root = Media.root(media);
 						
-						if(root.format().isAnyOf(MediaFormat.M3U8)) {
+						if(root.format().is(MediaFormat.M3U8)) {
 							output.addOptions(
 								Options.streamAudioCodecCopy(index),
 								Option.ofShort("bsf:a", "aac_adtstoasc")
@@ -412,6 +412,20 @@ public final class FFmpeg {
 					return RESULT_REENCODE;
 				}
 			}
+			
+			/** @since 00.02.09 */
+			public static final class TS extends MP4Compatible {
+				
+				protected TS() {
+					super(MediaFormat.TS);
+				}
+				
+				@Override
+				public boolean isConversionNeeded(List<ConversionMedia> inputs, ResolvedMedia output) {
+					// If the source is HLS (M3U8), just rename the input file
+					return !Media.root(inputs.get(0).media()).format().is(MediaFormat.M3U8);
+				}
+			}
 		}
 		
 		private static final class AudioConversionFormat extends ConversionFormat {
@@ -513,6 +527,7 @@ public final class FFmpeg {
 			register(new Formats.VideoConversionFormat.WMV());
 			register(new Formats.VideoConversionFormat.WEBMV());
 			register(new Formats.VideoConversionFormat.OGGV());
+			register(new Formats.VideoConversionFormat.TS());
 			// Audio formats
 			register(new Formats.AudioConversionFormat(MediaFormat.MP3, "mp3"));
 			register(new Formats.AudioConversionFormat(MediaFormat.WAV, "pcm_s16le"));
@@ -559,6 +574,10 @@ public final class FFmpeg {
 					"Unable to create FFmpeg command: input=%s, output=%s",
 					formatInput, formatOutput
 				));
+			}
+			
+			if(!format.isConversionNeeded(inputs, output)) {
+				return ConversionCommand.Constants.RENAME;
 			}
 			
 			for(int i = 0, l = mutableInputs.size(); i < l; ++i) {

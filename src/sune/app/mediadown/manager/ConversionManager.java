@@ -25,6 +25,7 @@ import sune.app.mediadown.gui.table.ResolvedMedia;
 import sune.app.mediadown.media.MediaConversionContext;
 import sune.app.mediadown.report.ReportContext;
 import sune.app.mediadown.util.CheckedConsumer;
+import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.QueueContext;
 
 /** @since 00.01.26 */
@@ -174,6 +175,19 @@ public final class ConversionManager implements QueueContext {
 		public Void call() throws Exception {
 			try {
 				ConversionCommand command = provider.createCommand(inputs, output);
+				
+				if(command == ConversionCommand.Constants.RENAME) {
+					// Check the number of inputs and throw an exception, rather than silently deleting
+					// possible other inputs, apart from the first one.
+					if(inputs.size() > 1) {
+						throw new IllegalStateException("Cannot rename multiple files into a single file");
+					}
+					
+					// Direct rename (only the first input file)
+					NIO.moveForce(inputs.get(0).path(), output.path());
+					return null; // Do not continue
+				}
+				
 				converter = provider.createConverter(new TrackerManager(new WaitTracker()));
 				converter.start(command);
 				return null;

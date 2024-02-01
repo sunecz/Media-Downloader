@@ -101,6 +101,22 @@ public abstract class ConversionCommand {
 		return string();
 	}
 	
+	/** @since 00.02.09 */
+	public static final class Constants {
+		
+		public static final ConversionCommand RENAME = new Rename();
+		
+		// Forbid anyone to create an instance of this class
+		private Constants() {
+		}
+		
+		private static final class Rename extends ConversionCommand {
+			
+			public Rename() { super(List.of(), List.of(), List.of(), Metadata.empty()); }
+			@Override public String string() { return null; }
+		}
+	}
+	
 	public static class IOPoint {
 		
 		protected final Path path;
