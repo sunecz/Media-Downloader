@@ -146,7 +146,7 @@ public final class FFmpegConverter implements Converter {
 			String message = String.format(
 				"FFmpeg exited with non-zero code: %d.%s", exitCode,
 				logPath != null
-					? String.format("See %s for details.", logPath.toAbsolutePath().toString())
+					? String.format(" See %s for details.", logPath.toAbsolutePath().toString())
 					: ""
 			);
 			
