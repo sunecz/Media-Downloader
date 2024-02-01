@@ -5,26 +5,21 @@ import java.util.Objects;
 
 import sune.app.mediadown.conversion.ConversionMedia;
 import sune.app.mediadown.gui.table.ResolvedMedia;
-import sune.app.mediadown.util.Metadata;
 
 /** @since 00.01.26 */
 public final class DownloadPipelineResult implements PipelineResult {
 	
 	private final boolean needConversion;
 	/** @since 00.02.08 */
-	private final ResolvedMedia output;
-	/** @since 00.02.08 */
 	private final List<ConversionMedia> inputs;
 	/** @since 00.02.08 */
-	private final Metadata metadata;
+	private final ResolvedMedia output;
 	
 	/** @since 00.02.08 */
-	private DownloadPipelineResult(boolean needConversion, ResolvedMedia output, List<ConversionMedia> inputs,
-			Metadata metadata) {
+	private DownloadPipelineResult(boolean needConversion, List<ConversionMedia> inputs, ResolvedMedia output) {
 		this.needConversion = needConversion;
-		this.output = output;
 		this.inputs = inputs;
-		this.metadata = metadata;
+		this.output = output;
 	}
 	
 	/** @since 00.02.08 */
@@ -37,20 +32,19 @@ public final class DownloadPipelineResult implements PipelineResult {
 	}
 	
 	public static final DownloadPipelineResult noConversion() {
-		return new DownloadPipelineResult(false, null, null, null);
+		return new DownloadPipelineResult(false, null, null);
 	}
 	
 	/** @since 00.02.08 */
-	public static final DownloadPipelineResult doConversion(ResolvedMedia output, List<ConversionMedia> inputs,
-			Metadata metadata) {
-		return new DownloadPipelineResult(true, Objects.requireNonNull(output), checkInputs(inputs), metadata);
+	public static final DownloadPipelineResult doConversion(List<ConversionMedia> inputs, ResolvedMedia output) {
+		return new DownloadPipelineResult(true, checkInputs(inputs), Objects.requireNonNull(output));
 	}
 	
 	@Override
 	public final PipelineTask process(Pipeline pipeline) throws Exception {
 		// Try to fix the media, if a fixing is requested, before anything else
 		if(output.media().metadata().get("media.fix.required", false)) {
-			return MediaFixPipelineTask.of(needConversion, output, inputs, metadata);
+			return MediaFixPipelineTask.of(needConversion, inputs, output);
 		}
 		
 		if(needConversion) {
@@ -66,18 +60,13 @@ public final class DownloadPipelineResult implements PipelineResult {
 	}
 	
 	/** @since 00.02.09 */
-	public ResolvedMedia output() {
-		return output;
-	}
-	
-	/** @since 00.02.09 */
 	public List<ConversionMedia> inputs() {
 		return inputs;
 	}
 	
 	/** @since 00.02.09 */
-	public Metadata metadata() {
-		return metadata;
+	public ResolvedMedia output() {
+		return output;
 	}
 	
 	/** @since 00.02.09 */

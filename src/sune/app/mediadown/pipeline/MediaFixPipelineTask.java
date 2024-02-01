@@ -9,7 +9,6 @@ import sune.app.mediadown.manager.MediaFixManager;
 import sune.app.mediadown.manager.PositionAwareManagerSubmitResult;
 import sune.app.mediadown.media.fix.MediaFixContext;
 import sune.app.mediadown.media.fix.MediaFixer;
-import sune.app.mediadown.util.Metadata;
 
 /** @since 00.02.09 */
 public final class MediaFixPipelineTask
@@ -33,7 +32,7 @@ public final class MediaFixPipelineTask
 	}
 	
 	public static final MediaFixPipelineTask of(
-			boolean needConversion, ResolvedMedia output, List<ConversionMedia> inputs, Metadata metadata
+			boolean needConversion, List<ConversionMedia> inputs, ResolvedMedia output
 	) {
 		return new MediaFixPipelineTask(needConversion, inputs, output);
 	}
