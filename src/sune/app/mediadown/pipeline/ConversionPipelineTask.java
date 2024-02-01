@@ -47,7 +47,7 @@ public final class ConversionPipelineTask
 	
 	@Override
 	protected PipelineResult pipelineResult() throws Exception {
-		return TerminatingPipelineTask.getTypedInstance();
+		return TerminatingPipelineResult.getTypedInstance();
 	}
 	
 	@Override protected void doStop() throws Exception { doAction(Converter::stop); }
