@@ -501,7 +501,7 @@ public final class FXUtils {
 				TextArea label = new TextArea(message);
 				label.setEditable(false);
 				label.setPrefRowCount(1);
-				double labelHeight = label.getFont().getSize() * 2.5;
+				double labelHeight = label.getFont().getSize() * 3.5;
 				label.setPrefHeight(labelHeight);
 				label.setMinHeight(labelHeight);
 				wrapper.getChildren().add(label);
