@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.WeakHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -61,6 +62,8 @@ public final class Web {
 	private static final int INTERNAL_RETRY_WAIT_BASE_MS = 1000;
 	/** @since 00.02.09 */
 	private static final int INTERNAL_RETRY_MAX_WAIT_MS = 10000;
+	/** @since 00.02.09 */
+	private static final Version DEFAULT_HTTP_VERSION = Version.HTTP_2;
 	
 	private static Duration defaultConnectTimeout = Duration.ofMillis(5000);
 	private static Duration defaultReadTimeout = Duration.ofMillis(20000);
@@ -74,6 +77,11 @@ public final class Web {
 	
 	/** @since 00.02.09 */
 	public static final long UNKNOWN_SIZE = -1L;
+	
+	static {
+		// See: https://bugs.openjdk.org/browse/JDK-8304701
+		System.setProperty("jdk.httpclient.allowRestrictedHeaders", "connection");
+	}
 	
 	// Forbid anyone to create an instance of this class
 	private Web() {
@@ -90,7 +98,7 @@ public final class Web {
 					.connectTimeout(defaultConnectTimeout)
 					.cookieHandler(cookieManager())
 					.executor(newExecutor())
-					.version(Version.HTTP_2);
+					.version(DEFAULT_HTTP_VERSION);
 	}
 	
 	private static final HttpClient newDefaultHttpClientWithRedirect() {
@@ -165,18 +173,51 @@ public final class Web {
 	}
 	
 	/** @since 00.02.09 */
+	private static final HttpRequest toHttpRequest(Request request) {
+		HttpRequest.Builder builder = request.toHttpRequestBuilder();
+		Version version = request.version();
+		
+		if(version == null) {
+			version = Internal.getHttpVersion(request);
+			
+			if(version == null) {
+				version = DEFAULT_HTTP_VERSION;
+			}
+		}
+		
+		builder.version(version);
+		
+		// See: https://bugs.openjdk.org/browse/JDK-8304701
+		if(version == Version.HTTP_1_1) {
+			builder.setHeader("connection", "close");
+		}
+		
+		return builder.build();
+	}
+	
+	/** @since 00.02.09 */
 	private static final <T, R extends Response> R doRequest(
 			Request request, BiFunction<Request, HttpResponse<T>, R> constructor, BodyHandler<T> handler,
 			int retryInternalAttempt, int retryExternalAttempt
 	) throws Exception {
 		do {
 			try {
-				return constructor.apply(
+				R response = constructor.apply(
 					request,
 					httpClientFor(request)
-						.sendAsync(request.toHttpRequest(), handler)
+						.sendAsync(toHttpRequest(request), handler)
 						.get(request.timeout().toNanos(), TimeUnit.NANOSECONDS)
 				);
+				
+				Version targetVersion = request.version();
+				Version version = response.version();
+				
+				if(version != DEFAULT_HTTP_VERSION
+						|| (targetVersion != null && !targetVersion.equals(version))) {
+					Internal.setHttpVersion(request, version);
+				}
+				
+				return response;
 			} catch(ExecutionException ex) {
 				Throwable cause = ex.getCause();
 				
@@ -243,8 +284,8 @@ public final class Web {
 		return doRequest(request, Response.OfStream::new, BodyHandlers.ofInputStream());
 	}
 	
-	public static final Response.OfStream peek(Request request) throws Exception {
-		return requestStream(request.toHEAD());
+	public static final Response.OfVoid peek(Request request) throws Exception {
+		return doRequest(request.toHEAD(), Response.OfVoid::new, BodyHandlers.discarding());
 	}
 	
 	public static final long size(Request request) throws Exception {
@@ -293,6 +334,37 @@ public final class Web {
 		}
 	}
 	
+	/** @since 00.02.09 */
+	private static final class Internal {
+		
+		private static final Map<URI, Version> versions = new WeakHashMap<>();
+		
+		// Forbid anyone to create an instance of this class
+		private Internal() {
+		}
+		
+		private static final URI normalizeForLookup(URI uri) {
+			// Keep only the scheme and domain (possibly user, pass, port), i.e. remove path, query and fragment.
+			return uri.normalize().resolve("/");
+		}
+		
+		public static final void setHttpVersion(Request request, Version version) {
+			URI normalizedUri = normalizeForLookup(request.uri());
+			
+			synchronized(versions) {
+				versions.putIfAbsent(normalizedUri, version);
+			}
+		}
+		
+		public static final Version getHttpVersion(Request request) {
+			URI normalizedUri = normalizeForLookup(request.uri());
+			
+			synchronized(versions) {
+				return versions.get(normalizedUri);
+			}
+		}
+	}
+	
 	private static final class WebThreadFactory implements ThreadFactory {
 		
 		private final String namePrefix;
@@ -326,6 +398,8 @@ public final class Web {
 		public int statusCode() { return response.statusCode(); }
 		public URI uri() { return response.uri(); }
 		public HttpHeaders headers() { return response.headers(); }
+		/** @since 00.02.09 */
+		public Version version() { return response.version(); }
 		
 		public String identifier() {
 			HttpHeaders headers = headers();
@@ -336,6 +410,22 @@ public final class Web {
 			}
 			
 			return identifier.orElse(null);
+		}
+		
+		/** @since 00.02.09 */
+		public static class OfVoid extends Response {
+			
+			protected OfVoid(Request request, HttpResponse<Void> response) {
+				super(request, response);
+			}
+			
+			@Override
+			public void close() throws Exception {
+				// Do nothing
+			}
+			
+			@SuppressWarnings("unchecked")
+			public HttpResponse<Void> response() { return (HttpResponse<Void>) response; }
 		}
 		
 		public static class OfString extends Response {
@@ -386,6 +476,8 @@ public final class Web {
 		protected final Duration timeout;
 		/** @since 00.02.09 */
 		protected final int retry;
+		/** @since 00.02.09 */
+		protected final Version version;
 		
 		protected Request(String method, Builder builder) {
 			this.method = Objects.requireNonNull(method);
@@ -398,6 +490,7 @@ public final class Web {
 			this.range = builder.range();
 			this.timeout = Objects.requireNonNull(builder.timeout());
 			this.retry = builder.retry();
+			this.version = builder.version();
 		}
 		
 		public static Builder of(URI uri) {
@@ -450,6 +543,8 @@ public final class Web {
 			return Request.Builder.of(this);
 		}
 		
+		/** @since 00.02.09 */
+		protected abstract HttpRequest.Builder toHttpRequestBuilder();
 		public abstract HttpRequest toHttpRequest();
 		public abstract Request toHEAD();
 		public abstract Request toRanged(Range<Long> range, String identifier);
@@ -468,6 +563,8 @@ public final class Web {
 		public Duration timeout() { return timeout; }
 		/** @since 00.02.09 */
 		public int retry() { return retry; }
+		/** @since 00.02.09 */
+		public Version version() { return version; }
 		
 		protected static class GET extends Request {
 			
@@ -476,8 +573,13 @@ public final class Web {
 			}
 			
 			@Override
+			protected HttpRequest.Builder toHttpRequestBuilder() {
+				return httpRequestBuilder().GET();
+			}
+			
+			@Override
 			public HttpRequest toHttpRequest() {
-				return httpRequestBuilder().GET().build();
+				return Web.toHttpRequest(this);
 			}
 			
 			@Override
@@ -508,11 +610,15 @@ public final class Web {
 			}
 			
 			@Override
-			public HttpRequest toHttpRequest() {
+			protected HttpRequest.Builder toHttpRequestBuilder() {
 				return httpRequestBuilder()
 							.header("content-type", contentType)
-							.POST(BodyPublishers.ofString(body, CHARSET))
-							.build();
+							.POST(BodyPublishers.ofString(body, CHARSET));
+			}
+			
+			@Override
+			public HttpRequest toHttpRequest() {
+				return Web.toHttpRequest(this);
 			}
 			
 			@Override
@@ -538,8 +644,14 @@ public final class Web {
 			}
 			
 			@Override
+			protected HttpRequest.Builder toHttpRequestBuilder() {
+				return httpRequestBuilder()
+							.method(method(), BodyPublishers.noBody());
+			}
+			
+			@Override
 			public HttpRequest toHttpRequest() {
-				return httpRequestBuilder().method(method(), BodyPublishers.noBody()).build();
+				return Web.toHttpRequest(this);
 			}
 			
 			@Override
@@ -572,6 +684,8 @@ public final class Web {
 			private Duration timeout;
 			/** @since 00.02.09 */
 			private int retry;
+			/** @since 00.02.09 */
+			private Version version;
 			
 			private Builder(URI uri) {
 				this.uri = Objects.requireNonNull(uri);
@@ -589,6 +703,8 @@ public final class Web {
 				identifier = request.identifier();
 				range = request.range();
 				timeout = request.timeout();
+				retry = request.retry();
+				version = request.version();
 			}
 			
 			protected static final <T> List<T> merge(List<T> list, Collection<T> values) {
@@ -729,6 +845,8 @@ public final class Web {
 			public Builder timeout(Duration timeout) { this.timeout = timeout; return this; }
 			/** @since 00.02.09 */
 			public Builder retry(int retry) { this.retry = retry; return this; }
+			/** @since 00.02.09 */
+			public Builder version(Version version) { this.version = version; return this; }
 			
 			public URI uri() { return uri; }
 			public String userAgent() { return userAgent; }
@@ -740,6 +858,8 @@ public final class Web {
 			public Duration timeout() { return timeout; }
 			/** @since 00.02.09 */
 			public int retry() { return retry; }
+			/** @since 00.02.09 */
+			public Version version() { return version; }
 		}
 	}
 	
