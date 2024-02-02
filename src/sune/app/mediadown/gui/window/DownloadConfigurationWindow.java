@@ -380,8 +380,8 @@ public class DownloadConfigurationWindow extends DraggableWindow<BorderPane> {
 				GridPane.setHgrow(listFormatsPriority, Priority.ALWAYS);
 				
 				window.grid().getChildren().addAll(lblFormatsPriority, listFormatsPriority);
-				GridPane.setConstraints(lblFormatsPriority, 0, row);
-				GridPane.setConstraints(listFormatsPriority, 0, row + 1);
+				GridPane.setConstraints(lblFormatsPriority, 0, row, 2, 1);
+				GridPane.setConstraints(listFormatsPriority, 0, row + 1, 2, 1);
 				return row + 2;
 			}
 			
@@ -475,8 +475,8 @@ public class DownloadConfigurationWindow extends DraggableWindow<BorderPane> {
 				GridPane.setHgrow(listSubtitlesLanguage, Priority.ALWAYS);
 				
 				window.grid().getChildren().addAll(lblSubtitlesLanguage, listSubtitlesLanguage);
-				GridPane.setConstraints(lblSubtitlesLanguage, 0, row);
-				GridPane.setConstraints(listSubtitlesLanguage, 0, row + 1);
+				GridPane.setConstraints(lblSubtitlesLanguage, 0, row, 2, 1);
+				GridPane.setConstraints(listSubtitlesLanguage, 0, row + 1, 2, 1);
 				return row + 2;
 			}
 			
