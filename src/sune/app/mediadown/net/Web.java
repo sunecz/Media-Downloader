@@ -155,7 +155,8 @@ public final class Web {
 		}
 		
 		return message.contains("GOAWAY received")
-					|| message.contains("too many concurrent streams");
+					|| message.contains("too many concurrent streams")
+					|| message.contains("Received RST_STREAM");
 	}
 	
 	/** @since 00.02.09 */
