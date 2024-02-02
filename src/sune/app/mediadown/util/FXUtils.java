@@ -58,6 +58,7 @@ import javafx.stage.Modality;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import sune.app.mediadown.MediaDownloader;
+import sune.app.mediadown.exception.TranslatableException;
 import sune.app.mediadown.exception.WrappedReportContextException;
 import sune.app.mediadown.gui.GUI;
 import sune.app.mediadown.gui.window.MainWindow;
@@ -284,6 +285,11 @@ public final class FXUtils {
 				return;
 			}
 			
+			if(throwable instanceof TranslatableException) {
+				add(Common.itemOfTranslatedException((TranslatableException) throwable));
+				return;
+			}
+			
 			add(new OfThrowable(throwable));
 		}
 		
@@ -403,6 +409,19 @@ public final class FXUtils {
 				wrapper.getChildren().add(btnReport);
 				
 				return wrapper;
+			}
+			
+			public static final ErrorItem itemOfTranslatedException(TranslatableException exception) {
+				Translation translation = MediaDownloader.translation();
+				String message = translation.getSingle(exception.translationPath());
+				String content = null;
+				
+				Throwable cause;
+				if((cause = exception.getCause()) != null) {
+					content = Utils.throwableToString(cause);
+				}
+				
+				return new OfMessage(message, content);
 			}
 		}
 		

@@ -576,6 +576,12 @@
 		},
 		conversion: {
 			cannot_convert: "Nelze zkonvertovat soubor: %{path}"
+		},
+		credentials: {
+			missing:   "Chybějící přihlašovací údaje. Zadejte prosím své přihlašovací údaje "
+					 + "v okně Přihlašovací údaje.",
+			incorrect: "Možná nesprávné přihlašovací údaje. Zkontrolujte prosím své přihlašovací údaje "
+					 + "v okně Přihlašovací údaje."
 		}
 	},
 	generic: {

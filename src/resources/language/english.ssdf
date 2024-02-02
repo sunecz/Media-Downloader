@@ -576,6 +576,12 @@
 		},
 		conversion: {
 			cannot_convert: "Unable to convert file: %{path}"
+		},
+		credentials: {
+			missing:   "Missing credentials. Please, enter your login credentials "
+					 + "in the Login credentials window.",
+			incorrect: "Possibly incorrect credentials. Please, check your login credentials "
+				     + "in the Login credentials window."
 		}
 	},
 	generic: {
