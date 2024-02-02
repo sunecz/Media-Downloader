@@ -628,7 +628,7 @@ public final class MediaUtils {
 		public final List<Media.Builder<?, ?>> parse(URI uri, URI sourceURI, Map<String, Object> data)
 				throws Exception {
 			Request request = Request.of(uri).GET();
-			try(Response.OfStream response = Web.peek(request)) {
+			try(Response response = Web.peek(request)) {
 				MediaFormat format = Opt.of(contentType(response.headers()))
 					.ifTrue(Parser::isNotUnknownFormat)
 					.or((o) -> Opt.of(contentTypeFromUri(uri)))

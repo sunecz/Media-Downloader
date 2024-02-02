@@ -1068,7 +1068,7 @@ public final class MediaDownloader {
 				
 				// Check whether the remote JAR file exists or not
 				do {
-					try(Response.OfStream response = Web.peek(Request.of(Net.uri(jarUrl)).HEAD())) {
+					try(Response response = Web.peek(Request.of(Net.uri(jarUrl)).HEAD())) {
 						// If the remote file exists, we can continue in the process
 						if(response.statusCode() == 200) break;
 						
