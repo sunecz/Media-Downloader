@@ -16,15 +16,35 @@ public final class InternalState {
 		state = new AtomicInteger(initialState);
 	}
 	
+	/** @since 00.02.09 */
+	private static final int opSet(int current, int value) {
+		return current | value;
+	}
+	
+	/** @since 00.02.09 */
+	private static final int opUnset(int current, int value) {
+		return current & (~value);
+	}
+	
 	private final void setValue(IntUnaryOperator op) {
-		int oldValue = state.get();
-		int newValue = op.applyAsInt(oldValue);
+		for(int value = state.get(), expected;
+				(value = state.compareAndExchange(expected = value, op.applyAsInt(value))) != expected;
+		);
+	}
+	
+	/** @since 00.02.09 */
+	private final boolean compareAndSetValue(int expected, int mask, IntUnaryOperator op) {
+		int value = state.get(), check = expected;
 		
-		while(oldValue != newValue
-				&& !state.compareAndSet(oldValue, newValue)) {
-			oldValue = state.get();
-			newValue = op.applyAsInt(oldValue);
-		}
+		do {
+			if((value = state.compareAndExchange(check, op.applyAsInt(value))) == check) {
+				return true;
+			}
+			
+			check = value;
+		} while(((value & mask) ^ expected) == 0);
+		
+		return false;
 	}
 	
 	public final void clear(int value) {
@@ -32,11 +52,41 @@ public final class InternalState {
 	}
 	
 	public final void set(int value) {
-		setValue((current) -> current | value);
+		setValue((current) -> opSet(current, value));
 	}
 	
 	public final void unset(int value) {
-		setValue((current) -> current & (~value));
+		setValue((current) -> opUnset(current, value));
+	}
+	
+	/** @since 00.02.09 */
+	public final boolean compareAndSet(int expected, int mask, int value) {
+		return compareAndSetValue(expected, mask, (current) -> opSet(current, value));
+	}
+	
+	/** @since 00.02.09 */
+	public final boolean compareAndUnset(int expected, int mask, int value) {
+		return compareAndSetValue(expected, mask, (current) -> opUnset(current, value));
+	}
+	
+	/** @since 00.02.09 */
+	public final boolean compareAndSetBit(boolean expected, int mask) {
+		return compareAndSetBit(expected, mask, mask);
+	}
+	
+	/** @since 00.02.09 */
+	public final boolean compareAndSetBit(boolean expected, int mask, int value) {
+		return compareAndSet(expected ? mask : 0, mask, value);
+	}
+	
+	/** @since 00.02.09 */
+	public final boolean compareAndUnsetBit(boolean expected, int mask) {
+		return compareAndUnsetBit(expected, mask, mask);
+	}
+	
+	/** @since 00.02.09 */
+	public final boolean compareAndUnsetBit(boolean expected, int mask, int value) {
+		return compareAndUnset(expected ? mask : 0, mask, value);
 	}
 	
 	public final int get() {
@@ -45,5 +95,10 @@ public final class InternalState {
 	
 	public final boolean is(int value) {
 		return (state.get() & value) == value;
+	}
+	
+	/** @since 00.02.09 */
+	public final boolean is(int value, int mask) {
+		return ((state.get() & mask) ^ value) == 0;
 	}
 }
