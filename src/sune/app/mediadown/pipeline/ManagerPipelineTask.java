@@ -112,10 +112,18 @@ public abstract class ManagerPipelineTask<R, V> implements PipelineTask {
 	@Override
 	public final void pause() throws Exception {
 		doPause();
+		
+		if(result != null) {
+			result.pause();
+		}
 	}
 	
 	@Override
 	public final void resume() throws Exception {
 		doResume();
+		
+		if(result != null) {
+			result.resume();
+		}
 	}
 }

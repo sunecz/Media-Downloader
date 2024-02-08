@@ -7,7 +7,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import sune.app.mediadown.InternalState;
 
@@ -22,7 +21,7 @@ public class QueueTaskExecutor<V> {
 	
 	protected final int maxTaskCount;
 	protected final Queue<InternalQueueTask> submittedTasks = new ConcurrentLinkedQueue<>();
-	protected final Queue<InternalQueueTask> queuedTasks = new ConcurrentLinkedQueue<>();
+	protected final Queue<InternalQueueTask> runningTasks = new ConcurrentLinkedQueue<>();
 	protected final StateMutex mtxSubmitted = new StateMutex();
 	protected final InternalState state = new InternalState(STATE_INITIAL);
 	protected final CounterLock lockTasks;
@@ -67,8 +66,36 @@ public class QueueTaskExecutor<V> {
 		return executor().submit(task);
 	}
 	
+	/** @since 00.02.09 */
+	protected void removeLeadingFinishedTasks() {
+		// To avoid search in the queue to remove a task that may be at any position,
+		// remove all leading done or cancelled tasks from the queue at once.
+		for(InternalQueueTask task;
+				!state.is(STATE_STOPPING)
+					&& (task = runningTasks.peek()) != null
+					&& (task.isDone() || task.isCancelled());
+				// Use remove to ensure that the wanted task is removed, not another task
+				runningTasks.remove(task));
+	}
+	
 	protected void cancelTask(InternalQueueTask task) {
-		// Do nothing by default
+		removeLeadingFinishedTasks();
+	}
+	
+	/** @since 00.02.09 */
+	protected void pauseTask(InternalQueueTask task) {
+		// Nothing to do
+	}
+	
+	/** @since 00.02.09 */
+	protected void resumeTask(InternalQueueTask task) {
+		submittedTasks.add(task);
+		mtxSubmitted.unlock();
+	}
+	
+	/** @since 00.02.09 */
+	protected void finishTask(InternalQueueTask task) {
+		removeLeadingFinishedTasks();
 	}
 	
 	protected void loop() {
@@ -89,7 +116,7 @@ public class QueueTaskExecutor<V> {
 			Future<V> future = submitTask(task);
 			
 			task.future(future);
-			queuedTasks.add(task);
+			runningTasks.add(task);
 		}
 	}
 	
@@ -127,9 +154,11 @@ public class QueueTaskExecutor<V> {
 			
 			if(es != null) {
 				if(cancel) {
-					for(InternalQueueTask task : queuedTasks) {
+					for(InternalQueueTask task : runningTasks) {
 						task.cancel();
 					}
+					
+					runningTasks.clear();
 				}
 				
 				es.shutdown();
@@ -184,10 +213,23 @@ public class QueueTaskExecutor<V> {
 	
 	protected class InternalQueueTask implements QueueTask<V>, QueueTaskResult<V> {
 		
+		/** @since 00.02.09 */
+		protected static final int TASK_STATE_INITIAL   = 0;
+		/** @since 00.02.09 */
+		protected static final int TASK_STATE_CALLED    = 1 << 1;
+		/** @since 00.02.09 */
+		protected static final int TASK_STATE_PAUSED    = 1 << 2;
+		/** @since 00.02.09 */
+		protected static final int TASK_STATE_DONE      = 1 << 3;
+		/** @since 00.02.09 */
+		protected static final int TASK_STATE_CANCELLED = 1 << 4;
+		
 		protected final QueueTask<V> task;
-		protected final StateMutex mtxQueued = new StateMutex();
-		protected final AtomicBoolean isCancelled = new AtomicBoolean();
-		protected Future<V> future;
+		/** @since 00.02.09 */
+		protected final StateMutex mtxCalled = new StateMutex();
+		/** @since 00.02.09 */
+		protected final InternalState state = new InternalState(TASK_STATE_INITIAL);
+		protected volatile Future<V> future;
 		protected Exception exception;
 		
 		public InternalQueueTask(QueueTask<V> task) {
@@ -195,39 +237,74 @@ public class QueueTaskExecutor<V> {
 		}
 		
 		protected void future(Future<V> future) {
-			this.future = future;
-			mtxQueued.unlock();
+			synchronized(this) {
+				this.future = future;
+			}
 		}
 		
 		protected V run() throws Exception {
-			if(isCancelled()) {
+			if(!state.compareAndSetBit(false, TASK_STATE_CALLED) || isCancelled()) {
 				return null;
 			}
 			
-			return task.call();
+			// The task should be run but is still paused, actually pause it now.
+			if(isPaused()) {
+				pauseTask(this);
+				return null;
+			}
+			
+			try {
+				return task.call();
+			} finally {
+				mtxCalled.unlock();
+			}
 		}
 		
-		protected boolean isCancelled() {
-			return isCancelled.get();
-		}
-		
-		protected boolean isQueued() {
-			return mtxQueued.isUnlocked();
+		protected boolean isCalled() {
+			return state.is(TASK_STATE_CALLED);
 		}
 		
 		@Override
 		public void cancel() throws Exception {
-			if(!isCancelled.compareAndSet(false, true)) {
+			if(!state.compareAndSetBit(false, TASK_STATE_CANCELLED)) {
 				return; // Already cancelled
 			}
 			
-			if(future != null) {
-				future.cancel(true);
+			state.unset(TASK_STATE_PAUSED);
+			
+			Future<V> ref;
+			if((ref = future) != null) {
+				synchronized(this) {
+					if((ref = future) != null) {
+						ref.cancel(true);
+					}
+				}
 			}
 			
 			cancelTask(this);
+			mtxCalled.unlock();
+		}
+		
+		@Override
+		public void pause() throws Exception {
+			if(isDone() || isCancelled() || !state.compareAndSetBit(false, TASK_STATE_PAUSED)) {
+				return; // Already paused or no need to paused
+			}
 			
-			mtxQueued.unlock();
+			// Do not pause the task here, since it can be resumed before it is actually run.
+		}
+		
+		@Override
+		public void resume() throws Exception {
+			if(isDone() || isCancelled() || !state.compareAndUnsetBit(true, TASK_STATE_PAUSED)) {
+				return; // Already resumed or no need to resume
+			}
+			
+			// If the task was already actually run, we have to submit it once more.
+			if(isCalled()) {
+				state.unset(TASK_STATE_CALLED);
+				resumeTask(this);
+			}
 		}
 		
 		@Override
@@ -239,24 +316,53 @@ public class QueueTaskExecutor<V> {
 				throw ex; // Propagate
 			} finally {
 				lockTasks.decrement();
+				
+				if(!isPaused()) {
+					if(!isCancelled()) {
+						state.set(TASK_STATE_DONE);
+					}
+					
+					finishTask(this);
+				}
 			}
 		}
 		
 		@Override
-		public boolean awaitQueued() {
-			mtxQueued.await();
-			
-			return !isCancelled();
-		}
-		
-		@Override
 		public V get() throws Exception {
-			return awaitQueued() ? future.get() : null;
+			if(!mtxCalled.await() || isCancelled()) {
+				return null;
+			}
+			
+			Future<V> ref;
+			if((ref = future) == null) {
+				synchronized(this) {
+					if((ref = future) == null) {
+						return null;
+					}
+				}
+			}
+			
+			return ref.get();
 		}
 		
 		@Override
 		public Exception exception() {
 			return exception;
+		}
+		
+		@Override
+		public boolean isPaused() {
+			return state.is(TASK_STATE_PAUSED);
+		}
+		
+		@Override
+		public boolean isCancelled() {
+			return state.is(TASK_STATE_CANCELLED);
+		}
+		
+		@Override
+		public boolean isDone() {
+			return state.is(TASK_STATE_DONE);
 		}
 	}
 	
@@ -266,10 +372,20 @@ public class QueueTaskExecutor<V> {
 	
 	public static interface QueueTaskResult<V> {
 		
-		boolean awaitQueued();
 		void cancel() throws Exception;
+		/** @since 00.02.09 */
+		void pause() throws Exception;
+		/** @since 00.02.09 */
+		void resume() throws Exception;
 		
 		V get() throws Exception;
 		Exception exception();
+		
+		/** @since 00.02.09 */
+		boolean isPaused();
+		/** @since 00.02.09 */
+		boolean isDone();
+		/** @since 00.02.09 */
+		boolean isCancelled();
 	}
 }

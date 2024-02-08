@@ -27,10 +27,14 @@ public class ManagerSubmitResult<A, B> implements QueueTaskResult<B>, Cancellabl
 		taskResult.cancel();
 	}
 	
-	/** @since 00.02.08 */
 	@Override
-	public boolean awaitQueued() {
-		return taskResult.awaitQueued();
+	public void pause() throws Exception {
+		taskResult.pause();
+	}
+	
+	@Override
+	public void resume() throws Exception {
+		taskResult.resume();
 	}
 	
 	@Override
@@ -56,5 +60,20 @@ public class ManagerSubmitResult<A, B> implements QueueTaskResult<B>, Cancellabl
 	/** @since 00.02.08 */
 	public QueueContext context() {
 		return context;
+	}
+	
+	@Override
+	public boolean isPaused() {
+		return taskResult.isPaused();
+	}
+	
+	@Override
+	public boolean isCancelled() {
+		return taskResult.isCancelled();
+	}
+	
+	@Override
+	public boolean isDone() {
+		return taskResult.isDone();
 	}
 }
