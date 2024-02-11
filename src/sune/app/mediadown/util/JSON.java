@@ -240,8 +240,9 @@ public final class JSON {
 				default:     /* Collections, should not happen */ break;
 			}
 			
-			// Always reset the last type
+			// Always reset the last meta information
 			lastType = JSONType.UNKNOWN;
+			lastStr  = null;
 		}
 		
 		private final int readAndMatchSequence(String sequence) throws IOException {
@@ -294,6 +295,10 @@ public final class JSON {
 			if(parents.isEmpty()) parents.push(new Pair<>(null,    JSONCollection.empty()));
 			else                  parents.push(new Pair<>(lastStr, JSONCollection.empty()));
 			c = next();
+			
+			// Always reset the last meta information
+			lastType = JSONType.UNKNOWN;
+			lastStr  = null;
 		}
 		
 		private final void readArray() throws IOException {
@@ -301,6 +306,10 @@ public final class JSON {
 			if(parents.isEmpty()) parents.push(new Pair<>(null,    JSONCollection.emptyArray()));
 			else                  parents.push(new Pair<>(lastStr, JSONCollection.emptyArray()));
 			c = next();
+			
+			// Always reset the last meta information
+			lastType = JSONType.UNKNOWN;
+			lastStr  = null;
 		}
 		
 		private final boolean readSequence(String word, JSONType type) throws IOException {
