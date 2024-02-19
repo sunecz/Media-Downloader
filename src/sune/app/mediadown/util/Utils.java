@@ -387,16 +387,36 @@ public final class Utils {
 		return DECODER_BASE64_URL;
 	}
 	
+	/** @since 00.02.09 */
+	public static final byte[] base64DecodeRaw(byte[] bytes) {
+		return base64Decoder().decode(bytes);
+	}
+	
+	/** @since 00.02.09 */
+	public static final String base64DecodeRawAsString(byte[] bytes) {
+		return new String(base64DecodeRaw(bytes), CHARSET);
+	}
+	
 	public static final byte[] base64DecodeRaw(String string) {
-		return base64Decoder().decode(string.getBytes(CHARSET));
+		return base64DecodeRaw(string.getBytes(CHARSET));
 	}
 	
 	public static final String base64Decode(String string) {
 		return new String(base64DecodeRaw(string), CHARSET);
 	}
 	
+	/** @since 00.02.09 */
+	public static final byte[] base64URLDecodeRaw(byte[] bytes) {
+		return base64URLDecoder().decode(bytes);
+	}
+	
+	/** @since 00.02.09 */
+	public static final String base64URLDecodeRawAsString(byte[] bytes) {
+		return new String(base64URLDecodeRaw(bytes), CHARSET);
+	}
+	
 	public static final byte[] base64URLDecodeRaw(String string) {
-		return base64URLDecoder().decode(string.getBytes(CHARSET));
+		return base64URLDecodeRaw(string.getBytes(CHARSET));
 	}
 	
 	public static final String base64URLDecode(String string) {
@@ -423,16 +443,36 @@ public final class Utils {
 		return ENCODER_BASE64_URL;
 	}
 	
+	/** @since 00.02.09 */
+	public static final byte[] base64EncodeRaw(byte[] bytes) {
+		return base64Encoder().encode(bytes);
+	}
+	
+	/** @since 00.02.09 */
+	public static final String base64EncodeRawAsString(byte[] bytes) {
+		return new String(base64EncodeRaw(bytes), CHARSET);
+	}
+	
 	public static final byte[] base64EncodeRaw(String string) {
-		return base64Encoder().encode(string.getBytes(CHARSET));
+		return base64EncodeRaw(string.getBytes(CHARSET));
 	}
 	
 	public static final String base64Encode(String string) {
 		return new String(base64EncodeRaw(string), CHARSET);
 	}
 	
+	/** @since 00.02.09 */
+	public static final byte[] base64URLEncodeRaw(byte[] bytes) {
+		return base64URLEncoder().encode(bytes);
+	}
+	
+	/** @since 00.02.09 */
+	public static final String base64URLEncodeRawAsString(byte[] bytes) {
+		return new String(base64URLEncodeRaw(bytes), CHARSET);
+	}
+	
 	public static final byte[] base64URLEncodeRaw(String string) {
-		return base64URLEncoder().encode(string.getBytes(CHARSET));
+		return base64URLEncodeRaw(string.getBytes(CHARSET));
 	}
 	
 	public static final String base64URLEncode(String string) {
