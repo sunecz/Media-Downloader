@@ -63,6 +63,7 @@ import sune.app.mediadown.event.NativeLibraryLoaderEvent;
 import sune.app.mediadown.event.PluginLoaderEvent;
 import sune.app.mediadown.event.tracker.DownloadTracker;
 import sune.app.mediadown.event.tracker.TrackerManager;
+import sune.app.mediadown.exception.TranslatableException;
 import sune.app.mediadown.gui.Dialog;
 import sune.app.mediadown.gui.Window;
 import sune.app.mediadown.gui.form.field.PasswordField;
@@ -1648,19 +1649,50 @@ public final class MediaDownloader {
 	}
 	
 	public static final void error(Throwable throwable) {
-		if(throwable == null) return; // Do nothing
+		if(throwable == null) {
+			return; // Do nothing
+		}
+		
 		throwable = maybeUnwrapThrowableForView(throwable);
 		Log.error(throwable, "An error occurred");
-		if(FXUtils.isInitialized()) FXUtils.showExceptionWindow(throwable);
-		else throwable.printStackTrace(); // FX not available, print to stderr
+		
+		if(FXUtils.isInitialized()) {
+			// Display TranslatableException differently
+			if(throwable instanceof TranslatableException) {
+				TranslatableException exception = (TranslatableException) throwable;
+				String title = "Error";
+				String text = translation().getSingle(exception.translationPath());
+				
+				Throwable cause;
+				if((cause = exception.getCause()) != null) {
+					String content = Utils.throwableToString(cause);
+					Dialog.showContentError(title, text, content);
+				} else {
+					Dialog.showError(title, text);
+				}
+			} else {
+				FXUtils.showExceptionWindow(throwable);
+			}
+		} else {
+			// FX not available, print to stderr
+			throwable.printStackTrace();
+		}
 	}
 	
 	public static final void errorWithContent(String message, String content) {
-		if(message == null) return; // Do nothing
+		if(message == null) {
+			return; // Do nothing
+		}
+		
 		String text = message + "\n" + content;
 		Log.error(text);
-		if(FXUtils.isInitialized()) FXUtils.showExceptionWindow(message, content);
-		else System.err.println(text); // FX not available, print to stderr
+		
+		if(FXUtils.isInitialized()) {
+			FXUtils.showExceptionWindow(message, content);
+		} else {
+			// FX not available, print to stderr
+			System.err.println(text);
+		}
 	}
 	
 	private static final class InternalResources {
