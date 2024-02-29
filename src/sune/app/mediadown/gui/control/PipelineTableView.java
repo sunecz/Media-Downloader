@@ -1052,8 +1052,9 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 	public static final class PipelineInfo implements TrackerView {
 		
 		private static final long MIN_UPDATE_DIFF_TIME = 250L * 1000000L; // 250 ms
-		private static final Event<? extends EventType, ?>[] STATE_UPDATE_EVENTS
-			= Utils.merge(PipelineEvent.values(), QueueEvent.values());
+		private static final Event<? extends EventType, ?>[] STATE_UPDATE_EVENTS = Utils.merge(
+			PipelineEvent.values(), QueueEvent.values()
+		);
 		
 		public static final String TEXT_NONE = null;
 		

@@ -47,15 +47,17 @@ public class QueueTaskExecutor<V> {
 	}
 	
 	protected ExecutorService executor() {
-		if(executor == null) {
+		ExecutorService es;
+		if((es = executor) == null) {
 			synchronized(this) {
-				if(executor == null) {
-					executor = createExecutor();
+				if((es = executor) == null) {
+					es = createExecutor();
+					executor = es;
 				}
 			}
 		}
 		
-		return executor;
+		return es;
 	}
 	
 	protected InternalQueueTask createTask(QueueTask<V> task) {
@@ -83,12 +85,22 @@ public class QueueTaskExecutor<V> {
 	}
 	
 	/** @since 00.02.09 */
-	protected void pauseTask(InternalQueueTask task) {
+	protected void pauseSubmittedTask(InternalQueueTask task) {
 		// Nothing to do
 	}
 	
 	/** @since 00.02.09 */
-	protected void resumeTask(InternalQueueTask task) {
+	protected void pauseDelayedTask(InternalQueueTask task) {
+		// Nothing to do
+	}
+	
+	/** @since 00.02.09 */
+	protected void resumeSubmittedTask(InternalQueueTask task) {
+		// Nothing to do
+	}
+	
+	/** @since 00.02.09 */
+	protected void resumeDelayedTask(InternalQueueTask task) {
 		submittedTasks.add(task);
 		mtxSubmitted.unlock();
 	}
@@ -121,17 +133,18 @@ public class QueueTaskExecutor<V> {
 	}
 	
 	protected void start() {
-		if(thread == null) {
+		Thread t;
+		if((t = thread) == null) {
 			synchronized(this) {
-				if(thread == null) {
-					thread = Threads.newThreadUnmanaged(this::loop);
-					thread.start();
+				if((t = thread) == null) {
+					t = Threads.newThreadUnmanaged(this::loop);
+					t.start();
+					thread = t;
 				}
 			}
 		}
 		
-		state.set(STATE_STARTED);
-		state.set(STATE_RUNNING);
+		state.set(STATE_STARTED | STATE_RUNNING);
 	}
 	
 	protected void stop(boolean cancel) throws Exception {
@@ -139,6 +152,7 @@ public class QueueTaskExecutor<V> {
 			return;
 		}
 		
+		// TODO: Make atomic
 		state.set(STATE_STOPPING);
 		state.unset(STATE_RUNNING);
 		
@@ -147,24 +161,27 @@ public class QueueTaskExecutor<V> {
 		mtxSubmitted.unlock();
 		
 		try {
-			ExecutorService es = null;
-			synchronized(this) {
-				es = executor;
+			ExecutorService es;
+			if((es = executor) == null) {
+				synchronized(this) {
+					if((es = executor) == null) {
+						return;
+					}
+				}
 			}
 			
-			if(es != null) {
-				if(cancel) {
-					for(InternalQueueTask task : runningTasks) {
-						task.cancel();
-					}
-					
-					runningTasks.clear();
+			if(cancel) {
+				for(InternalQueueTask task : runningTasks) {
+					task.cancel();
 				}
 				
-				es.shutdown();
-				es.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+				runningTasks.clear();
 			}
+			
+			es.shutdown();
+			es.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
 		} finally {
+			// TODO: Make atomic
 			state.set(STATE_STOPPED);
 			state.unset(STATE_STOPPING);
 		}
@@ -223,6 +240,8 @@ public class QueueTaskExecutor<V> {
 		protected static final int TASK_STATE_DONE      = 1 << 3;
 		/** @since 00.02.09 */
 		protected static final int TASK_STATE_CANCELLED = 1 << 4;
+		/** @since 00.02.09 */
+		protected static final int TASK_STATE_DELAYED   = 1 << 5;
 		
 		protected final QueueTask<V> task;
 		/** @since 00.02.09 */
@@ -243,14 +262,15 @@ public class QueueTaskExecutor<V> {
 		}
 		
 		protected V run() throws Exception {
-			if(!state.compareAndSetBit(false, TASK_STATE_CALLED) || isCancelled()) {
+			if(!state.compareAndSetBit(false, TASK_STATE_CALLED)) {
 				return null;
 			}
 			
 			// The task should be run but is still paused, actually pause it now.
 			if(isPaused()) {
-				pauseTask(this);
-				return null;
+				state.set(TASK_STATE_DELAYED);
+				pauseDelayedTask(this);
+				return null; // Do not run the task itself
 			}
 			
 			try {
@@ -260,23 +280,19 @@ public class QueueTaskExecutor<V> {
 			}
 		}
 		
-		protected boolean isCalled() {
-			return state.is(TASK_STATE_CALLED);
-		}
-		
 		@Override
 		public void cancel() throws Exception {
 			if(!state.compareAndSetBit(false, TASK_STATE_CANCELLED)) {
 				return; // Already cancelled
 			}
 			
-			state.unset(TASK_STATE_PAUSED);
+			state.unset(TASK_STATE_PAUSED | TASK_STATE_CALLED | TASK_STATE_DELAYED);
 			
-			Future<V> ref;
-			if((ref = future) != null) {
+			Future<V> f;
+			if((f = future) != null) {
 				synchronized(this) {
-					if((ref = future) != null) {
-						ref.cancel(true);
+					if((f = future) != null) {
+						f.cancel(true);
 					}
 				}
 			}
@@ -287,23 +303,31 @@ public class QueueTaskExecutor<V> {
 		
 		@Override
 		public void pause() throws Exception {
-			if(isDone() || isCancelled() || !state.compareAndSetBit(false, TASK_STATE_PAUSED)) {
+			if(!state.compareAndSetBit(false, TASK_STATE_PAUSED) || isDone() || isCancelled()) {
 				return; // Already paused or no need to paused
 			}
 			
 			// Do not pause the task here, since it can be resumed before it is actually run.
+			
+			if(!state.is(TASK_STATE_CALLED)) {
+				pauseSubmittedTask(this);
+			}
 		}
 		
 		@Override
 		public void resume() throws Exception {
-			if(isDone() || isCancelled() || !state.compareAndUnsetBit(true, TASK_STATE_PAUSED)) {
+			if(!state.compareAndUnsetBit(true, TASK_STATE_PAUSED) || isDone() || isCancelled()) {
 				return; // Already resumed or no need to resume
 			}
 			
+			boolean isDelayed = state.is(TASK_STATE_DELAYED);
+			
 			// If the task was already actually run, we have to submit it once more.
-			if(isCalled()) {
-				state.unset(TASK_STATE_CALLED);
-				resumeTask(this);
+			if(isDelayed) {
+				state.unset(TASK_STATE_CALLED | TASK_STATE_DELAYED);
+				resumeDelayedTask(this);
+			} else if(!state.is(TASK_STATE_CALLED)) {
+				resumeSubmittedTask(this);
 			}
 		}
 		
@@ -333,16 +357,16 @@ public class QueueTaskExecutor<V> {
 				return null;
 			}
 			
-			Future<V> ref;
-			if((ref = future) == null) {
+			Future<V> f;
+			if((f = future) == null) {
 				synchronized(this) {
-					if((ref = future) == null) {
+					if((f = future) == null) {
 						return null;
 					}
 				}
 			}
 			
-			return ref.get();
+			return f.get();
 		}
 		
 		@Override

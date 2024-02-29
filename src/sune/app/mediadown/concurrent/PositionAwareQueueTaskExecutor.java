@@ -13,14 +13,9 @@ import sune.app.mediadown.util.Utils;
 public class PositionAwareQueueTaskExecutor<V> extends QueueTaskExecutor<V> {
 	
 	/** @since 00.02.09 */
-	protected final AtomicInteger nextNormalPosition = new AtomicInteger();
-	/** @since 00.02.09 */
-	protected final AtomicInteger nextPausePosition = new AtomicInteger();
-	
+	protected final AtomicInteger nextPosition = new AtomicInteger();
 	/** @since 00.02.09 */
 	protected final AtomicInteger taskTotalCount = new AtomicInteger();
-	/** @since 00.02.09 */
-	protected final AtomicInteger taskPausedCount = new AtomicInteger();
 	
 	public PositionAwareQueueTaskExecutor(int maxTaskCount) {
 		super(maxTaskCount);
@@ -35,15 +30,8 @@ public class PositionAwareQueueTaskExecutor<V> extends QueueTaskExecutor<V> {
 	
 	/** @since 00.02.09 */
 	protected PositionAwareQueueTaskState taskNormalState() {
-		int position = nextNormalPosition.getAndIncrement();
+		int position = nextPosition.getAndIncrement();
 		int lowerFence = taskTotalCount.get();
-		return new PositionAwareQueueTaskState(position, lowerFence);
-	}
-	
-	/** @since 00.02.09 */
-	protected PositionAwareQueueTaskState taskPauseState() {
-		int position = nextPausePosition.getAndIncrement();
-		int lowerFence = taskPausedCount.get();
 		return new PositionAwareQueueTaskState(position, lowerFence);
 	}
 	
@@ -83,9 +71,8 @@ public class PositionAwareQueueTaskExecutor<V> extends QueueTaskExecutor<V> {
 	}
 	
 	@Override
-	protected void pauseTask(InternalQueueTask task) {
-		super.pauseTask(task);
-		taskPausedCount.getAndIncrement();
+	protected void pauseSubmittedTask(InternalQueueTask task) {
+		super.pauseSubmittedTask(task);
 		
 		PositionAwareInternalQueueTask castedTask = Utils.cast(task);
 		int position = castedTask.position();
@@ -97,8 +84,20 @@ public class PositionAwareQueueTaskExecutor<V> extends QueueTaskExecutor<V> {
 	}
 	
 	@Override
-	protected void resumeTask(InternalQueueTask task) {
-		super.resumeTask(task);
+	protected void pauseDelayedTask(QueueTaskExecutor<V>.InternalQueueTask task) {
+		PositionAwareInternalQueueTask castedTask = Utils.cast(task);
+		int position = castedTask.position();
+		
+		// Treat the delayed task as resumed
+		notifySubmittedTasks(
+			PositionAwareInternalQueueTask::taskResumed,
+			position
+		);
+	}
+	
+	@Override
+	protected void resumeSubmittedTask(InternalQueueTask task) {
+		super.resumeSubmittedTask(task);
 		
 		PositionAwareInternalQueueTask castedTask = Utils.cast(task);
 		int position = castedTask.position();
@@ -107,6 +106,14 @@ public class PositionAwareQueueTaskExecutor<V> extends QueueTaskExecutor<V> {
 			PositionAwareInternalQueueTask::taskResumed,
 			position
 		);
+	}
+	
+	@Override
+	protected void resumeDelayedTask(InternalQueueTask task) {
+		PositionAwareInternalQueueTask castedTask = Utils.cast(task);
+		castedTask.setState(taskNormalState()); // Resubmit
+		
+		super.resumeDelayedTask(task);
 	}
 	
 	@Override
@@ -129,6 +136,10 @@ public class PositionAwareQueueTaskExecutor<V> extends QueueTaskExecutor<V> {
 			return position - lowerFence.incrementAndGet();
 		}
 		
+		public int increaseQueuePosition() {
+			return position - lowerFence.decrementAndGet();
+		}
+		
 		public int position() {
 			return position;
 		}
@@ -141,46 +152,26 @@ public class PositionAwareQueueTaskExecutor<V> extends QueueTaskExecutor<V> {
 	protected class PositionAwareInternalQueueTask extends InternalQueueTask
 			implements PositionAwareQueueTaskResult<V> {
 		
-		protected final PositionAwareQueueTaskState normalState;
+		/** @since 00.02.09 */
+		protected volatile PositionAwareQueueTaskState state;
 		/** @since 00.02.09 */
 		protected final VarLoader<IntegerProperty> queuePositionProperty;
-		/** @since 00.02.09 */
-		protected final VarLoader<PositionAwareQueueTaskState> pauseState;
-		/** @since 00.02.09 */
-		protected final VarLoader<IntegerProperty> pauseQueuePositionProperty;
 		
 		public PositionAwareInternalQueueTask(QueueTask<V> task, PositionAwareQueueTaskState state) {
 			super(task);
-			this.normalState = Objects.requireNonNull(state);
+			this.state = Objects.requireNonNull(state);
 			this.queuePositionProperty = VarLoader.of(this::createQueuePositionProperty);
-			this.pauseState = VarLoader.of(this::createPauseState);
-			this.pauseQueuePositionProperty = VarLoader.of(this::createPauseQueuePositionProperty);
 		}
 		
 		/** @since 00.02.09 */
 		protected final IntegerProperty createQueuePositionProperty() {
-			return new SimpleIntegerProperty(normalState.queuePosition());
+			return new SimpleIntegerProperty(state.queuePosition());
 		}
 		
 		/** @since 00.02.09 */
-		protected final IntegerProperty createPauseQueuePositionProperty() {
-			return new SimpleIntegerProperty(
-				pauseState.isSet()
-					? pauseState.value().queuePosition()
-					: UNDEFINED_POSITION
-			);
-		}
-		
-		/** @since 00.02.09 */
-		protected final PositionAwareQueueTaskState createPauseState() {
-			PositionAwareQueueTaskState state = taskPauseState();
-			
-			if(pauseQueuePositionProperty.isSet()) {
-				IntegerProperty prop = pauseQueuePositionProperty.value();
-				prop.set(state.queuePosition());
-			}
-			
-			return state;
+		protected void setState(PositionAwareQueueTaskState state) {
+			this.state = Objects.requireNonNull(state);
+			queuePosition(state.queuePosition());
 		}
 		
 		/** @since 00.02.09 */
@@ -197,26 +188,31 @@ public class PositionAwareQueueTaskExecutor<V> extends QueueTaskExecutor<V> {
 			queuePosition(state.decreaseQueuePosition());
 		}
 		
+		/** @since 00.02.09 */
+		protected void maybeIncreaseQueuePosition(PositionAwareQueueTaskState state, int position) {
+			if(position > state.position()) {
+				return;
+			}
+			
+			queuePosition(state.increaseQueuePosition());
+		}
+		
 		protected void taskSubmitted(int position) {
-			maybeDecreaseQueuePosition(normalState, position);
+			maybeDecreaseQueuePosition(state, position);
 		}
 		
 		protected void taskCancelled(int position) {
-			maybeDecreaseQueuePosition(normalState, position);
+			maybeDecreaseQueuePosition(state, position);
 		}
 		
 		/** @since 00.02.09 */
 		protected void taskPaused(int position) {
-			pauseState.value(); // Create the pause state
+			maybeDecreaseQueuePosition(state, position);
 		}
 		
 		/** @since 00.02.09 */
 		protected void taskResumed(int position) {
-			if(!pauseState.isSet()) {
-				return; // Has not yet been paused
-			}
-			
-			maybeDecreaseQueuePosition(pauseState.value(), position);
+			maybeIncreaseQueuePosition(state, position);
 		}
 		
 		@Override
@@ -226,27 +222,12 @@ public class PositionAwareQueueTaskExecutor<V> extends QueueTaskExecutor<V> {
 		
 		@Override
 		public int position() {
-			return normalState.position();
+			return state.position();
 		}
 		
 		@Override
 		public int queuePosition() {
-			return normalState.queuePosition();
-		}
-		
-		@Override
-		public IntegerProperty pauseQueuePositionProperty() {
-			return pauseQueuePositionProperty.value();
-		}
-		
-		@Override
-		public int pausePosition() {
-			return pauseState.isSet() ? pauseState.value().position() : UNDEFINED_POSITION;
-		}
-		
-		@Override
-		public int pauseQueuePosition() {
-			return pauseState.isSet() ? pauseState.value().queuePosition() : UNDEFINED_POSITION;
+			return state.queuePosition();
 		}
 	}
 	
@@ -258,12 +239,5 @@ public class PositionAwareQueueTaskExecutor<V> extends QueueTaskExecutor<V> {
 		IntegerProperty queuePositionProperty();
 		int position();
 		int queuePosition();
-		
-		/** @since 00.02.09 */
-		IntegerProperty pauseQueuePositionProperty();
-		/** @since 00.02.09 */
-		int pausePosition();
-		/** @since 00.02.09 */
-		int pauseQueuePosition();
 	}
 }
