@@ -270,6 +270,10 @@ public class QueueTaskExecutor<V> {
 			}
 			
 			try {
+				if(isCancelled()) {
+					return null; // Do not continue
+				}
+				
 				return task.call();
 			} finally {
 				mtxCalled.unlock();
