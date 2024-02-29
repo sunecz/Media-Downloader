@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.stream.Stream;
 
@@ -180,7 +181,9 @@ public final class MediaFormat {
 	}
 	
 	public static final MediaFormat fromPath(String path) {
-		return fromExtension(Utils.OfPath.info(path).extension());
+		return Optional.ofNullable(Utils.OfPath.info(path).extension())
+					.map(MediaFormat::fromExtension)
+					.orElse(UNKNOWN);
 	}
 	
 	public static final MediaFormat fromName(String string) {
