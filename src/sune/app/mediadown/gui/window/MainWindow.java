@@ -171,9 +171,6 @@ public final class MainWindow extends Window<BorderPane> {
 		centerOnScreen();
 		
 		FXUtils.onWindowShowOnce(this, this::initialize);
-		FXUtils.onWindowShowOnce(this, this::showMessagesAsync);
-		FXUtils.onWindowShowOnce(this, this::maybeAutoEnableClipboardWatcher);
-		
 		INSTANCE = this;
 	}
 	
@@ -360,6 +357,9 @@ public final class MainWindow extends Window<BorderPane> {
 		
 		// Initialize the menu AFTER the window is shown so that plugins are already loaded.
 		initializeAddMenu();
+		
+		showMessagesAsync();
+		maybeAutoEnableClipboardWatcher();
 	}
 	
 	/** @since 00.02.02 */
