@@ -81,6 +81,9 @@ public final class Web {
 	static {
 		// See: https://bugs.openjdk.org/browse/JDK-8304701
 		System.setProperty("jdk.httpclient.allowRestrictedHeaders", "connection");
+		// See: https://bugs.openjdk.org/browse/JDK-8297030
+		System.setProperty("jdk.httpclient.keepalive.timeout", "30");
+		System.setProperty("jdk.httpclient.keepalive.timeout.h2", "30");
 	}
 	
 	// Forbid anyone to create an instance of this class
