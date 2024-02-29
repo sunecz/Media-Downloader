@@ -374,10 +374,27 @@ public final class MediaUtils {
 		}
 		
 		public static final double estimate(Media media) {
-			MediaType type = media.type();
-			if(type.is(MediaType.VIDEO)) return estimate((VideoMedia) media);
-			if(type.is(MediaType.AUDIO)) return estimate((AudioMedia) media);
-			return MediaConstants.UNKNOWN_SIZE;
+			double totalSize = MediaConstants.UNKNOWN_SIZE;
+			Media video = Media.findOfType(media, MediaType.VIDEO);
+			Media audio = Media.findOfType(media, MediaType.AUDIO);
+			
+			if(video != null) {
+				double mediaSize = estimate((VideoMedia) video);
+				
+				if(mediaSize >= 0.0) {
+					totalSize = Math.max(0.0, totalSize) + mediaSize;
+				}
+			}
+			
+			if(audio != null) {
+				double mediaSize = estimate((AudioMedia) audio);
+				
+				if(mediaSize >= 0.0) {
+					totalSize = Math.max(0.0, totalSize) + mediaSize;
+				}
+			}
+			
+			return totalSize;
 		}
 	}
 	
