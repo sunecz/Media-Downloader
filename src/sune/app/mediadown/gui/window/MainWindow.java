@@ -390,11 +390,15 @@ public final class MainWindow extends Window<BorderPane> {
 	
 	/** @since 00.02.04 */
 	private final void showMessagesAsync() {
-		actions.submit((context) -> {
-			context.setProgress(ProgressContext.PROGRESS_INDETERMINATE);
-			context.setText(tr("actions.messages.checking"));
-			Ignore.callVoid(MainWindow.this::showMessages, MediaDownloader::error);
-		});
+		boolean check = MediaDownloader.configuration().checkMessagesOnStartup();
+		
+		if(check) {
+			actions.submit((context) -> {
+				context.setProgress(ProgressContext.PROGRESS_INDETERMINATE);
+				context.setText(tr("actions.messages.checking"));
+				Ignore.callVoid(MainWindow.this::showMessages, MediaDownloader::error);
+			});
+		}
 	}
 	
 	/** @since 00.02.02 */

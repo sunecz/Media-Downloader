@@ -66,6 +66,8 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 	/** @since 00.02.09 */
 	private ConversionProvider conversionProvider;
 	/** @since 00.02.09 */
+	private boolean checkMessagesOnStartup;
+	/** @since 00.02.09 */
 	private String reportEmail;
 	
 	private ApplicationConfiguration(Path path, String name, SSDCollection data, Map<String, ConfigurationProperty<?>> properties) {
@@ -192,6 +194,9 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 		builder.addProperty(ConfigurationProperty.ofBoolean(PROPERTY_AUTO_ENABLE_CLIPBOARD_WATCHER)
 			.inGroup(GROUP_OTHER)
 			.withDefaultValue(false));
+		builder.addProperty(ConfigurationProperty.ofBoolean(PROPERTY_CHECK_MESSAGES_ON_STARTUP)
+			.inGroup(GROUP_OTHER)
+			.withDefaultValue(true));
 		builder.addProperty(ConfigurationProperty.ofString(PROPERTY_REPORT_EMAIL)
 			.inGroup(GROUP_OTHER));
 		
@@ -240,6 +245,7 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 		usePreReleaseVersions = UsePreReleaseVersions.of(stringValue(PROPERTY_USE_PRE_RELEASE_VERSIONS));
 		autoEnableClipboardWatcher = booleanValue(PROPERTY_AUTO_ENABLE_CLIPBOARD_WATCHER);
 		conversionProvider = Conversions.Providers.ofName(stringValue(PROPERTY_CONVERSION_PROVIDER));
+		checkMessagesOnStartup = booleanValue(PROPERTY_CHECK_MESSAGES_ON_STARTUP);
 		reportEmail = stringValue(PROPERTY_REPORT_EMAIL);
 	}
 	
@@ -364,6 +370,12 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 	@Override
 	public ConversionProvider conversionProvider() {
 		return conversionProvider;
+	}
+	
+	/** @since 00.02.09 */
+	@Override
+	public boolean checkMessagesOnStartup() {
+		return checkMessagesOnStartup;
 	}
 	
 	/** @since 00.02.09 */
@@ -502,6 +514,12 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 		@Override
 		public ConversionProvider conversionProvider() {
 			return Conversions.Providers.ofName(accessor().stringValue(PROPERTY_CONVERSION_PROVIDER));
+		}
+		
+		/** @since 00.02.09 */
+		@Override
+		public boolean checkMessagesOnStartup() {
+			return accessor().booleanValue(PROPERTY_CHECK_MESSAGES_ON_STARTUP);
 		}
 		
 		/** @since 00.02.09 */

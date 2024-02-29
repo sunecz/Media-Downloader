@@ -396,6 +396,7 @@
 				usePreReleaseVersions:      "Use pre-release versions",
 				autoEnableClipboardWatcher: "Automatically enable the Clipboard watcher",
 				conversionProvider:         "Conversion provider",
+				checkMessagesOnStartup:     "Check messages on startup",
 				plugins: {
 					autoUpdateCheck: "Automatic plugin updates"
 				},

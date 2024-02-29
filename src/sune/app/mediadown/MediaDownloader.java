@@ -2630,6 +2630,8 @@ public final class MediaDownloader {
 		/** @since 00.02.09 */
 		@Override public ConversionProvider conversionProvider() { return accessor().conversionProvider(); }
 		/** @since 00.02.09 */
+		@Override public boolean checkMessagesOnStartup() { return accessor().checkMessagesOnStartup(); }
+		/** @since 00.02.09 */
 		@Override public String reportEmail() { return accessor().reportEmail(); }
 		@Override public SSDCollection data() { return accessor().data(); }
 		/** @since 00.02.07 */

@@ -63,6 +63,8 @@ public interface ApplicationConfigurationAccessor extends ConfigurationLocatable
 	/** @since 00.02.09 */
 	public static final String PROPERTY_CONVERSION_PROVIDER = "conversionProvider";
 	/** @since 00.02.09 */
+	public static final String PROPERTY_CHECK_MESSAGES_ON_STARTUP = "checkMessagesOnStartup";
+	/** @since 00.02.09 */
 	public static final String PROPERTY_REPORT_EMAIL = "report.email";
 	
 	Version version();
@@ -95,6 +97,8 @@ public interface ApplicationConfigurationAccessor extends ConfigurationLocatable
 	boolean autoEnableClipboardWatcher();
 	/** @since 00.02.09 */
 	ConversionProvider conversionProvider();
+	/** @since 00.02.09 */
+	boolean checkMessagesOnStartup();
 	/** @since 00.02.09 */
 	String reportEmail();
 	

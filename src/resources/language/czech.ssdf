@@ -396,6 +396,7 @@
 				usePreReleaseVersions:      "Používat předběžné verze",
 				autoEnableClipboardWatcher: "Automaticky aktivovat Sledování schránky",
 				conversionProvider:         "Poskytovatel konverzí",
+				checkMessagesOnStartup:     "Kontrolovat zprávy při spuštění",
 				plugins: {
 					autoUpdateCheck: "Automatická aktualizace pluginů"
 				},
