@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
@@ -217,24 +218,33 @@ public class ReportWindow extends DraggableWindow<VBox> {
 		loadingData = true;
 		
 		try {
+			Node focusedNode = null;
 			chbReason.setValue(report.reason());
 			
 			ContactInformation contact = report.contact();
 			
 			if(contact != null) {
 				txtEmail.setText(contact.email());
+			} else if(focusedNode == null) {
+				focusedNode = txtEmail;
 			}
 			
 			String note = report.note();
 			
 			if(note != null) {
 				txtNote.setText(note);
+			} else if(focusedNode == null) {
+				focusedNode = txtNote;
 			}
 			
 			boolean anonymize = chbAnonymizeData.isSelected();
 			JSONCollection payload = Reporting.payload(report.build(), anonymize);
 			
 			txtRawData.setText(payload.toString(false));
+			
+			if(focusedNode != null) {
+				focusedNode.requestFocus();
+			}
 		} finally {
 			loadingData = false;
 		}
