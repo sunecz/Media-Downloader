@@ -65,6 +65,8 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 	private boolean autoEnableClipboardWatcher;
 	/** @since 00.02.09 */
 	private ConversionProvider conversionProvider;
+	/** @since 00.02.09 */
+	private String reportEmail;
 	
 	private ApplicationConfiguration(Path path, String name, SSDCollection data, Map<String, ConfigurationProperty<?>> properties) {
 		super(name, data, properties);
@@ -190,6 +192,8 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 		builder.addProperty(ConfigurationProperty.ofBoolean(PROPERTY_AUTO_ENABLE_CLIPBOARD_WATCHER)
 			.inGroup(GROUP_OTHER)
 			.withDefaultValue(false));
+		builder.addProperty(ConfigurationProperty.ofString(PROPERTY_REPORT_EMAIL)
+			.inGroup(GROUP_OTHER));
 		
 		return builder;
 	}
@@ -236,6 +240,7 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 		usePreReleaseVersions = UsePreReleaseVersions.of(stringValue(PROPERTY_USE_PRE_RELEASE_VERSIONS));
 		autoEnableClipboardWatcher = booleanValue(PROPERTY_AUTO_ENABLE_CLIPBOARD_WATCHER);
 		conversionProvider = Conversions.Providers.ofName(stringValue(PROPERTY_CONVERSION_PROVIDER));
+		reportEmail = stringValue(PROPERTY_REPORT_EMAIL);
 	}
 	
 	/** @since 00.02.07 */
@@ -359,6 +364,12 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 	@Override
 	public ConversionProvider conversionProvider() {
 		return conversionProvider;
+	}
+	
+	/** @since 00.02.09 */
+	@Override
+	public String reportEmail() {
+		return reportEmail;
 	}
 	
 	public static final class Builder extends Configuration.Builder implements ApplicationConfigurationAccessor {
@@ -491,6 +502,12 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 		@Override
 		public ConversionProvider conversionProvider() {
 			return Conversions.Providers.ofName(accessor().stringValue(PROPERTY_CONVERSION_PROVIDER));
+		}
+		
+		/** @since 00.02.09 */
+		@Override
+		public String reportEmail() {
+			return accessor().stringValue(PROPERTY_REPORT_EMAIL);
 		}
 		
 		@Override

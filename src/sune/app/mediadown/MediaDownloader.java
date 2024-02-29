@@ -2629,6 +2629,8 @@ public final class MediaDownloader {
 		@Override public boolean autoEnableClipboardWatcher() { return accessor().autoEnableClipboardWatcher(); }
 		/** @since 00.02.09 */
 		@Override public ConversionProvider conversionProvider() { return accessor().conversionProvider(); }
+		/** @since 00.02.09 */
+		@Override public String reportEmail() { return accessor().reportEmail(); }
 		@Override public SSDCollection data() { return accessor().data(); }
 		/** @since 00.02.07 */
 		@Override public boolean reload() { return accessor().reload(); }

@@ -54,6 +54,7 @@ public class ReportWindow extends DraggableWindow<VBox> {
 	
 	private volatile Report.Builder report;
 	private volatile Features features;
+	private volatile boolean loadingData;
 	
 	public ReportWindow() {
 		super(NAME, new VBox(5.0), 450.0, 400.0);
@@ -213,27 +214,37 @@ public class ReportWindow extends DraggableWindow<VBox> {
 	}
 	
 	private final void loadData() {
-		chbReason.setValue(report.reason());
+		loadingData = true;
 		
-		ContactInformation contact = report.contact();
-		
-		if(contact != null) {
-			txtEmail.setText(contact.email());
+		try {
+			chbReason.setValue(report.reason());
+			
+			ContactInformation contact = report.contact();
+			
+			if(contact != null) {
+				txtEmail.setText(contact.email());
+			}
+			
+			String note = report.note();
+			
+			if(note != null) {
+				txtNote.setText(note);
+			}
+			
+			boolean anonymize = chbAnonymizeData.isSelected();
+			JSONCollection payload = Reporting.payload(report.build(), anonymize);
+			
+			txtRawData.setText(payload.toString(false));
+		} finally {
+			loadingData = false;
 		}
-		
-		String note = report.note();
-		
-		if(note != null) {
-			txtNote.setText(note);
-		}
-		
-		boolean anonymize = chbAnonymizeData.isSelected();
-		JSONCollection payload = Reporting.payload(report.build(), anonymize);
-		
-		txtRawData.setText(payload.toString(false));
 	}
 	
 	private final void updateData() {
+		if(loadingData) {
+			return;
+		}
+		
 		updatePayload();
 	}
 	

@@ -403,6 +403,9 @@
 					mediaTitleFormat:            "Media titles format",
 					customMediaTitleFormat:      "Custom media titles format",
 					customMediaTitleFormat_help: "How to write custom media titles format?"
+				},
+				report: {
+					email: "Default email for reporting"
 				}
 			},
 			buttons: {

@@ -371,6 +371,8 @@ public abstract class Report {
 			this.name = Objects.requireNonNull(name);
 			this.reason = Objects.requireNonNull(reason);
 			this.context = Objects.requireNonNull(context);
+			// Always set the default contact information
+			this.contact = Reporting.defaultContactInformation();
 		}
 		
 		public abstract Report build();

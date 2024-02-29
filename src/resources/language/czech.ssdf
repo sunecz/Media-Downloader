@@ -403,6 +403,9 @@
 					mediaTitleFormat:            "Formát názvů médií",
 					customMediaTitleFormat:      "Vlastní formát názvů médií",
 					customMediaTitleFormat_help: "Jak napsat vlastní formát názvů médií?"
+				},
+				report: {
+					email: "Výchozí email pro nahlašování"
 				}
 			},
 			buttons: {

@@ -62,6 +62,8 @@ public interface ApplicationConfigurationAccessor extends ConfigurationLocatable
 	public static final String PROPERTY_AUTO_ENABLE_CLIPBOARD_WATCHER = "autoEnableClipboardWatcher";
 	/** @since 00.02.09 */
 	public static final String PROPERTY_CONVERSION_PROVIDER = "conversionProvider";
+	/** @since 00.02.09 */
+	public static final String PROPERTY_REPORT_EMAIL = "report.email";
 	
 	Version version();
 	Language language();
@@ -93,6 +95,8 @@ public interface ApplicationConfigurationAccessor extends ConfigurationLocatable
 	boolean autoEnableClipboardWatcher();
 	/** @since 00.02.09 */
 	ConversionProvider conversionProvider();
+	/** @since 00.02.09 */
+	String reportEmail();
 	
 	SSDCollection data();
 	

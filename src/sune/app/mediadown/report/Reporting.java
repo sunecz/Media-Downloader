@@ -41,6 +41,16 @@ public class Reporting {
 		}
 	}
 	
+	public static final ContactInformation defaultContactInformation() {
+		String email = MediaDownloader.configuration().reportEmail();
+		
+		if(email == null || email.isBlank()) {
+			return null;
+		}
+		
+		return new ContactInformation(email);
+	}
+	
 	private static final class API {
 		
 		private static final URI APP_URI = Net.uri("https://app.sune.tech/mediadown/api/v1/");
