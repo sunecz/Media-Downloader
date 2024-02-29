@@ -152,9 +152,7 @@ public class QueueTaskExecutor<V> {
 			return;
 		}
 		
-		// TODO: Make atomic
-		state.set(STATE_STOPPING);
-		state.unset(STATE_RUNNING);
+		state.setAndUnset(STATE_STOPPING, STATE_RUNNING);
 		
 		submittedTasks.clear();
 		lockTasks.free();
@@ -181,9 +179,7 @@ public class QueueTaskExecutor<V> {
 			es.shutdown();
 			es.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
 		} finally {
-			// TODO: Make atomic
-			state.set(STATE_STOPPED);
-			state.unset(STATE_STOPPING);
+			state.setAndUnset(STATE_STOPPED, STATE_STOPPING);
 		}
 	}
 	

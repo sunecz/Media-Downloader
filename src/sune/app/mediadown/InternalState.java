@@ -60,6 +60,11 @@ public final class InternalState {
 	}
 	
 	/** @since 00.02.09 */
+	public final void setAndUnset(int set, int unset) {
+		setValue((current) -> opUnset(opSet(current, set), unset));
+	}
+	
+	/** @since 00.02.09 */
 	public final boolean compareAndSet(int expected, int mask, int value) {
 		return compareAndSetValue(expected, mask, (current) -> opSet(current, value));
 	}
