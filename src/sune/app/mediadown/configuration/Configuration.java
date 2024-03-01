@@ -446,6 +446,16 @@ public class Configuration implements ConfigurationAccessor {
 				this.defaultValue = defaultValue;
 				return this;
 			}
+			
+			/** @since 00.02.09 */
+			public V defaultValue() {
+				return defaultValue;
+			}
+			
+			/** @since 00.02.09 */
+			public boolean useValue() {
+				return useValue;
+			}
 		}
 		
 		public static abstract class ScalarBuilder<V, T extends ConfigurationProperty<V>> extends Builder<V, T> {
