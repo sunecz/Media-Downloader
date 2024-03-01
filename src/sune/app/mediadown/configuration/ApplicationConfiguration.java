@@ -138,7 +138,7 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 			.withOrder(20));
 		builder.addProperty(ConfigurationProperty.ofBoolean(PROPERTY_COMPUTE_STREAM_SIZE)
 			.inGroup(GROUP_DOWNLOAD)
-			.withDefaultValue(true)
+			.withDefaultValue(false)
 			.withOrder(30));
 		builder.addProperty(ConfigurationProperty.ofInteger(PROPERTY_REQUEST_CONNECT_TIMEOUT)
 			.inGroup(GROUP_DOWNLOAD)
