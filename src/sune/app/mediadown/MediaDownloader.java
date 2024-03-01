@@ -781,6 +781,10 @@ public final class MediaDownloader {
 			@Override
 			public InitializationState run(Arguments args) {
 				if(applicationUpdated) {
+					ApplicationUpdateTriggers.run(
+						ApplicationUpdateTriggers.Stage.AFTER_CONFIGURATION_FINALIZATION
+					);
+					
 					// To prevent some issues, re-save all registered configurations
 					// to force all properties to be revalidated.
 					saveAllConfigurations();
@@ -1256,6 +1260,12 @@ public final class MediaDownloader {
 		// Set configuration-dependant values early
 		Web.defaultConnectTimeout(Duration.ofMillis(configuration.requestConnectTimeout()));
 		Web.defaultReadTimeout(Duration.ofMillis(configuration.requestReadTimeout()));
+		
+		if(applicationUpdated) {
+			ApplicationUpdateTriggers.init(configuration.version(), VERSION);
+			addApplicationUpdateTriggers();
+			ApplicationUpdateTriggers.run(ApplicationUpdateTriggers.Stage.EARLY);
+		}
 	}
 	
 	private static final class ResourcesManager {
@@ -1636,6 +1646,102 @@ public final class MediaDownloader {
 			// Update the version in the configuration file (even if the resources directory is not updated)
 			data.set(propertyName, VERSION.string());
 			saveConfiguration();
+		}
+	}
+	
+	/** @since 00.02.09 */
+	private static final void addApplicationUpdateTriggers() {
+		// Update computeStreamSize to the new default value
+		ApplicationUpdateTriggers.add(
+			ApplicationUpdateTriggers.Stage.EARLY,
+			Version.ZERO,
+			Version.of("00.02.09-dev.18"),
+			() -> {
+				Configuration.BooleanConfigurationProperty.Builder property
+					= (Configuration.BooleanConfigurationProperty.Builder) configuration.builder.getProperty("computeStreamSize");
+				
+				@SuppressWarnings("unused") // Silence incorrect warning
+				final boolean oldDefaultValue = true;
+				final boolean newDefaultValue = property.defaultValue();
+				boolean currentValue = configuration.computeStreamSize();
+				
+				if(currentValue == oldDefaultValue) {
+					property.withValue(newDefaultValue);
+				}
+			}
+		);
+	}
+	
+	/** @since 00.02.09 */
+	public static final class ApplicationUpdateTriggers {
+		
+		private static final List<Trigger> triggers = new ArrayList<>();
+		private static Version oldVersion;
+		private static Version newVersion;
+		
+		private ApplicationUpdateTriggers() {
+		}
+		
+		private static final boolean intersect(Version aStart, Version aEnd, Version bStart, Version bEnd) {
+			return bStart.compareTo(aEnd) <= 0 && bEnd.compareTo(aStart) >= 0;
+		}
+		
+		protected static final void init(Version oldVersion, Version newVersion) {
+			ApplicationUpdateTriggers.oldVersion = oldVersion;
+			ApplicationUpdateTriggers.newVersion = newVersion;
+		}
+		
+		protected static final void add(Stage stage, Version minVersion, Version maxVersion, CheckedRunnable action) {
+			triggers.add(new Trigger(stage, minVersion, maxVersion, action));
+		}
+		
+		public static final void add(Version minVersion, Version maxVersion, CheckedRunnable action) {
+			add(Stage.AFTER_CONFIGURATION_FINALIZATION, minVersion, maxVersion, action);
+		}
+		
+		protected static final void run(Stage stage) {
+			if(stage == null || oldVersion == null || newVersion == null) {
+				throw new IllegalArgumentException();
+			}
+			
+			for(Trigger trigger : triggers) {
+				if(stage != trigger.stage()
+						|| !intersect(oldVersion, newVersion, trigger.minVersion(), trigger.maxVersion())) {
+					continue; // Do not run
+				}
+				
+				try {
+					trigger.run();
+				} catch(Exception ex) {
+					// Do not interrupt other triggers
+					error(ex);
+				}
+			}
+		}
+		
+		protected static enum Stage {
+			
+			EARLY, AFTER_CONFIGURATION_FINALIZATION;
+		}
+		
+		protected static final class Trigger {
+			
+			private final Stage stage;
+			private final Version minVersion;
+			private final Version maxVersion;
+			private final CheckedRunnable action;
+			
+			private Trigger(Stage stage, Version minVersion, Version maxVersion, CheckedRunnable action) {
+				this.stage = Objects.requireNonNull(stage);
+				this.minVersion = Objects.requireNonNull(minVersion);
+				this.maxVersion = Objects.requireNonNull(maxVersion);
+				this.action = Objects.requireNonNull(action);
+			}
+			
+			public void run() throws Exception { action.run(); }
+			public Stage stage() { return stage; }
+			public Version minVersion() { return minVersion; }
+			public Version maxVersion() { return maxVersion; }
 		}
 	}
 	
