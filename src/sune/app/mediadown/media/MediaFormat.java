@@ -80,7 +80,7 @@ public final class MediaFormat {
 		TS = new Builder().name("TS").formatType(MediaFormatType.BOTH).mediaType(MediaType.VIDEO)
 					.fileExtensions("ts").mimeTypes("video/mp2t").string("TS").build();
 		MP3 = new Builder().name("MP3").formatType(MediaFormatType.BOTH).mediaType(MediaType.AUDIO)
-			        .fileExtensions("mp3").mimeTypes("audio/mpeg").string("MP3").build();
+			        .fileExtensions("mp3").mimeTypes("audio/mpeg", "audio/mp3").string("MP3").build();
 		WAV = new Builder().name("WAV").formatType(MediaFormatType.BOTH).mediaType(MediaType.AUDIO)
 			        .fileExtensions("wav").mimeTypes("audio/wav").string("WAV").build();
 		WMA = new Builder().name("WMA").formatType(MediaFormatType.BOTH).mediaType(MediaType.AUDIO)
