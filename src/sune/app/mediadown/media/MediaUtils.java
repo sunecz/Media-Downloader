@@ -592,9 +592,19 @@ public final class MediaUtils {
 				URI uri, MediaFormat format, Request request, URI sourceURI, Map<String, Object> data, long size
 		) throws Exception {
 			MediaMetadata.Builder mediaData = MediaMetadata.builder().sourceURI(sourceURI);
+			Media.Builder<?, ?> builder;
+			MediaType formatType = format.mediaType();
+			
+			if(formatType.is(MediaType.VIDEO)) {
+				builder = VideoMedia.simple();
+			} else if(formatType.is(MediaType.AUDIO)) {
+				builder = AudioMedia.simple();
+			} else {
+				builder = new SimpleMedia.Builder<>();
+			}
 			
 			return List.of(
-				VideoMedia.simple()
+				builder
 					.uri(uri).format(format).quality(MediaQuality.UNKNOWN)
 					.metadata(mediaData.add(data).build())
 			);
