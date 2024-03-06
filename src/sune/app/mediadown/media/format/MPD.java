@@ -18,6 +18,7 @@ import org.jsoup.nodes.Attribute;
 import org.jsoup.nodes.Attributes;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.jsoup.parser.Parser;
 import org.jsoup.select.Elements;
 
 import sune.app.mediadown.Shared;
@@ -235,30 +236,54 @@ public final class MPD {
 		private final String id;
 		private final MediaResolution resolution;
 		private final Map<String, String> attributes;
+		/** @since 00.02.09 */
+		private SegmentTemplate template;
 		
-		private Representation(String id, MediaResolution resolution, Map<String, String> attributes) {
+		private Representation(String id, MediaResolution resolution, Map<String, String> attributes, SegmentTemplate template) {
 			this.id = requireNonEmpty(id);
 			this.resolution = Objects.requireNonNull(resolution);
 			this.attributes = Objects.requireNonNull(attributes);
+			this.template = template; // May be null
 		}
 		
 		public static final Representation parse(Element element) {
-			if(!Objects.requireNonNull(element).nodeName().equalsIgnoreCase(NODE_NAME))
+			if(!Objects.requireNonNull(element).nodeName().equalsIgnoreCase(NODE_NAME)) {
 				throw new IllegalArgumentException();
+			}
+			
 			String id = element.attr("id");
 			MediaResolution resolution = MediaResolution.UNKNOWN;
+			
 			if(element.hasAttr("width") && element.hasAttr("height")) {
 				int width = Integer.parseInt(element.attr("width"));
 				int height = Integer.parseInt(element.attr("height"));
 				resolution = new MediaResolution(width, height);
 			}
+			
 			Map<String, String> attributes = elementAttributesToMap(element.attributes());
-			return new Representation(id, resolution, attributes);
+			
+			SegmentTemplate template = null;
+			Element elementSegmentTemplate = element.getElementsByTag(SegmentTemplate.NODE_NAME).first();
+			
+			if(elementSegmentTemplate != null) {
+				template = SegmentTemplate.parse(elementSegmentTemplate);
+			}
+			
+			return new Representation(id, resolution, attributes, template);
 		}
 		
-		public final MPDFile apply(URI baseURI, MediaFormat format, SegmentTemplate template,
-				ContentProtection protection, Map<String, String> attributes) throws Exception {
+		public final MPDFile apply(URI baseURI, MediaFormat format, ContentProtection protection,
+				Map<String, String> attributes) throws Exception {
+			if(template == null) {
+				throw new IllegalStateException("No SegmentTemplate");
+			}
+			
 			return (new MPDFileConstructor(baseURI, this, template, protection, attributes)).construct(format);
+		}
+		
+		/** @since 00.02.09 */
+		public void template(SegmentTemplate template) {
+			this.template = Objects.requireNonNull(template);
 		}
 		
 		public final String id() {
@@ -271,6 +296,11 @@ public final class MPD {
 		
 		public Map<String, String> attributes() {
 			return attributes;
+		}
+		
+		/** @since 00.02.09 */
+		public SegmentTemplate template() {
+			return template;
 		}
 	}
 	
@@ -387,41 +417,72 @@ public final class MPD {
 		
 		private final MediaFormat format;
 		private final List<Representation> representations;
-		private final SegmentTemplate template;
 		private final ContentProtection protection;
 		private final Map<String, String> attributes;
 		
-		public AdaptationSet(MediaFormat format, List<Representation> representations, SegmentTemplate template,
-				ContentProtection protection, Map<String, String> attributes) {
+		public AdaptationSet(MediaFormat format, List<Representation> representations, ContentProtection protection,
+				Map<String, String> attributes) {
 			this.format = Objects.requireNonNull(format);
 			this.representations = Objects.requireNonNull(representations);
-			this.template = Objects.requireNonNull(template);
 			this.protection = Objects.requireNonNull(protection);
 			this.attributes = Objects.requireNonNull(attributes);
 		}
 		
 		public static final AdaptationSet parse(Element element) {
-			if(!Objects.requireNonNull(element).nodeName().equalsIgnoreCase(NODE_NAME))
+			if(!Objects.requireNonNull(element).nodeName().equalsIgnoreCase(NODE_NAME)) {
 				throw new IllegalArgumentException();
+			}
+			
 			MediaFormat format = MediaFormat.fromMimeType(element.attr("mimeType"));
+			
 			List<Representation> representations = new ArrayList<>();
+			boolean needsOuterSegmentTemplate = false;
+			
 			for(Element elementRepresentation : element.getElementsByTag(Representation.NODE_NAME)) {
 				Representation representation = Representation.parse(elementRepresentation);
+				
+				if(representation.template() == null) {
+					needsOuterSegmentTemplate = true;
+				}
+				
 				representations.add(representation);
 			}
-			Element elementTemplate = element.getElementsByTag(SegmentTemplate.NODE_NAME).first();
-			if(elementTemplate == null)
-				throw new IllegalArgumentException();
-			SegmentTemplate template = SegmentTemplate.parse(elementTemplate);
+			
+			if(needsOuterSegmentTemplate) {
+				Element elementTemplate = null;
+				
+				for(Element child : element.children()) {
+					if(child.nodeName().equalsIgnoreCase(SegmentTemplate.NODE_NAME)) {
+						elementTemplate = child;
+						break;
+					}
+				}
+				
+				if(elementTemplate == null) {
+					throw new IllegalStateException("No SegmentTemplate");
+				}
+				
+				SegmentTemplate template = SegmentTemplate.parse(elementTemplate);
+				
+				for(Representation representation : representations) {
+					if(representation.template() != null) {
+						continue;
+					}
+					
+					representation.template(template);
+				}
+			}
+			
 			ContentProtection protection = ContentProtection.parse(element.getElementsByTag(ContentProtection.NODE_NAME));
 			Map<String, String> attributes = elementAttributesToMap(element.attributes());
-			return new AdaptationSet(format, representations, template, protection, attributes);
+			
+			return new AdaptationSet(format, representations, protection, attributes);
 		}
 		
 		public final List<MPDFile> process(URI baseURI) throws Exception {
 			List<MPDFile> files = new ArrayList<>();
 			for(Representation representation : representations) {
-				files.add(representation.apply(baseURI, format, template, protection, attributes));
+				files.add(representation.apply(baseURI, format, protection, attributes));
 			}
 			return files;
 		}
@@ -451,7 +512,7 @@ public final class MPD {
 		
 		private final Document responseDocument(InputStream stream, URI baseURI)
 				throws IOException {
-			return Jsoup.parse(stream, Shared.CHARSET.name(), baseURI.toString());
+			return Jsoup.parse(stream, Shared.CHARSET.name(), baseURI.toString(), Parser.xmlParser());
 		}
 		
 		private final List<MPDFile> read(URI baseURI, Document document) throws Exception {
