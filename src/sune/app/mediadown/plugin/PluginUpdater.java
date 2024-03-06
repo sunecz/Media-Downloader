@@ -19,6 +19,7 @@ import sune.app.mediadown.net.Web.Request;
 import sune.app.mediadown.net.Web.Response;
 import sune.app.mediadown.update.Version;
 import sune.app.mediadown.update.VersionType;
+import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.Regex;
 import sune.app.mediadown.util.Utils.Ignore;
 
@@ -108,6 +109,12 @@ public final class PluginUpdater {
 	
 	public static final String newestVersionURL(PluginFile file) {
 		return versionURL(file, newestVersion(file));
+	}
+	
+	/** @since 00.02.09 */
+	public static final Pair<String, Version> newestVersionInfo(String baseURL) {
+		Version version = newestVersion(baseURL, Version.UNKNOWN);
+		return new Pair<>(versionURL(baseURL, version), version);
 	}
 	
 	/** @since 00.02.07 */

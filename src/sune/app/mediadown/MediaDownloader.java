@@ -135,6 +135,7 @@ import sune.app.mediadown.util.PathSystem;
 import sune.app.mediadown.util.Ref;
 import sune.app.mediadown.util.Reflection2;
 import sune.app.mediadown.util.Reflection3;
+import sune.app.mediadown.util.Regex;
 import sune.app.mediadown.util.SelfProcess;
 import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Utils.Ignore;
@@ -781,8 +782,8 @@ public final class MediaDownloader {
 			@Override
 			public InitializationState run(Arguments args) {
 				if(applicationUpdated) {
-					ApplicationUpdateTriggers.run(
-						ApplicationUpdateTriggers.Stage.AFTER_CONFIGURATION_FINALIZATION
+					UpdateTriggers.OfApplication.run(
+						UpdateTriggers.OfApplication.Stage.AFTER_CONFIGURATION_FINALIZATION
 					);
 					
 					// To prevent some issues, re-save all registered configurations
@@ -1262,9 +1263,9 @@ public final class MediaDownloader {
 		Web.defaultReadTimeout(Duration.ofMillis(configuration.requestReadTimeout()));
 		
 		if(applicationUpdated) {
-			ApplicationUpdateTriggers.init(configuration.version(), VERSION);
+			UpdateTriggers.OfApplication.init(configuration.version(), VERSION);
 			addApplicationUpdateTriggers();
-			ApplicationUpdateTriggers.run(ApplicationUpdateTriggers.Stage.EARLY);
+			UpdateTriggers.OfApplication.run(UpdateTriggers.OfApplication.Stage.EARLY);
 		}
 	}
 	
@@ -1652,8 +1653,8 @@ public final class MediaDownloader {
 	/** @since 00.02.09 */
 	private static final void addApplicationUpdateTriggers() {
 		// Update computeStreamSize to the new default value
-		ApplicationUpdateTriggers.add(
-			ApplicationUpdateTriggers.Stage.EARLY,
+		UpdateTriggers.OfApplication.add(
+			UpdateTriggers.OfApplication.Stage.EARLY,
 			Version.ZERO,
 			Version.of("00.02.09-dev.18"),
 			() -> {
@@ -1673,40 +1674,37 @@ public final class MediaDownloader {
 	}
 	
 	/** @since 00.02.09 */
-	public static final class ApplicationUpdateTriggers {
+	public static abstract class UpdateTriggers {
 		
-		private static final List<Trigger> triggers = new ArrayList<>();
-		private static Version oldVersion;
-		private static Version newVersion;
+		protected final List<Trigger> triggers = new ArrayList<>();
+		protected Version oldVersion;
+		protected Version newVersion;
 		
-		private ApplicationUpdateTriggers() {
+		protected UpdateTriggers() {
 		}
 		
-		private static final boolean intersect(Version aStart, Version aEnd, Version bStart, Version bEnd) {
+		protected static final boolean intersect(Version aStart, Version aEnd, Version bStart, Version bEnd) {
 			return bStart.compareTo(aEnd) <= 0 && bEnd.compareTo(aStart) >= 0;
 		}
 		
-		protected static final void init(Version oldVersion, Version newVersion) {
-			ApplicationUpdateTriggers.oldVersion = oldVersion;
-			ApplicationUpdateTriggers.newVersion = newVersion;
+		protected void initVersions(Version oldVersion, Version newVersion) {
+			this.oldVersion = Objects.requireNonNull(oldVersion);
+			this.newVersion = Objects.requireNonNull(newVersion);
 		}
 		
-		protected static final void add(Stage stage, Version minVersion, Version maxVersion, CheckedRunnable action) {
-			triggers.add(new Trigger(stage, minVersion, maxVersion, action));
+		protected void addTrigger(Trigger trigger) {
+			triggers.add(Objects.requireNonNull(trigger));
 		}
 		
-		public static final void add(Version minVersion, Version maxVersion, CheckedRunnable action) {
-			add(Stage.AFTER_CONFIGURATION_FINALIZATION, minVersion, maxVersion, action);
-		}
+		protected abstract boolean canRun(Trigger trigger);
 		
-		protected static final void run(Stage stage) {
-			if(stage == null || oldVersion == null || newVersion == null) {
+		protected void runTriggers() {
+			if(oldVersion == null || newVersion == null) {
 				throw new IllegalArgumentException();
 			}
 			
 			for(Trigger trigger : triggers) {
-				if(stage != trigger.stage()
-						|| !intersect(oldVersion, newVersion, trigger.minVersion(), trigger.maxVersion())) {
+				if(!canRun(trigger)) {
 					continue; // Do not run
 				}
 				
@@ -1719,27 +1717,119 @@ public final class MediaDownloader {
 			}
 		}
 		
-		protected static enum Stage {
+		public static final class OfApplication extends UpdateTriggers {
 			
-			EARLY, AFTER_CONFIGURATION_FINALIZATION;
+			private static final OfApplication instance = new OfApplication();
+			
+			private Stage stage;
+			
+			private OfApplication() {
+			}
+			
+			protected static final void init(Version oldVersion, Version newVersion) {
+				instance.initVersions(oldVersion, newVersion);
+			}
+			
+			protected static final void add(Stage stage, Version minVersion, Version maxVersion, CheckedRunnable action) {
+				instance.addTrigger(new ApplicationTrigger(action, minVersion, maxVersion, stage));
+			}
+			
+			protected static final void run(Stage stage) {
+				instance.runTriggers(stage);
+			}
+			
+			public static final void add(Version minVersion, Version maxVersion, CheckedRunnable action) {
+				add(Stage.AFTER_CONFIGURATION_FINALIZATION, minVersion, maxVersion, action);
+			}
+			
+			@Override
+			protected final boolean canRun(Trigger trigger) {
+				return ((ApplicationTrigger) trigger).stage() == stage
+							&& intersect(oldVersion, newVersion, trigger.minVersion(), trigger.maxVersion());
+			}
+			
+			protected final void runTriggers(Stage stage) {
+				if(stage == null) {
+					throw new IllegalArgumentException();
+				}
+				
+				this.stage = stage;
+				super.runTriggers();
+			}
+			
+			protected static enum Stage {
+				
+				EARLY, AFTER_CONFIGURATION_FINALIZATION;
+			}
+			
+			protected static final class ApplicationTrigger extends Trigger {
+				
+				private final Stage stage;
+				
+				private ApplicationTrigger(CheckedRunnable action, Version minVersion, Version maxVersion, Stage stage) {
+					super(action, minVersion, maxVersion);
+					this.stage = Objects.requireNonNull(stage);
+				}
+				
+				public Stage stage() { return stage; }
+			}
 		}
 		
-		protected static final class Trigger {
+		public static final class OfPlugin extends UpdateTriggers {
 			
-			private final Stage stage;
-			private final Version minVersion;
-			private final Version maxVersion;
-			private final CheckedRunnable action;
+			private static final OfPlugin instance = new OfPlugin();
 			
-			private Trigger(Stage stage, Version minVersion, Version maxVersion, CheckedRunnable action) {
-				this.stage = Objects.requireNonNull(stage);
+			private String pluginName;
+			
+			private OfPlugin() {
+			}
+			
+			protected static final void run(Version oldVersion, Version newVersion, String pluginName) {
+				if(pluginName == null) {
+					throw new IllegalArgumentException();
+				}
+				
+				instance.initVersions(oldVersion, newVersion);
+				instance.pluginName = pluginName;
+				instance.runTriggers();
+			}
+			
+			public static final void add(String pluginName, Version minVersion, Version maxVersion, CheckedRunnable action) {
+				instance.addTrigger(new PluginTrigger(action, minVersion, maxVersion, pluginName));
+			}
+			
+			@Override
+			protected final boolean canRun(Trigger trigger) {
+				return ((PluginTrigger) trigger).pluginName().equals(pluginName)
+							&& intersect(oldVersion, newVersion, trigger.minVersion(), trigger.maxVersion());
+			}
+			
+			protected static final class PluginTrigger extends Trigger {
+				
+				private final String pluginName;
+				
+				private PluginTrigger(CheckedRunnable action, Version minVersion, Version maxVersion, String pluginName) {
+					super(action, minVersion, maxVersion);
+					this.pluginName = Objects.requireNonNull(pluginName);
+				}
+				
+				public String pluginName() { return pluginName; }
+			}
+		}
+		
+		protected static class Trigger {
+			
+			protected final CheckedRunnable action;
+			protected final Version minVersion;
+			protected final Version maxVersion;
+			
+			protected Trigger(CheckedRunnable action, Version minVersion, Version maxVersion) {
+				this.action = Objects.requireNonNull(action);
 				this.minVersion = Objects.requireNonNull(minVersion);
 				this.maxVersion = Objects.requireNonNull(maxVersion);
-				this.action = Objects.requireNonNull(action);
 			}
 			
 			public void run() throws Exception { action.run(); }
-			public Stage stage() { return stage; }
 			public Version minVersion() { return minVersion; }
 			public Version maxVersion() { return maxVersion; }
 		}
@@ -2307,12 +2397,16 @@ public final class MediaDownloader {
 			DownloadConfiguration downloadConfiguration = DownloadConfiguration.ofDefault();
 			bindPluginDownloadEvents(downloader);
 			
+			Regex regexOnlyAlphanum = Regex.of("[^A-Za-z0-9]+");
+			Regex regexPluginPrefix = Regex.of("^plugin-");
+			
 			for(Pair<String, String> plugin : PluginListObtainer.obtain()) {
-				String fileName = plugin.b.replaceAll("[^A-Za-z0-9]+", "-").replaceFirst("^plugin-", "") + ".jar";
+				String fileName = regexPluginPrefix.replaceFirst(regexOnlyAlphanum.replaceAll(plugin.b, "-"), "") + ".jar";
 				Path path = NIO.localPath(BASE_RESOURCE, "plugin", fileName);
 				
 				if(!NIO.exists(path)) {
-					String versionUrl = PluginUpdater.newestVersionURL(plugin.a);
+					Pair<String, Version> pluginInfo = PluginUpdater.newestVersionInfo(plugin.a);
+					String versionUrl = pluginInfo.a;
 					
 					// Check whether there is a file available for the current application version
 					if(versionUrl != null) {
@@ -2321,6 +2415,11 @@ public final class MediaDownloader {
 						
 						NIO.createDir(path.getParent()); // Ensure parent directory
 						downloader.start(request, path, downloadConfiguration);
+						
+						String pluginName = regexPluginPrefix.replaceFirst(regexOnlyAlphanum.replaceAll(plugin.b, "."), "");
+						Version oldVersion = Version.ZERO;
+						Version newVersion = pluginInfo.b;
+						UpdateTriggers.OfPlugin.run(oldVersion, newVersion, pluginName);
 					}
 				}
 			}
@@ -2397,6 +2496,7 @@ public final class MediaDownloader {
 								// Check whether there is a newer version of the plugin
 								if(pluginURL != null) {
 									Path file = Path.of(plugin.getPath());
+									Version oldVersion = Version.of(plugin.getPlugin().instance().version());
 									Request request = Request.of(Net.uri(pluginURL)).GET();
 									
 									NIO.createDir(file.getParent()); // Ensure parent directory
@@ -2406,6 +2506,10 @@ public final class MediaDownloader {
 									// Must reload the plugin, otherwise it will have incorrect information
 									PluginFile.resetPluginFileLoader();
 									plugin = PluginFile.from(file);
+									
+									String pluginName = plugin.getPlugin().instance().name();
+									Version newVersion = Version.of(plugin.getPlugin().instance().version());
+									UpdateTriggers.OfPlugin.run(oldVersion, newVersion, pluginName);
 								}
 								
 								receiver.receive(String.format(
