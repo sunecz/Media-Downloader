@@ -117,14 +117,7 @@ public final class Choosers {
 		}
 		
 		public static final Builder configuredBuilder() {
-			Builder builder = new Builder(true);
-			
-			Path lastDir = lastDirectory();
-			if(lastDir != null) {
-				builder.directory(lastDir);
-			}
-			
-			return builder;
+			return (new Builder(true)).directory(lastDirectory());
 		}
 		
 		public static final class Chooser extends ChooserAccessor<Chooser> {
@@ -324,10 +317,15 @@ public final class Choosers {
 			}
 			
 			public T directory(Path directory) {
-				this.directory = directory;
-				if(directory != null && NIO.isDirectory(directory)) {
-					chooser.setInitialDirectory(directory.toFile());
+				if(directory != null) {
+					if(NIO.isDirectory(directory)) {
+						chooser.setInitialDirectory(directory.toFile());
+					} else {
+						directory = null; // Reset
+					}
 				}
+				
+				this.directory = directory;
 				return self();
 			}
 			
