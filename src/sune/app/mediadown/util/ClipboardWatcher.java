@@ -212,12 +212,33 @@ public final class ClipboardWatcher {
 		}
 		
 		@Override
-		public void lostOwnership(Clipboard c, Transferable t) {
-			if(!running.get()) return;
-			Ignore.callVoid(() -> Thread.sleep(WAIT_MILLIS));
-			Transferable contents = contents();
-			contentsChanged(c, contents);
-			takeOwnership(contents);
+		public void lostOwnership(Clipboard clipboard, Transferable t) {
+			if(!running.get()) {
+				return;
+			}
+			
+			Transferable contents = null;
+			
+			for(int attempt = 0, maxAttempts = 3; attempt < maxAttempts; ++attempt) {
+				try {
+					Ignore.callVoid(() -> Thread.sleep(WAIT_MILLIS)); // Wait a little
+					contents = contents();
+					break; // Success, no need to continue
+				} catch(IllegalStateException ex) {
+					String message;
+					if((message = ex.getMessage()) != null
+							&& message.equalsIgnoreCase("cannot open system clipboard")) {
+						continue;
+					}
+					
+					throw ex; // Rethrow
+				}
+			}
+			
+			if(contents != null) {
+				contentsChanged(clipboard, contents);
+				takeOwnership(contents);
+			}
 		}
 		
 		public void start() {
