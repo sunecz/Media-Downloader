@@ -115,14 +115,21 @@ public final class MPD {
 			long time = -1L;
 			long duration = -1L;
 			int count = 1;
-			if(element.hasAttr("t"))
-				time = Long.valueOf(element.attr("t"));
-			if(element.hasAttr("d"))
-				duration = Long.valueOf(element.attr("d"));
-			if(element.hasAttr("r"))
+			
+			if(element.hasAttr("t")) {
+				time = Long.parseLong(element.attr("t"));
+			}
+			
+			if(element.hasAttr("d")) {
+				duration = Long.parseLong(element.attr("d"));
+			}
+			
+			if(element.hasAttr("r")) {
 				// Number of repetitions AFTER the first segment,
 				// i.e. first segment + 'r' more segments.
-				count = Math.max(1, Integer.valueOf(element.attr("r")) + 1);
+				count += Math.max(0, Integer.parseInt(element.attr("r")));
+			}
+			
 			return new Segment(time, duration, count);
 		}
 		
@@ -190,12 +197,12 @@ public final class MPD {
 			Element elementTimeline = element.getElementsByTag(SegmentTimeline.NODE_NAME).first();
 			if(elementTimeline == null)
 				throw new IllegalArgumentException();
-			int timescale = Integer.valueOf(element.attr("timescale"));
+			int timescale = Integer.parseInt(element.attr("timescale"));
 			String media = element.attr("media");
 			String initialization = element.attr("initialization");
 			String startNumberStr = element.attr("startNumber");
 			if(startNumberStr.isEmpty()) startNumberStr = "0";
-			int startNumber = Math.max(0, Integer.valueOf(startNumberStr));
+			int startNumber = Math.max(0, Integer.parseInt(startNumberStr));
 			SegmentTimeline timeline = SegmentTimeline.parse(elementTimeline);
 			return new SegmentTemplate(timescale, media, initialization, startNumber, timeline);
 		}
@@ -241,8 +248,8 @@ public final class MPD {
 			String id = element.attr("id");
 			MediaResolution resolution = MediaResolution.UNKNOWN;
 			if(element.hasAttr("width") && element.hasAttr("height")) {
-				int width = Integer.valueOf(element.attr("width"));
-				int height = Integer.valueOf(element.attr("height"));
+				int width = Integer.parseInt(element.attr("width"));
+				int height = Integer.parseInt(element.attr("height"));
 				resolution = new MediaResolution(width, height);
 			}
 			Map<String, String> attributes = elementAttributesToMap(element.attributes());
@@ -629,7 +636,7 @@ public final class MPD {
 		
 		public final int bandwidth() {
 			if(bandwidth == null) {
-				bandwidth = Integer.valueOf(attributes.getOrDefault("bandwidth", "0"));
+				bandwidth = Integer.parseInt(attributes.getOrDefault("bandwidth", "0"));
 			}
 			
 			return bandwidth;
