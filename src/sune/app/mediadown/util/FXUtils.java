@@ -329,6 +329,18 @@ public final class FXUtils {
 				getButtonTypes().setAll(ButtonType.OK);
 				setGraphic(null);
 				initStylesheet();
+				
+				// Make the window resizable so that at least the user can resize it
+				// and that way see the content, if the window is incorrectly sized.
+				// See: https://github.com/javafxports/openjdk-jfx/issues/222
+				// See: https://bugs.openjdk.org/browse/JDK-8179073
+				setResizable(true);
+				
+				// Limit the size of the window. This should help when the window is
+				// incorrectly sized on some Linux systems.
+				Stage stage = alertStage(this);
+				stage.setMinWidth(200.0);
+				stage.setMinHeight(200.0);
 			}
 			
 			private final void initStylesheet() {
@@ -1328,6 +1340,15 @@ public final class FXUtils {
 	/** @since 00.02.06 */
 	public static final boolean openURI(URI uri) {
 		return openURI(Objects.requireNonNull(uri).toString());
+	}
+	
+	/** @since 00.02.09 */
+	public static final Stage alertStage(Alert alert) {
+		Objects.requireNonNull(alert);
+		Class<?> internalClass = Reflection2.getClass("javafx.scene.control.HeavyweightDialog");
+		return (Stage) Reflection2.getField(
+			internalClass, Reflection2.getField(Dialog.class, alert, "dialog"), "stage"
+		);
 	}
 	
 	// Forbid anyone to create an instance of this class
