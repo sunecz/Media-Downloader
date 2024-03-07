@@ -770,6 +770,10 @@ public final class MediaDownloader {
 				
 				Ignore.callVoid(Plugins::loadAll, MediaDownloader::error);
 				
+				// Run the plugin update triggers here so that the plugins themselves have an opportunity
+				// to register their own plugin update triggers.
+				UpdateTriggers.OfPlugin.run();
+				
 				return new Finalization();
 			}
 			
@@ -1778,20 +1782,27 @@ public final class MediaDownloader {
 		public static final class OfPlugin extends UpdateTriggers {
 			
 			private static final OfPlugin instance = new OfPlugin();
+			private static final Map<String, Pair<Version, Version>> updates = new HashMap<>();
 			
 			private String pluginName;
 			
 			private OfPlugin() {
 			}
 			
-			protected static final void run(Version oldVersion, Version newVersion, String pluginName) {
-				if(pluginName == null) {
-					throw new IllegalArgumentException();
+			protected static final void run() {
+				for(Entry<String, Pair<Version, Version>> update : updates.entrySet()) {
+					String pluginName = update.getKey();
+					Pair<Version, Version> value = update.getValue();
+					Version oldVersion = value.a;
+					Version newVersion = value.b;
+					instance.initVersions(oldVersion, newVersion);
+					instance.pluginName = pluginName;
+					instance.runTriggers();
 				}
-				
-				instance.initVersions(oldVersion, newVersion);
-				instance.pluginName = pluginName;
-				instance.runTriggers();
+			}
+			
+			protected static final void addUpdate(String pluginName, Version oldVersion, Version newVersion) {
+				updates.put(pluginName, new Pair<>(oldVersion, newVersion));
 			}
 			
 			public static final void add(String pluginName, Version minVersion, Version maxVersion, CheckedRunnable action) {
@@ -2419,7 +2430,7 @@ public final class MediaDownloader {
 						String pluginName = regexPluginPrefix.replaceFirst(regexOnlyAlphanum.replaceAll(plugin.b, "."), "");
 						Version oldVersion = Version.ZERO;
 						Version newVersion = pluginInfo.b;
-						UpdateTriggers.OfPlugin.run(oldVersion, newVersion, pluginName);
+						UpdateTriggers.OfPlugin.addUpdate(pluginName, oldVersion, newVersion);
 					}
 				}
 			}
@@ -2509,7 +2520,7 @@ public final class MediaDownloader {
 									
 									String pluginName = plugin.getPlugin().instance().name();
 									Version newVersion = Version.of(plugin.getPlugin().instance().version());
-									UpdateTriggers.OfPlugin.run(oldVersion, newVersion, pluginName);
+									UpdateTriggers.OfPlugin.addUpdate(pluginName, oldVersion, newVersion);
 								}
 								
 								receiver.receive(String.format(
