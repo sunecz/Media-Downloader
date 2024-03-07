@@ -2454,7 +2454,10 @@ public final class MediaDownloader {
 			
 			Files.walk(dir)
 				// Filter out only the files
-				.filter(Files::isRegularFile)
+				.filter((p) -> {
+					return NIO.isRegularFile(p)
+								&& Utils.OfPath.fileType(p).equalsIgnoreCase("jar");
+				})
 				// Sort files in the same directory lexicographically but put shorter names first
 				.sorted((a, b) -> {
 					// Check whether the files are in the same directory
