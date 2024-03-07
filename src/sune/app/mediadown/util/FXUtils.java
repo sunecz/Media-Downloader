@@ -325,6 +325,7 @@ public final class FXUtils {
 				tabs = new TabPane();
 				pane.getChildren().addAll(tabs);
 				getDialogPane().setContent(pane);
+				VBox.setVgrow(tabs, Priority.ALWAYS);
 				setDialogIcon(this, MediaDownloader.ICON);
 				getButtonTypes().setAll(ButtonType.OK);
 				setGraphic(null);
@@ -450,6 +451,7 @@ public final class FXUtils {
 				TextArea area = new TextArea(text);
 				area.setEditable(false);
 				wrapper.getChildren().add(area);
+				VBox.setVgrow(area, Priority.ALWAYS);
 				
 				String title = throwable.getClass().getSimpleName();
 				return new ErrorTab(this, title, wrapper);
@@ -503,6 +505,7 @@ public final class FXUtils {
 					TextArea area = new TextArea(content);
 					area.setEditable(false);
 					wrapper.getChildren().add(area);
+					VBox.setVgrow(area, Priority.ALWAYS);
 				}
 				
 				String title = "Error";
