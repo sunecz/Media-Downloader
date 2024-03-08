@@ -28,7 +28,7 @@
 }
 
 .lbl-title {
-	-fx-font-family: "HP Simplified Bold";
+	-fx-font-family: "md-hps";
 	-fx-font-size: 60;
 	-fx-text-alignment: center;
 	-fx-effect: dropshadow(two-pass-box, rgb(0, 0, 0), 4, 4, 0, 0);
@@ -39,6 +39,7 @@
 	-fx-font-smoothing-type: gray;
 }
 
+#pane-title  { -fx-translate-y: -5;  }
 #lbl-title-0 { -fx-translate-y: -28; }
 #lbl-title-1 { -fx-translate-y: +28; }
 
