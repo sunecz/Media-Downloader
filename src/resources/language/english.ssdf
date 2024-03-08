@@ -135,7 +135,7 @@
 					text:  "Are you sure you want to update all resources?",
 					success: {
 						title: "Update resources",
-						text:  "Resources have been updated."
+						text:  "Resources have been updated. Please, restart the application."
 					}
 				},
 				close_request: {
