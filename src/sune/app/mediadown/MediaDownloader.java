@@ -78,7 +78,6 @@ import sune.app.mediadown.gui.window.ConfigurationWindow;
 import sune.app.mediadown.gui.window.CredentialsEditDialogWindow;
 import sune.app.mediadown.gui.window.CredentialsWindow;
 import sune.app.mediadown.gui.window.DownloadConfigurationWindow;
-import sune.app.mediadown.gui.window.InformationWindow;
 import sune.app.mediadown.gui.window.MainWindow;
 import sune.app.mediadown.gui.window.MediaGetterWindow;
 import sune.app.mediadown.gui.window.MediaInfoWindow;
@@ -2204,7 +2203,6 @@ public final class MediaDownloader {
 		
 		private static final void registerWindows() {
 			windows.register(MainWindow.NAME, initializator(MainWindow::new));
-			windows.register(InformationWindow.NAME, initializator(InformationWindow::new));
 			windows.register(MediaGetterWindow.NAME, initializator(MediaGetterWindow::new));
 			windows.register(DownloadConfigurationWindow.NAME, initializator(DownloadConfigurationWindow::new));
 			windows.register(ConfigurationWindow.NAME, initializator(ConfigurationWindow::new));

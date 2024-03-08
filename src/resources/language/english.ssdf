@@ -59,21 +59,12 @@
 					items: {
 						media_getter: "URL"
 					}
-				},
-				information: {
-					items: {
-						engines:     "Websites",
-						downloaders: "Downloaders",
-						servers:     "Servers",
-						plugins:     "Plugins"
-					}
 				}
 			},
 			menu_bar: {
 				application: {
 					title: "Application",
 					item: {
-						information:   "Information",
 						configuration: "Configuration",
 						credentials:   "Login credentials",
 						plugins:       "Plugin manager"
@@ -187,73 +178,6 @@
 						progress: "Updating %{name}... %{current} / %{total} (%{percent}%%)",
 						end:      "Updating %{name}... done",
 						error:    "Updating %{name}... error (%{message})"
-					}
-				}
-			}
-		},
-		information: {
-			title: "Information",
-			labels: {
-				no_item_selected: "No item is selected"
-			},
-			tabs: {
-				media_engines: {
-					title: "Websites",
-					labels: {
-						url:     "URL",
-						title:   "Title",
-						version: "Version",
-						author:  "Author"
-					}
-				},
-				downloaders: {
-					title: "Downloaders",
-					labels: {
-						title:   "Title",
-						version: "Version",
-						author:  "Author"
-					}
-				},
-				servers: {
-					title: "Servers",
-					labels: {
-						url:     "URL",
-						title:   "Title",
-						version: "Version",
-						author:  "Author"
-					}
-				},
-				plugins: {
-					title: "Plugins",
-					labels: {
-						name:    "Name",
-						title:   "Title",
-						version: "Version",
-						author:  "Author",
-						update: {
-							checking_new_version:     "Checking new version...",
-							no_new_version_available: "No new version available",
-							new_version_available:    "New version available: %{version}",
-							download: {
-								begin:    "Updating %{name}...",
-								progress: "Updating %{name}... %{current} / %{total} (%{percent}%%)",
-								end:      "Updating %{name}... done",
-								error:    "Updating %{name}... error (%{message})"
-							}
-						},
-						update_many: {
-							title:     "Plugins update",
-							init:      "Updating plugins...",
-							item_init: "Updating %{name}...",
-							item_done: "Updating %{name}... done",
-							done_any:  "Plugins updated. For changes restart the application.",
-							done_none: "No plugins updated.",
-							cancel:    "Updating plugins canceled"
-						}
-					},
-					buttons: {
-						update_all:      "Update all",
-						update_selected: "Update selected"
 					}
 				}
 			}

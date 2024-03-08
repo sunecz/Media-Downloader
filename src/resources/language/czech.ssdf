@@ -59,21 +59,12 @@
 					items: {
 						media_getter: "URL"
 					}
-				},
-				information: {
-					items: {
-						engines:     "Weby",
-						downloaders: "Stahovače",
-						servers:     "Servery",
-						plugins:     "Pluginy"
-					}
 				}
 			},
 			menu_bar: {
 				application: {
 					title: "Program",
 					item: {
-						information:   "Informace",
 						configuration: "Nastavení",
 						credentials:   "Přihlašovací údaje",
 						plugins:       "Správce pluginů"
@@ -187,73 +178,6 @@
 						progress: "Aktualizace %{name}... %{current} / %{total} (%{percent}%%)",
 						end:      "Aktualizace %{name}... hotovo",
 						error:    "Aktualizace %{name}... chyba (%{message})"
-					}
-				}
-			}
-		},
-		information: {
-			title: "Informace",
-			labels: {
-				no_item_selected: "Není vybrána žádná položka"
-			},
-			tabs: {
-				media_engines: {
-					title: "Weby",
-					labels: {
-						url:     "URL",
-						title:   "Název",
-						version: "Verze",
-						author:  "Autor"
-					}
-				},
-				downloaders: {
-					title: "Stahovače",
-					labels: {
-						title:   "Název",
-						version: "Verze",
-						author:  "Autor"
-					}
-				},
-				servers: {
-					title: "Servery",
-					labels: {
-						url:     "URL",
-						title:   "Název",
-						version: "Verze",
-						author:  "Autor"
-					}
-				},
-				plugins: {
-					title: "Pluginy",
-					labels: {
-						name:    "Jméno",
-						title:   "Název",
-						version: "Verze",
-						author:  "Autor",
-						update: {
-							checking_new_version:     "Kontrolování nové verze...",
-							no_new_version_available: "Není k dispozici žádná nová verze",
-							new_version_available:    "Nová verze k dispozici: %{version}",
-							download: {
-								begin:    "Aktualizace %{name}...",
-								progress: "Aktualizace %{name}... %{current} / %{total} (%{percent}%%)",
-								end:      "Aktualizace %{name}... hotovo",
-								error:    "Aktualizace %{name}... chyba (%{message})"
-							}
-						},
-						update_many: {
-							title:     "Aktualizace pluginů",
-							init:      "Aktualizace pluginů...",
-							item_init: "Aktualizace %{name}...",
-							item_done: "Aktualizace %{name}... done",
-							done_any:  "Pluginy byly aktualizovány. Pro provedení změn restartujte aplikaci.",
-							done_none: "Žádné pluginy nebyly aktualizovány.",
-							cancel:    "Aktualizace pluginů zrušena"
-						}
-					},
-					buttons: {
-						update_all:      "Aktualizovat vše",
-						update_selected: "Aktualizovat vybrané"
 					}
 				}
 			}

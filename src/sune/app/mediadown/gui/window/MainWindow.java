@@ -1,7 +1,6 @@
 package sune.app.mediadown.gui.window;
 
 import java.net.URI;
-import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -33,19 +32,15 @@ import javafx.scene.control.TableView;
 import javafx.scene.control.TableView.TableViewSelectionModel;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
-import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
 import sune.app.mediadown.Disposables;
 import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.concurrent.Threads;
-import sune.app.mediadown.download.Download;
 import sune.app.mediadown.entity.MediaEngine;
 import sune.app.mediadown.entity.MediaEngines;
-import sune.app.mediadown.event.DownloadEvent;
 import sune.app.mediadown.event.PipelineEvent;
 import sune.app.mediadown.event.QueueEvent;
 import sune.app.mediadown.event.tracker.ConversionTracker;
@@ -59,10 +54,6 @@ import sune.app.mediadown.event.tracker.TrackerVisitor;
 import sune.app.mediadown.event.tracker.WaitTracker;
 import sune.app.mediadown.gui.Dialog;
 import sune.app.mediadown.gui.GUI;
-import sune.app.mediadown.gui.InformationItems.ItemDownloader;
-import sune.app.mediadown.gui.InformationItems.ItemMediaEngine;
-import sune.app.mediadown.gui.InformationItems.ItemPlugin;
-import sune.app.mediadown.gui.InformationItems.ItemServer;
 import sune.app.mediadown.gui.ProgressWindow;
 import sune.app.mediadown.gui.ProgressWindow.ProgressAction;
 import sune.app.mediadown.gui.ProgressWindow.ProgressContext;
@@ -77,8 +68,6 @@ import sune.app.mediadown.gui.control.PipelineTableView.Stats;
 import sune.app.mediadown.gui.table.ResolvedMedia;
 import sune.app.mediadown.gui.table.ResolvedMediaPipelineResult;
 import sune.app.mediadown.gui.table.TablePipelineResult;
-import sune.app.mediadown.gui.window.InformationWindow.InformationTab;
-import sune.app.mediadown.gui.window.InformationWindow.TabContent;
 import sune.app.mediadown.language.Translation;
 import sune.app.mediadown.language.Translator;
 import sune.app.mediadown.media.Media;
@@ -92,9 +81,6 @@ import sune.app.mediadown.pipeline.DownloadPipelineTask;
 import sune.app.mediadown.pipeline.Pipeline;
 import sune.app.mediadown.pipeline.PipelineTask;
 import sune.app.mediadown.pipeline.PipelineTransformer;
-import sune.app.mediadown.plugin.PluginFile;
-import sune.app.mediadown.plugin.PluginUpdater;
-import sune.app.mediadown.plugin.Plugins;
 import sune.app.mediadown.report.Report;
 import sune.app.mediadown.report.Report.Reason;
 import sune.app.mediadown.report.ReportContext;
@@ -102,7 +88,6 @@ import sune.app.mediadown.transformer.Transformer;
 import sune.app.mediadown.transformer.Transformers;
 import sune.app.mediadown.util.ClipboardUtils;
 import sune.app.mediadown.util.FXUtils;
-import sune.app.mediadown.util.MathUtils;
 import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Utils.Ignore;
@@ -137,7 +122,6 @@ public final class MainWindow extends Window<BorderPane> {
 	
 	private MenuBar menuBar;
 	private Menu menuApplication;
-	private MenuItem menuItemInformation;
 	private MenuItem menuItemConfiguration;
 	/** @since 00.02.09 */
 	private MenuItem menuItemCredentials;
@@ -704,11 +688,6 @@ public final class MainWindow extends Window<BorderPane> {
 		menuTools = new Menu(tr("menu_bar.tools.title"));
 		menuHelp = new Menu(tr("menu_bar.help.title"));
 		
-		menuItemInformation = new MenuItem(tr("menu_bar.application.item.information"));
-		menuItemInformation.setOnAction((e) -> {
-			showInformationWindow();
-		});
-		
 		menuItemConfiguration = new MenuItem(tr("menu_bar.application.item.configuration"));
 		menuItemConfiguration.setOnAction((e) -> {
 			MediaDownloader.window(ConfigurationWindow.NAME).show(this);
@@ -774,7 +753,7 @@ public final class MainWindow extends Window<BorderPane> {
 		});
 		
 		menuApplication.getItems().addAll(
-			menuItemInformation, menuItemConfiguration, menuItemCredentials, menuItemPlugins
+			menuItemConfiguration, menuItemCredentials, menuItemPlugins
 		);
 		menuTools.getItems().addAll(menuItemClipboardWatcher, menuItemUpdateResources);
 		menuHelp.getItems().addAll(
@@ -820,148 +799,6 @@ public final class MainWindow extends Window<BorderPane> {
 		box.setPadding(new Insets(0, 15, 15, 15));
 		
 		return box;
-	}
-	
-	private final ProgressAction action_updatePlugins(Stage window, Collection<PluginFile> plugins) {
-		InformationWindow informationWindow = MediaDownloader.window(InformationWindow.NAME);
-		Translation translation = informationWindow.getTranslation().getTranslation("tabs.plugins");
-		return new ProgressAction() {
-			
-			private final AtomicBoolean cancelled = new AtomicBoolean();
-			private ProgressContext context;
-			private double pluginsCount;
-			private Download downloadUpdate;
-			
-			private final boolean update(PluginFile pluginFile) {
-				try {
-					String pluginURL = PluginUpdater.check(pluginFile);
-					// Check whether there is a newer version of the plugin
-					if((pluginURL != null)) {
-						String pluginTitle = pluginFile.getPlugin().instance().title();
-						downloadUpdate = PluginUpdater.update(pluginURL, Path.of(pluginFile.getPath()));
-						downloadUpdate.addEventListener(DownloadEvent.BEGIN,
-							(ctx) -> context.setText(translation.getSingle("labels.update.download.begin", "name", pluginTitle)));
-						downloadUpdate.addEventListener(DownloadEvent.UPDATE, (ctx) -> {
-							DownloadTracker tracker = Utils.cast(ctx.trackerManager().tracker());
-							String progress = translation.getSingle("labels.update.download.progress",
-								"name",    pluginTitle,
-								"current", tracker.current(),
-								"total",   tracker.total(),
-								"percent", MathUtils.round(tracker.progress() * 100.0, 2));
-							context.setText(progress);
-						});
-						downloadUpdate.addEventListener(DownloadEvent.ERROR,
-							(ctx) -> context.setText(translation.getSingle("labels.update.download.error", "message", ctx.exception())));
-						downloadUpdate.addEventListener(DownloadEvent.END,
-							(ctx) -> context.setText(translation.getSingle("labels.update.download.end", "name", pluginTitle)));
-						downloadUpdate.start();
-						return true;
-					}
-				} catch(Exception ex) {
-					// Ignore
-				}
-				return false;
-			}
-			
-			private final void stopDownload() {
-				try {
-					if((downloadUpdate != null))
-						downloadUpdate.stop();
-				} catch(Exception ex) {
-					// Ignore
-				}
-			}
-			
-			@Override
-			public void action(ProgressContext context) {
-				this.context = context;
-				context.setText(translation.getSingle("labels.update_many.init"));
-				if((cancelled.get())) return;
-				context.setProgress(ProgressContext.PROGRESS_NONE);
-				pluginsCount = plugins.size();
-				boolean updated = false;
-				int ctr = 0;
-				for(PluginFile pluginFile : plugins) {
-					if((cancelled.get())) {
-						stopDownload();
-						break;
-					}
-					String pluginTitle = MediaDownloader.translation().getSingle(pluginFile.getPlugin().instance().title());
-					context.setText(translation.getSingle("labels.update_many.item_init", "name", pluginTitle));
-					updated = update(pluginFile) || updated;
-					context.setProgress(++ctr / pluginsCount);
-					context.setText(translation.getSingle("labels.update_many.item_done", "name", pluginTitle));
-				}
-				String title = translation.getSingle("labels.update_many.title");
-				String text = translation.getSingle("labels.update_many." + (updated ? "done_any" : "done_none"));
-				Dialog.showInfo(title, text);
-				FXUtils.thread(window::close);
-			}
-			
-			@Override
-			public void cancel() {
-				context.setText(translation.getSingle("labels.update_many.cancel"));
-				cancelled.set(true);
-			}
-		};
-	}
-	
-	/** @since 00.02.08 */
-	private final void initializeInformationWindowPluginsTab(InformationWindow window) {
-		InformationWindow informationWindow = MediaDownloader.window(InformationWindow.NAME);
-		InformationTab<ItemPlugin> tab = window.selectedTab();
-		Translation tabTranslation = informationWindow.getTranslation().getTranslation("tabs.plugins");
-		
-		tab.list().getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-		
-		// Special buttons for the Plugins tab
-		Button btnUpdateAll = new Button(tabTranslation.getSingle("buttons.update_all"));
-		Button btnUpdateSelected = new Button(tabTranslation.getSingle("buttons.update_selected"));
-		
-		btnUpdateAll.setOnAction((e) -> {
-			ProgressWindow.submitAction(window, action_updatePlugins(window, Plugins.allLoaded()));
-		});
-		
-		btnUpdateSelected.setOnAction((e) -> {
-			Collection<ItemPlugin> selectedItems = tab.list().getSelectionModel().getSelectedItems();
-			Collection<PluginFile> plugins = selectedItems.stream()
-				.map(ItemPlugin::getPlugin)
-				.collect(Collectors.toList());
-			
-			ProgressWindow.submitAction(window, action_updatePlugins(window, plugins));
-		});
-		
-		HBox boxBottom = new HBox(5);
-		HBox boxFill = new HBox();
-		boxBottom.getChildren().addAll(boxFill, btnUpdateAll, btnUpdateSelected);
-		boxBottom.setId("box-bottom");
-		HBox.setHgrow(boxFill, Priority.ALWAYS);
-		
-		GridPane pane = Utils.cast(tab.getContent());
-		pane.getChildren().add(boxBottom);
-		GridPane.setConstraints(boxBottom, 0, 2, 1, 1);
-	}
-	
-	private final void showInformationWindow() {
-		InformationWindow window = MediaDownloader.window(InformationWindow.NAME);
-		Translation tr = window.getTranslation().getTranslation("tabs");
-		
-		List<TabContent<?>> tabs = List.of(
-			new TabContent<>(tr.getTranslation("plugins"), ItemPlugin.items()),
-			new TabContent<>(tr.getTranslation("media_engines"), ItemMediaEngine.items()),
-			new TabContent<>(tr.getTranslation("downloaders"), ItemDownloader.items()),
-			new TabContent<>(tr.getTranslation("servers"), ItemServer.items())
-		);
-		
-		// Filter out empty tabs
-		tabs = tabs.stream()
-			.filter((tab) -> !tab.items().isEmpty())
-			.collect(Collectors.toList());
-		
-		tabs.get(0).setOnInit(this::initializeInformationWindowPluginsTab);
-		
-		window.setArgs("tabs", tabs);
-		window.show(this);
 	}
 	
 	/** @since 00.02.09 */
