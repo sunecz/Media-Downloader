@@ -157,7 +157,8 @@
 				column: {
 					title:   "Title",
 					version: "Version",
-					author:  "Author"
+					author:  "Author",
+					url:     "URL"
 				}
 			},
 			button: {

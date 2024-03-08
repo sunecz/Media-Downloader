@@ -1,12 +1,17 @@
 package sune.app.mediadown.gui.window;
 
+import java.io.IOException;
+import java.net.URI;
 import java.nio.file.Path;
 import java.util.Collection;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javafx.beans.property.SimpleStringProperty;
 import javafx.geometry.Insets;
 import javafx.scene.control.Button;
+import javafx.scene.control.Hyperlink;
+import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.image.Image;
@@ -27,6 +32,8 @@ import sune.app.mediadown.gui.ProgressWindow.ProgressAction;
 import sune.app.mediadown.gui.ProgressWindow.ProgressContext;
 import sune.app.mediadown.gui.control.IconTableCell;
 import sune.app.mediadown.language.Translation;
+import sune.app.mediadown.net.Net;
+import sune.app.mediadown.os.OS;
 import sune.app.mediadown.plugin.PluginFile;
 import sune.app.mediadown.plugin.PluginUpdater;
 import sune.app.mediadown.plugin.Plugins;
@@ -42,7 +49,7 @@ public class PluginManagerWindow extends DraggableWindow<VBox> {
 	private final Button btnUpdateAll;
 	
 	public PluginManagerWindow() {
-		super(NAME, new VBox(5.0), 600.0, 500.0);
+		super(NAME, new VBox(5.0), 650.0, 500.0);
 		initModality(Modality.APPLICATION_MODAL);
 		
 		table = new TableView<>();
@@ -51,17 +58,21 @@ public class PluginManagerWindow extends DraggableWindow<VBox> {
 		TableColumn<PluginFile, String> columnTitle = new TableColumn<>(tr("table.column.title"));
 		TableColumn<PluginFile, String> columnVersion = new TableColumn<>(tr("table.column.version"));
 		TableColumn<PluginFile, String> columnAuthor = new TableColumn<>(tr("table.column.author"));
+		TableColumn<PluginFile, String> columnUrl = new TableColumn<>(tr("table.column.url"));
 		
 		columnIcon.setCellFactory((v) -> new PluginIconTableCell());
 		columnIcon.setCellValueFactory((v) -> new SimpleStringProperty(v.getValue().getPlugin().instance().icon()));
 		columnTitle.setCellValueFactory((v) -> new SimpleStringProperty(v.getValue().getInstance().getTitle()));
 		columnVersion.setCellValueFactory((v) -> new SimpleStringProperty(v.getValue().getInstance().getVersion()));
 		columnAuthor.setCellValueFactory((v) -> new SimpleStringProperty(v.getValue().getInstance().getAuthor()));
+		columnUrl.setCellFactory((v) -> new PluginUrlTableCell());
+		columnUrl.setCellValueFactory((v) -> new SimpleStringProperty(v.getValue().getInstance().getURL()));
 		
 		columnIcon.setPrefWidth(24.0);
-		columnTitle.setPrefWidth(300.0);
+		columnTitle.setPrefWidth(210.0);
 		columnVersion.setPrefWidth(100.0);
-		columnAuthor.setPrefWidth(80.0);
+		columnAuthor.setPrefWidth(60.0);
+		columnUrl.setPrefWidth(160.0);
 		
 		columnIcon.setReorderable(false);
 		columnIcon.setResizable(false);
@@ -69,11 +80,14 @@ public class PluginManagerWindow extends DraggableWindow<VBox> {
 		columnTitle.setReorderable(false);
 		columnVersion.setReorderable(false);
 		columnAuthor.setReorderable(false);
+		columnUrl.setReorderable(false);
+		columnUrl.setSortable(false);
 		
 		table.getColumns().add(columnIcon);
 		table.getColumns().add(columnTitle);
 		table.getColumns().add(columnVersion);
 		table.getColumns().add(columnAuthor);
+		table.getColumns().add(columnUrl);
 		
 		table.getSortOrder().add(columnTitle);
 		table.setEditable(false);
@@ -130,6 +144,46 @@ public class PluginManagerWindow extends DraggableWindow<VBox> {
 			view.setFitWidth(24.0);
 			view.setFitHeight(24.0);
 			return view;
+		}
+	}
+	
+	private static final class PluginUrlTableCell extends TableCell<PluginFile, String> {
+		
+		private Hyperlink hyperlink;
+		
+		private final void openUrl(URI uri) {
+			try {
+				OS.current().browse(uri);
+			} catch(IOException ex) {
+				// Ignore
+			}
+		}
+		
+		@Override
+		protected void updateItem(String item, boolean empty) {
+			if(Objects.equals(item, getItem())) {
+				return;
+			}
+			
+			super.updateItem(item, empty);
+			
+			if(item == null) {
+				setText(null);
+				setGraphic(null);
+			} else {
+				if(hyperlink == null) {
+					hyperlink = new Hyperlink(item);
+					hyperlink.setPadding(Insets.EMPTY);
+					hyperlink.setOnAction((e) -> {
+						openUrl(Net.uri(((Hyperlink) e.getTarget()).getText()));
+					});
+				} else {
+					hyperlink.setText(item);
+				}
+				
+				setText(null);
+				setGraphic(hyperlink);
+			}
 		}
 	}
 	

@@ -157,7 +157,8 @@
 				column: {
 					title:   "Název",
 					version: "Verze",
-					author:  "Autor"
+					author:  "Autor",
+					url:     "URL"
 				}
 			},
 			button: {
