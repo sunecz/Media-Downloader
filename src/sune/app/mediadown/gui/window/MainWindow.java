@@ -141,6 +141,8 @@ public final class MainWindow extends Window<BorderPane> {
 	private MenuItem menuItemConfiguration;
 	/** @since 00.02.09 */
 	private MenuItem menuItemCredentials;
+	/** @since 00.02.09 */
+	private MenuItem menuItemPlugins;
 	private Menu menuTools;
 	private MenuItem menuItemClipboardWatcher;
 	private MenuItem menuItemUpdateResources;
@@ -717,6 +719,11 @@ public final class MainWindow extends Window<BorderPane> {
 			showCredentialsWindow();
 		});
 		
+		menuItemPlugins = new MenuItem(tr("menu_bar.application.item.plugins"));
+		menuItemPlugins.setOnAction((e) -> {
+			showPluginManagerWindow();
+		});
+		
 		menuItemMessages = new MenuItem(tr("menu_bar.help.item.messages"));
 		menuItemMessages.setOnAction((e) -> resetAndShowMessagesAsync());
 		
@@ -767,7 +774,7 @@ public final class MainWindow extends Window<BorderPane> {
 		});
 		
 		menuApplication.getItems().addAll(
-			menuItemInformation, menuItemConfiguration, menuItemCredentials
+			menuItemInformation, menuItemConfiguration, menuItemCredentials, menuItemPlugins
 		);
 		menuTools.getItems().addAll(menuItemClipboardWatcher, menuItemUpdateResources);
 		menuHelp.getItems().addAll(
@@ -955,6 +962,11 @@ public final class MainWindow extends Window<BorderPane> {
 		
 		window.setArgs("tabs", tabs);
 		window.show(this);
+	}
+	
+	/** @since 00.02.09 */
+	private final void showPluginManagerWindow() {
+		MediaDownloader.window(PluginManagerWindow.NAME).show(this);
 	}
 	
 	/** @since 00.02.08 */

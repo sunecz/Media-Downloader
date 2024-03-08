@@ -83,6 +83,7 @@ import sune.app.mediadown.gui.window.MainWindow;
 import sune.app.mediadown.gui.window.MediaGetterWindow;
 import sune.app.mediadown.gui.window.MediaInfoWindow;
 import sune.app.mediadown.gui.window.MessageWindow;
+import sune.app.mediadown.gui.window.PluginManagerWindow;
 import sune.app.mediadown.gui.window.PreviewWindow;
 import sune.app.mediadown.gui.window.ReportWindow;
 import sune.app.mediadown.gui.window.TableWindow;
@@ -2216,6 +2217,7 @@ public final class MediaDownloader {
 			windows.register(ReportWindow.NAME, initializator(ReportWindow::new));
 			windows.register(CredentialsWindow.NAME, initializator(CredentialsWindow::new));
 			windows.register(CredentialsEditDialogWindow.NAME, initializator(CredentialsEditDialogWindow::new));
+			windows.register(PluginManagerWindow.NAME, initializator(PluginManagerWindow::new));
 		}
 		
 		/** @since 00.02.09 */

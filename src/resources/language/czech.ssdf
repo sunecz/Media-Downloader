@@ -75,7 +75,8 @@
 					item: {
 						information:   "Informace",
 						configuration: "Nastavení",
-						credentials:   "Přihlašovací údaje"
+						credentials:   "Přihlašovací údaje",
+						plugins:       "Správce pluginů"
 					}
 				},
 				tools: {
@@ -156,6 +157,37 @@
 			actions: {
 				messages: {
 					checking: "Kontrolování nových zpráv..."
+				}
+			}
+		},
+		plugin_manager: {
+			title: "Správce pluginů",
+			table: {
+				column: {
+					title:   "Název",
+					version: "Verze",
+					author:  "Autor"
+				}
+			},
+			button: {
+				update_all: "Aktualizovat"
+			},
+			progress: {
+				update: {
+					title:     "Aktualizace pluginů",
+					init:      "Aktualizace pluginů...",
+					done:      "Aktualizace pluginů... hotovo",
+					item_init: "Aktualizace %{name}...",
+					item_done: "Aktualizace %{name}... hotovo",
+					done_any:  "Pluginy byly aktualizovány. Pro provedení změn restartujte aplikaci.",
+					done_none: "Nebyly nalezeny žádné aktualizace.",
+					cancelled: "Aktualizace pluginů zrušena.",
+					download: {
+						begin:    "Aktualizace %{name}...",
+						progress: "Aktualizace %{name}... %{current} / %{total} (%{percent}%%)",
+						end:      "Aktualizace %{name}... hotovo",
+						error:    "Aktualizace %{name}... chyba (%{message})"
+					}
 				}
 			}
 		},

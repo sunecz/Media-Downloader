@@ -75,7 +75,8 @@
 					item: {
 						information:   "Information",
 						configuration: "Configuration",
-						credentials:   "Login credentials"
+						credentials:   "Login credentials",
+						plugins:       "Plugin manager"
 					}
 				},
 				tools: {
@@ -156,6 +157,37 @@
 			actions: {
 				messages: {
 					checking: "Checking new messages..."
+				}
+			}
+		},
+		plugin_manager: {
+			title: "Plugin manager",
+			table: {
+				column: {
+					title:   "Title",
+					version: "Version",
+					author:  "Author"
+				}
+			},
+			button: {
+				update_all: "Update"
+			},
+			progress: {
+				update: {
+					title:     "Plugins update",
+					init:      "Updating plugins...",
+					done:      "Updating plugins... done",
+					item_init: "Updating %{name}...",
+					item_done: "Updating %{name}... done",
+					done_any:  "Plugins updated. For changes restart the application.",
+					done_none: "No updates found.",
+					cancelled: "Updating plugins cancelled.",
+					download: {
+						begin:    "Updating %{name}...",
+						progress: "Updating %{name}... %{current} / %{total} (%{percent}%%)",
+						end:      "Updating %{name}... done",
+						error:    "Updating %{name}... error (%{message})"
+					}
 				}
 			}
 		},
