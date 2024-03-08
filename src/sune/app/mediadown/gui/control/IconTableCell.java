@@ -13,24 +13,23 @@ public abstract class IconTableCell<T, V> extends TableCell<T, V> {
 	
 	protected IconTableCell() {
 		getStyleClass().add("has-icon");
+		setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
 	}
 	
 	protected abstract ImageView iconView(V value);
 	
 	protected void update(V value) {
-		if(getTableRow().getItem() == null) {
-			return;
-		}
+		ImageView view = null;
 		
-		ImageView view = iconView(value);
-		
-		if(view == null) {
-			return;
+		if(getTableRow().getItem() != null) {
+			view = iconView(value);
+			
+			if(view != null) {
+				icon = view;
+			}
 		}
 		
 		setGraphic(view);
-		setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
-		icon = view;
 	}
 	
 	protected void dispose() {
