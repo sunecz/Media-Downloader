@@ -1,6 +1,6 @@
 {
 	name:    "english",
-	version: "16",
+	version: "17",
 	title:   "English",
 	code:    "eng",
 	windows: {
@@ -306,26 +306,6 @@
 			},
 			getter: {
 				automatic: "Automatically"
-			}
-		},
-		search: {
-			title: "Search",
-			buttons: {
-				search: "Search",
-				close:  "Close",
-				select: "Select"
-			},
-			progress: {
-				search: "Searching...",
-				cancel: "Canceling..."
-			},
-			table: {
-				placeholder: "No search results",
-				columns: {
-					source: "Source",
-					icon:   "Icon",
-					title:  "Title"
-				}
 			}
 		},
 		configuration: {

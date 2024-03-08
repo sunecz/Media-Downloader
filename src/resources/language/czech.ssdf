@@ -1,6 +1,6 @@
 {
 	name:    "czech",
-	version: "16",
+	version: "17",
 	title:   "Čeština",
 	code:    "ces",
 	windows: {
@@ -306,26 +306,6 @@
 			},
 			getter: {
 				automatic: "Automaticky"
-			}
-		},
-		search: {
-			title: "Hledat",
-			buttons: {
-				search: "Hledat",
-				close:  "Zavřít",
-				select: "Vybrat"
-			},
-			progress: {
-				search: "Vyhledávání...",
-				cancel: "Rušení..."
-			},
-			table: {
-				placeholder: "Žádné výsledky hledání",
-				columns: {
-					source: "Zdroj",
-					icon:   "Ikona",
-					title:  "Název"
-				}
 			}
 		},
 		configuration: {
