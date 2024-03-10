@@ -73,8 +73,7 @@
 				tools: {
 					title: "Nástroje",
 					item: {
-						clipboard_watcher: "Sledování schránky",
-						update_resources:  "Aktualizovat prostředky"
+						clipboard_watcher: "Sledování schránky"
 					}
 				},
 				help: {
@@ -84,7 +83,13 @@
 						feedback:      "Zpětná vazba",
 						documentation: "Dokumentace",
 						messages:      "Zprávy",
-						about:         "O programu"
+						about:         "O programu",
+						resolve_issues: {
+							title: "Řešení problémů",
+							item: {
+								update_resources: "Aktualizovat prostředky"
+							}
+						}
 					}
 				}
 			},

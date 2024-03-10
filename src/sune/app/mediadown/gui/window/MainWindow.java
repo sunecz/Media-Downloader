@@ -129,7 +129,6 @@ public final class MainWindow extends Window<BorderPane> {
 	private MenuItem menuItemPlugins;
 	private Menu menuTools;
 	private MenuItem menuItemClipboardWatcher;
-	private MenuItem menuItemUpdateResources;
 	/** @since 00.02.09 */
 	private Menu menuHelp;
 	/** @since 00.02.09 */
@@ -141,6 +140,9 @@ public final class MainWindow extends Window<BorderPane> {
 	private MenuItem menuItemMessages;
 	/** @since 00.02.08 */
 	private MenuItem menuItemAbout;
+	/** @since 00.02.09 */
+	private Menu menuResolveIssues;
+	private MenuItem menuItemUpdateResources;
 	
 	public MainWindow() {
 		super(NAME, new BorderPane(), DEFAULT_WIDTH, DEFAULT_HEIGHT);
@@ -687,6 +689,7 @@ public final class MainWindow extends Window<BorderPane> {
 		menuApplication = new Menu(tr("menu_bar.application.title"));
 		menuTools = new Menu(tr("menu_bar.tools.title"));
 		menuHelp = new Menu(tr("menu_bar.help.title"));
+		menuResolveIssues = new Menu(tr("menu_bar.help.item.resolve_issues.title"));
 		
 		menuItemConfiguration = new MenuItem(tr("menu_bar.application.item.configuration"));
 		menuItemConfiguration.setOnAction((e) -> {
@@ -716,7 +719,7 @@ public final class MainWindow extends Window<BorderPane> {
 			MediaDownloader.window(ClipboardWatcherWindow.NAME).show(this);
 		});
 		
-		menuItemUpdateResources = new MenuItem(tr("menu_bar.tools.item.update_resources"));
+		menuItemUpdateResources = new MenuItem(tr("menu_bar.help.item.resolve_issues.item.update_resources"));
 		menuItemUpdateResources.setOnAction((e) -> {
 			Translation tr = trtr("dialogs.update_resources");
 			if(Dialog.showPrompt(tr.getSingle("title"), tr.getSingle("text"))) {
@@ -755,10 +758,12 @@ public final class MainWindow extends Window<BorderPane> {
 		menuApplication.getItems().addAll(
 			menuItemConfiguration, menuItemCredentials, menuItemPlugins
 		);
-		menuTools.getItems().addAll(menuItemClipboardWatcher, menuItemUpdateResources);
+		menuTools.getItems().addAll(menuItemClipboardWatcher);
 		menuHelp.getItems().addAll(
-			menuItemReportIssue, menuItemFeedback, menuItemDocumentation, menuItemMessages, menuItemAbout
+			menuItemReportIssue, menuItemFeedback, menuItemDocumentation, menuItemMessages, menuResolveIssues,
+			menuItemAbout
 		);
+		menuResolveIssues.getItems().addAll(menuItemUpdateResources);
 		menuBar.getMenus().addAll(menuApplication, menuTools, menuHelp);
 		
 		return menuBar;

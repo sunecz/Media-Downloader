@@ -73,8 +73,7 @@
 				tools: {
 					title: "Tools",
 					item: {
-						clipboard_watcher: "Clipboard watcher",
-						update_resources:  "Update resources"
+						clipboard_watcher: "Clipboard watcher"
 					}
 				},
 				help: {
@@ -84,7 +83,13 @@
 						feedback:      "Feedback",
 						documentation: "Documentation",
 						messages:      "Messages",
-						about:         "About"
+						about:         "About",
+						resolve_issues: {
+							title: "Resolve issues",
+							item: {
+								update_resources: "Update resources"
+							}
+						}
 					}
 				}
 			},
