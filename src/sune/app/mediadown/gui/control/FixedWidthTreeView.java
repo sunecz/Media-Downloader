@@ -16,7 +16,6 @@ import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.control.skin.TreeViewSkin;
-import javafx.util.Callback;
 import sune.app.mediadown.util.FXUtils;
 
 /** @since 00.02.09 */
@@ -105,7 +104,7 @@ public class FixedWidthTreeView<T> extends TreeView<T> {
 		
 		public FixedWidthTreeViewSkin(TreeView<T> control) {
 			super(control);
-			control.setCellFactory(cellFactory());
+			control.setCellFactory((t) -> new FixedWidthTreeCell());
 		}
 		
 		private final void expandChildren(TreeItem<T> parent, List<TreeItem<T>> expanded) {
@@ -192,10 +191,6 @@ public class FixedWidthTreeView<T> extends TreeView<T> {
 			}
 			
 			return maxWidth;
-		}
-		
-		protected final Callback<TreeView<T>, TreeCell<T>> cellFactory() {
-			return (t) -> new FixedWidthTreeCell();
 		}
 		
 		protected final void prepareForWidthComputation() {

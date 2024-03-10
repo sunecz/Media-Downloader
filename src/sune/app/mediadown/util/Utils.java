@@ -1371,13 +1371,16 @@ public final class Utils {
 	}
 	
 	/** @since 00.02.05 */
-	public static final <T> Callable<T> callable(ThrowableCallable<T> callable) {
-		return (() -> { try { return callable.run(); } catch(Throwable th) { throw new Exception(th); } });
-	}
-	
-	/** @since 00.02.05 */
 	public static final <T> T primitive(T value, Class<? extends T> clazz) {
-		return value != null ? value : cast(Ignore.call(() -> callable(() -> MethodHandles.zero(clazz).invoke(value))));
+		if(value != null) {
+			return value;
+		}
+		
+		try {
+			return cast(MethodHandles.zero(clazz).invoke(value));
+		} catch(Throwable th) {
+			throw new RuntimeException(th);
+		}
 	}
 	
 	/** @since 00.02.05 */

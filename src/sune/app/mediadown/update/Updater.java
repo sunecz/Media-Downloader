@@ -7,7 +7,6 @@ import java.time.Duration;
 import java.util.Collection;
 import java.util.function.BiPredicate;
 
-import javafx.util.Callback;
 import sune.app.mediadown.download.DownloadConfiguration;
 import sune.app.mediadown.download.FileDownloader;
 import sune.app.mediadown.event.CheckEvent;
@@ -20,6 +19,7 @@ import sune.app.mediadown.net.Web.Request;
 import sune.app.mediadown.update.FileChecker.FileCheckerEntry;
 import sune.app.mediadown.util.BiCallback;
 import sune.app.mediadown.util.CheckedBiFunction;
+import sune.app.mediadown.util.CheckedCallback;
 import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Utils.Ignore;
@@ -99,7 +99,7 @@ public abstract class Updater implements EventBindable<CheckEvent> {
 	/** @since 00.02.08 */
 	public static final Updater ofRemoteFiles(RemoteConfiguration cfgRemote, String remoteDirURL, Path dir, int timeout,
 			FileChecker checker, CheckedBiFunction<String, Path, Path> callback,
-			BiCallback<Path, String, String> urlResolver, Callback<Path, Path> entryPathFixer,
+			BiCallback<Path, String, String> urlResolver, CheckedCallback<Path, Path> entryPathFixer,
 			BiPredicate<FileCheckerEntry, FileCheckerEntry> shouldDownloadPredicate, Collection<Path> updatedPaths) {
 		return new OfRemoteFiles(cfgRemote, remoteDirURL, dir, timeout, checker, callback, urlResolver, entryPathFixer,
 			shouldDownloadPredicate, updatedPaths);
@@ -115,7 +115,7 @@ public abstract class Updater implements EventBindable<CheckEvent> {
 	/** @since 00.02.08 */
 	public static final Updater ofResources(String baseURL, Path dir, int timeout, FileChecker checker,
 			CheckedBiFunction<String, Path, Path> callback, BiCallback<Path, String, String> urlResolver,
-			Callback<Path, Path> entryPathFixer,
+			CheckedCallback<Path, Path> entryPathFixer,
 			BiPredicate<FileCheckerEntry, FileCheckerEntry> shouldDownloadPredicate,
 			Collection<Path> updatedPaths) throws Exception {
 		RemoteConfiguration cfg = RemoteConfiguration.from(stream(urlConcat(baseURL, NAME_CONFIG), timeout));
@@ -156,13 +156,13 @@ public abstract class Updater implements EventBindable<CheckEvent> {
 		private final FileChecker checker;
 		private final CheckedBiFunction<String, Path, Path> callback;
 		private final BiCallback<Path, String, String> urlResolver;
-		private final Callback<Path, Path> entryPathFixer;
+		private final CheckedCallback<Path, Path> entryPathFixer;
 		private final BiPredicate<FileCheckerEntry, FileCheckerEntry> shouldDownloadPredicate;
 		private final Collection<Path> updatedPaths;
 		
 		private OfRemoteFiles(RemoteConfiguration cfgRemote, String remoteDirURL, Path dir, int timeout,
 				FileChecker checker, CheckedBiFunction<String, Path, Path> callback,
-				BiCallback<Path, String, String> urlResolver, Callback<Path, Path> entryPathFixer,
+				BiCallback<Path, String, String> urlResolver, CheckedCallback<Path, Path> entryPathFixer,
 		        BiPredicate<FileCheckerEntry, FileCheckerEntry> shouldDownloadPredicate,
 		        Collection<Path> updatedPaths) {
 			this.cfgRemote = cfgRemote;
