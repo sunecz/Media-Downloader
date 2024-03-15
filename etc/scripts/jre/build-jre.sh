@@ -45,4 +45,4 @@ jdeps="$jdeps,$manual_modules_java"
 echo Dependencies: "$jdeps"
 
 echo Creating JRE...
-jlink --module-path "$path_java:$path_javafx_jmods:$path_lib" --no-header-files --no-man-pages --compress=2 --strip-debug --add-modules="$jdeps" --output "$output"
+jlink --module-path "$path_java:$path_javafx_jmods:$path_lib" --no-header-files --no-man-pages --compress=1 --vm=server --strip-debug --add-modules="$jdeps" --output "$output"
