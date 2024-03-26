@@ -36,9 +36,10 @@ public final class OSUtils {
 	private static final String normalizeOSArch(String osArch) {
 		return // 64-bit
 			   (
-			   osArch.equals("amd64")  ||
-			   osArch.equals("x86_64") ||
-			   osArch.equals("sparcv9")
+			   osArch.equals("amd64")   ||
+			   osArch.equals("x86_64")  ||
+			   osArch.equals("sparcv9") ||
+			   osArch.equals("aarch64")
 			   ) ?
 			   OS_ARCH_64 :
 			   // Treat others as 32-bit
