@@ -26,6 +26,10 @@ public final class FXFix {
 		}
 		
 		public final void fix(Scene oldScene, Scene newScene) {
+			if(windowShowingChangedListener == null) {
+				return; // Nothing to do
+			}
+			
 			if((oldScene != null)) {
 				Window win = oldScene.windowProperty().get();
 				if((win != null)) {
