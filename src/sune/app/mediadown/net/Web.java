@@ -13,6 +13,7 @@ import java.net.http.HttpClient.Redirect;
 import java.net.http.HttpClient.Version;
 import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest;
+import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandler;
@@ -604,10 +605,10 @@ public final class Web {
 		
 		protected static class POST extends Request {
 			
-			protected final String body;
+			protected final BodyPublisher body;
 			protected final String contentType;
 			
-			protected POST(Builder builder, String body, String contentType) {
+			protected POST(Builder builder, BodyPublisher body, String contentType) {
 				super("POST", builder);
 				this.body = Objects.requireNonNull(body);
 				this.contentType = Objects.requireNonNull(contentType);
@@ -617,7 +618,7 @@ public final class Web {
 			protected HttpRequest.Builder toHttpRequestBuilder() {
 				return httpRequestBuilder()
 							.header("content-type", contentType)
-							.POST(BodyPublishers.ofString(body, CHARSET));
+							.POST(body);
 			}
 			
 			@Override
@@ -752,7 +753,32 @@ public final class Web {
 				return POST(body, DEFAULT_CONTENT_TYPE);
 			}
 			
+			/** @since 00.02.09 */
+			public Request POST(byte[] body) {
+				return POST(body, DEFAULT_CONTENT_TYPE);
+			}
+			
+			/** @since 00.02.09 */
+			public Request POST(InputStream body) {
+				return POST(body, DEFAULT_CONTENT_TYPE);
+			}
+			
 			public Request POST(String body, String contentType) {
+				return POST(BodyPublishers.ofString(body, CHARSET), contentType);
+			}
+			
+			/** @since 00.02.09 */
+			public Request POST(byte[] body, String contentType) {
+				return POST(BodyPublishers.ofByteArray(body), contentType);
+			}
+			
+			/** @since 00.02.09 */
+			public Request POST(InputStream body, String contentType) {
+				return POST(BodyPublishers.ofInputStream(() -> body), contentType);
+			}
+			
+			/** @since 00.02.09 */
+			public Request POST(BodyPublisher body, String contentType) {
 				return new Request.POST(ensureValues(), body, contentType);
 			}
 			
