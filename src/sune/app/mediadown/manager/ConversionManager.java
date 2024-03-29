@@ -16,6 +16,7 @@ import sune.app.mediadown.conversion.ConversionProvider;
 import sune.app.mediadown.entity.Converter;
 import sune.app.mediadown.event.ConversionEvent;
 import sune.app.mediadown.event.Event;
+import sune.app.mediadown.event.EventRegistry;
 import sune.app.mediadown.event.Listener;
 import sune.app.mediadown.event.tracker.PipelineStates;
 import sune.app.mediadown.event.tracker.TrackerManager;
@@ -90,13 +91,24 @@ public final class ConversionManager implements QueueContext {
 	private static final class ConversionDelegate implements Converter {
 		
 		private final ConversionTask task;
+		private EventRegistry<ConversionEvent> eventDelegate;
 		
 		public ConversionDelegate(ConversionTask task) {
 			this.task = task;
+			this.task.delegate = this;
 		}
 		
 		private final Converter delegate() {
 			return task.converter;
+		}
+		
+		private final EventRegistry<ConversionEvent> eventDelegate() {
+			EventRegistry<ConversionEvent> ref;
+			if((ref = eventDelegate) == null) {
+				eventDelegate = ref = new EventRegistry<>();
+			}
+			
+			return ref;
 		}
 		
 		private final void doAction(CheckedConsumer<Converter> action) throws Exception {
@@ -119,6 +131,16 @@ public final class ConversionManager implements QueueContext {
 			return action.apply(delegate);
 		}
 		
+		protected final void converterCreated() {
+			EventRegistry<ConversionEvent> ref;
+			if((ref = eventDelegate) == null) {
+				return; // No events to transfer
+			}
+			
+			ref.transferListenersTo(delegate());
+			eventDelegate = null;
+		}
+		
 		@Override public void start(ConversionCommand command) throws Exception { doAction((c) -> c.start(command)); }
 		@Override public void stop() throws Exception { doAction(Converter::stop); }
 		@Override public void pause() throws Exception  { doAction(Converter::pause); }
@@ -139,6 +161,10 @@ public final class ConversionManager implements QueueContext {
 			Converter delegate;
 			if((delegate = delegate()) != null) {
 				delegate.addEventListener(event, listener);
+			} else {
+				// Delegate the action to an event delegate. The final state of the event delegate
+				// will then be transfered to the actual action delegate.
+				eventDelegate().add(event, listener);
 			}
 		}
 		
@@ -147,6 +173,10 @@ public final class ConversionManager implements QueueContext {
 			Converter delegate;
 			if((delegate = delegate()) != null) {
 				delegate.removeEventListener(event, listener);
+			} else {
+				// Delegate the action to an event delegate. The final state of the event delegate
+				// will then be transfered to the actual action delegate.
+				eventDelegate().remove(event, listener);
 			}
 		}
 	}
@@ -159,6 +189,8 @@ public final class ConversionManager implements QueueContext {
 		private final List<ConversionMedia> inputs;
 		private final ResolvedMedia output;
 		private Converter converter;
+		/** @since 00.02.09 */
+		private ConversionDelegate delegate;
 		
 		public ConversionTask(ConversionProvider provider, List<ConversionMedia> inputs, ResolvedMedia output) {
 			this.provider = Objects.requireNonNull(provider);
@@ -189,6 +221,14 @@ public final class ConversionManager implements QueueContext {
 				}
 				
 				converter = provider.createConverter(new TrackerManager(new WaitTracker()));
+				
+				// Must notify the bound delegate so that already added events may be transferred
+				// correctly. That means that any event added before the converter was created will be
+				// also added to the newly created converter.
+				if(delegate != null) {
+					delegate.converterCreated();
+				}
+				
 				converter.start(command);
 				return null;
 			} catch(Exception ex) {
