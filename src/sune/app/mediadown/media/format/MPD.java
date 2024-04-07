@@ -196,15 +196,6 @@ public final class MPD {
 			if(!Objects.requireNonNull(element).nodeName().equalsIgnoreCase(NODE_NAME))
 				throw new IllegalArgumentException();
 			Element elementTimeline = element.getElementsByTag(SegmentTimeline.NODE_NAME).first();
-			
-			// TODO: Support number-based SegmentTemplate
-			// - No SegmentTimeline is present
-			// - Attributes @startNumber and @duration are present
-			// - SegmentTemplate is in the Period element
-			// - Period element has @duration attribute
-			// - The total number of segments is:
-			//       1 + ceil(seconds(Period@duration) / (SegmentTemplate@duration / SegmentTemplate@timescale))
-			
 			if(elementTimeline == null)
 				throw new IllegalArgumentException();
 			int timescale = Integer.parseInt(element.attr("timescale"));
