@@ -1,6 +1,5 @@
 package sune.app.mediadown.update;
 
-import java.util.Comparator;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Matcher;
@@ -12,8 +11,6 @@ public final class Version implements Comparable<Version> {
 	public static final Version UNKNOWN = new Version();
 	/** @since 00.02.07 */
 	public static final Version ZERO    = new Version(VersionType.UNKNOWN, 0, 0, 0, 0, 0);
-	
-	private static Comparator<Version> comparator;
 	
 	private final VersionType type;
 	/** @since 00.02.07 */
@@ -49,8 +46,10 @@ public final class Version implements Comparable<Version> {
 	
 	/** @since 00.02.07 */
 	private static final int checkInteger(int value) {
-		if(value < 0)
+		if(value < 0) {
 			throw new IllegalArgumentException("Value cannot be < 0");
+		}
+		
 		return value;
 	}
 	
@@ -176,18 +175,14 @@ public final class Version implements Comparable<Version> {
 	
 	@Override
 	public int compareTo(Version other) {
-		if(comparator == null) {
-			comparator = Comparator.nullsLast(
-				Comparator.    comparing(Version::major)
-				          .thenComparing(Version::minor)
-				          .thenComparing(Version::patch)
-				          .thenComparing(Version::type)
-				          .thenComparing(Version::value)
-				          .thenComparing(Version::buildNumber)
-			);
-		}
-		
-		return comparator.compare(this, other);
+		int cmp;
+		if((cmp = Integer.compare(major, other.major))             != 0) return cmp;
+		if((cmp = Integer.compare(minor, other.minor))             != 0) return cmp;
+		if((cmp = Integer.compare(patch, other.patch))             != 0) return cmp;
+		if((cmp = type.compareTo(other.type))                      != 0) return cmp;
+		if((cmp = Integer.compare(value, other.value))             != 0) return cmp;
+		if((cmp = Integer.compare(buildNumber, other.buildNumber)) != 0) return cmp;
+		return 0;
 	}
 	
 	@Override
@@ -198,17 +193,17 @@ public final class Version implements Comparable<Version> {
 	/** @since 00.02.07 */
 	private static final class Parser {
 		
+		private static final Parser INSTANCE = new Parser();
 		private static final Regex REGEX = Regex.of(
 			"^(\\d+)(?:\\.(\\d+)(?:\\.(\\d+)(?:-(?:([a-z]+)\\.)?(\\d+))?)?)?(?:\\+(\\d+))?$"
 		);
-		private static Parser INSTANCE;
 		
 		// Forbid anyone to create an instance of this class
 		private Parser() {
 		}
 		
 		public static final Parser instance() {
-			return INSTANCE == null ? (INSTANCE = new Parser()) : INSTANCE;
+			return INSTANCE;
 		}
 		
 		public Version parse(String string) {
@@ -218,8 +213,9 @@ public final class Version implements Comparable<Version> {
 			}
 			
 			Matcher matcher;
-			if(!(matcher = REGEX.matcher(string)).matches())
+			if(!(matcher = REGEX.matcher(string)).matches()) {
 				return UNKNOWN;
+			}
 			
 			int major = Integer.valueOf(matcher.group(1));
 			int minor = Optional.ofNullable(matcher.group(2)).map(Integer::valueOf).orElse(0);
@@ -234,14 +230,14 @@ public final class Version implements Comparable<Version> {
 	/** @since 00.02.07 */
 	private static final class Formatter {
 		
-		private static Formatter INSTANCE;
+		private static final Formatter INSTANCE = new Formatter();
 		
 		// Forbid anyone to create an instance of this class
 		private Formatter() {
 		}
 		
 		public static final Formatter instance() {
-			return INSTANCE == null ? (INSTANCE = new Formatter()) : INSTANCE;
+			return INSTANCE;
 		}
 		
 		/** @since 00.02.08 */
@@ -311,8 +307,8 @@ public final class Version implements Comparable<Version> {
 	/** @since 00.02.08 */
 	public static final class FormatterSettings {
 		
-		private static FormatterSettings DEFAULT;
-		private static FormatterSettings COMPACT;
+		private static final FormatterSettings DEFAULT = of();
+		private static final FormatterSettings COMPACT = of(1, 1, 1, 1, 1);
 		
 		private final int[] numberOfDigits;
 		
@@ -343,11 +339,11 @@ public final class Version implements Comparable<Version> {
 		}
 		
 		public static final FormatterSettings ofDefault() {
-			return DEFAULT == null ? (DEFAULT = of()) : DEFAULT;
+			return DEFAULT;
 		}
 		
 		public static final FormatterSettings ofCompact() {
-			return COMPACT == null ? (COMPACT = of(1, 1, 1, 1, 1)) : COMPACT;
+			return COMPACT;
 		}
 		
 		public int numberOfDigits(FormatterDigitsType digitsType) {
@@ -403,33 +399,33 @@ public final class Version implements Comparable<Version> {
 		}
 		
 		public Builder type(VersionType type) {
-			this.type = Objects.requireNonNull(type);
+			this.type = type;
 			return this;
 		}
 		
 		public Builder major(int major) {
-			this.major = checkInteger(major);
+			this.major = major;
 			return this;
 		}
 		
 		public Builder minor(int minor) {
-			this.minor = checkInteger(minor);
+			this.minor = minor;
 			return this;
 		}
 		
 		public Builder patch(int patch) {
-			this.patch = checkInteger(patch);
+			this.patch = patch;
 			return this;
 		}
 		
 		public Builder value(int value) {
-			this.value = checkInteger(value);
+			this.value = value;
 			return this;
 		}
 		
 		/** @since 00.02.09 */
 		public Builder buildNumber(int buildNumber) {
-			this.buildNumber = checkInteger(buildNumber);
+			this.buildNumber = buildNumber;
 			return this;
 		}
 		
