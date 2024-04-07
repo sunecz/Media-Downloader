@@ -95,8 +95,9 @@ public class Theme implements Extractable {
 	
 	/** @since 00.02.07 */
 	private final String fileURL(String name) {
-		if(externalPath == null)
-			return null; // Not extracted yet
+		if(internal && externalPath == null) {
+			return "internal:///resources/" + internalPath(name);
+		}
 		
 		Path file = externalPath.resolve(name);
 		if(!NIO.exists(file))

@@ -12,6 +12,9 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.URL;
+import java.net.URLConnection;
+import java.net.URLStreamHandler;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -109,6 +112,7 @@ import sune.app.mediadown.registry.ResourceNamedRegistry.ResourceRegistryEntry;
 import sune.app.mediadown.resource.ExternalResources;
 import sune.app.mediadown.resource.Extractable;
 import sune.app.mediadown.resource.InputStreamResolver;
+import sune.app.mediadown.resource.InternalURLProtocols;
 import sune.app.mediadown.resource.JRE;
 import sune.app.mediadown.resource.JRE.JREEvent;
 import sune.app.mediadown.resource.ResourceRegistry;
@@ -264,6 +268,7 @@ public final class MediaDownloader {
 				initExceptionHandlers();
 				disableIllegalAccessWarnings();
 				initAutoDispose();
+				initInternalProtocol();
 				return new ShowStartupWindow();
 			}
 		}
@@ -286,6 +291,7 @@ public final class MediaDownloader {
 			public InitializationState run(Arguments args) {
 				initConfiguration();
 				Versions.load();
+				Ignore.callVoid(MediaDownloader::initRemoteConfiguration);
 				return new CheckJRE();
 			}
 			
@@ -300,120 +306,129 @@ public final class MediaDownloader {
 			private static final Path oldJREPath()  { return PathSystem.getPath("jre"); }
 			private static final Path newJREPath()  { return PathSystem.getPath("jre-new"); }
 			
+			private final void doRun(Arguments args, RemoteConfiguration configuration) throws Exception {
+				// Obtain the required JRE version from the remote configuration
+				jreVersion = configuration.value("jre");
+				
+				if(args.has("jre-update") && args.has("pid")) {
+					long pid = Long.valueOf(args.getValue("pid"));
+					
+					if(pid <= 0L) {
+						throw new IllegalStateException("Invalid PID");
+					}
+					
+					// Get the parent process
+					ProcessHandle handle = ProcessHandle.of(pid).orElse(null);
+					
+					// Check whether the old process still exists
+					if(handle != null) {
+						// Wait for it to finish
+						setText("Waiting for process to finish...");
+						handle.onExit().get();
+					}
+					
+					// Move the directories around so that the new JRE is in the correct location
+					Path oldJREPath = oldJREPath();
+					Path newJREPath = newJREPath();
+					setText("Deleting old JRE...");
+					NIO.deleteDir(oldJREPath);
+					setText("Copying new JRE...");
+					NIO.copyDir(newJREPath, oldJREPath);
+					
+					// Launch the previous process again
+					setText("Launching application using the new JRE...");
+					String runCommand = args.getValue("run-command");
+					runCommand = new String(Base64.getDecoder().decode(runCommand), Shared.CHARSET);
+					runCommand += " --jre-update-finish";
+					SelfProcess.launch(runCommand);
+					
+					// Exit normally
+					System.exit(0);
+				} else if(args.has("jre-update-finish")) {
+					// Finish the whole JRE update process by deleting the temporary JRE directory
+					NIO.deleteDir(newJREPath());
+					// Update the JRE version so that we know which version is present
+					Versions.Common.jre().set(Version.of(jreVersion));
+				} else if(AppArguments.isUpdateEnabled()) {
+					VersionEntryAccessor version = Versions.Common.jre();
+					Version verLocal = version.get();
+					Version verRemote = Version.of(jreVersion);
+					
+					// Check the current JRE version and update, if necessary
+					if(verLocal.compareTo(verRemote) != 0 || verLocal == Version.UNKNOWN) {
+						JRE jre = JRE.newInstance();
+						jre.addEventListener(JREEvent.CHECK, (context) -> {
+							setText(String.format("Checking %s...", context.name()));
+						});
+						jre.addEventListener(JREEvent.DOWNLOAD_BEGIN, (context) -> {
+							setText(String.format("Downloading %s...", context.path().getFileName().toString()));
+						});
+						jre.addEventListener(JREEvent.DOWNLOAD_UPDATE, (context) -> {
+							setText(String.format("Downloading %s... %s%%", context.path().getFileName().toString(),
+							                      MathUtils.round(context.tracker().progress() * 100.0, 2)));
+						});
+						jre.addEventListener(JREEvent.DOWNLOAD_END, (context) -> {
+							setText(String.format("Downloading %s... done", context.path().getFileName().toString()));
+						});
+						jre.addEventListener(JREEvent.ERROR, (context) -> {
+							error(context.exception());
+						});
+						
+						boolean checkIntegrity = true; // Always check integrity
+						Path oldJREPath = oldJREPath();
+						Path newJREPath = newJREPath();
+						Set<Path> visitedFiles = new HashSet<>();
+						
+						// Check the files and if any is changed, continue the process
+						if(jre.check(oldJREPath, newJREPath, Requirements.CURRENT, jreVersion, visitedFiles,
+						             (p) -> checkIntegrity, null)) {
+							// Copy all files that were not updated and exist on the web (were visited)
+							NIO.mergeDirectories(oldJREPath, newJREPath, (p, np) -> visitedFiles.contains(p) && !NIO.exists(np));
+							
+							// Get the current run command, so that the application can be run again
+							String runCommand = SelfProcess.command(args.argsList());
+							runCommand = Base64.getEncoder().encodeToString(runCommand.getBytes(Shared.CHARSET));
+							
+							// Get Java executable in the new directory
+							Path exePath = SelfProcess.exePath();
+							// Check whether the current process was run in the old JRE directory
+							Path parent = exePath;
+							while((parent = parent.getParent()) != null && !parent.equals(oldJREPath));
+							// If run in the old JRE directory, change the new executable path to the new JRE directory
+							if(parent != null && parent.equals(oldJREPath)) {
+								exePath = newJREPath.resolve(oldJREPath.relativize(exePath));
+							}
+							
+							// Make sure the new executable is actually executable
+							NIO.makeExecutable(exePath);
+							
+							// Start a new process to finish updating the JRE
+							SelfProcess.launch(exePath, List.of(
+								"--jre-update",
+								"--pid", String.valueOf(SelfProcess.pid()),
+								"--run-command", runCommand
+							));
+							
+							// Exit normally
+							System.exit(0);
+						} else {
+							// Also delete the empty new JRE directory (from checking)
+							NIO.deleteDir(newJREPath);
+							// Update the JRE version so that we know which version is present
+							version.set(Version.of(jreVersion));
+						}
+					}
+				}
+			}
+			
 			@Override
 			public InitializationState run(Arguments args) {
 				try {
-					// Obtain the required JRE version from the remote configuration
-					jreVersion = remoteConfiguration().value("jre");
+					RemoteConfiguration remoteConfiguration = remoteConfiguration();
 					
-					if(args.has("jre-update") && args.has("pid")) {
-						long pid = Long.valueOf(args.getValue("pid"));
-						
-						if(pid <= 0L) {
-							throw new IllegalStateException("Invalid PID");
-						}
-						
-						// Get the parent process
-						ProcessHandle handle = ProcessHandle.of(pid).orElse(null);
-						
-						// Check whether the old process still exists
-						if(handle != null) {
-							// Wait for it to finish
-							setText("Waiting for process to finish...");
-							handle.onExit().get();
-						}
-						
-						// Move the directories around so that the new JRE is in the correct location
-						Path oldJREPath = oldJREPath();
-						Path newJREPath = newJREPath();
-						setText("Deleting old JRE...");
-						NIO.deleteDir(oldJREPath);
-						setText("Copying new JRE...");
-						NIO.copyDir(newJREPath, oldJREPath);
-						
-						// Launch the previous process again
-						setText("Launching application using the new JRE...");
-						String runCommand = args.getValue("run-command");
-						runCommand = new String(Base64.getDecoder().decode(runCommand), Shared.CHARSET);
-						runCommand += " --jre-update-finish";
-						SelfProcess.launch(runCommand);
-						
-						// Exit normally
-						System.exit(0);
-					} else if(args.has("jre-update-finish")) {
-						// Finish the whole JRE update process by deleting the temporary JRE directory
-						NIO.deleteDir(newJREPath());
-						// Update the JRE version so that we know which version is present
-						Versions.Common.jre().set(Version.of(jreVersion));
-					} else if(AppArguments.isUpdateEnabled()) {
-						VersionEntryAccessor version = Versions.Common.jre();
-						Version verLocal = version.get();
-						Version verRemote = Version.of(jreVersion);
-						
-						// Check the current JRE version and update, if necessary
-						if(verLocal.compareTo(verRemote) != 0 || verLocal == Version.UNKNOWN) {
-							JRE jre = JRE.newInstance();
-							jre.addEventListener(JREEvent.CHECK, (context) -> {
-								setText(String.format("Checking %s...", context.name()));
-							});
-							jre.addEventListener(JREEvent.DOWNLOAD_BEGIN, (context) -> {
-								setText(String.format("Downloading %s...", context.path().getFileName().toString()));
-							});
-							jre.addEventListener(JREEvent.DOWNLOAD_UPDATE, (context) -> {
-								setText(String.format("Downloading %s... %s%%", context.path().getFileName().toString(),
-								                      MathUtils.round(context.tracker().progress() * 100.0, 2)));
-							});
-							jre.addEventListener(JREEvent.DOWNLOAD_END, (context) -> {
-								setText(String.format("Downloading %s... done", context.path().getFileName().toString()));
-							});
-							jre.addEventListener(JREEvent.ERROR, (context) -> {
-								error(context.exception());
-							});
-							
-							boolean checkIntegrity = true; // Always check integrity
-							Path oldJREPath = oldJREPath();
-							Path newJREPath = newJREPath();
-							Set<Path> visitedFiles = new HashSet<>();
-							
-							// Check the files and if any is changed, continue the process
-							if(jre.check(oldJREPath, newJREPath, Requirements.CURRENT, jreVersion, visitedFiles,
-							             (p) -> checkIntegrity, null)) {
-								// Copy all files that were not updated and exist on the web (were visited)
-								NIO.mergeDirectories(oldJREPath, newJREPath, (p, np) -> visitedFiles.contains(p) && !NIO.exists(np));
-								
-								// Get the current run command, so that the application can be run again
-								String runCommand = SelfProcess.command(args.argsList());
-								runCommand = Base64.getEncoder().encodeToString(runCommand.getBytes(Shared.CHARSET));
-								
-								// Get Java executable in the new directory
-								Path exePath = SelfProcess.exePath();
-								// Check whether the current process was run in the old JRE directory
-								Path parent = exePath;
-								while((parent = parent.getParent()) != null && !parent.equals(oldJREPath));
-								// If run in the old JRE directory, change the new executable path to the new JRE directory
-								if(parent != null && parent.equals(oldJREPath)) {
-									exePath = newJREPath.resolve(oldJREPath.relativize(exePath));
-								}
-								
-								// Make sure the new executable is actually executable
-								NIO.makeExecutable(exePath);
-								
-								// Start a new process to finish updating the JRE
-								SelfProcess.launch(exePath, List.of(
-									"--jre-update",
-									"--pid", String.valueOf(SelfProcess.pid()),
-									"--run-command", runCommand
-								));
-								
-								// Exit normally
-								System.exit(0);
-							} else {
-								// Also delete the empty new JRE directory (from checking)
-								NIO.deleteDir(newJREPath);
-								// Update the JRE version so that we know which version is present
-								version.set(Version.of(jreVersion));
-							}
-						}
+					if(remoteConfiguration != null) {
+						// Actually run only if the remote configuration has been obtained
+						doRun(args, remoteConfiguration);
 					}
 				} catch(Exception ex) {
 					error(ex);
@@ -952,9 +967,15 @@ public final class MediaDownloader {
 		
 		public static final EventBindableAction<EventType, Void> checkLibraries(FileDownloader downloader)
 				throws Exception {
+			RemoteConfiguration remoteConfiguration = remoteConfiguration();
+			
+			if(remoteConfiguration == null) {
+				return new EventBindableAction.OfNone<>(null); // Do not continue
+			}
+			
 			boolean checkIntegrity = configuration.isCheckResourcesIntegrity();
 			boolean checkLibraries = true;
-			String versionLib = remoteConfiguration().value("lib");
+			String versionLib = remoteConfiguration.value("lib");
 			VersionEntryAccessor version = Versions.Common.lib();
 			
 			// If there is no integrity checking, we have to manually check the versions
@@ -1139,15 +1160,18 @@ public final class MediaDownloader {
 	
 	private static RemoteConfiguration remoteConfiguration;
 	
-	public static final RemoteConfiguration remoteConfiguration() {
-		if(remoteConfiguration == null) {
-			try {
-				String configURL = Net.uriConcat(URL_BASE_VER, VERSION.stringRelease(), "config");
-				remoteConfiguration = RemoteConfiguration.from(Net.stream(Net.uri(configURL), Duration.ofMillis(TIMEOUT)));
-			} catch(IOException ex) {
-				error(ex);
-			}
+	private static final void initRemoteConfiguration() throws IOException {
+		try {
+			String configURL = Net.uriConcat(URL_BASE_VER, VERSION.stringRelease(), "config");
+			remoteConfiguration = RemoteConfiguration.from(
+				Net.stream(Net.uri(configURL), Duration.ofMillis(TIMEOUT))
+			);
+		} catch(Exception ex) {
+			errorDebug(ex);
 		}
+	}
+	
+	public static final RemoteConfiguration remoteConfiguration() {
 		return remoteConfiguration;
 	}
 	
@@ -1212,6 +1236,51 @@ public final class MediaDownloader {
 		Runtime.getRuntime().addShutdownHook(Threads.newThreadUnmanaged(MediaDownloader::dispose));
 	}
 	
+	/** @since 00.02.09 */
+	private static final void initInternalProtocol() {
+		InternalURLProtocols.register(InternalProtocol.PROTOCOL_NAME, new InternalProtocol());
+	}
+	
+	/** @since 00.02.09 */
+	private static final class InternalProtocol extends URLStreamHandler {
+		
+		private static final String PROTOCOL_NAME = "internal";
+		
+		private InternalProtocol() {
+		}
+		
+		@Override
+		protected URLConnection openConnection(URL url) throws IOException {
+			return new Connection(url);
+		}
+		
+		private static final class Connection extends URLConnection {
+			
+			protected Connection(URL url) {
+				super(checkUrl(url));
+			}
+			
+			private static final URL checkUrl(URL url) {
+				if(!url.getProtocol().equalsIgnoreCase(PROTOCOL_NAME)) {
+					throw new IllegalArgumentException("Invalid protocol");
+				}
+				
+				return url;
+			}
+			
+			@Override
+			public void connect() throws IOException {
+				// Nothing to do
+			}
+			
+			@Override
+			public InputStream getInputStream() throws IOException {
+				String path = url.getPath(); // Leave the path as is
+				return InternalProtocol.class.getResourceAsStream(path);
+			}
+		}
+	}
+	
 	/** @since 00.02.07 */
 	private static final void addLibrary(Path path, String name) {
 		addLibrary(path, name, Requirements.ANY);
@@ -1243,7 +1312,13 @@ public final class MediaDownloader {
 	}
 	
 	private static final void registerResources() {
-		Optional.ofNullable(remoteConfiguration().properties("res"))
+		RemoteConfiguration remoteConfiguration = remoteConfiguration();
+		
+		if(remoteConfiguration == null) {
+			return; // Do not continue
+		}
+		
+		Optional.ofNullable(remoteConfiguration.properties("res"))
 		        .ifPresent((p) -> p.entrySet()
 		                           .forEach((r) -> ResourcesManager.addResource(r.getKey(), r.getValue())));
 	}
@@ -1902,6 +1977,13 @@ public final class MediaDownloader {
 		}
 	}
 	
+	/** @since 00.02.09 */
+	public static final void errorDebug(Throwable throwable) {
+		if(AppArguments.isDebugEnabled()) {
+			error(throwable);
+		}
+	}
+	
 	private static final class InternalResources {
 		
 		public static final void addLanguage(String name, boolean isExtractable) {
@@ -2104,24 +2186,24 @@ public final class MediaDownloader {
 	}
 	
 	private static final void loadMiscellaneousResources(StringReceiver stringReceiver) {
-		try {
-			boolean checkIntegrity = configuration.isCheckResourcesIntegrity();
-			Set<Path> pathsToCheck = new HashSet<>();
-			Path pathResources = NIO.localPath("resources/binary");
-			
-			// If there is no integrity checking, we have to manually check the versions
-			if(!checkIntegrity) {
-				for(InternalResource resource : Resources.localResources()) {
-					Version verLocal = Versions.get("res_" + resource.name());
-					Version verRemote = Version.of(resource.version());
-					
-					if(verLocal.compareTo(verRemote) != 0 || verLocal == Version.UNKNOWN) {
-						Path path = pathResources.resolve(OSUtils.getExecutableName(resource.name()));
-						pathsToCheck.add(path);
-					}
+		boolean checkIntegrity = configuration.isCheckResourcesIntegrity();
+		Set<Path> pathsToCheck = new HashSet<>();
+		Path pathResources = NIO.localPath("resources/binary");
+		
+		// If there is no integrity checking, we have to manually check the versions
+		if(!checkIntegrity) {
+			for(InternalResource resource : Resources.localResources()) {
+				Version verLocal = Versions.get("res_" + resource.name());
+				Version verRemote = Version.of(resource.version());
+				
+				if(verLocal.compareTo(verRemote) != 0 || verLocal == Version.UNKNOWN) {
+					Path path = pathResources.resolve(OSUtils.getExecutableName(resource.name()));
+					pathsToCheck.add(path);
 				}
 			}
-			
+		}
+		
+		try {
 			Resources.ensureResources(stringReceiver, (path) -> checkIntegrity || pathsToCheck.contains(path), null);
 			
 			for(InternalResource resource : Resources.localResources()) {
@@ -2134,7 +2216,7 @@ public final class MediaDownloader {
 				}
 			}
 		} catch(Exception ex) {
-			error(ex);
+			errorDebug(ex);
 		}
 	}
 	
@@ -2303,13 +2385,17 @@ public final class MediaDownloader {
 		private static final String URL_DIR = URL_BASE_DAT + "plugin/";
 		
 		private static final List<Pair<String, String>> parseList() throws Exception {
-			List<Pair<String, String>> plugins = new ArrayList<>();
+			RemoteConfiguration remoteConfiguration = remoteConfiguration();
 			
+			if(remoteConfiguration == null) {
+				return List.of(); // Do not continue
+			}
+			
+			List<Pair<String, String>> plugins = new ArrayList<>();
 			Requirements requirements = Requirements.CURRENT;
 			String version = VERSION.stringRelease();
-			RemoteConfiguration config = remoteConfiguration();
-			String listURL = Net.uriConcat(URL_BASE_VER, version, config.value("plugin_list"));
-			String prefix  = config.value("plugin_prefix");
+			String listURL = Net.uriConcat(URL_BASE_VER, version, remoteConfiguration.value("plugin_list"));
+			String prefix  = remoteConfiguration.value("plugin_prefix");
 			
 			try(Response.OfStream response = Web.requestStream(Request.of(Net.uri(listURL)).GET());
 				BufferedReader reader = new BufferedReader(new InputStreamReader(response.stream()))) {
@@ -2592,6 +2678,42 @@ public final class MediaDownloader {
 			Language language = language();
 			return language.code().equalsIgnoreCase("auto") ? localLanguage() : language;
 		}
+		
+		/** @since 00.02.09 */
+		private static final Language defaultLanguage() {
+			return DefaultLanguage.INSTANCE;
+		}
+		
+		/**
+		 * Used only when either the local language or any other language is still not
+		 * available. This may happen during an early error when, for example, the program
+		 * tries to show the Error window.
+		 * @since 00.02.09
+		 */
+		private static final class DefaultLanguage {
+			
+			private static final Language INSTANCE = obtainInstance();
+			private DefaultLanguage() {}
+			
+			private static final Language obtainInstance() {
+				try(InputStream stream = stream("/resources/language", "/english.ssdf")) {
+					return Language.from("", stream);
+				} catch(IOException ex) {
+					throw new IllegalStateException("Failed to obtain the default language", ex);
+				}
+			}
+		}
+	}
+	
+	/** @since 00.02.09 */
+	public static final class Themes {
+		
+		private Themes() {
+		}
+		
+		public static final Theme defaultTheme() {
+			return Theme.ofDefault();
+		}
 	}
 	
 	public static final ApplicationConfiguration configuration() {
@@ -2599,15 +2721,25 @@ public final class MediaDownloader {
 	}
 	
 	public static final Language language() {
-		return configuration.language();
+		Language language;
+		if((language = configuration.language()) == null) {
+			return Languages.defaultLanguage();
+		}
+		
+		return language;
 	}
 	
 	public static final Translation translation() {
-		return configuration.language().translation();
+		return language().translation();
 	}
 	
 	public static final Theme theme() {
-		return configuration.theme();
+		Theme theme;
+		if((theme = configuration.theme()) == null) {
+			return Themes.defaultTheme();
+		}
+		
+		return theme;
 	}
 	
 	// Will be called automatically when closed properly
