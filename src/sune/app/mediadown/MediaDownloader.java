@@ -43,6 +43,7 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javafx.scene.image.Image;
 import sune.app.mediadown.MediaDownloader.Versions.VersionEntryAccessor;
@@ -172,6 +173,8 @@ public final class MediaDownloader {
 	private static String jreVersion;
 	/** @since 00.02.08 */
 	private static Libraries libraries;
+	/** @since 00.02.09 */
+	private static Set<String> pluginConfigurationsToUpdate = new LinkedHashSet<>();
 	
 	private static final AtomicBoolean isDisposed = new AtomicBoolean();
 	private static final String BASE_RESOURCE = "/resources/";
@@ -800,15 +803,35 @@ public final class MediaDownloader {
 			
 			@Override
 			public InitializationState run(Arguments args) {
+				Set<Configuration> configurations = null;
+				
 				if(applicationUpdated) {
 					UpdateTriggers.OfApplication.run(
 						UpdateTriggers.OfApplication.Stage.AFTER_CONFIGURATION_FINALIZATION
 					);
 					
-					// To prevent some issues, re-save all registered configurations
-					// to force all properties to be revalidated.
-					saveAllConfigurations();
+					configurations = new LinkedHashSet<>();
+					configurations.add(configuration());
 				}
+				
+				if(!pluginConfigurationsToUpdate.isEmpty()) {
+					if(configurations == null) {
+						configurations = new LinkedHashSet<>();
+					}
+					
+					Plugins.allLoaded().stream()
+						.filter((p) -> pluginConfigurationsToUpdate.contains(p.getPlugin().instance().name()))
+						.map(PluginFile::getConfiguration)
+						.filter(Objects::nonNull)
+						.filter(Predicate.not(PluginConfiguration::isEmpty))
+						.forEachOrdered(configurations::add);
+					
+					pluginConfigurationsToUpdate = null; // Clean up
+				}
+				
+				// To prevent some issues, re-save all updated configurations to force
+				// all properties to be revalidated.
+				saveConfigurations(configurations);
 				
 				return new MaybeExitEarly();
 			}
@@ -1648,24 +1671,33 @@ public final class MediaDownloader {
 		
 		// To prevent some issues, re-save all registered configurations
 		// to force all properties to be revalidated.
-		saveAllConfigurations();
+		saveConfigurations(allConfigurations());
 	}
 	
-	/** @since 00.02.07 */
-	private static final void saveAllConfigurations() {
-		Set<Configuration> configurations = new LinkedHashSet<>();
-		
-		configurations.add(MediaDownloader.configuration());
-		Plugins.allLoaded().stream()
-			.map(PluginFile::getConfiguration)
-			.filter(Objects::nonNull)
-			.filter(Predicate.not(PluginConfiguration::isEmpty))
-			.forEach(configurations::add);
+	/** @since 00.02.09 */
+	private static final Set<Configuration> allConfigurations() {
+		return Stream.concat(
+			Stream.of(configuration()),
+			Plugins.allLoaded().stream()
+				.map(PluginFile::getConfiguration)
+				.filter(Objects::nonNull)
+				.filter(Predicate.not(PluginConfiguration::isEmpty))
+		).collect(Collectors.toUnmodifiableSet());
+	}
+	
+	/** @since 00.02.09 */
+	private static final void saveConfigurations(Set<Configuration> configurations) {
+		if(configurations == null || configurations.isEmpty()) {
+			return; // Nothing to do
+		}
 		
 		Path configDir = NIO.localPath(BASE_RESOURCE).resolve("config");
-		configurations.stream()
-			.forEach((c) -> Ignore.callVoid(() -> c.writer().save(configDir.resolve(c.name() + ".ssdf")),
-			                                MediaDownloader::error));
+		configurations.stream().forEach(
+			(c) -> Ignore.callVoid(
+				() -> c.writer().save(configDir.resolve(c.name() + ".ssdf")),
+				MediaDownloader::error
+			)
+		);
 	}
 	
 	private static final void updateResourcesDirectory(Version previousVersion, boolean force) {
@@ -2517,6 +2549,7 @@ public final class MediaDownloader {
 						Version oldVersion = Version.ZERO;
 						Version newVersion = pluginInfo.b;
 						UpdateTriggers.OfPlugin.addUpdate(pluginName, oldVersion, newVersion);
+						pluginConfigurationsToUpdate.add(pluginName);
 					}
 				}
 			}
@@ -2610,6 +2643,7 @@ public final class MediaDownloader {
 									String pluginName = plugin.getPlugin().instance().name();
 									Version newVersion = Version.of(plugin.getPlugin().instance().version());
 									UpdateTriggers.OfPlugin.addUpdate(pluginName, oldVersion, newVersion);
+									pluginConfigurationsToUpdate.add(pluginName);
 								}
 								
 								receiver.receive(String.format(
