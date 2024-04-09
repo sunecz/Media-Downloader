@@ -55,8 +55,6 @@ public final class TorProcess implements AutoCloseable {
 			return;
 		}
 		
-		System.out.println("[TOR] " + line);
-		
 		if(line.contains("Bootstrapped 100% (done)")) {
 			mtxInitialized.unlock();
 		} else if(line.contains("Opened Control listener connection (ready)")) {
