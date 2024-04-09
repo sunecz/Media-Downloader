@@ -521,13 +521,13 @@ public final class TorControl implements AutoCloseable {
 	
 	@Override
 	public void close() throws Exception {
+		if(socket != null) {
+			socket.close();
+		}
+		
 		if(threadInput != null) {
 			threadInput.interrupt();
 			threadInput.join();
-		}
-		
-		if(socket != null) {
-			socket.close();
 		}
 	}
 	

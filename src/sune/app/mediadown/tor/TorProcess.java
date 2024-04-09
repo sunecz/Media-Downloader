@@ -166,6 +166,11 @@ public final class TorProcess implements AutoCloseable {
 	public void close() throws Exception {
 		try {
 			process.close();
+			
+			if(control.isSet()) {
+				TorControl tc = control.value();
+				tc.close();
+			}
 		} finally {
 			if(!state.is(TaskStates.DONE)) {
 				state.set(TaskStates.STOPPED);
