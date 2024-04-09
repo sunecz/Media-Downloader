@@ -94,7 +94,7 @@ public final class Requirements {
 		);
 	}
 	
-	/** @since 00.02.09 */
+	/** @since 00.02.10 */
 	public String toCompactString() {
 		return String.format(
 			"%s%s",

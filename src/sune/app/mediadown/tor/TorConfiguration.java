@@ -12,7 +12,7 @@ import java.util.stream.Stream;
 
 import sune.app.mediadown.concurrent.VarLoader;
 
-/** @since 00.02.09 */
+/** @since 00.02.10 */
 public final class TorConfiguration {
 	
 	private static final VarLoader<TorConfiguration> empty = VarLoader.of(TorConfiguration::createEmpty);

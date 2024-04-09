@@ -36,7 +36,7 @@ import sune.app.mediadown.update.Requirements;
 import sune.app.mediadown.update.Version;
 import sune.app.mediadown.util.Utils;
 
-/** @since 00.02.09 */
+/** @since 00.02.10 */
 public final class Patcher implements EventBindable<EventType>, PatchContext {
 	
 	private final EventRegistry<EventType> eventRegistry = new EventRegistry<>();

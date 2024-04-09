@@ -2242,30 +2242,20 @@ public final class MediaDownloader {
 			Resources.ensureResources(stringReceiver, (path) -> checkIntegrity || pathsToCheck.contains(path), null);
 			
 			for(InternalResource resource : Resources.localResources()) {
-				Version verLocal = Versions.get("res_" + resource.name());
+				VersionEntryAccessor version = VersionEntryAccessor.of("res_" + resource.name());
+				Version verLocal = version.get();
 				Version verRemote = Version.of(resource.version());
 				
 				if(verLocal.compareTo(verRemote) != 0 || verLocal == Version.UNKNOWN) {
-					Path path = pathResources.resolve(OSUtils.getExecutableName(resource.name()));
-					pathsToCheck.add(path);
+					version.set(verRemote);
 				}
 			}
 		} catch(Exception ex) {
 			errorDebug(ex);
 		}
-		
-		for(InternalResource resource : Resources.localResources()) {
-			VersionEntryAccessor version = VersionEntryAccessor.of("res_" + resource.name());
-			Version verLocal = version.get();
-			Version verRemote = Version.of(resource.version());
-			
-			if(verLocal.compareTo(verRemote) != 0 || verLocal == Version.UNKNOWN) {
-				version.set(verRemote);
-			}
-		}
 	}
 	
-	/** @since 00.02.09 */
+	/** @since 00.02.10 */
 	private static final void loadTorResources(StringReceiver stringReceiver) {
 		boolean checkIntegrity = configuration.isCheckResourcesIntegrity();
 		

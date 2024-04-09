@@ -10,7 +10,7 @@ import java.util.Set;
 
 import sune.app.mediadown.concurrent.VarLoader;
 
-/** @since 00.02.09 */
+/** @since 00.02.10 */
 public final class TorStream {
 	
 	private int id;

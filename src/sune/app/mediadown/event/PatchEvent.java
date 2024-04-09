@@ -3,7 +3,7 @@ package sune.app.mediadown.event;
 import sune.app.mediadown.resource.PatchContext;
 import sune.app.mediadown.util.Utils;
 
-/** @since 00.02.09 */
+/** @since 00.02.10 */
 public final class PatchEvent implements EventType {
 	
 	public static final Event<PatchEvent, PatchContext> BEGIN  = new Event<>();

@@ -10,7 +10,7 @@ import java.util.Objects;
 import sune.app.mediadown.concurrent.VarLoader;
 import sune.app.mediadown.util.NIO;
 
-/** @since 00.02.09 */
+/** @since 00.02.10 */
 public final class TorConfigurationFile {
 	
 	private static final StandardOpenOption[] options = new StandardOpenOption[] {

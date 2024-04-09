@@ -7,7 +7,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import sune.app.mediadown.net.Web.Proxy;
 import sune.app.mediadown.util.Utils;
 
-/** @since 00.02.09 */
+/** @since 00.02.10 */
 public final class TorConnection implements AutoCloseable {
 	
 	private final TorConfiguration configuration;

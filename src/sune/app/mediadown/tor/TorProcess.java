@@ -13,7 +13,7 @@ import sune.app.mediadown.concurrent.VarLoader;
 import sune.app.mediadown.util.Regex;
 import sune.app.mediadown.util.Utils;
 
-/** @since 00.02.09 */
+/** @since 00.02.10 */
 public final class TorProcess implements AutoCloseable {
 	
 	private static final int PORT_UNKNOWN = -1;

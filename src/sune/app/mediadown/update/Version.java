@@ -37,7 +37,7 @@ public final class Version implements Comparable<Version> {
 		this.compact = false;
 	}
 	
-	/** @since 00.02.10 */
+	/** @since 00.02.07 */
 	private Version(VersionType type, int major, int minor, int patch, int value, int buildNumber, boolean compact) {
 		this.type = Objects.requireNonNull(type);
 		this.major = checkInteger(major);
@@ -108,7 +108,7 @@ public final class Version implements Comparable<Version> {
 		return this == UNKNOWN || isRelease() ? this : new Version(VersionType.RELEASE, major, minor, patch, 0, 0, compact);
 	}
 	
-	/** @since 00.02.09 */
+	/** @since 00.02.10 */
 	public Version compact() {
 		return this == UNKNOWN || compact ? this : new Version(type, major, minor, patch, value, buildNumber, true);
 	}
@@ -227,7 +227,7 @@ public final class Version implements Comparable<Version> {
 		private Parser() {
 		}
 		
-		/** @since 00.02.09 */
+		/** @since 00.02.10 */
 		private static final boolean hasLeadingZeroes(Matcher matcher) {
 			for(int i = 1, l = matcher.groupCount(); i <= l; ++i) {
 				String group = matcher.group(i);

@@ -8,7 +8,7 @@ import java.util.regex.Matcher;
 
 import sune.app.mediadown.util.Regex;
 
-/** @since 00.02.09 */
+/** @since 00.02.10 */
 public final class TorCircuit {
 	
 	private static final Regex regex = Regex.of("^(?<id>\\d+) (?<status>[^ ]+) (?<path>[^ ]+).*$");

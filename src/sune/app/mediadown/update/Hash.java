@@ -12,19 +12,19 @@ import sune.app.mediadown.concurrent.VarLoader;
 
 public final class Hash {
 	
-	/** @since 00.02.09 */
+	/** @since 00.02.10 */
 	private static final VarLoader<MessageDigest> sha1 = VarLoader.ofChecked(Hash::initSha1MessageDigest);
 	
 	// Forbid anyone to create an instance of this class
 	private Hash() {
 	}
 	
-	/** @since 00.02.09 */
+	/** @since 00.02.10 */
 	private static final MessageDigest initSha1MessageDigest() throws NoSuchAlgorithmException {
 		return MessageDigest.getInstance("SHA-1");
 	}
 	
-	/** @since 00.02.09 */
+	/** @since 00.02.10 */
 	private static final MessageDigest sha1MessageDigest() throws IOException {
 		try {
 			return sha1.valueChecked();
@@ -33,7 +33,7 @@ public final class Hash {
 		}
 	}
 	
-	/** @since 00.02.09 */
+	/** @since 00.02.10 */
 	public static final byte[] sha1rawChecked(Path file) throws IOException {
 		MessageDigest digest = sha1MessageDigest();
 		
@@ -50,7 +50,7 @@ public final class Hash {
 		return digest.digest();
 	}
 	
-	/** @since 00.02.09 */
+	/** @since 00.02.10 */
 	public static final byte[] sha1raw(Path file) throws IOException {
 		try {
 			return sha1rawChecked(file);
@@ -61,7 +61,7 @@ public final class Hash {
 		return null;
 	}
 	
-	/** @since 00.02.09 */
+	/** @since 00.02.10 */
 	public static final String sha1Checked(Path file) throws IOException {
 		return Hex.string(sha1raw(file));
 	}

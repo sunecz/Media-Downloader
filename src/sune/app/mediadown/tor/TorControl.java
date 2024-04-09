@@ -31,7 +31,7 @@ import sune.app.mediadown.concurrent.VarLoader;
 import sune.app.mediadown.util.Ref;
 import sune.app.mediadown.util.Regex;
 
-/** @since 00.02.09 */
+/** @since 00.02.10 */
 public final class TorControl implements AutoCloseable {
 	
 	// Reference: https://github.com/torproject/torspec/blob/main/control-spec.txt

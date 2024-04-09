@@ -20,7 +20,7 @@ import sune.app.mediadown.update.Requirements;
 import sune.app.mediadown.update.Version;
 import sune.app.mediadown.util.NIO;
 
-/** @since 00.02.09 */
+/** @since 00.02.10 */
 public final class TorBootstrap implements EventBindable<EventType> {
 	
 	private static final Version torVersion = Version.of("0.4.7-14");

@@ -6,7 +6,7 @@ import sune.app.mediadown.concurrent.VarLoader;
 import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.OSUtils;
 
-/** @since 00.02.09 */
+/** @since 00.02.10 */
 public final class Tor {
 	
 	private static final VarLoader<Path> path = VarLoader.of(Tor::ensureBinary);

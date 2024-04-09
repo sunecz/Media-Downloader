@@ -75,9 +75,9 @@ public final class Web {
 	private static Duration defaultConnectTimeout = Duration.ofMillis(5000);
 	private static Duration defaultReadTimeout = Duration.ofMillis(20000);
 	
-	/** @since 00.02.09 */
+	/** @since 00.02.10 */
 	private static final VarLoader<Client> client = VarLoader.of(Client.OfDefault::new);
-	/** @since 00.02.09 */
+	/** @since 00.02.10 */
 	private static final VarLoader<Map<Proxy, WeakReference<Client>>> proxyClients = VarLoader.of(WeakHashMap::new);
 	private static final VarLoader<CookieManager> cookieManager = VarLoader.of(Web::newCookieManager);
 	private static final VarLoader<HttpRequest.Builder> httpRequestBuilder = VarLoader.of(Web::newHttpRequestBuilder);
@@ -121,12 +121,12 @@ public final class Web {
 		return newHttpClientBuilder().followRedirects(Redirect.NEVER).build();
 	}
 	
-	/** @since 00.02.09 */
+	/** @since 00.02.10 */
 	private static final HttpClient newProxyHttpClientWithRedirect(Proxy proxy) {
 		return newHttpClientBuilder().followRedirects(Redirect.NORMAL).proxy(proxy.selector()).build();
 	}
 	
-	/** @since 00.02.09 */
+	/** @since 00.02.10 */
 	private static final HttpClient newProxyHttpClientNoRedirect(Proxy proxy) {
 		return newHttpClientBuilder().followRedirects(Redirect.NEVER).proxy(proxy.selector()).build();
 	}

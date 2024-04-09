@@ -13,7 +13,7 @@ public final class StateMutex {
 		this.unlocked = new AtomicBoolean(false);
 	}
 	
-	/** @since 00.02.09 */
+	/** @since 00.02.10 */
 	public StateMutex(boolean unlocked) {
 		this.unlocked = new AtomicBoolean(unlocked);
 	}
@@ -55,7 +55,7 @@ public final class StateMutex {
 		}
 	}
 	
-	/** @since 00.02.09 */
+	/** @since 00.02.10 */
 	public void unlockOne() {
 		synchronized(this) {
 			unlocked.set(true);

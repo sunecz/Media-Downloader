@@ -219,7 +219,7 @@ public final class Resources {
 		return checker;
 	}
 	
-	/** @since 00.02.09 */
+	/** @since 00.02.10 */
 	public static final URI baseUri(String name, Version version, Requirements requirements) {
 		return Net.uri(Utils.format(
 			"https://app.sune.tech/mediadown/res/%{name}s/%{version}s/%{os}s/",

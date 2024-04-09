@@ -2,7 +2,7 @@ package sune.app.mediadown.tor;
 
 import java.util.Objects;
 
-/** @since 00.02.09 */
+/** @since 00.02.10 */
 public enum TorResource {
 	
 	GEO_IPV4("geoip"),

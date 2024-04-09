@@ -94,14 +94,14 @@ public final class RemoteConfiguration {
 		}
 	}
 	
-	/** @since 00.02.09 */
+	/** @since 00.02.10 */
 	public static final RemoteConfiguration of(Request request) throws Exception {
 		try(Response.OfStream response = Web.requestStream(request)) {
 			return from(response.stream());
 		}
 	}
 	
-	/** @since 00.02.09 */
+	/** @since 00.02.10 */
 	public static final RemoteConfiguration of(URI uri) throws Exception {
 		return of(Request.of(uri).GET());
 	}
