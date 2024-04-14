@@ -11,6 +11,7 @@ import java.util.function.BiFunction;
 import java.util.stream.Stream;
 
 import sune.app.mediadown.concurrent.VarLoader;
+import sune.app.mediadown.util.Regex;
 import sune.app.mediadown.util.Utils;
 
 /** @since 00.02.05 */
@@ -31,6 +32,8 @@ public final class MediaFormat {
 		= ((format, string) -> format.name().toLowerCase().equals(string));
 	private static final BiFunction<MediaFormat, String, Boolean> PREDICATE_MIME_TYPE
 		= ((format, mimeType) -> format.mimeTypes().contains(mimeType));
+	/** @since 00.02.09 */
+	private static final Regex REGEX_EXTENSION_PREFIX = Regex.of("^\\*\\.");
 	
 	// Special formats
 	public static final MediaFormat UNKNOWN;
@@ -196,7 +199,7 @@ public final class MediaFormat {
 	
 	/** @since 00.02.08 */
 	public static final MediaFormat fromExtension(String extension) {
-		return filter(PREDICATE_EXTENSIONS, extension.toLowerCase());
+		return filter(PREDICATE_EXTENSIONS, REGEX_EXTENSION_PREFIX.replaceFirst(extension.toLowerCase(), ""));
 	}
 	
 	public static final MediaFormat[] outputFormats() {

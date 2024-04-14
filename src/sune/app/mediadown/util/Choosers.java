@@ -27,7 +27,7 @@ public final class Choosers {
 	/** @since 00.02.08 */
 	private static final MediaFormat selectedMediaFormat(SelectedItem item) {
 		return item.extension().getExtensions().stream()
-					.map(MediaFormat::fromName)
+					.map(MediaFormat::fromExtension)
 					.filter((f) -> !f.is(MediaFormat.UNKNOWN))
 					.findFirst().orElse(MediaFormat.UNKNOWN);
 	}
