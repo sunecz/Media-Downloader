@@ -1,5 +1,7 @@
 package sune.app.mediadown.gui.window;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -8,6 +10,8 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
+import javafx.scene.control.TextArea;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
@@ -15,6 +19,7 @@ import javafx.scene.text.TextFlow;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import sune.app.mediadown.MediaDownloader;
+import sune.app.mediadown.Shared;
 import sune.app.mediadown.gui.DraggableWindow;
 import sune.app.mediadown.net.Net;
 import sune.app.mediadown.os.OS;
@@ -31,7 +36,9 @@ public class AboutWindow extends DraggableWindow<VBox> {
 	private final Label lblTitle;
 	private final TextFlow lblVersion;
 	private final TextFlow lblAuthor;
-	private final Label lblDescription;
+	private final Text lblDescription;
+	/** @since 00.02.09 */
+	private final TextArea txtCopyright;
 	
 	public AboutWindow() {
 		super(NAME, new VBox(0.0), 400.0, 250.0);
@@ -48,24 +55,36 @@ public class AboutWindow extends DraggableWindow<VBox> {
 			"name", MediaDownloader.AUTHOR,
 			"email", Data.authorEmail()
   		);
-		lblDescription = new Label(tr("label.description"));
+		lblDescription = new Text(tr("label.description"));
+		txtCopyright = new TextArea(copyrightText());
 		
 		VBox.setMargin(lblTitle, new Insets(-10.0, 0, 0, 0));
 		VBox.setMargin(lblDescription, new Insets(15.0, 0, 0, 0));
+		VBox.setMargin(txtCopyright, new Insets(15.0, 0, 0, 0));
+		VBox.setVgrow(txtCopyright, Priority.ALWAYS);
 		
 		lblTitle.setId("label-title");
 		lblVersion.setId("label-version");
 		lblAuthor.setId("label-author");
 		lblDescription.setId("label-description");
+		txtCopyright.setId("text-copyright");
 		
 		lblTitle.setTextAlignment(TextAlignment.CENTER);
 		lblVersion.setTextAlignment(TextAlignment.CENTER);
 		lblAuthor.setTextAlignment(TextAlignment.CENTER);
 		lblDescription.setTextAlignment(TextAlignment.CENTER);
-		lblDescription.setWrapText(true);
+		lblDescription.wrappingWidthProperty().bind(
+			// Important to subtract the insets otherwise the window will be endlessly
+			// expanding to accomodate the ever-growing label.
+			// Explanation: window (outer) = 2*20px, content (inner) = 2*20px.
+			content.widthProperty().subtract(2.0 * 20.0 + 2.0 * 20.0)
+		);
+		txtCopyright.setEditable(false);
+		txtCopyright.setWrapText(true);
+		txtCopyright.setPrefRowCount(4);
 		
-		content.setAlignment(Pos.CENTER);
-		content.getChildren().addAll(lblTitle, lblVersion, lblAuthor, lblDescription);
+		content.setAlignment(Pos.TOP_CENTER);
+		content.getChildren().addAll(lblTitle, lblVersion, lblAuthor, lblDescription, txtCopyright);
 		
 		setMinWidth(400.0);
 		setMinHeight(250.0);
@@ -130,6 +149,16 @@ public class AboutWindow extends DraggableWindow<VBox> {
 		}
 		
 		return flow;
+	}
+	
+	/** @since 00.02.09 */
+	private static final String copyrightText() {
+		try(InputStream stream = MediaDownloader.class.getResourceAsStream("/resources/theme/copyright")) {
+			return new String(stream.readAllBytes(), Shared.CHARSET);
+		} catch(IOException ex) {
+			// Return an empty content, rather than fail.
+			return "";
+		}
 	}
 	
 	private static final class Data {

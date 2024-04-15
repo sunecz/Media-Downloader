@@ -1,0 +1,35 @@
+Java™ Runtime Environment (JRE) is based on Adoptium® Eclipse Temurin™
+Copyright © Eclipse Foundation
+https://adoptium.net/
+
+INFOMAS ASL :: Annotation Detector (infomas-asl.jar)
+Copyright © XIAM Solutions B.V.
+https://mvnrepository.com/artifact/eu.infomas/annotation-detector
+
+jsoup: Java HTML Parser (jsoup.jar)
+Copyright © Jonathan Hedley
+https://jsoup.org/
+
+Utils-Memory (sune-memory.jar)
+Copyright © Sune
+Not publicly available
+
+Process Utils (sune-process-api.jar)
+Copyright © Sune
+https://github.com/sunecz/Utils-Process
+
+FFmpeg (ffmpeg, ffprobe)
+Copyright © FFmpeg project
+https://ffmpeg.org/
+
+Bento4 toolkit (mp4decrypt)
+Copyright © Axiomatic Systems, LLC
+https://www.bento4.com/
+
+Sysinternals (PsSuspend)
+Copyright © Microsoft
+https://learn.microsoft.com/en-us/sysinternals/
+
+All plugins are the property of their respective owners.
+
+All trademarks, icons, logos and brand names are the property of their respective owners.
