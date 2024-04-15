@@ -108,6 +108,15 @@ public class DraggableWindow<T extends Pane> extends Window<StackPane> {
 		pane.getChildren().add(wrapper);
 		pane.getStyleClass().add("draggable-window-pane");
 		setResizable(true);
+		
+		FXUtils.onWindowShow(this, () -> {
+			double outerHeight = getHeight();
+			double innerHeight = wrapper.getHeight() + OUTER_INSETS.getTop() + OUTER_INSETS.getBottom();
+			
+			if(outerHeight < innerHeight) {
+				setHeight(innerHeight);
+			}
+		});
 	}
 	
 	private final void windowClose() {
@@ -168,9 +177,6 @@ public class DraggableWindow<T extends Pane> extends Window<StackPane> {
 		private Direction dragDirection;
 		private boolean isCursorChanged;
 		
-		private boolean isSetWidth = false;
-		private boolean isSetHeight = false;
-		
 		private Resizer(DraggableWindow<? extends Pane> window, Insets border) {
 			this.window = Objects.requireNonNull(window);
 			this.border = Objects.requireNonNull(border);
@@ -227,21 +233,15 @@ public class DraggableWindow<T extends Pane> extends Window<StackPane> {
 			
 			Dimension2D min = minContentSize(window.content);
 			Insets insets = window.content.getInsets();
-			double headerHeight = window.header.getHeight();
+			double outer, inner;
 			
-			if(isSetWidth || window.getMinWidth() <= 0.0) {
-				double outer = OUTER_INSETS.getLeft() + OUTER_INSETS.getRight();
-				double inner = insets.getLeft() + insets.getRight();
-				window.setMinWidth(min.getWidth() + inner + outer);
-				isSetWidth = true;
-			}
+			outer = OUTER_INSETS.getLeft() + OUTER_INSETS.getRight();
+			inner = insets.getLeft() + insets.getRight();
+			window.setMinWidth(min.getWidth() + inner + outer);
 			
-			if(isSetHeight || window.getMinHeight() <= 0.0) {
-				double outer = OUTER_INSETS.getTop() + OUTER_INSETS.getBottom();
-				double inner = insets.getTop() + insets.getBottom();
-				window.setMinHeight(min.getHeight() + inner + outer + headerHeight);
-				isSetHeight = true;
-			}
+			outer = OUTER_INSETS.getTop() + OUTER_INSETS.getBottom();
+			inner = insets.getTop() + insets.getBottom();
+			window.setMinHeight(min.getHeight() + inner + outer);
 		}
 		
 		private static final Dimension2D minContentSize(Region node) {
