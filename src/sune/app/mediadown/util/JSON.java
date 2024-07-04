@@ -972,6 +972,32 @@ public final class JSON {
 		public static final JSONCollection empty() { return empty(false); }
 		public static final JSONCollection emptyArray() { return empty(true); }
 		
+		/** @since 00.02.09 */
+		private static final JSONNode asNode(Object value) {
+			if(value instanceof JSONNode) {
+				return (JSONNode) value;
+			}
+			
+			if(value instanceof Map) {
+				Map<?, ?> map = (Map<?, ?>) value;
+				Object[] array = new Object[2 * map.size()];
+				int cursor = 0;
+				
+				for(Entry<?, ?> entry : map.entrySet()) {
+					array[cursor++] = String.valueOf(entry.getKey());
+					array[cursor++] = entry.getValue();
+				}
+				
+				return ofObject(array);
+			}
+			
+			if(value instanceof Collection) {
+				return ofArray(((Collection<?>) value).toArray(Object[]::new));
+			}
+			
+			return JSONObject.of(value);
+		}
+		
 		public static final JSONCollection ofObject(Object... namesAndNodes) {
 			if(namesAndNodes == null || namesAndNodes.length <= 0) {
 				return empty(false);
@@ -982,7 +1008,7 @@ public final class JSON {
 			
 			for(int i = 0, l = namesAndNodes.length; i < l; i += 2) {
 				String name = (String) namesAndNodes[i];
-				JSONNode node = (JSONNode) namesAndNodes[i + 1];
+				JSONNode node = asNode(namesAndNodes[i + 1]);
 				node.assign(collection, name);
 				nodesMap.put(name, node);
 			}
@@ -1002,6 +1028,26 @@ public final class JSON {
 			for(int i = 0, l = nodes.length; i < l; ++i) {
 				String name = indexName(i);
 				JSONNode node = (JSONNode) nodes[i];
+				node.assign(collection, name);
+				nodesMap.put(name, node);
+			}
+			
+			collection.setNodesMap(nodesMap);
+			return collection;
+		}
+		
+		/** @since 00.02.09 */
+		public static final JSONCollection ofArray(Object... values) {
+			if(values == null || values.length <= 0) {
+				return empty(true);
+			}
+			
+			JSONCollection collection = new JSONCollection(true);
+			Map<String, JSONNode> nodesMap = new LinkedHashMap<>();
+			
+			for(int i = 0, l = values.length; i < l; ++i) {
+				String name = indexName(i);
+				JSONNode node = asNode(values[i]);
 				node.assign(collection, name);
 				nodesMap.put(name, node);
 			}
