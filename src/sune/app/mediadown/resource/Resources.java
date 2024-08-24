@@ -50,40 +50,41 @@ public final class Resources {
 		// To be sure, delete the file first, so a fresh copy is downloaded.
 		NIO.deleteFile(destination);
 		
-		FileDownloader downloader = new FileDownloader(new TrackerManager());
-		downloader.setResponseStreamFactory(InputStreamFactory.GZIP.ofDefault());
-		
-		final String fileName = destination.getFileName().toString();
-		final long minTime = 500000000L; // 500ms
-		final Ref.Mutable<Long> lastTime = new Ref.Mutable<>(0L);
-		
-		downloader.addEventListener(DownloadEvent.BEGIN, (context) -> {
-			if(receiver != null) {
-				receiver.receive(String.format("Downloading %s...", fileName));
-			}
-		});
-		
-		downloader.addEventListener(DownloadEvent.UPDATE, (context) -> {
-			if(receiver != null
-					// Throttle to remove flickering
-					&& System.nanoTime() - lastTime.get() >= minTime) {
-				DownloadTracker tracker = (DownloadTracker) context.trackerManager().tracker();
-				long current = tracker.current();
-				long total = tracker.total();
-				double percent = current * 100.0 / total;
-				receiver.receive(String.format(Locale.US, "Downloading %s... %.2f%%", fileName, percent));
-				lastTime.set(System.nanoTime());
-			}
-		});
-		
-		downloader.addEventListener(DownloadEvent.END, (context) -> {
-			if(receiver != null) {
-				receiver.receive(String.format("Downloading %s... done", fileName));
-			}
-		});
-		
-		Request request = Request.of(uri).GET();
-		downloader.start(request, destination, DownloadConfiguration.ofDefault());
+		try(FileDownloader downloader = new FileDownloader(new TrackerManager())) {
+			downloader.setResponseStreamFactory(InputStreamFactory.GZIP.ofDefault());
+			
+			final String fileName = destination.getFileName().toString();
+			final long minTime = 500000000L; // 500ms
+			final Ref.Mutable<Long> lastTime = new Ref.Mutable<>(0L);
+			
+			downloader.addEventListener(DownloadEvent.BEGIN, (context) -> {
+				if(receiver != null) {
+					receiver.receive(String.format("Downloading %s...", fileName));
+				}
+			});
+			
+			downloader.addEventListener(DownloadEvent.UPDATE, (context) -> {
+				if(receiver != null
+						// Throttle to remove flickering
+						&& System.nanoTime() - lastTime.get() >= minTime) {
+					DownloadTracker tracker = (DownloadTracker) context.trackerManager().tracker();
+					long current = tracker.current();
+					long total = tracker.total();
+					double percent = current * 100.0 / total;
+					receiver.receive(String.format(Locale.US, "Downloading %s... %.2f%%", fileName, percent));
+					lastTime.set(System.nanoTime());
+				}
+			});
+			
+			downloader.addEventListener(DownloadEvent.END, (context) -> {
+				if(receiver != null) {
+					receiver.receive(String.format("Downloading %s... done", fileName));
+				}
+			});
+			
+			Request request = Request.of(uri).GET();
+			downloader.start(request, destination, DownloadConfiguration.ofDefault());
+		}
 		
 		return destination;
 	}

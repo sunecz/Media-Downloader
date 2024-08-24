@@ -34,7 +34,7 @@ import sune.app.mediadown.util.Range;
 import sune.app.mediadown.util.Utils;
 
 /** @since 00.02.08 */
-public class FileDownloader implements InternalDownloader {
+public class FileDownloader implements InternalDownloader, AutoCloseable {
 	
 	/* Implementation note:
 	 * All ranges passed to this class as arguments must be exclusive,
@@ -91,6 +91,7 @@ public class FileDownloader implements InternalDownloader {
 	protected ByteBuffer buffer;
 	
 	protected Exception exception;
+	protected Path prevOutput;
 	
 	public FileDownloader(TrackerManager trackerManager) {
 		this.trackerManager = Objects.requireNonNull(trackerManager);
@@ -141,24 +142,40 @@ public class FileDownloader implements InternalDownloader {
 	}
 	
 	protected void openFile(Path output, Range<Long> range) throws IOException {
-		channel = FileChannel.open(output, CREATE, WRITE);
-		channel.position(Math.max(0L, range.from()));
+		FileChannel ch = channel;
+		
+		// Do not open multiple file channels if it is still the same file
+		// as in the previous run.
+		if(prevOutput == null || !prevOutput.equals(output)) {
+			if(ch != null) {
+				// Close the previous channel
+				ch.close();
+			}
+			
+			channel = ch = FileChannel.open(output, CREATE, WRITE);
+			prevOutput = output;
+		}
+		
+		ch.position(Math.max(0L, range.from()));
 	}
 	
 	protected void closeFile() throws IOException {
-		if(channel == null) {
+		FileChannel ch;
+		if((ch = channel) == null) {
 			return;
 		}
 		
-		channel.close();
+		ch.close();
 		channel = null;
+		prevOutput = null;
 	}
 	
 	protected int write(ByteBuffer buffer) throws IOException {
+		FileChannel ch = channel;
 		int count = 0;
 		
 		while(buffer.hasRemaining()) {
-			count += channel.write(buffer);
+			count += ch.write(buffer);
 		}
 		
 		return count;
@@ -364,8 +381,6 @@ public class FileDownloader implements InternalDownloader {
 			long writtenBytes = written.get() - prevWritten;
 			rangeRequest = offsetRange(rangeRequest, downloadedBytes, totalBytes);
 			rangeOutput = offsetRange(rangeOutput, writtenBytes, -1L);
-			
-			closeFile();
 		}
 		
 		return reachedEOF;
@@ -468,6 +483,11 @@ public class FileDownloader implements InternalDownloader {
 		}
 		
 		doStop(TaskStates.STOPPED);
+	}
+	
+	@Override
+	public void close() throws Exception {
+		closeFile();
 	}
 	
 	@Override

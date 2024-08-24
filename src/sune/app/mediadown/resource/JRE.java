@@ -225,29 +225,30 @@ public final class JRE implements EventBindable<JREEvent> {
 			NIO.deleteFile(destination);
 			NIO.createDir(destination.getParent());
 			
-			FileDownloader downloader = new FileDownloader(manager);
-			downloader.setResponseStreamFactory(InputStreamFactory.GZIP.ofDefault());
-			
-			DownloadTracker tracker = new DownloadTracker();
-			downloader.setTracker(tracker);
-			
-			DownloadEventContext<JRE> context
-				= new DownloadEventContext<>(JRE.this, uri, destination, tracker);
-			
-			downloader.addEventListener(DownloadEvent.BEGIN, (d) -> {
-				eventRegistry.call(JREEvent.DOWNLOAD_BEGIN, context);
-			});
-			
-			downloader.addEventListener(DownloadEvent.UPDATE, (pair) -> {
-				eventRegistry.call(JREEvent.DOWNLOAD_UPDATE, context);
-			});
-			
-			downloader.addEventListener(DownloadEvent.END, (d) -> {
-				eventRegistry.call(JREEvent.DOWNLOAD_END, context);
-			});
-			
-			Request request = Request.of(uri).GET();
-			downloader.start(request, destination, DownloadConfiguration.ofDefault());
+			try(FileDownloader downloader = new FileDownloader(manager)) {
+				downloader.setResponseStreamFactory(InputStreamFactory.GZIP.ofDefault());
+				
+				DownloadTracker tracker = new DownloadTracker();
+				downloader.setTracker(tracker);
+				
+				DownloadEventContext<JRE> context
+					= new DownloadEventContext<>(JRE.this, uri, destination, tracker);
+				
+				downloader.addEventListener(DownloadEvent.BEGIN, (d) -> {
+					eventRegistry.call(JREEvent.DOWNLOAD_BEGIN, context);
+				});
+				
+				downloader.addEventListener(DownloadEvent.UPDATE, (pair) -> {
+					eventRegistry.call(JREEvent.DOWNLOAD_UPDATE, context);
+				});
+				
+				downloader.addEventListener(DownloadEvent.END, (d) -> {
+					eventRegistry.call(JREEvent.DOWNLOAD_END, context);
+				});
+				
+				Request request = Request.of(uri).GET();
+				downloader.start(request, destination, DownloadConfiguration.ofDefault());
+			}
 			
 			return destination;
 		}

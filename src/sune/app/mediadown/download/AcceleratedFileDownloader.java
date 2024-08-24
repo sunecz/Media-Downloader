@@ -319,6 +319,11 @@ public class AcceleratedFileDownloader implements InternalDownloader {
 	}
 	
 	@Override
+	public void close() throws Exception {
+		doAction(InternalDownloader::close);
+	}
+	
+	@Override
 	public void setTracker(DownloadTracker tracker) {
 		Ignore.callVoid(() -> doAction((downloader) -> downloader.setTracker(tracker)));
 	}

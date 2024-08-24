@@ -10,6 +10,7 @@ import sune.app.mediadown.concurrent.PositionAwareQueueTaskExecutor;
 import sune.app.mediadown.concurrent.PositionAwareQueueTaskExecutor.PositionAwareQueueTaskResult;
 import sune.app.mediadown.concurrent.QueueTaskExecutor.QueueTask;
 import sune.app.mediadown.concurrent.VarLoader;
+import sune.app.mediadown.download.Download;
 import sune.app.mediadown.download.DownloadConfiguration;
 import sune.app.mediadown.download.DownloadResult;
 import sune.app.mediadown.download.MediaDownloadConfiguration;
@@ -112,8 +113,8 @@ public final class DownloadManager implements QueueContext {
 		
 		@Override
 		public Long call() throws Exception {
-			try {
-				result.download().start();
+			try(Download download = result.download()) {
+				download.start();
 				return 0L;
 			} catch(Exception ex) {
 				throw new WrappedReportContextException(ex, createContext());

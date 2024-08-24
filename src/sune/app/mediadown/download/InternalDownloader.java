@@ -8,7 +8,8 @@ import sune.app.mediadown.event.tracker.DownloadTracker;
 import sune.app.mediadown.net.Web.Request;
 
 /** @since 00.02.08 */
-public interface InternalDownloader extends DownloadContext, EventCallable<DownloadEvent> {
+public interface InternalDownloader
+		extends DownloadContext, AutoCloseable, EventCallable<DownloadEvent> {
 	
 	long start(Request request, Path output, DownloadConfiguration configuration) throws Exception;
 	void pause() throws Exception;

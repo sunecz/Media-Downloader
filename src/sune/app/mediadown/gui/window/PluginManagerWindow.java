@@ -201,16 +201,24 @@ public class PluginManagerWindow extends DraggableWindow<VBox> {
 		}
 		
 		private final boolean update(PluginFile pluginFile) {
+			String pluginURL = null;
+			
 			try {
-				String pluginURL = PluginUpdater.check(pluginFile);
+				pluginURL = PluginUpdater.check(pluginFile);
 				
 				// Check whether there is a newer version of the plugin
 				if(pluginURL == null) {
 					return false;
 				}
-				
-				String pluginTitle = pluginFile.getPlugin().instance().title();
-				download = PluginUpdater.update(pluginURL, Path.of(pluginFile.getPath()));
+			} catch(Exception ex) {
+				MediaDownloader.error(ex);
+			}
+			
+			String pluginTitle = pluginFile.getPlugin().instance().title();
+			Path pluginPath = Path.of(pluginFile.getPath());
+			
+			try(Download download = PluginUpdater.update(pluginURL, pluginPath)) {
+				this.download = download; // Assign so that the download is stoppable
 				
 				download.addEventListener(DownloadEvent.BEGIN, (ctx) -> {
 					context.setText(translation.getSingle("download.begin", "name", pluginTitle));
@@ -245,6 +253,7 @@ public class PluginManagerWindow extends DraggableWindow<VBox> {
 			try {
 				if(download != null) {
 					download.stop();
+					download.close();
 				}
 			} catch(Exception ex) {
 				// Ignore

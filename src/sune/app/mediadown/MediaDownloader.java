@@ -485,44 +485,43 @@ public final class MediaDownloader {
 				if(AppArguments.isUpdateEnabled()) {
 					final Path rootDir = Path.of(PathSystem.getCurrentDirectory());
 					final Ref.Mutable<Double> progressValue = new Ref.Mutable<>(0.0);
-					FileDownloader downloader = new FileDownloader(new TrackerManager());
 					
-					downloader.addEventListener(DownloadEvent.BEGIN, (context) -> {
-						Path file = context.output();
-						String path = file.subpath(rootDir.getNameCount(), file.getNameCount()).toString();
+					try(FileDownloader downloader = new FileDownloader(new TrackerManager())) {
+						downloader.addEventListener(DownloadEvent.BEGIN, (context) -> {
+							Path file = context.output();
+							String path = file.subpath(rootDir.getNameCount(), file.getNameCount()).toString();
+							
+							progressValue.set(getProgress());
+							setText(String.format("Downloading library %s...", path));
+							setProgress(0.0);
+						});
 						
-						progressValue.set(getProgress());
-						setText(String.format("Downloading library %s...", path));
-						setProgress(0.0);
-					});
-					
-					downloader.addEventListener(DownloadEvent.UPDATE, (context) -> {
-						Path file = context.output();
-						DownloadTracker tracker = (DownloadTracker) context.trackerManager().tracker();
-						double current = tracker.current();
-						double total = tracker.total();
-						double percent0 = (current / (double) total);
-						double percent1 = (percent0 * 100.0);
+						downloader.addEventListener(DownloadEvent.UPDATE, (context) -> {
+							Path file = context.output();
+							DownloadTracker tracker = (DownloadTracker) context.trackerManager().tracker();
+							double current = tracker.current();
+							double total = tracker.total();
+							double percent0 = (current / (double) total);
+							double percent1 = (percent0 * 100.0);
+							
+							String path = file.subpath(rootDir.getNameCount(), file.getNameCount()).toString();
+							setText(String.format("Downloading library %s... %s%%", path, MathUtils.round(percent1, 2)));
+							setProgress(percent0);
+						});
 						
-						String path = file.subpath(rootDir.getNameCount(), file.getNameCount()).toString();
-						setText(String.format("Downloading library %s... %s%%", path, MathUtils.round(percent1, 2)));
-						setProgress(percent0);
-					});
-					
-					downloader.addEventListener(DownloadEvent.END, (d) -> {
-						Path file = d.output();
-						String path = file.subpath(rootDir.getNameCount(), file.getNameCount()).toString();
+						downloader.addEventListener(DownloadEvent.END, (d) -> {
+							Path file = d.output();
+							String path = file.subpath(rootDir.getNameCount(), file.getNameCount()).toString();
+							
+							setText(String.format("Downloading library %s... Done", path));
+							setProgress(progressValue.get());
+						});
 						
-						setText(String.format("Downloading library %s... Done", path));
-						setProgress(progressValue.get());
-					});
-					
-					downloader.addEventListener(DownloadEvent.ERROR, (pair) -> {
-						setText(String.format("Downloading library... Error"));
-						setProgress(progressValue.get());
-					});
-					
-					try {
+						downloader.addEventListener(DownloadEvent.ERROR, (pair) -> {
+							setText(String.format("Downloading library... Error"));
+							setProgress(progressValue.get());
+						});
+						
 						EventBindableAction<EventType, Void> action = Update.checkLibraries(downloader);
 						
 						action.addEventListener(CheckEvent.COMPARE, (name) -> {
@@ -783,7 +782,7 @@ public final class MediaDownloader {
 				
 				Plugins.addEventListener(PluginLoaderEvent.ERROR_DISPOSE, (pair) -> {
 					String message = String.format("Cannot dispose plugin: %s", pair.a.getPlugin().instance().name());
-					MediaDownloader.error(new IllegalStateException(message, pair.b));
+					error(new IllegalStateException(message, pair.b));
 				});
 				
 				Ignore.callVoid(Plugins::loadAll, MediaDownloader::error);
@@ -1137,30 +1136,30 @@ public final class MediaDownloader {
 					}
 				} while(true);
 				
-				FileDownloader downloader = new FileDownloader(new TrackerManager());
-				
-				downloader.addEventListener(DownloadEvent.BEGIN, (context) -> {
-					receiver.receive("Downloading the new version...");
-				});
-				
-				downloader.addEventListener(DownloadEvent.UPDATE, (context) -> {
-					DownloadTracker tracker = (DownloadTracker) context.trackerManager().tracker();
-					long current = tracker.current();
-					long total = tracker.total();
-					receiver.receive(String.format(Locale.US, "Downloading the new version... %.2f%%", current * 100.0 / total));
-				});
-				
-				downloader.addEventListener(DownloadEvent.END, (context) -> {
-					receiver.receive("Downloading the new version... done");
-				});
-				
-				downloader.addEventListener(DownloadEvent.ERROR, (context) -> {
-					error(context.exception());
-				});
-				
-				// Download the new version's JAR file
-				Request request = Request.of(Net.uri(jarUrl)).GET();
-				downloader.start(request, newJar, DownloadConfiguration.ofDefault());
+				try(FileDownloader downloader = new FileDownloader(new TrackerManager())) {
+					downloader.addEventListener(DownloadEvent.BEGIN, (context) -> {
+						receiver.receive("Downloading the new version...");
+					});
+					
+					downloader.addEventListener(DownloadEvent.UPDATE, (context) -> {
+						DownloadTracker tracker = (DownloadTracker) context.trackerManager().tracker();
+						long current = tracker.current();
+						long total = tracker.total();
+						receiver.receive(String.format(Locale.US, "Downloading the new version... %.2f%%", current * 100.0 / total));
+					});
+					
+					downloader.addEventListener(DownloadEvent.END, (context) -> {
+						receiver.receive("Downloading the new version... done");
+					});
+					
+					downloader.addEventListener(DownloadEvent.ERROR, (context) -> {
+						error(context.exception());
+					});
+					
+					// Download the new version's JAR file
+					Request request = Request.of(Net.uri(jarUrl)).GET();
+					downloader.start(request, newJar, DownloadConfiguration.ofDefault());
+				}
 				
 				// Get the current run command, so that the application can be run again
 				String runCommand = SelfProcess.command(args.argsList());
@@ -2521,8 +2520,7 @@ public final class MediaDownloader {
 	private static final void initDefaultPlugins() {
 		if(!AppArguments.isUpdateEnabled()) return;
 		
-		try {
-			FileDownloader downloader = new FileDownloader(new TrackerManager());
+		try(FileDownloader downloader = new FileDownloader(new TrackerManager())) {
 			DownloadConfiguration downloadConfiguration = DownloadConfiguration.ofDefault();
 			bindPluginDownloadEvents(downloader);
 			
@@ -2565,9 +2563,8 @@ public final class MediaDownloader {
 		if(!NIO.exists(dir)) return;
 		
 		// Find and register all the plugins
-		try {
+		try(FileDownloader downloader = new FileDownloader(new TrackerManager())) {
 			final StringReceiver receiver = InitializationStates::setText;
-			FileDownloader downloader = new FileDownloader(new TrackerManager());
 			DownloadConfiguration downloadConfiguration = DownloadConfiguration.ofDefault();
 			bindPluginDownloadEvents(downloader);
 			
@@ -2660,7 +2657,7 @@ public final class MediaDownloader {
 				})
 				// Add the plugin to the list, so it will be loaded
 				.forEach(Plugins::add);
-		} catch(IOException ex) {
+		} catch(Exception ex) {
 			error(ex);
 		}
 	}

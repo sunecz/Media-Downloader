@@ -3,6 +3,7 @@ package sune.app.mediadown.plugin;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.StringReader;
+import java.net.URI;
 import java.nio.file.Path;
 
 import sune.app.mediadown.MediaDownloader;
@@ -21,7 +22,6 @@ import sune.app.mediadown.update.Version;
 import sune.app.mediadown.update.VersionType;
 import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.Regex;
-import sune.app.mediadown.util.Utils.Ignore;
 
 public final class PluginUpdater {
 	
@@ -29,6 +29,10 @@ public final class PluginUpdater {
 	private static final Regex REGEX_ONLY_DIGITS = Regex.of("^\\d+$");
 	/** @since 00.02.08 */
 	private static final Regex REGEX_VERSION_VALUE = Regex.of("-(\\d+)$");
+	
+	// Forbid anyone to create an instance of this class
+	private PluginUpdater() {
+	}
 	
 	/** @since 00.02.08 */
 	private static final String fixPluginVersionString(Version version) {
@@ -146,86 +150,8 @@ public final class PluginUpdater {
 		return versionURL(file, pluginVersion(file.getPlugin().instance().version()));
 	}
 	
-	public static final Download update(String pluginURL, Path file) {
-		return new Download() {
-			
-			private final TrackerManager trackerManager = new TrackerManager();
-			private final FileDownloader downloader = new FileDownloader(trackerManager);
-			
-			@Override
-			public void start() throws Exception {
-				Request request = Request.of(Net.uri(pluginURL)).GET();
-				long size = Ignore.defaultValue(() -> Web.size(request), -1L);
-				downloader.start(request, file, DownloadConfiguration.ofTotalBytes(size));
-			}
-			
-			@Override
-			public void stop() throws Exception {
-				downloader.stop();
-			}
-			
-			@Override
-			public void pause() throws Exception {
-				downloader.pause();
-			}
-			
-			@Override
-			public void resume() throws Exception {
-				downloader.resume();
-			}
-			
-			@Override
-			public boolean isRunning() {
-				return downloader.isRunning();
-			}
-			
-			@Override
-			public boolean isDone() {
-				return downloader.isDone();
-			}
-			
-			@Override
-			public boolean isStarted() {
-				return downloader.isStarted();
-			}
-			
-			@Override
-			public boolean isPaused() {
-				return downloader.isPaused();
-			}
-			
-			@Override
-			public boolean isStopped() {
-				return downloader.isStopped();
-			}
-			
-			@Override
-			public boolean isError() {
-				return downloader.isError();
-			}
-			
-			@Override
-			public <V> void addEventListener(Event<? extends DownloadEvent, V> event, Listener<V> listener) {
-				downloader.addEventListener(event, listener);
-			}
-			
-			@Override
-			public <V> void removeEventListener(Event<? extends DownloadEvent, V> event, Listener<V> listener) {
-				downloader.removeEventListener(event, listener);
-			}
-			
-			@Override
-			public TrackerManager trackerManager() {
-				return trackerManager;
-			}
-			
-			@Override public Exception exception() { return null; /* Not required */ }
-			@Override public Request request() { return null; /* Not required */ }
-			@Override public Path output() { return null; /* Not required */ }
-			@Override public DownloadConfiguration configuration() { return null; /* Not required */ }
-			@Override public Response response() { return null; /* Not required */ }
-			@Override public long totalBytes() { return 0; /* Not required */ }
-		};
+	public static final Download update(String pluginUrl, Path file) {
+		return new UpdateDownload(Net.uri(pluginUrl), file);
 	}
 	
 	public static final String check(PluginFile file) {
@@ -237,7 +163,94 @@ public final class PluginUpdater {
 		return isNewerVersionAvailable(file) ? newestVersion(file) : null;
 	}
 	
-	// Forbid anyone to create an instance of this class
-	private PluginUpdater() {
+	/** @since 00.02.09 */
+	private static final class UpdateDownload implements Download {
+		
+		private final URI pluginUrl;
+		private final Path file;
+		private final TrackerManager trackerManager = new TrackerManager();
+		private final FileDownloader downloader = new FileDownloader(trackerManager);
+		
+		public UpdateDownload(URI pluginUrl, Path file) {
+			this.pluginUrl = pluginUrl;
+			this.file = file;
+		}
+		
+		@Override
+		public void start() throws Exception {
+			downloader.start(Request.of(pluginUrl).GET(), file, DownloadConfiguration.ofDefault());
+		}
+		
+		@Override
+		public void stop() throws Exception {
+			downloader.stop();
+		}
+		
+		@Override
+		public void pause() throws Exception {
+			downloader.pause();
+		}
+		
+		@Override
+		public void resume() throws Exception {
+			downloader.resume();
+		}
+		
+		@Override
+		public void close() throws Exception {
+			downloader.close();
+		}
+		
+		@Override
+		public boolean isRunning() {
+			return downloader.isRunning();
+		}
+		
+		@Override
+		public boolean isDone() {
+			return downloader.isDone();
+		}
+		
+		@Override
+		public boolean isStarted() {
+			return downloader.isStarted();
+		}
+		
+		@Override
+		public boolean isPaused() {
+			return downloader.isPaused();
+		}
+		
+		@Override
+		public boolean isStopped() {
+			return downloader.isStopped();
+		}
+		
+		@Override
+		public boolean isError() {
+			return downloader.isError();
+		}
+		
+		@Override
+		public <V> void addEventListener(Event<? extends DownloadEvent, V> event, Listener<V> listener) {
+			downloader.addEventListener(event, listener);
+		}
+		
+		@Override
+		public <V> void removeEventListener(Event<? extends DownloadEvent, V> event, Listener<V> listener) {
+			downloader.removeEventListener(event, listener);
+		}
+		
+		@Override
+		public TrackerManager trackerManager() {
+			return trackerManager;
+		}
+		
+		@Override public Exception exception() { return null; /* Not required */ }
+		@Override public Request request() { return null; /* Not required */ }
+		@Override public Path output() { return null; /* Not required */ }
+		@Override public DownloadConfiguration configuration() { return null; /* Not required */ }
+		@Override public Response response() { return null; /* Not required */ }
+		@Override public long totalBytes() { return 0; /* Not required */ }
 	}
 }
