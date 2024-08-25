@@ -45,7 +45,7 @@ public class AcceleratedFileDownloader implements InternalDownloader {
 	private final AtomicLong written = new AtomicLong();
 	
 	private Request request;
-	private Path output;
+	private Destination destination;
 	private DownloadConfiguration configuration;
 	
 	private volatile Response response;
@@ -177,7 +177,7 @@ public class AcceleratedFileDownloader implements InternalDownloader {
 	}
 	
 	@Override
-	public long start(Request request, Path output, DownloadConfiguration configuration) throws Exception {
+	public long start(Request request, Destination destination, DownloadConfiguration configuration) throws Exception {
 		this.configuration = configuration;
 		flagBegin.set(false);
 		bytes.set(0L);
@@ -222,7 +222,7 @@ public class AcceleratedFileDownloader implements InternalDownloader {
 			InternalDownloader downloader = downloaders.get(0);
 			DownloadConfiguration downloadConfiguration
 				= DownloadConfiguration.ofRanges(rangeOutput, rangeRequest, size);
-			long downloadedBytes = downloader.start(request, output, downloadConfiguration);
+			long downloadedBytes = downloader.start(request, destination, downloadConfiguration);
 			long writtenBytes = downloader.writtenBytes();
 			maybeSetResponse(downloader.response());
 			
@@ -254,7 +254,7 @@ public class AcceleratedFileDownloader implements InternalDownloader {
 					try {
 						DownloadConfiguration downloadConfiguration
 							= DownloadConfiguration.ofRanges(rangeOut, rangeReq, size);
-						long downloadedBytes = downloader.start(request, output, downloadConfiguration);
+						long downloadedBytes = downloader.start(request, destination, downloadConfiguration);
 						long writtenBytes = downloader.writtenBytes();
 						maybeSetResponse(downloader.response());
 						
@@ -345,7 +345,7 @@ public class AcceleratedFileDownloader implements InternalDownloader {
 	
 	@Override
 	public Path output() {
-		return output;
+		return destination != null ? destination.path() : null;
 	}
 	
 	@Override

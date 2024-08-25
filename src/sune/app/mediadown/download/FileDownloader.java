@@ -1,16 +1,11 @@
 package sune.app.mediadown.download;
 
-import static java.nio.file.StandardOpenOption.CREATE;
-import static java.nio.file.StandardOpenOption.WRITE;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
@@ -71,7 +66,8 @@ public class FileDownloader implements InternalDownloader, AutoCloseable {
 	protected final TrackerManager trackerManager;
 	
 	protected Request request;
-	protected Path output;
+	/** @since 00.02.09 */
+	protected Destination destination;
 	protected DownloadConfiguration configuration;
 	
 	protected DownloadTracker tracker;
@@ -91,7 +87,8 @@ public class FileDownloader implements InternalDownloader, AutoCloseable {
 	protected ByteBuffer buffer;
 	
 	protected Exception exception;
-	protected Path prevOutput;
+	/** @since 00.02.09 */
+	protected Destination prevDestination;
 	
 	public FileDownloader(TrackerManager trackerManager) {
 		this.trackerManager = Objects.requireNonNull(trackerManager);
@@ -131,54 +128,48 @@ public class FileDownloader implements InternalDownloader, AutoCloseable {
 		return range.from() < 0L || range.to() < 0L ? -1L : range.to() - range.from();
 	}
 	
-	protected static final int bufferSize(Path path) {
-		try {
-			return (int) (FILE_STORE_BLOCKS_COUNT * Files.getFileStore(path).getBlockSize());
-		} catch(IOException ex) {
-			// Ignore
-		}
-		
-		return DEFAULT_BUFFER_SIZE;
-	}
-	
-	protected void openFile(Path output, Range<Long> range) throws IOException {
+	protected void openFile(Destination destination, Range<Long> range) throws IOException {
+		final Destination prevDest = prevDestination;
 		FileChannel ch = channel;
 		
 		// Do not open multiple file channels if it is still the same file
 		// as in the previous run.
-		if(prevOutput == null || !prevOutput.equals(output)) {
-			if(ch != null) {
-				// Close the previous channel
-				ch.close();
+		if(prevDest == null || !prevDest.equals(destination)) {
+			// Close the previous destination
+			if(prevDest != null) {
+				prevDest.close();
 			}
 			
-			channel = ch = FileChannel.open(output, CREATE, WRITE);
-			prevOutput = output;
+			channel = ch = destination.channel();
+			prevDestination = destination;
 		}
 		
 		ch.position(Math.max(0L, range.from()));
 	}
 	
 	protected void closeFile() throws IOException {
-		FileChannel ch;
-		if((ch = channel) == null) {
+		Destination dest;
+		if((dest = destination) == null) {
 			return;
 		}
 		
-		ch.close();
+		// Close the current destination
+		dest.close();
+		
 		channel = null;
-		prevOutput = null;
+		prevDestination = null;
 	}
 	
 	protected int write(ByteBuffer buffer) throws IOException {
-		FileChannel ch = channel;
-		int count = 0;
+		final FileChannel ch = channel;
+		long wr = Math.max(0L, rangeOutput.from()) + written.get();
+		final long start = wr;
 		
-		while(buffer.hasRemaining()) {
-			count += ch.write(buffer);
-		}
+		for(int num;
+			buffer.hasRemaining() && (num = ch.write(buffer, wr)) >= 0;
+			wr += num);
 		
-		return count;
+		return (int) (wr - start);
 	}
 	
 	/** @since 00.02.09 */
@@ -313,7 +304,7 @@ public class FileDownloader implements InternalDownloader, AutoCloseable {
 	
 	/** @since 00.02.09 */
 	protected ByteBuffer createBuffer() {
-		return ByteBuffer.allocateDirect(bufferSize(output)).order(ByteOrder.nativeOrder());
+		return DownloadCommon.newDirectBuffer(destination.path());
 	}
 	
 	protected ByteBuffer buffer() {
@@ -356,7 +347,7 @@ public class FileDownloader implements InternalDownloader, AutoCloseable {
 		}
 		
 		try(ReadableByteChannel input = doRequest(rangeRequest)) {
-			openFile(output, rangeOutput);
+			openFile(destination, rangeOutput);
 			ByteBuffer buffer = buffer();
 			
 			for(int read, written; isRunning()
@@ -422,9 +413,9 @@ public class FileDownloader implements InternalDownloader, AutoCloseable {
 	}
 	
 	@Override
-	public long start(Request request, Path output, DownloadConfiguration configuration) throws Exception {
+	public long start(Request request, Destination destination, DownloadConfiguration configuration) throws Exception {
 		this.request       = Objects.requireNonNull(request);
-		this.output        = Objects.requireNonNull(output);
+		this.destination   = Objects.requireNonNull(destination);
 		this.configuration = Objects.requireNonNull(configuration);
 		identifier         = null;
 		totalBytes         = configuration.totalBytes();
@@ -533,7 +524,7 @@ public class FileDownloader implements InternalDownloader, AutoCloseable {
 	
 	@Override
 	public Path output() {
-		return output;
+		return destination != null ? destination.path() : null;
 	}
 	
 	@Override

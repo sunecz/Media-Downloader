@@ -11,7 +11,20 @@ import sune.app.mediadown.net.Web.Request;
 public interface InternalDownloader
 		extends DownloadContext, AutoCloseable, EventCallable<DownloadEvent> {
 	
-	long start(Request request, Path output, DownloadConfiguration configuration) throws Exception;
+	default long start(
+		Request request,
+		Path output,
+		DownloadConfiguration configuration
+	) throws Exception {
+		return start(request, new Destination.OfPath(output), configuration);
+	}
+	/** @since 00.02.09 */
+	long start(
+		Request request,
+		Destination destination,
+		DownloadConfiguration configuration
+	) throws Exception;
+	
 	void pause() throws Exception;
 	void resume() throws Exception;
 	void stop() throws Exception;
