@@ -2277,7 +2277,7 @@ public final class Utils {
 				
 				// Remove trailing empty strings
 				if(limit == 0) {
-					for(; to > 0 && list.get(to - 1).equals(""); --to);
+					for(; to > 0 && list.get(to - 1).isEmpty(); --to);
 				}
 				
 				parts = list.subList(0, to).toArray(String[]::new);
