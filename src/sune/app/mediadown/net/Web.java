@@ -37,6 +37,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
@@ -248,6 +249,13 @@ public final class Web {
 				}
 				
 				throw ex; // Propagate
+			} catch(TimeoutException ex) {
+				// Allow retries when the request times out
+				if(retryExternalAttempt++ >= request.retry()) {
+					throw ex; // Propagate
+				}
+				
+				continue; // Retry the request
 			}
 		} while(true);
 	}
