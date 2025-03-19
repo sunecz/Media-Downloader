@@ -459,7 +459,17 @@ public final class MPD {
 				}
 				
 				if(elementTemplate == null) {
-					throw new IllegalStateException("No SegmentTemplate");
+					// External subtitles may not have a SegmentTemplate, handle it separately.
+					Element elementRole = element.selectFirst("Role");
+					
+					// Check that the AdaptationSet is really for subtitles
+					if(elementRole == null
+							|| !"subtitle".equalsIgnoreCase(elementRole.attr("value"))) {
+						throw new IllegalStateException("No SegmentTemplate");
+					}
+					
+					// Currently ignore it, may be supported in the future
+					return null;
 				}
 				
 				SegmentTemplate template = SegmentTemplate.parse(elementTemplate);
@@ -527,7 +537,11 @@ public final class MPD {
 			
 			for(Element elementAdaptationSet : document.getElementsByTag(AdaptationSet.NODE_NAME)) {
 				AdaptationSet adaptationSet = AdaptationSet.parse(elementAdaptationSet);
-				files.addAll(adaptationSet.process(baseURI));
+				
+				// Currently, AdaptationSet is null for subtitles, if it happens just ignore it
+				if(adaptationSet != null) {
+					files.addAll(adaptationSet.process(baseURI));
+				}
 			}
 			
 			return files;
