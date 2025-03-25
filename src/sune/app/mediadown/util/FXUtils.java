@@ -48,6 +48,8 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableView;
+import javafx.scene.control.skin.TableColumnHeader;
+import javafx.scene.control.skin.TableHeaderRow;
 import javafx.scene.control.skin.TableViewSkinBase;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -793,7 +795,50 @@ public final class FXUtils {
 			
 			private static final int DEFAULT_RESIZE_COLUMN_NUM_ROWS = 30;
 			
-			private static MethodHandle mh_resizeColumnToFitContent;
+			private static final MethodHandle mh_getColumnHeaderFor;
+			private static final MethodHandle mh_resizeColumnToFitContent;
+			
+			static {
+				MethodHandles.Lookup lookup = MethodHandles.lookup();
+				MethodHandle _mh_getColumnHeaderFor;
+				MethodHandle _mh_resizeColumnToFitContent;
+				
+				try {
+					Method method = TableHeaderRow.class.getDeclaredMethod(
+						"getColumnHeaderFor",
+						TableColumnBase.class
+					);
+					Reflection.setAccessible(method, true);
+					_mh_getColumnHeaderFor = lookup.unreflect(method);
+				} catch(NoSuchMethodException
+							| SecurityException
+							| NoSuchFieldException
+							| IllegalArgumentException
+							| IllegalAccessException ex) {
+					throw new IllegalStateException(ex);
+				}
+				
+				try {
+					Method method = TableColumnHeader.class.getDeclaredMethod(
+						"resizeColumnToFitContent",
+						int.class
+					);
+					Reflection.setAccessible(method, true);
+					_mh_resizeColumnToFitContent = lookup.unreflect(method);
+				} catch(NoSuchMethodException
+						| SecurityException
+						| NoSuchFieldException
+						| IllegalArgumentException
+						| IllegalAccessException ex) {
+					throw new IllegalStateException(ex);
+				}
+				
+				mh_getColumnHeaderFor = _mh_getColumnHeaderFor;
+				mh_resizeColumnToFitContent = _mh_resizeColumnToFitContent;
+			}
+			
+			private ColumnResizer() {
+			}
 			
 			private static final int countItems(TreeItem<?> item) {
 				int count = 0;
@@ -835,25 +880,20 @@ public final class FXUtils {
 			
 			public static final void resizeColumnToFitContent(TableViewSkinBase<?, ?, ?, ?, ?> skin,
 					TableColumnBase<?, ?> column, int numRows) {
-				if(mh_resizeColumnToFitContent == null) {
-					try {
-						Method method_resizeColumnToFitContent = Class.forName("javafx.scene.control.skin.TableSkinUtils")
-								.getDeclaredMethod("resizeColumnToFitContent",
-								                   Class.forName("javafx.scene.control.skin.TableViewSkinBase"),
-								                   TableColumnBase.class, int.class);
-						Reflection.setAccessible(method_resizeColumnToFitContent, true);
-						mh_resizeColumnToFitContent = MethodHandles.lookup().unreflect(method_resizeColumnToFitContent);
-					} catch(NoSuchMethodException
-								| SecurityException
-								| ClassNotFoundException
-								| NoSuchFieldException
-								| IllegalArgumentException
-								| IllegalAccessException ex) {
-						throw new RuntimeException(ex);
-					}
+				Object headerRow = skin.getSkinnable().lookup("TableHeaderRow");
+				
+				if(headerRow == null) {
+					return; // Ignore, nothing we can do
 				}
+				
 				try {
-					mh_resizeColumnToFitContent.invoke(skin, column, numRows);
+					Object columnHeader = mh_getColumnHeaderFor.invoke(headerRow, column);
+					
+					if(columnHeader == null) {
+						return; // Ignore, nothing we can do
+					}
+					
+					mh_resizeColumnToFitContent.invoke(columnHeader, -1);
 				} catch(Throwable ex) {
 					throw new RuntimeException(ex);
 				}
