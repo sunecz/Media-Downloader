@@ -71,11 +71,42 @@ class Linux implements OS {
 		
 		private static enum HighlightMethod {
 			
+			// Note: Do not change the order of the following enum items. The idea is such that
+			//       we want to use the built-in method first, if it is supported, if not, then
+			//       some common ones, and if all of them fails then the more low-level ones,
+			//       such as gdbus or dbus, and even if they fail, just show the parent directory,
+			//       which at least should be supported natively in AWT.
+			
 			AWT {
 				
 				@Override
 				public void highlight(Path path) throws Exception {
 					Desktop.getDesktop().browseFileDirectory(path.toAbsolutePath().toFile());
+				}
+			},
+			NAUTILUS {
+				
+				@Override
+				public void highlight(Path path) throws Exception {
+					Runtime.getRuntime().exec(new String[] {
+						"nautilus", "-s", path.toAbsolutePath().toString()
+					});
+				}
+			},
+			GDBUS {
+				
+				@Override
+				public void highlight(Path path) throws Exception {
+					// Same as the DBUS method but using the gdbus command which supports
+					// commas in the path.
+					Runtime.getRuntime().exec(new String[] {
+						"gdbus", "call", "--session",
+						"--dest", "org.freedesktop.FileManager1",
+						"--object-path", "/org/freedesktop/FileManager1",
+						"--method", "org.freedesktop.FileManager1.ShowItems",
+						"['file://" + path.toAbsolutePath().toString() + "']",
+						""
+					});
 				}
 			},
 			DBUS {
@@ -88,17 +119,8 @@ class Linux implements OS {
 						"--dest=org.freedesktop.FileManager1",
 						"/org/freedesktop/FileManager1",
 						"org.freedesktop.FileManager1.ShowItems",
-						"array:string:file://" + path.toAbsolutePath().toString(),
-						"string:"
-					});
-				}
-			},
-			NAUTILUS {
-				
-				@Override
-				public void highlight(Path path) throws Exception {
-					Runtime.getRuntime().exec(new String[] {
-						"nautilus", "-s", path.toAbsolutePath().toString()
+						"array:string:\"file://" + path.toAbsolutePath().toString() + "\"",
+						"string:\"\""
 					});
 				}
 			},
