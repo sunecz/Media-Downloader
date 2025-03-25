@@ -18,6 +18,7 @@ import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandler;
 import java.net.http.HttpResponse.BodyHandlers;
+import java.net.http.WebSocket;
 import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -341,6 +342,16 @@ public final class Web {
 		}
 		
 		return headers.firstValueAsLong("content-length").orElse(UNKNOWN_SIZE);
+	}
+	
+	/** @since 00.02.09 */
+	public static final WebSocket newWebSocket(Request request, WebSocket.Listener listener) {
+		return (
+			httpClientFor(request)
+				.newWebSocketBuilder()
+				.buildAsync(request.uri(), listener)
+				.join()
+		);
 	}
 	
 	public static final void clear() {
