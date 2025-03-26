@@ -1183,6 +1183,10 @@ public final class MediaDownloader {
 	private static RemoteConfiguration remoteConfiguration;
 	
 	private static final void initRemoteConfiguration() throws IOException {
+		if(!AppArguments.isUpdateEnabled()) {
+			return;
+		}
+		
 		try {
 			String configURL = Net.uriConcat(URL_BASE_VER, VERSION.stringRelease(), "config");
 			remoteConfiguration = RemoteConfiguration.from(
