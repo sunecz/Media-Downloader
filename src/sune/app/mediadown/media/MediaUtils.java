@@ -343,7 +343,11 @@ public final class MediaUtils {
 			int height = video.resolution().height();
 			
 			if(height <= 0) {
-				height = ((VideoQualityValue) video.quality().value()).height();
+				QualityValue value = video.quality().value();
+				
+				if(value instanceof VideoQualityValue) {
+					height = ((VideoQualityValue) value).height();
+				}
 			}
 			
 			return approximateBandwidthFromVideoHeight(height);
