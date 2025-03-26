@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no" ?>
 <project basedir="." default="build" name="Media-Downloader" xmlns:if="ant:if" xmlns:unless="ant:unless">
-	<!-- path.javafx must be set using -Dpath.javafx=PATH -->
 	<property name="name.jar" value="media-downloader" />
 	
 	<dirname property="md.path.cwd" file="${ant.file.Media-Downloader}" />
@@ -151,17 +150,4 @@
 			<fileset dir="${md.path.bin}" />
 		</jar>
 	</target>
-	
-	<target name="dist-single" depends="build">
-		<echo message="Building distribution archive for '${arg.os}'..." />
-		<exec executable="/bin/bash">
-			<arg value="${md.path.scripts}/dist.sh" />
-			<arg value="${arg.os}" />
-		</exec>
-	</target>
-	
-	<target name="dist-windows"><antcall target="dist-single"><param name="arg.os" value="windows" /></antcall></target>
-	<target name="dist-linux"><antcall target="dist-single"><param name="arg.os" value="linux" /></antcall></target>
-	<target name="dist-osx"><antcall target="dist-single"><param name="arg.os" value="osx" /></antcall></target>
-	<target name="dist-all" depends="dist-windows,dist-linux,dist-osx"></target>
 </project>
