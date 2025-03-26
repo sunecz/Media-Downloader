@@ -53,16 +53,16 @@ public final class DownloadPipelineTask
 		return Utils.cast(result().value().pipelineResult());
 	}
 	
-	@Override protected void doStop() throws Exception { doAction(DownloadResult::download, Download::stop); }
-	@Override protected void doPause() throws Exception { doAction(DownloadResult::download, Download::pause); }
-	@Override protected void doResume() throws Exception { doAction(DownloadResult::download, Download::resume); }
+	@Override protected void doStop() throws Exception { doActionCast(DownloadResult::download, Download::stop); }
+	@Override protected void doPause() throws Exception { doActionCast(DownloadResult::download, Download::pause); }
+	@Override protected void doResume() throws Exception { doActionCast(DownloadResult::download, Download::resume); }
 	
-	@Override public boolean isRunning() { return doAction(DownloadResult::download, Download::isRunning, false); }
-	@Override public boolean isStarted() { return doAction(DownloadResult::download, Download::isStarted, false); }
-	@Override public boolean isDone() { return doAction(DownloadResult::download, Download::isDone, false); }
-	@Override public boolean isPaused() { return doAction(DownloadResult::download, Download::isPaused, false); }
-	@Override public boolean isStopped() { return doAction(DownloadResult::download, Download::isStopped, false); }
-	@Override public boolean isError() { return doAction(DownloadResult::download, Download::isError, false); }
+	@Override public boolean isRunning() { return doActionCast(DownloadResult::download, Download::isRunning, false); }
+	@Override public boolean isStarted() { return doActionCast(DownloadResult::download, Download::isStarted, false); }
+	@Override public boolean isDone() { return doActionCast(DownloadResult::download, Download::isDone, false); }
+	@Override public boolean isPaused() { return doActionCast(DownloadResult::download, Download::isPaused, false); }
+	@Override public boolean isStopped() { return doActionCast(DownloadResult::download, Download::isStopped, false); }
+	@Override public boolean isError() { return doActionCast(DownloadResult::download, Download::isError, false); }
 	
 	/** @since 00.02.09 */
 	@Override public Media media() { return media.media(); }

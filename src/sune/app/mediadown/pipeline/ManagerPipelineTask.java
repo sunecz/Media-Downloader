@@ -40,14 +40,14 @@ public abstract class ManagerPipelineTask<R, V> implements PipelineTask {
 		}
 	}
 	
-	protected final <T, P> P doAction(Function<R, T> cast, Function<T, P> action, P defaultValue) {
+	protected final <T, P> P doActionCast(Function<R, T> cast, Function<T, P> action, P defaultValue) {
 		T value;
 		return result == null || (value = cast.apply(result.value())) == null
 					? defaultValue
 					: action.apply(value);
 	}
 	
-	protected final <T, P> void doAction(Function<R, T> cast, CheckedConsumer<T> action) throws Exception {
+	protected final <T, P> void doActionCast(Function<R, T> cast, CheckedConsumer<T> action) throws Exception {
 		T value;
 		if(result == null || (value = cast.apply(result.value())) == null) {
 			return;
@@ -57,11 +57,11 @@ public abstract class ManagerPipelineTask<R, V> implements PipelineTask {
 	}
 	
 	protected final <P> P doAction(Function<R, P> action, P defaultValue) {
-		return doAction(Function.identity(), action, defaultValue);
+		return doActionCast(Function.identity(), action, defaultValue);
 	}
 	
 	protected final <P> void doAction(CheckedConsumer<R> action) throws Exception {
-		doAction(Function.identity(), action);
+		doActionCast(Function.identity(), action);
 	}
 	
 	protected final PositionAwareManagerSubmitResult<R, V> result() {
