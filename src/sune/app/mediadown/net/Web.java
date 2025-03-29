@@ -164,7 +164,8 @@ public final class Web {
 					|| message.contains("too many concurrent streams")
 					|| message.contains("Received RST_STREAM")
 					|| message.contains("EOF reached while reading")
-					|| message.contains("An existing connection was forcibly closed");
+					|| message.contains("An existing connection was forcibly closed")
+					|| message.contains("Connection reset by peer");
 	}
 	
 	/** @since 00.02.09 */
