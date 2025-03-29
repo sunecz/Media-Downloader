@@ -188,7 +188,8 @@ public class Reporting {
 					continue;
 				}
 				
-				parent.set(name, System.getProperty(name).replace("\\", "\\\\"));
+				String value = System.getProperty(name);
+				parent.set(name, value != null ? value.replace("\\", "\\\\") : value);
 			}
 			
 			return parent;
