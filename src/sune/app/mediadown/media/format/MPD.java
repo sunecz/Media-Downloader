@@ -178,12 +178,15 @@ public final class MPD {
 		private final String initialization;
 		private final SegmentTimeline timeline;
 		private final int startNumber;
+		private final long timeOffset;
 		
-		private SegmentTemplate(int timescale, String media, String initialization, int startNumber, SegmentTimeline timeline) {
+		private SegmentTemplate(int timescale, String media, String initialization, int startNumber,
+				long timeOffset, SegmentTimeline timeline) {
 			this.timescale = requireIntPositive(timescale);
 			this.media = media;
 			this.initialization = initialization;
 			this.startNumber = startNumber;
+			this.timeOffset = timeOffset;
 			this.timeline = Objects.requireNonNull(timeline);
 		}
 		
@@ -193,14 +196,17 @@ public final class MPD {
 			Element elementTimeline = element.getElementsByTag(SegmentTimeline.NODE_NAME).first();
 			if(elementTimeline == null)
 				throw new IllegalArgumentException();
-			int timescale = Integer.parseInt(element.attr("timescale"));
+			int timescale = Math.max(1, Integer.parseInt(element.attr("timescale")));
 			String media = element.attr("media");
 			String initialization = element.attr("initialization");
 			String startNumberStr = element.attr("startNumber");
 			if(startNumberStr.isEmpty()) startNumberStr = "0";
 			int startNumber = Math.max(0, Integer.parseInt(startNumberStr));
+			String strTimeOffset = element.attr("presentationTimeOffset");
+			if(strTimeOffset.isEmpty()) strTimeOffset = "0";
+			long timeOffset = Long.parseLong(strTimeOffset);
 			SegmentTimeline timeline = SegmentTimeline.parse(elementTimeline);
-			return new SegmentTemplate(timescale, media, initialization, startNumber, timeline);
+			return new SegmentTemplate(timescale, media, initialization, startNumber, timeOffset, timeline);
 		}
 		
 		public final int timescale() {
@@ -217,6 +223,10 @@ public final class MPD {
 		
 		public final int startNumber() {
 			return startNumber;
+		}
+		
+		public long timeOffset() {
+			return timeOffset;
 		}
 		
 		public final SegmentTimeline timeline() {
@@ -367,14 +377,14 @@ public final class MPD {
 		private final void addSegment(String templateURI, Segment segment) throws Exception {
 			long startTime = segment.time();
 			if(startTime >= 0L) time = startTime;
-			double duration = segment.duration();
+			long duration = segment.duration();
 			int count = segment.count();
 			for(int i = 0; i < count; ++i) {
 				addSegment(templateURI, duration, false);
 			}
 		}
 		
-		private final void addSegment(String templateURI, double duration, boolean isInitialization) throws Exception {
+		private final void addSegment(String templateURI, long duration, boolean isInitialization) throws Exception {
 			double timescaleMult = 1.0 / template.timescale();
 			formatMap.put("Time", String.valueOf(time));
 			formatMap.put("Number", String.valueOf(count));
@@ -392,14 +402,14 @@ public final class MPD {
 			time = 0L; // Muset reset the time first
 			count = template.startNumber(); // Muset reset the count first for the Number variable
 			// Add initialization segment
-			addSegment(template.initialization(), 0.0, true);
+			addSegment(template.initialization(), 0L, true);
 			// Add other segments
 			String templateURI = template.media();
 			for(Segment segment : timeline.segments()) {
 				addSegment(templateURI, segment);
 			}
 			// Compute total duration (in seconds)
-			double duration = time / (double) template.timescale();
+			double duration = (time - template.timeOffset()) / (double) template.timescale();
 			MediaResolution resolution = representation.resolution();
 			Map<String, String> mergedAttrs = Utils.mergeNew(attributes, representation.attributes());
 			return new MPDFile(segments, format, resolution, duration, protection, mergedAttrs);
