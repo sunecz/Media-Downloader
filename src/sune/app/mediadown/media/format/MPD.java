@@ -433,7 +433,14 @@ public final class MPD {
 				throw new IllegalArgumentException();
 			}
 			
-			MediaFormat format = MediaFormat.fromMimeType(element.attr("mimeType"));
+			String mimeType = element.attr("mimeType");
+			
+			// Ignore non-video and non-audio adaptation sets
+			if(!mimeType.startsWith("video/") && !mimeType.startsWith("audio/")) {
+				return null;
+			}
+			
+			MediaFormat format = MediaFormat.fromMimeType(mimeType);
 			
 			List<Representation> representations = new ArrayList<>();
 			boolean needsOuterSegmentTemplate = false;
@@ -459,17 +466,7 @@ public final class MPD {
 				}
 				
 				if(elementTemplate == null) {
-					// External subtitles may not have a SegmentTemplate, handle it separately.
-					Element elementRole = element.selectFirst("Role");
-					
-					// Check that the AdaptationSet is really for subtitles
-					if(elementRole == null
-							|| !"subtitle".equalsIgnoreCase(elementRole.attr("value"))) {
-						throw new IllegalStateException("No SegmentTemplate");
-					}
-					
-					// Currently ignore it, may be supported in the future
-					return null;
+					throw new IllegalStateException("No SegmentTemplate");
 				}
 				
 				SegmentTemplate template = SegmentTemplate.parse(elementTemplate);
@@ -538,7 +535,8 @@ public final class MPD {
 			for(Element elementAdaptationSet : document.getElementsByTag(AdaptationSet.NODE_NAME)) {
 				AdaptationSet adaptationSet = AdaptationSet.parse(elementAdaptationSet);
 				
-				// Currently, AdaptationSet is null for subtitles, if it happens just ignore it
+				// Currently, AdaptationSet is null for non-video and non-audio sources,
+				// if it happens just ignore it.
 				if(adaptationSet != null) {
 					files.addAll(adaptationSet.process(baseURI));
 				}
