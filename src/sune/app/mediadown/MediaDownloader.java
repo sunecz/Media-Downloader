@@ -967,7 +967,7 @@ public final class MediaDownloader {
 				return new EventBindableAction.OfNone<>(null); // Do not continue
 			}
 			
-			boolean checkIntegrity = configuration.isCheckResourcesIntegrity();
+			boolean checkIntegrity = isCheckIntegrityEnabled();
 			boolean checkLibraries = true;
 			String versionLib = remoteConfiguration.value("lib");
 			VersionEntryAccessor version = Versions.Common.lib();
@@ -2167,8 +2167,16 @@ public final class MediaDownloader {
 		ResourceRegistry.languages.registerValue(autoLanguage.name(), autoLanguage);
 	}
 	
+	/** @since 00.02.09 */
+	private static final boolean isCheckIntegrityEnabled() {
+		// Always check integrity when the application is updated to ensure valid files,
+		// but still respect the no-update flag.
+		return AppArguments.isUpdateEnabled()
+					&& (applicationUpdated || configuration.isCheckResourcesIntegrity());
+	}
+	
 	private static final void loadMiscellaneousResources(StringReceiver stringReceiver) {
-		boolean checkIntegrity = configuration.isCheckResourcesIntegrity();
+		boolean checkIntegrity = isCheckIntegrityEnabled();
 		Set<Path> pathsToCheck = new HashSet<>();
 		Path pathResources = NIO.localPath("resources/binary");
 		
