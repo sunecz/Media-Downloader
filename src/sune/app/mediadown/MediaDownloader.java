@@ -446,34 +446,10 @@ public final class MediaDownloader {
 			@Override
 			public InitializationState run(Arguments args) {
 				libraries = Libraries.create();
-				
 				registerNativeLibraries();
 				registerLibraries();
 				registerResources();
 				updateTotal(false);
-				return new MaybeListGeneration();
-			}
-		}
-		
-		private static final class MaybeListGeneration implements InitializationState {
-			
-			@Override
-			public InitializationState run(Arguments args) {
-				if(AppArguments.isGenerateListsEnabled()) {
-					try {
-						generateList();
-						generateResourcesList("original");
-						generateResourcesList("compressed");
-						generateJREList();
-						
-						return null; // Do not continue
-					} catch(Exception ex) {
-						error(ex);
-					} finally {
-						close();
-					}
-				}
-				
 				return new CheckLibraries();
 			}
 		}
@@ -926,10 +902,6 @@ public final class MediaDownloader {
 			return !arguments.booleanValue("no-update");
 		}
 		
-		public static final boolean isGenerateListsEnabled() {
-			return arguments.booleanValue("generate-lists");
-		}
-		
 		public static final boolean isOnlyInitializationEnabled() {
 			return arguments.booleanValue("only-init");
 		}
@@ -1222,31 +1194,6 @@ public final class MediaDownloader {
 		// Generate the list of entries
 		checker.generate((path) -> true, checkRequirements, predicateComputeHash);
 		return checker;
-	}
-	
-	protected static final void generateList() throws Exception {
-		FileChecker checker = localFileChecker(false, (path) -> true);
-		
-		if(checker != null) {
-			NIO.save(NIO.localPath("list.sha1"), checker.toString());
-		}
-	}
-	
-	/** @since 00.02.07 */
-	protected static final void generateResourcesList(String dirName) throws Exception {
-		FileChecker checker = Resources.etcFileChecker(dirName, (path) -> true);
-		
-		if(checker != null) {
-			NIO.save(NIO.localPath("list_resources_" + Utils.OfPath.baseName(dirName) + ".sha1"), checker.toString());
-		}
-	}
-	
-	protected static final void generateJREList() {
-		try {
-			JRE.newInstance().generateHashLists(jreVersion);
-		} catch(Exception ex) {
-			error(ex);
-		}
 	}
 	
 	private static final void initExceptionHandlers() {
