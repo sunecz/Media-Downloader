@@ -175,6 +175,8 @@ public final class MediaDownloader {
 	private static Libraries libraries;
 	/** @since 00.02.09 */
 	private static Set<String> pluginConfigurationsToUpdate = new LinkedHashSet<>();
+	/** @since 00.02.09 */
+	private static Log log;
 	
 	private static final AtomicBoolean isDisposed = new AtomicBoolean();
 	private static final String BASE_RESOURCE = "/resources/";
@@ -875,7 +877,7 @@ public final class MediaDownloader {
 	
 	public static final void initialize(String[] args) {
 		arguments = Arguments.parse(args);
-		Log.initialize(Level.ALL);
+		log = Log.initialize("Media-Downloader", "application.log", Level.ALL);
 		for(InitializationState state = InitializationStates.FIRST_STATE;
 				state != null;
 				state = state.run(arguments)) {
@@ -886,6 +888,11 @@ public final class MediaDownloader {
 	/** @since 00.02.02 */
 	public static final Arguments arguments() {
 		return arguments;
+	}
+	
+	/** @since 00.02.09 */
+	public static final Log log() {
+		return log;
 	}
 	
 	/** @since 00.02.08 */
@@ -1918,7 +1925,7 @@ public final class MediaDownloader {
 		}
 		
 		throwable = maybeUnwrapThrowableForView(throwable);
-		Log.error(throwable, "An error occurred");
+		log.error(throwable, "An error occurred");
 		
 		if(FXUtils.isInitialized()) {
 			// Display TranslatableException differently
@@ -1949,7 +1956,7 @@ public final class MediaDownloader {
 		}
 		
 		String text = message + "\n" + content;
-		Log.error(text);
+		log.error(text);
 		
 		if(FXUtils.isInitialized()) {
 			FXUtils.showExceptionWindow(message, content);

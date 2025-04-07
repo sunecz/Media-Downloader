@@ -8,6 +8,7 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
+import java.util.Objects;
 import java.util.logging.FileHandler;
 import java.util.logging.Formatter;
 import java.util.logging.Handler;
@@ -22,48 +23,54 @@ import sune.app.mediadown.util.Utils;
 /** @since 00.02.00 */
 public final class Log {
 	
-	private static final String LOGGER_NAME = "Media-Downloader";
 	/** @since 00.02.08 */
 	private static final Path LOG_DIRECTORY = NIO.localPath("resources/log");
-	private static final Path LOG_PATH = LOG_DIRECTORY.resolve("application.log");
-	private static Logger logger;
+	/** @since 00.02.09 */
+	private static final Log NOOP = new Log();
 	
-	// Forbid anyone to create an instance of this class
+	private Logger logger;
+	
+	// Used only for the NOOP log
+	/** @since 00.02.09 */
 	private Log() {
+		this.logger = null;
 	}
 	
-	private static final void log(Level level, Throwable throwable, String message, Object... args) {
-		if(logger == null) {
-			return;
-		}
-		
-		String sourceClass = null;
-		String sourceMethod = null;
-		
-		StackFrame stackFrame = SourceFinder.stackFrame();
-		if(stackFrame != null) {
-			sourceClass = stackFrame.getClassName();
-			sourceMethod = stackFrame.getMethodName();
-		}
-		
-		logger.logp(level, sourceClass, sourceMethod, String.format(message, args), throwable);
+	/** @since 00.02.09 */
+	private Log(Logger logger) {
+		this.logger = Objects.requireNonNull(logger);
 	}
 	
-	public static final void initialize(Level minLevel) {
-		if(minLevel.intValue() == Level.OFF.intValue()) {
-			return; // Do not bother creating any logger
+	/** @since 00.02.09 */
+	public static final Log initialize(String name, Level minLevel) {
+		return initialize(name, name, minLevel);
+	}
+	
+	/** @since 00.02.09 */
+	public static final Log initialize(String name, String fileName, Level level) {
+		return initialize(name, LOG_DIRECTORY.resolve(fileName), level);
+	}
+	
+	/** @since 00.02.09 */
+	public static final Log initialize(String name, Path path, Level level) {
+		if(name == null || path == null || level == null) {
+			throw new NullPointerException();
 		}
 		
-		logger = Logger.getLogger(LOGGER_NAME);
-		logger.setLevel(minLevel);
+		if(level.intValue() == Level.OFF.intValue()) {
+			return NOOP;
+		}
+		
+		Logger logger = Logger.getLogger(name);
+		logger.setLevel(level);
 		logger.setUseParentHandlers(false);
 		
 		Handler handler;
 		Formatter formatter = new LogRecordFormatter();
 		Exception exception = null;
 		try {
-			NIO.createDir(LOG_PATH.getParent());
-			handler = new FileHandler(LOG_PATH.toAbsolutePath().toString());
+			NIO.createDir(path.getParent());
+			handler = new FileHandler(path.toAbsolutePath().toString());
 			handler.setFormatter(formatter);
 		} catch(SecurityException | IOException ex) {
 			handler = new StreamHandler(System.out, formatter) {
@@ -78,59 +85,78 @@ public final class Log {
 		}
 		
 		logger.addHandler(handler);
+		Log log = new Log(logger);
 		
 		if(exception != null) {
-			error(exception, "Failed to initialize logging to a file. Defaulting to the console.");
+			log.error(exception, "Failed to initialize logging to a file. Defaulting to standard output.");
 		}
 		
-		info("Logger initialized.");
+		log.info("Logger initialized.");
+		return log;
 	}
 	
-	public static final void debug(String message, Object... args) {
+	private final void log(Level level, Throwable throwable, String message, Object... args) {
+		if(logger == null) {
+			return; // Noop
+		}
+		
+		String sourceClass = null;
+		String sourceMethod = null;
+		
+		StackFrame stackFrame = SourceFinder.stackFrame();
+		if(stackFrame != null) {
+			sourceClass = stackFrame.getClassName();
+			sourceMethod = stackFrame.getMethodName();
+		}
+		
+		logger.logp(level, sourceClass, sourceMethod, String.format(message, args), throwable);
+	}
+	
+	public final void debug(String message, Object... args) {
 		debug(null, message, args);
 	}
 	
-	public static final void debug(Throwable throwable, String message, Object... args) {
+	public final void debug(Throwable throwable, String message, Object... args) {
 		log(Level.FINE, throwable, message, args);
 	}
 	
-	public static final void info(String message, Object... args) {
+	public final void info(String message, Object... args) {
 		info(null, message, args);
 	}
 	
-	public static final void info(Throwable throwable, String message, Object... args) {
+	public final void info(Throwable throwable, String message, Object... args) {
 		log(Level.INFO, throwable, message, args);
 	}
 	
-	public static final void warning(String message, Object... args) {
+	public final void warning(String message, Object... args) {
 		warning(null, message, args);
 	}
 	
-	public static final void warning(Throwable throwable, String message, Object... args) {
+	public final void warning(Throwable throwable, String message, Object... args) {
 		log(Level.WARNING, throwable, message, args);
 	}
 	
-	public static final void error(String message, Object... args) {
+	public final void error(String message, Object... args) {
 		error(null, message, args);
 	}
 	
-	public static final void error(Throwable throwable, String message, Object... args) {
+	public final void error(Throwable throwable, String message, Object... args) {
 		log(Level.SEVERE, throwable, message, args);
 	}
 	
 	/** @since 00.02.08 */
-	public static final void toPath(Path path, String message, Object... args) throws IOException {
+	public final void toPath(Path path, String message, Object... args) throws IOException {
 		NIO.save(path, args.length == 0 ? message : String.format(message, args));
 	}
 	
 	/** @since 00.02.08 */
-	public static final Path toUniquePath(String prefix, String message, Object... args)
+	public final Path toUniquePath(String prefix, String message, Object... args)
 			throws IOException {
 		return toUniquePath(LOG_DIRECTORY, prefix, message, args);
 	}
 	
 	/** @since 00.02.08 */
-	public static final Path toUniquePath(Path directory, String prefix, String message, Object... args)
+	public final Path toUniquePath(Path directory, String prefix, String message, Object... args)
 			throws IOException {
 		Path path = NIO.uniqueFile(directory, prefix, ".log");
 		toPath(path, message, args);
