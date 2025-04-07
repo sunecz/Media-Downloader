@@ -109,7 +109,11 @@ public final class Log {
 			sourceMethod = stackFrame.getMethodName();
 		}
 		
-		logger.logp(level, sourceClass, sourceMethod, String.format(message, args), throwable);
+		if(args.length > 0) {
+			message = String.format(message, args);
+		}
+		
+		logger.logp(level, sourceClass, sourceMethod, message, throwable);
 	}
 	
 	public final void debug(String message, Object... args) {
