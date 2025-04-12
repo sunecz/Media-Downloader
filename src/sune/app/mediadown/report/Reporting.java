@@ -189,7 +189,12 @@ public class Reporting {
 				}
 				
 				String value = System.getProperty(name);
-				parent.set(name, value != null ? value.replace("\\", "\\\\") : value);
+				
+				if(value != null) {
+					parent.set(name, value.replace("\\", "\\\\"));
+				} else {
+					parent.setNull(name);
+				}
 			}
 			
 			return parent;
