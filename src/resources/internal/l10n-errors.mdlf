@@ -1,0 +1,33 @@
+#name=any:WEBINTERNALRETRY,fallback=en
+en|goaway received
+en|too many concurrent streams
+en|received rst_stream
+en|eof reached while reading
+en|an existing connection was forcibly closed
+en|connection reset
+
+#name=windows:WSAECONNRESET,fallback=en
+ar|تم إنهاء الاتصال الموجود بالقوة بواسطة المضيف البعيد
+cs|stávající připojení bylo vynuceně ukončeno vzdáleným hostitelem
+da|en eksisterende forbindelse blev tvunget lukket af fjernværten
+de|eine bestehende verbindung wurde vom remotehost geschlossen
+el|υπάρχουσα σύνδεση τερματίστηκε αναγκαστικά από τον απομακρυσμένο κεντρικό υπολογιστή
+en|an existing connection was forcibly closed by the remote host
+es|se forzó el cierre de una conexión existente por el host remoto
+fi|olemassa oleva yhteys suljettiin etäisännän toimesta pakotetusti
+fr|une connexion existante a été fermée de force par l'hôte distant
+he|החיבור הקיים נסגר בכפייה על ידי המארח המרוחק
+hu|egy meglévő kapcsolatot a távoli számítógép kényszerítetten megszakított
+it|una connessione esistente è stata chiusa forzatamente dall'host remoto
+ja|既存の接続がリモート ホストによって強制的に切断されました
+ko|원격 호스트에 의해 기존 연결이 강제로 종료되었습니다
+nb|en eksisterende tilkobling ble tvangslukket av den eksterne verten
+nl|een bestaande verbinding is door de externe host geforceerd gesloten
+pl|istniejące połączenie zostało przymusowo zamknięte przez zdalnego hosta
+pt-br|uma conexão existente foi forçada a ser encerrada pelo host remoto
+pt-pt|uma ligação existente foi forçada a ser fechada pelo host remoto
+ru|существующее подключение было принудительно закрыто удаленным хостом
+sv|en befintlig anslutning tvingades att stängas av fjärrvärden
+tr|mevcut bir bağlantı uzak ana bilgisayar tarafından zorla kapatıldı
+zh-cn|远程主机强迫关闭了一个现有的连接
+zh-tw|遠端主機強制關閉了一個現有的連線

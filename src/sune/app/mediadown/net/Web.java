@@ -49,6 +49,7 @@ import java.util.stream.Stream;
 
 import sune.app.mediadown.Shared;
 import sune.app.mediadown.concurrent.VarLoader;
+import sune.app.mediadown.util.L10N;
 import sune.app.mediadown.util.Opt;
 import sune.app.mediadown.util.Range;
 import sune.app.mediadown.util.Regex;
@@ -154,18 +155,16 @@ public final class Web {
 			return false;
 		}
 		
-		String message = cause.getMessage();
+		String message = L10N.messageOf(cause);
 		
 		if(message == null) {
 			return false;
 		}
 		
-		return message.contains("GOAWAY received")
-					|| message.contains("too many concurrent streams")
-					|| message.contains("Received RST_STREAM")
-					|| message.contains("EOF reached while reading")
-					|| message.contains("An existing connection was forcibly closed")
-					|| message.contains("Connection reset by peer");
+		return (
+			L10N.Errors.ofNeutral().anyContains(message, "WEBINTERNALRETRY")
+				|| L10N.Errors.ofOS().anyEquals(message, "WSAECONNRESET")
+		);
 	}
 	
 	/** @since 00.02.09 */
