@@ -816,10 +816,23 @@ public final class JSON {
 		public static final JSONObject ofLong(long value) { return new JSONObject(JSONType.INTEGER, value); }
 		public static final JSONObject ofFloat(float value) { return new JSONObject(JSONType.DECIMAL, (double) value); }
 		public static final JSONObject ofDouble(double value) { return new JSONObject(JSONType.DECIMAL, value); }
-		public static final JSONObject ofString(String value) { return new JSONObject(JSONType.STRING, JSONString.unescape(value)); }
+		
+		public static final JSONObject ofString(String value) {
+			if(value == null) {
+				return ofNull();
+			}
+			
+			return new JSONObject(JSONType.STRING, JSONString.unescape(value));
+		}
 		
 		// Do not expose to the public interface
-		private static final JSONObject ofStringUnquoted(String value) { return new JSONObject(JSONType.STRING_UNQUOTED, value); }
+		private static final JSONObject ofStringUnquoted(String value) {
+			if(value == null) {
+				return ofNull();
+			}
+			
+			return new JSONObject(JSONType.STRING_UNQUOTED, value);
+		}
 		
 		/** @since 00.02.09 */
 		@Override
