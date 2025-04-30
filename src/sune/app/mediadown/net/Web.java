@@ -105,6 +105,7 @@ public final class Web {
 					.connectTimeout(defaultConnectTimeout)
 					.cookieHandler(cookieManager())
 					.executor(newExecutor())
+					.sslContext(SSL.Contexts.aiaFetching())
 					.version(DEFAULT_HTTP_VERSION);
 	}
 	
