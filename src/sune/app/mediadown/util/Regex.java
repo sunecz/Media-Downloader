@@ -37,6 +37,11 @@ public final class Regex {
 		return Pattern.quote(string);
 	}
 	
+	/** @since 00.02.09 */
+	public static final String quoteReplacement(String string) {
+		return Matcher.quoteReplacement(string);
+	}
+	
 	public static final Regex of(String pattern) {
 		return new Regex(pattern, Flags.NONE);
 	}

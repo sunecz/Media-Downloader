@@ -337,41 +337,90 @@ public final class MPD {
 		
 		private final void prepareFormatMap() {
 			formatMap.put("RepresentationID", representation.id());
+			formatMap.put("Bandwidth", representation.attributes().get("bandwidth"));
 		}
 		
-		private static final Object castToFormatArg(String formatArg, String value) {
-			int type = Character.toLowerCase(Utils.codePointAt(formatArg, formatArg.length() - 1));
-			switch(type) {
-				case 'b':
-					return Boolean.valueOf(value);
-				case 'h':
-				case 'c':
-				case 'd':
-				case 'o':
-				case 'x':
-					return Long.valueOf(value);
-				case 'e':
-				case 'f':
-				case 'g':
-				case 'a':
-					return Double.valueOf(value);
-				default:
-					return value;
-			}
-		}
-		
-		private final String format(MatchResult result) {
-			String text = result.group(0);
+		// Reference: ISO-IEC 23009-1, section 5.3.9.4.4
+		/** @since 00.02.09 */
+		private final String resolveSegmentTemplateIdentifier(MatchResult result) {
 			String name = result.group(1);
+			
+			// Escape sequence: "$$" -> "$"
+			if(name.isEmpty()) {
+				return "\\$"; // Constant quoted replacement
+			}
+			
+			String identifier = name, format = null, value;
 			int index;
-			// Simple name without additional formatting arguments or % as a variable name.
-			if((index = name.indexOf("%")) < 1)
-				return formatMap.getOrDefault(name, text);
-			String varName = name.substring(0, index);
-			String args = name.substring(index + 1);
-			String value = formatMap.getOrDefault(varName, text);
-			value = String.format("%1$" + args, castToFormatArg(args, value));
+			
+			// Check whether a format is present and if so, split the identifier string.
+			if((index = name.indexOf("%")) >= 0) {
+				identifier = name.substring(0, index);
+				format = name.substring(index + 1);
+			}
+			
+			// Exhaustive list to check validity
+			switch(name) {
+				// Does not support formatting
+				case "RepresentationID": {
+					if(format != null) {
+						throw new IllegalStateException("RepresentationID must not have format");
+					}
+					
+					value = formatMap.get(identifier);
+					break;
+				}
+				// Supports formatting
+				case "Number":
+				case "Bandwidth":
+				case "Time": {
+					value = formatMap.get(identifier);
+					
+					// Apply formatting, if possible and requested
+					if(format != null && value != null) {
+						// Validate format, only "%0[width]d" is supported
+						if(!format.startsWith("%0")
+								|| !format.endsWith("d")
+								|| format.length() < 4) {
+							throw new IllegalStateException("Invalid format: " + format);
+						}
+						
+						int width = Integer.parseInt(format.substring(2, format.length() - 1));
+						
+						// The width must be an unsigned integer
+						if(width <= 0) {
+							throw new IllegalStateException("Invalid format: " + format);
+						}
+						
+						value = String.format("%1$0" + width + "d", value);
+					}
+					
+					break;
+				}
+				case "SubNumber": {
+					// Currently we don't support SubNumber identifier due to increased complexity
+					// and not supporting the "k" attribute at the Segment element.
+					throw new IllegalStateException("SubNumber identifier not supported");
+				}
+				default: {
+					return Regex.quoteReplacement(result.group(0)); // Ignore the identifier
+				}
+			}
+			
+			// The identifier must be present at this point, otherwise it is an invalid template
+			if(value == null) {
+				throw new IllegalStateException("Missing identifier value: " + name);
+			}
+			
 			return value;
+		}
+		
+		/** @since 00.02.09 */
+		private final String resolveSegmentTemplate(String template) {
+			return REGEX_SEGMENT_TEMPLATE.replaceAll(
+				template,
+				this::resolveSegmentTemplateIdentifier
+			);
 		}
 		
 		private final void addSegment(String templateURI, Segment segment) throws Exception {
@@ -388,7 +437,7 @@ public final class MPD {
 			double timescaleMult = 1.0 / template.timescale();
 			formatMap.put("Time", String.valueOf(time));
 			formatMap.put("Number", String.valueOf(count));
-			String uri = REGEX_SEGMENT_TEMPLATE.replaceAll(templateURI, this::format);
+			String uri = resolveSegmentTemplate(templateURI);
 			URI uriObj = Net.resolve(baseURI, uri);
 			segments.add(new MPDSegment(uriObj, duration * timescaleMult, time * timescaleMult));
 			time += duration;
