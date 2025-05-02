@@ -40,6 +40,13 @@ public final class SSL {
 			throws IOException, CertificateException {
 		Objects.requireNonNull(uri);
 		
+		// We could cache the certificate here ourselves to not download it multiple times,
+		// however:
+		// - there should be only a single instance of the AIA-fetching SSLContext,
+		// - an SSLContext in its implementation (OpenJDK) uses an SSLSessionContext,
+		// - and an SSLSessionContext implementation (OpenJDK) uses its own caching mechanism,
+		// thus we can omit our cache altogether, since the built-in cache should be enough.
+		
 		try(InputStream is = uri.toURL().openStream()) {
 			return (X509Certificate) Constants.CERT_FACTORY.generateCertificate(is);
 		}
