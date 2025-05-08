@@ -30,6 +30,7 @@ import sune.app.mediadown.update.FileChecker;
 import sune.app.mediadown.update.Requirements;
 import sune.app.mediadown.update.Updater;
 import sune.app.mediadown.util.NIO;
+import sune.app.mediadown.util.OSUtils;
 import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.PathSystem;
 import sune.app.mediadown.util.Utils;
@@ -299,7 +300,15 @@ public final class JRE implements EventBindable<JREEvent> {
 				eventRegistry.call(JREEvent.CHECK, new CheckEventContext<>(JRE.this, name));
 			});
 			
-			return updater.check();
+			boolean success = updater.check();
+			
+			if(success) {
+				// Make sure the `java` binary is executable
+				String name = OSUtils.getExecutableName("java");
+				NIO.makeExecutable(baseDirNew.resolve("bin").resolve(name));
+			}
+			
+			return success;
 		}
 	}
 }

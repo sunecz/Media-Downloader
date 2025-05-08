@@ -176,11 +176,10 @@ public final class Resources {
 		});
 		
 		if(updater.check()) {
-			// Make sure all the binaries are executable (Unix systems)
-			if(!OSUtils.isWindows()) {
-				for(InternalResource resource : localResources()) {
-					NIO.chmod(PATH_RESOURCES.resolve(OSUtils.getExecutableName(resource.name())), 7, 7, 7);
-				}
+			// Make sure all the binaries are executable
+			for(InternalResource resource : localResources()) {
+				String name = OSUtils.getExecutableName(resource.name());
+				NIO.makeExecutable(PATH_RESOURCES.resolve(name));
 			}
 		}
 	}
