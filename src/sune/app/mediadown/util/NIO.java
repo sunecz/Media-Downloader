@@ -31,7 +31,6 @@ import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.PosixFilePermission;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -390,44 +389,6 @@ public final class NIO {
 	public static final void setPosixFilePermissions(Path path, Set<PosixFilePermission> perms)
 			throws IOException {
 		Files.setPosixFilePermissions(path, perms);
-	}
-	
-	private static final PosixFilePermission[] POSIX_PERMISSIONS = {
-		PosixFilePermission.OWNER_EXECUTE,
-		PosixFilePermission.GROUP_EXECUTE,
-		PosixFilePermission.OTHERS_EXECUTE,
-		PosixFilePermission.OWNER_WRITE,
-		PosixFilePermission.GROUP_WRITE,
-		PosixFilePermission.OTHERS_WRITE,
-		PosixFilePermission.OWNER_READ,
-		PosixFilePermission.GROUP_READ,
-		PosixFilePermission.OTHERS_READ
-	};
-	
-	private static final void addPosixPermission(Set<PosixFilePermission> permissions, int index) {
-		if((index >= 0))
-			permissions.add(POSIX_PERMISSIONS[index]);
-	}
-	
-	private static final Set<PosixFilePermission> chmodPermissions(int owner, int group, int others) {
-		if((owner < 0 || owner > 7 || group < 0 || group > 7 || others < 0 || others > 7))
-			throw new IllegalArgumentException();
-		Set<PosixFilePermission> permissions = new HashSet<>();
-		addPosixPermission(permissions, ((owner  & 1) << 0) - 1);
-		addPosixPermission(permissions, ((owner  & 2) << 1) - 1);
-		addPosixPermission(permissions, ((owner  & 4) << 1) - 2);
-		addPosixPermission(permissions, ((group  & 1) << 1) - 1);
-		addPosixPermission(permissions, ((group  & 2) << 2) - 4);
-		addPosixPermission(permissions, ((group  & 4) << 1) - 1);
-		addPosixPermission(permissions, ((others & 1) << 2) - 2);
-		addPosixPermission(permissions, ((others & 2) << 2) - 3);
-		addPosixPermission(permissions, ((others & 4) << 2) - 8);
-		return permissions;
-	}
-	
-	public static final void chmod(Path path, int owner, int group, int others)
-			throws IOException {
-		setPosixFilePermissions(path, chmodPermissions(owner, group, others));
 	}
 	
 	/** @since 00.02.08 */
