@@ -207,7 +207,6 @@ public class FileDownloader implements InternalDownloader, AutoCloseable {
 		return stream; // By default do not modify
 	}
 	
-	@SuppressWarnings("resource")
 	protected ReadableByteChannel doRequest(Range<Long> range) throws Exception {
 		Request req = request;
 		long size = totalBytes;
