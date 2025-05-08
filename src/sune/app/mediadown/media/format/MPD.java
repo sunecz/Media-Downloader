@@ -360,7 +360,7 @@ public final class MPD {
 			}
 			
 			// Exhaustive list to check validity
-			switch(name) {
+			switch(identifier) {
 				// Does not support formatting
 				case "RepresentationID": {
 					if(format != null) {
@@ -379,20 +379,20 @@ public final class MPD {
 					// Apply formatting, if possible and requested
 					if(format != null && value != null) {
 						// Validate format, only "%0[width]d" is supported
-						if(!format.startsWith("%0")
+						if(!format.startsWith("0")
 								|| !format.endsWith("d")
-								|| format.length() < 4) {
+								|| format.length() < 3) {
 							throw new IllegalStateException("Invalid format: " + format);
 						}
 						
-						int width = Integer.parseInt(format.substring(2, format.length() - 1));
+						int width = Integer.parseInt(format.substring(1, format.length() - 1));
 						
 						// The width must be an unsigned integer
 						if(width <= 0) {
 							throw new IllegalStateException("Invalid format: " + format);
 						}
 						
-						value = String.format("%1$0" + width + "d", value);
+						value = String.format("%1$0" + width + "d", Integer.parseInt(value));
 					}
 					
 					break;
@@ -409,7 +409,7 @@ public final class MPD {
 			
 			// The identifier must be present at this point, otherwise it is an invalid template
 			if(value == null) {
-				throw new IllegalStateException("Missing identifier value: " + name);
+				throw new IllegalStateException("Missing identifier value: " + identifier);
 			}
 			
 			return value;
