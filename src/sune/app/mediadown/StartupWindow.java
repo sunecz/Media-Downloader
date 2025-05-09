@@ -25,6 +25,8 @@ public final class StartupWindow extends Stage {
 		InternalFontLoader.loadFonts();
 	}
 	
+	private static StartupWindow instance;
+	
 	private final Scene scene;
 	private final StackPane pane;
 	private final StackPane paneBack;
@@ -67,6 +69,7 @@ public final class StartupWindow extends Stage {
 		getIcons().setAll(MediaDownloader.ICON);
 		setTitle(title);
 		setTotal(total);
+		instance = this;
 	}
 	
 	private static final String stylesheet(String name) {
@@ -112,6 +115,10 @@ public final class StartupWindow extends Stage {
 		@SuppressWarnings("unchecked")
 		T casted = (T) result;
 		return casted;
+	}
+	
+	public static final StartupWindow instance() {
+		return instance;
 	}
 	
 	public final void update(String text) {
