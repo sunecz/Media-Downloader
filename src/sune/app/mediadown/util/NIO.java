@@ -9,7 +9,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.nio.ByteBuffer;
@@ -38,6 +37,7 @@ import java.util.function.BiPredicate;
 
 import sune.app.mediadown.Shared;
 import sune.app.mediadown.concurrent.Threads;
+import sune.app.mediadown.util.unsafe.Reflection;
 
 public final class NIO {
 	
@@ -359,30 +359,28 @@ public final class NIO {
 	}
 	
 	/** @since 00.02.00 */
-	public static final void unmap(MappedByteBuffer buffer)
-			throws NoSuchMethodException,
-			       SecurityException,
-			       NoSuchFieldException,
-			       IllegalArgumentException,
-			       IllegalAccessException,
-			       InvocationTargetException {
-		if((buffer != null && buffer.isDirect())) {
+	public static final void unmap(MappedByteBuffer buffer) throws IOException {
+		if(buffer == null || !buffer.isDirect()) {
+			return; // Nothing to unmap
+		}
+		
+		try {
 			// Since there is no official way to fully "close" a mapped byte
 			// buffer that uses direct byte buffer, it is needed to call
 			// Sun's internal methods to clean the leftovers. This ensures
 			// that the file can be copied, moved, renamed, deleted, etc.
 			// immediately after its file channel is closed.
-			Method methodCleaner = buffer.getClass().getMethod("cleaner");
-			Reflection.setAccessible(methodCleaner, true);
-			// Get the cleaner instance
-			Object objectCleaner = methodCleaner.invoke(buffer);
-			if((objectCleaner != null)) {
-				// Run the cleaner clean() method
-				Class<?> classCleaner = objectCleaner.getClass();
-				Method   methodClean  = classCleaner .getMethod("clean");
-				Reflection.setAccessible(methodClean, true);
-				methodClean.invoke(objectCleaner);
+			Method methodCleaner = Reflection.getMethod(buffer.getClass(), "cleaner");
+			Object cleaner = Reflection.invokeMethod(methodCleaner, buffer);
+			
+			if(cleaner != null) {
+				// Run the cleaner's clean() method
+				Method methodClean = Reflection.getMethod(cleaner.getClass(), "clean");
+				Reflection.invokeMethod(methodClean, cleaner);
 			}
+		} catch(Throwable th) {
+			// Should not be done, but since it's an IO operation, it should throw IOException.
+			throw new IOException(th);
 		}
 	}
 	

@@ -69,7 +69,7 @@ import sune.app.mediadown.report.Report;
 import sune.app.mediadown.report.Report.Reason;
 import sune.app.mediadown.report.ReportContext;
 import sune.app.mediadown.theme.Theme;
-import sune.app.mediadown.util.Reflection2.InstanceCreationException;
+import sune.app.mediadown.util.unsafe.Reflection;
 
 public final class FXUtils {
 	
@@ -812,7 +812,6 @@ public final class FXUtils {
 					_mh_getColumnHeaderFor = lookup.unreflect(method);
 				} catch(NoSuchMethodException
 							| SecurityException
-							| NoSuchFieldException
 							| IllegalArgumentException
 							| IllegalAccessException ex) {
 					throw new IllegalStateException(ex);
@@ -827,7 +826,6 @@ public final class FXUtils {
 					_mh_resizeColumnToFitContent = lookup.unreflect(method);
 				} catch(NoSuchMethodException
 						| SecurityException
-						| NoSuchFieldException
 						| IllegalArgumentException
 						| IllegalAccessException ex) {
 					throw new IllegalStateException(ex);
@@ -1366,12 +1364,11 @@ public final class FXUtils {
 			// the showDocument one does not use the Application instance in any way,
 			// at least not currently in JavaFX 11, so we should be okay.
 			try {
-				hostServices = Reflection2.newInstance(
-					HostServices.class,
-					new Class[] { Application.class },
+				hostServices = Reflection.newInstance(
+					Reflection.getConstructor(HostServices.class, Application.class),
 					dummyApplication()
 				);
-			} catch(InstanceCreationException ex) {
+			} catch(Throwable th) {
 				return false;
 			}
 		}
@@ -1388,10 +1385,10 @@ public final class FXUtils {
 	/** @since 00.02.09 */
 	public static final Stage alertStage(Alert alert) {
 		Objects.requireNonNull(alert);
-		Class<?> internalClass = Reflection2.getClass("javafx.scene.control.HeavyweightDialog");
-		return (Stage) Reflection2.getField(
-			internalClass, Reflection2.getField(Dialog.class, alert, "dialog"), "stage"
-		);
+		Class<?> internalClass = Reflection.getClass("javafx.scene.control.HeavyweightDialog");
+		Field fieldStage = Reflection.getField(internalClass, "stage");
+		Field fieldDialog = Reflection.getField(Dialog.class, "dialog");
+		return Reflection.getValue(fieldStage, Reflection.getValue(fieldDialog, alert));
 	}
 	
 	// Forbid anyone to create an instance of this class

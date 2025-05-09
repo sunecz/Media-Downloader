@@ -12,6 +12,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLStreamHandler;
@@ -130,7 +131,6 @@ import sune.app.mediadown.update.VersionType;
 import sune.app.mediadown.util.CheckedFunction;
 import sune.app.mediadown.util.CheckedRunnable;
 import sune.app.mediadown.util.FXUtils;
-import sune.app.mediadown.util.IllegalAccessWarnings;
 import sune.app.mediadown.util.MathUtils;
 import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.OSUtils;
@@ -138,12 +138,12 @@ import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.Password;
 import sune.app.mediadown.util.PathSystem;
 import sune.app.mediadown.util.Ref;
-import sune.app.mediadown.util.Reflection2;
-import sune.app.mediadown.util.Reflection3;
 import sune.app.mediadown.util.Regex;
 import sune.app.mediadown.util.SelfProcess;
 import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Utils.Ignore;
+import sune.app.mediadown.util.unsafe.IllegalAccessWarnings;
+import sune.app.mediadown.util.unsafe.Reflection;
 import sune.util.load.ModuleUtils;
 import sune.util.ssdf2.SSDAnnotation;
 import sune.util.ssdf2.SSDCollection;
@@ -840,11 +840,12 @@ public final class MediaDownloader {
 							.filter((p) -> p.getPlugin().instance().name().equals(pluginName))
 							.findFirst().isPresent()) {
 						// Check whether the class actually exists
-						Class<?> clazz = Reflection2.getClass(className);
+						Class<?> clazz = Reflection.getClass(className);
 						if(clazz != null) {
 							// Call the main method in that class
 							try {
-								Reflection3.invoke(null, clazz, "run", new Object[] { args.args() });
+								Method method = Reflection.getMethod(clazz, "run", String[].class);
+								Reflection.invokeMethod(method, null, new Object[] { args.args() });
 							} catch(Exception ex) {
 								// Just print exception and exit
 								ex.printStackTrace();

@@ -10,6 +10,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import sune.app.mediadown.util.unsafe.Reflection;
+
 /** @since 00.02.09 */
 public abstract class ClassRegistry<T> implements Iterable<Pair<String, T>> {
 	
@@ -33,14 +35,10 @@ public abstract class ClassRegistry<T> implements Iterable<Pair<String, T>> {
 			       NoSuchFieldException,
 			       SecurityException,
 			       NoSuchMethodException {
-		Constructor<? extends T> ctor = clazz.getDeclaredConstructor();
-		Reflection.setAccessible(ctor, true);
-		
-		try {
-			return ctor.newInstance();
-		} finally {
-			Reflection.setAccessible(ctor, false);
-		}
+		Constructor<?> ctor = Reflection.getConstructor(clazz);
+		@SuppressWarnings("unchecked")
+		T instance = (T) Reflection.newInstance(ctor);
+		return instance;
 	}
 	
 	protected Class<? extends T> classOf(String className) throws ClassNotFoundException {

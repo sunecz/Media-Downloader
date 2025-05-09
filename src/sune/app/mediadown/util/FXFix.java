@@ -1,5 +1,6 @@
 package sune.app.mediadown.util;
 
+import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -8,6 +9,7 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.ProgressBar;
 import javafx.stage.Window;
+import sune.app.mediadown.util.unsafe.Reflection;
 
 /** @since 00.02.00 */
 public final class FXFix {
@@ -18,10 +20,9 @@ public final class FXFix {
 		
 		private final ChangeListener<Boolean> windowShowingChangedListener;
 		
-		@SuppressWarnings("unchecked")
 		public ProgressBarFixer(ProgressBar progressBar) {
-			windowShowingChangedListener
-				= (ChangeListener<Boolean>) Reflection2.getField(Node.class, progressBar, "windowShowingChangedListener");
+			Field field = Reflection.getField(Node.class, "windowShowingChangedListener");
+			windowShowingChangedListener = Reflection.getValue(field, progressBar);
 			progressBar.sceneProperty().addListener((o, ov, nv) -> fix(ov, nv));
 		}
 		
