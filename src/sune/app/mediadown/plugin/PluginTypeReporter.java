@@ -41,7 +41,7 @@ final class PluginTypeReporter implements TypeReporter {
 			// Ignore
 		}
 		// Define the requested class by the given bytes
-		return UnsafeLegacy.defineClass(name, bytes, 0, bytes.length, loader, null);
+		return UnsafeLegacy.defineClass(loader, name, bytes, 0, bytes.length, null);
 	}
 	
 	public static final void resetClassLoader() {

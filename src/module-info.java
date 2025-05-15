@@ -58,4 +58,5 @@ module sune.app.mediadown {
 	exports sune.app.mediadown.transformer;
 	exports sune.app.mediadown.update;
 	exports sune.app.mediadown.util;
+	exports sune.app.mediadown.util.unsafe;
 }
