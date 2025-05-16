@@ -31,10 +31,12 @@ module sune.app.mediadown {
 	exports sune.app.mediadown.exception;
 	exports sune.app.mediadown.ffmpeg;
 	exports sune.app.mediadown.gui;
+	exports sune.app.mediadown.gui.clipboard;
 	exports sune.app.mediadown.gui.control;
 	exports sune.app.mediadown.gui.form;
 	exports sune.app.mediadown.gui.form.field;
 	exports sune.app.mediadown.gui.table;
+	exports sune.app.mediadown.gui.util;
 	exports sune.app.mediadown.gui.window;
 	exports sune.app.mediadown.language;
 	exports sune.app.mediadown.library;
