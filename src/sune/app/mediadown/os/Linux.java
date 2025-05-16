@@ -5,8 +5,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
 
-import sune.app.mediadown.gui.util.FXUtils;
-
 /** @since 00.02.07 */
 class Linux implements OS {
 	
@@ -31,8 +29,19 @@ class Linux implements OS {
 	
 	@Override
 	public void browse(URI uri) throws IOException {
-		// Delegate to the existing method
-		FXUtils.openURI(uri);
+		// `xdg-open` should be available on most Linux distributions. The reason to use
+		// this method is that the previous solution was to delegate the call to the JavaFX API,
+		// specifically the javafx.application.HostServices::showDocument method. The implementation
+		// simply tried pre-defined browsers (e.g. firefox, google-chrome) and if none was found
+		// to be working, just threw an exception. This solution simply delegates the call
+		// to a utility executable that should be mostly available and that is based on mime type
+		// handlers, thus it itself selects the application based on the scheme (HTTP, HTTPS, ...),
+		// which should open a web browser (or whatever, it does not really matter). This means,
+		// that it depends only on having this utility present and having a mime type handler setup.
+		// And that should behave better on most Linux systems.
+		Runtime.getRuntime().exec(new String[] {
+			"xdg-open", uri.toString()
+		});
 	}
 	
 	/** @since 00.02.08 */

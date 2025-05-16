@@ -18,8 +18,6 @@ import java.util.concurrent.Callable;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-import javafx.application.Application;
-import javafx.application.HostServices;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.property.ReadOnlyProperty;
@@ -1333,54 +1331,6 @@ public final class FXUtils {
 		} else {
 			once(stage.sceneProperty(), (o, ov, nv) -> oncePostLayout(stage, listener));
 		}
-	}
-	
-	/** @since 00.02.06 */
-	private static Application dummyApplication;
-	
-	/** @since 00.02.06 */
-	private static final Application dummyApplication() {
-		if(dummyApplication == null) {
-			dummyApplication = new Application() {
-				
-				@Override
-				public void start(Stage primaryStage) throws Exception {
-					// Do nothing
-				}
-			};
-		}
-		return dummyApplication;
-	}
-	
-	/** @since 00.02.06 */
-	private static HostServices hostServices;
-	
-	/** @since 00.02.06 */
-	public static final boolean openURI(String uri) {
-		Objects.requireNonNull(uri);
-		if(hostServices == null) {
-			// The constructor is not publicly accessible, so just use reflection.
-			// For the Application argument just use the dummy Application instance,
-			// this may cause problems with other HostServices methods, however
-			// the showDocument one does not use the Application instance in any way,
-			// at least not currently in JavaFX 11, so we should be okay.
-			try {
-				hostServices = Reflection.newInstance(
-					Reflection.getConstructor(HostServices.class, Application.class),
-					dummyApplication()
-				);
-			} catch(Throwable th) {
-				return false;
-			}
-		}
-		hostServices.showDocument(uri);
-		// Return true even though we don't know if it was really successful
-		return true;
-	}
-	
-	/** @since 00.02.06 */
-	public static final boolean openURI(URI uri) {
-		return openURI(Objects.requireNonNull(uri).toString());
 	}
 	
 	/** @since 00.02.09 */
