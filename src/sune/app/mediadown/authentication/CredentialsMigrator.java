@@ -15,7 +15,7 @@ import java.util.stream.Stream;
 
 import sune.app.mediadown.configuration.Configuration;
 import sune.app.mediadown.configuration.Configuration.ConfigurationProperty;
-import sune.app.mediadown.util.UncheckedException;
+import sune.app.mediadown.exception.UncheckedException;
 import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.unsafe.Reflection;
 

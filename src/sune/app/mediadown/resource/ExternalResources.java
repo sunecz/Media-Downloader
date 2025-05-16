@@ -17,12 +17,12 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import javafx.scene.image.Image;
+import sune.app.mediadown.exception.UncheckedException;
 import sune.app.mediadown.language.Language;
 import sune.app.mediadown.theme.Theme;
 import sune.app.mediadown.util.CheckedConsumer;
 import sune.app.mediadown.util.MimeType;
 import sune.app.mediadown.util.NIO;
-import sune.app.mediadown.util.UncheckedException;
 import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Utils.Ignore;
 import sune.util.ssdf2.SSDCollection;

@@ -18,7 +18,7 @@ import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 
-import sune.app.mediadown.util.UncheckedException;
+import sune.app.mediadown.exception.UncheckedException;
 
 /** @since 00.02.09 */
 public final class Crypto {
