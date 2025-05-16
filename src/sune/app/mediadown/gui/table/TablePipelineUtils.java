@@ -56,6 +56,7 @@ import sune.app.mediadown.media.MediaFormat;
 import sune.app.mediadown.media.MediaLanguage;
 import sune.app.mediadown.media.MediaQuality;
 import sune.app.mediadown.media.MediaType;
+import sune.app.mediadown.media.ResolvedMedia;
 import sune.app.mediadown.media.SubtitlesMediaBase;
 import sune.app.mediadown.report.Report;
 import sune.app.mediadown.report.Report.Reason;

@@ -1,10 +1,9 @@
-package sune.app.mediadown.gui.table;
+package sune.app.mediadown.media;
 
 import java.nio.file.Path;
 import java.util.Objects;
 
 import sune.app.mediadown.download.MediaDownloadConfiguration;
-import sune.app.mediadown.media.Media;
 
 /** @since 00.01.27 */
 public final class ResolvedMedia {

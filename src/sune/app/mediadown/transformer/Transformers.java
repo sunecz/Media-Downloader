@@ -4,7 +4,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import sune.app.mediadown.gui.table.ResolvedMedia;
+import sune.app.mediadown.media.ResolvedMedia;
 import sune.app.mediadown.util.ObjectHolder;
 import sune.app.mediadown.util.Opt;
 

@@ -1,7 +1,7 @@
 package sune.app.mediadown.transformer;
 
 import sune.app.mediadown.concurrent.VarLoader;
-import sune.app.mediadown.gui.table.ResolvedMedia;
+import sune.app.mediadown.media.ResolvedMedia;
 import sune.app.mediadown.pipeline.PipelineTransformer;
 
 /** @since 00.02.09 */

@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.Objects;
 
 import sune.app.mediadown.conversion.ConversionMedia;
-import sune.app.mediadown.gui.table.ResolvedMedia;
+import sune.app.mediadown.media.ResolvedMedia;
 
 /** @since 00.01.26 */
 public final class DownloadPipelineResult implements PipelineResult {

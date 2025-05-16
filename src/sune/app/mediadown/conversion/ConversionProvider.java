@@ -4,8 +4,8 @@ import java.util.List;
 
 import sune.app.mediadown.entity.Converter;
 import sune.app.mediadown.event.tracker.TrackerManager;
-import sune.app.mediadown.gui.table.ResolvedMedia;
 import sune.app.mediadown.media.MediaFormat;
+import sune.app.mediadown.media.ResolvedMedia;
 
 /** @since 00.02.09 */
 public interface ConversionProvider {

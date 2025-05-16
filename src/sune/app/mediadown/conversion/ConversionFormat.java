@@ -5,9 +5,9 @@ import java.util.Objects;
 
 import sune.app.mediadown.conversion.ConversionCommand.Input;
 import sune.app.mediadown.conversion.ConversionCommand.Output;
-import sune.app.mediadown.gui.table.ResolvedMedia;
 import sune.app.mediadown.media.Media;
 import sune.app.mediadown.media.MediaFormat;
+import sune.app.mediadown.media.ResolvedMedia;
 
 /** @since 00.02.08 */
 public abstract class ConversionFormat {

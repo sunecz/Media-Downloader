@@ -6,7 +6,7 @@ import java.util.Objects;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import sune.app.mediadown.gui.table.ResolvedMedia;
+import sune.app.mediadown.media.ResolvedMedia;
 import sune.app.mediadown.pipeline.AbstractPipelineTask;
 import sune.app.mediadown.pipeline.Pipeline;
 import sune.app.mediadown.pipeline.PipelineResult;
