@@ -30,7 +30,7 @@ import javafx.scene.shape.SVGPath;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
-import sune.app.mediadown.util.FXUtils;
+import sune.app.mediadown.gui.util.FXUtils;
 import sune.app.mediadown.util.Utils;
 
 public class DraggableWindow<T extends Pane> extends Window<StackPane> {

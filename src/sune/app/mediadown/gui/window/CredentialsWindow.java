@@ -31,7 +31,7 @@ import sune.app.mediadown.gui.DraggableWindow;
 import sune.app.mediadown.gui.GUI.CredentialsRegistry;
 import sune.app.mediadown.gui.GUI.CredentialsRegistry.CredentialsEntry;
 import sune.app.mediadown.gui.control.IconTableCell;
-import sune.app.mediadown.util.FXUtils;
+import sune.app.mediadown.gui.util.FXUtils;
 
 /** @since 00.02.09 */
 public class CredentialsWindow extends DraggableWindow<VBox> {

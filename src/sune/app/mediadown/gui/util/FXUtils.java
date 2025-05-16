@@ -1,4 +1,4 @@
-package sune.app.mediadown.util;
+package sune.app.mediadown.gui.util;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -69,6 +69,7 @@ import sune.app.mediadown.report.Report;
 import sune.app.mediadown.report.Report.Reason;
 import sune.app.mediadown.report.ReportContext;
 import sune.app.mediadown.theme.Theme;
+import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.unsafe.Reflection;
 
 public final class FXUtils {

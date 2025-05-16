@@ -21,6 +21,8 @@ import javafx.scene.layout.StackPane;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import sune.app.mediadown.gui.DraggableWindow;
+import sune.app.mediadown.gui.clipboard.ClipboardUtils;
+import sune.app.mediadown.gui.util.FXUtils;
 import sune.app.mediadown.media.AudioMediaBase;
 import sune.app.mediadown.media.Media;
 import sune.app.mediadown.media.MediaContainer;
@@ -29,8 +31,6 @@ import sune.app.mediadown.media.MediaQuality;
 import sune.app.mediadown.media.MediaType;
 import sune.app.mediadown.media.SubtitlesMedia;
 import sune.app.mediadown.media.VideoMediaBase;
-import sune.app.mediadown.util.ClipboardUtils;
-import sune.app.mediadown.util.FXUtils;
 
 /** @since 00.02.05 */
 public class MediaInfoWindow extends DraggableWindow<StackPane> {

@@ -5,7 +5,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
 
-import sune.app.mediadown.util.FXUtils;
+import sune.app.mediadown.gui.util.FXUtils;
 
 /** @since 00.02.07 */
 class Linux implements OS {

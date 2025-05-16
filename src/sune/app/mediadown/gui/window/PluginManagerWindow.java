@@ -31,13 +31,13 @@ import sune.app.mediadown.gui.ProgressWindow;
 import sune.app.mediadown.gui.ProgressWindow.ProgressAction;
 import sune.app.mediadown.gui.ProgressWindow.ProgressContext;
 import sune.app.mediadown.gui.control.IconTableCell;
+import sune.app.mediadown.gui.util.FXUtils;
 import sune.app.mediadown.language.Translation;
 import sune.app.mediadown.net.Net;
 import sune.app.mediadown.os.OS;
 import sune.app.mediadown.plugin.PluginFile;
 import sune.app.mediadown.plugin.PluginUpdater;
 import sune.app.mediadown.plugin.Plugins;
-import sune.app.mediadown.util.FXUtils;
 import sune.app.mediadown.util.MathUtils;
 
 /** @since 00.02.09 */

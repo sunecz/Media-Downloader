@@ -16,9 +16,9 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.gui.DraggableWindow;
+import sune.app.mediadown.gui.util.FXUtils;
 import sune.app.mediadown.language.Translation;
 import sune.app.mediadown.media.MediaTitleFormat;
-import sune.app.mediadown.util.FXUtils;
 import sune.app.mediadown.util.Previews;
 import sune.app.mediadown.util.Previews.MediaTitleFormatPreviewMask;
 

@@ -29,12 +29,12 @@ import sune.app.mediadown.gui.Dialog;
 import sune.app.mediadown.gui.DraggableWindow;
 import sune.app.mediadown.gui.GUI;
 import sune.app.mediadown.gui.control.TranslatableListCell;
+import sune.app.mediadown.gui.util.FXUtils;
 import sune.app.mediadown.language.Translation;
 import sune.app.mediadown.report.ContactInformation;
 import sune.app.mediadown.report.Report;
 import sune.app.mediadown.report.Report.Reason;
 import sune.app.mediadown.report.Reporting;
-import sune.app.mediadown.util.FXUtils;
 import sune.app.mediadown.util.JSON.JSONCollection;
 import sune.app.mediadown.util.Utils;
 

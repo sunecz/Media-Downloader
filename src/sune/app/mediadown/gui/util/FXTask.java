@@ -1,9 +1,10 @@
-package sune.app.mediadown.util;
+package sune.app.mediadown.gui.util;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicReference;
 
 import sune.app.mediadown.concurrent.SyncObject;
+import sune.app.mediadown.util.Utils;
 
 public final class FXTask<T> implements Runnable {
 	

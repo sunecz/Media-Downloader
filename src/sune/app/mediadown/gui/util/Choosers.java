@@ -1,4 +1,4 @@
-package sune.app.mediadown.util;
+package sune.app.mediadown.gui.util;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -15,6 +15,8 @@ import javafx.stage.Window;
 import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.configuration.ApplicationConfiguration;
 import sune.app.mediadown.media.MediaFormat;
+import sune.app.mediadown.util.NIO;
+import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Utils.Ignore;
 
 /** @since 00.02.05 */
