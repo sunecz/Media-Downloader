@@ -2,7 +2,7 @@ package sune.app.mediadown.update;
 
 import java.util.Objects;
 
-import sune.app.mediadown.util.OSUtils;
+import sune.app.mediadown.os.OS;
 import sune.app.mediadown.util.Regex;
 
 /** @since 00.02.07 */
@@ -12,11 +12,11 @@ public final class Requirements {
 	private static final String STRING_ANY_OS_NAME = "***";
 	private static final String STRING_ANY_OS_ARCH = "**";
 	
-	public static final Requirements CURRENT = new Requirements(OSUtils.getSystemName(), OSUtils.getSystemArch());
+	public static final Requirements CURRENT = new Requirements(OS.shortName(), String.valueOf(OS.bits()));
 	public static final Requirements ANY     = new Requirements(null, null);
-	public static final Requirements WIN_64  = new Requirements(OSUtils.OS_NAME_WINDOWS, OSUtils.OS_ARCH_64);
-	public static final Requirements UNX_64  = new Requirements(OSUtils.OS_NAME_UNIX, OSUtils.OS_ARCH_64);
-	public static final Requirements MAC_64  = new Requirements(OSUtils.OS_NAME_MACOS, OSUtils.OS_ARCH_64);
+	public static final Requirements WIN_64  = new Requirements(OS.Name.WINDOWS.shortValue(), "64");
+	public static final Requirements UNX_64  = new Requirements(OS.Name.LINUX.shortValue(), "64");
+	public static final Requirements MAC_64  = new Requirements(OS.Name.MACOS.shortValue(), "64");
 	
 	private final String osName;
 	private final String osArch;

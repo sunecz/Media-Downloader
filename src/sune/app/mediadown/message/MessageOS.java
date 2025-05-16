@@ -3,16 +3,16 @@ package sune.app.mediadown.message;
 import java.util.Objects;
 import java.util.Set;
 
-import sune.app.mediadown.util.OSUtils;
+import sune.app.mediadown.os.OS;
 
 /** @since 00.02.05 */
 public final class MessageOS {
 	
 	private static final Set<String> setNone = Set.of();
 	private static final Set<String> setAll = Set.of(
-		OSUtils.OS_NAME_WINDOWS,
-		OSUtils.OS_NAME_UNIX,
-		OSUtils.OS_NAME_MACOS
+		OS.Name.WINDOWS.shortValue(),
+		OS.Name.LINUX.shortValue(),
+		OS.Name.MACOS.shortValue()
 	);
 	
 	private static MessageOS NONE;

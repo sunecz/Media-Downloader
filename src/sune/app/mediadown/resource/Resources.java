@@ -20,11 +20,11 @@ import sune.app.mediadown.event.tracker.DownloadTracker;
 import sune.app.mediadown.event.tracker.TrackerManager;
 import sune.app.mediadown.net.Net;
 import sune.app.mediadown.net.Web.Request;
+import sune.app.mediadown.os.OS;
 import sune.app.mediadown.update.FileChecker;
 import sune.app.mediadown.update.Requirements;
 import sune.app.mediadown.update.Updater;
 import sune.app.mediadown.util.NIO;
-import sune.app.mediadown.util.OSUtils;
 import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.Ref;
 
@@ -89,8 +89,15 @@ public final class Resources {
 		return destination;
 	}
 	
+	/** @since 00.02.09 */
+	private static final Pair<String, String> parseOS(String string) {
+		return string != null && string.length() == 5
+					? new Pair<>(string.substring(0, 3).toLowerCase(), string.substring(3))
+					: null;
+	}
+	
 	private static final Requirements requirements(String os) {
-		Pair<String, String> pair = OSUtils.parse(os);
+		Pair<String, String> pair = parseOS(os);
 		return Requirements.create(pair.a, pair.b);
 	}
 	
@@ -178,7 +185,7 @@ public final class Resources {
 		if(updater.check()) {
 			// Make sure all the binaries are executable
 			for(InternalResource resource : localResources()) {
-				String name = OSUtils.getExecutableName(resource.name());
+				String name = OS.current().executableFileName(resource.name());
 				NIO.makeExecutable(PATH_RESOURCES.resolve(name));
 			}
 		}
@@ -194,7 +201,7 @@ public final class Resources {
 			checker.addEntry(dir.resolve(resource.os())
 			                    .resolve(resource.app())
 			                    .resolve(resource.version())
-			                    .resolve(OSUtils.getExecutableName(resource.name())),
+			                    .resolve(OS.current().executableFileName(resource.name())),
 			                 requirements(resource.os()),
 			                 resource.version());
 		}
@@ -208,7 +215,7 @@ public final class Resources {
 		FileChecker checker = new FileChecker.PrefixedFileChecker(PATH_RESOURCES, PATH_RESOURCES);
 		
 		for(InternalResource resource : localResources()) {
-			checker.addEntry(PATH_RESOURCES.resolve(OSUtils.getExecutableName(resource.name())),
+			checker.addEntry(PATH_RESOURCES.resolve(OS.current().executableFileName(resource.name())),
 			                 requirements(resource.os()),
 			                 resource.version());
 		}

@@ -26,9 +26,9 @@ import sune.app.mediadown.media.MediaConstants;
 import sune.app.mediadown.media.MediaFormat;
 import sune.app.mediadown.media.MediaType;
 import sune.app.mediadown.media.VideoMedia;
+import sune.app.mediadown.os.OS;
 import sune.app.mediadown.util.Metadata;
 import sune.app.mediadown.util.NIO;
-import sune.app.mediadown.util.OSUtils;
 import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.Regex;
 
@@ -43,7 +43,7 @@ public final class FFmpeg {
 	
 	private static final Path ensureBinary() {
 		if(path == null) {
-			path = NIO.localPath("resources/binary", OSUtils.getExecutableName("ffmpeg"));
+			path = NIO.localPath("resources/binary", OS.current().executableFileName("ffmpeg"));
 			
 			if(!NIO.isRegularFile(path)) {
 				throw new IllegalStateException("FFmpeg was not found at " + path.toAbsolutePath().toString());

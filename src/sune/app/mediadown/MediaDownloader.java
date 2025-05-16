@@ -105,6 +105,7 @@ import sune.app.mediadown.net.Net;
 import sune.app.mediadown.net.Web;
 import sune.app.mediadown.net.Web.Request;
 import sune.app.mediadown.net.Web.Response;
+import sune.app.mediadown.os.OS;
 import sune.app.mediadown.plugin.PluginConfiguration;
 import sune.app.mediadown.plugin.PluginFile;
 import sune.app.mediadown.plugin.PluginUpdater;
@@ -133,7 +134,6 @@ import sune.app.mediadown.util.CheckedRunnable;
 import sune.app.mediadown.util.FXUtils;
 import sune.app.mediadown.util.MathUtils;
 import sune.app.mediadown.util.NIO;
-import sune.app.mediadown.util.OSUtils;
 import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.Password;
 import sune.app.mediadown.util.PathSystem;
@@ -1331,9 +1331,9 @@ public final class MediaDownloader {
 	
 	private static final class ResourcesManager {
 		
-		private static final String OS_WIN64 = OSUtils.OS_NAME_WINDOWS + OSUtils.OS_ARCH_64;
-		private static final String OS_UNX64 = OSUtils.OS_NAME_UNIX    + OSUtils.OS_ARCH_64;
-		private static final String OS_MAC64 = OSUtils.OS_NAME_MACOS   + OSUtils.OS_ARCH_64;
+		private static final String OS_WIN64 = OS.Name.WINDOWS.shortValue() + "64";
+		private static final String OS_UNX64 = OS.Name.LINUX.shortValue() + "64";
+		private static final String OS_MAC64 = OS.Name.MACOS.shortValue() + "64";
 		
 		private static final boolean hasFlag(Set<String> flags, String flag) {
 			return flags.isEmpty() || flags.contains(flag);
@@ -2195,7 +2195,7 @@ public final class MediaDownloader {
 				Version verRemote = Version.of(resource.version());
 				
 				if(verLocal.compareTo(verRemote) != 0 || verLocal == Version.UNKNOWN) {
-					Path path = pathResources.resolve(OSUtils.getExecutableName(resource.name()));
+					Path path = pathResources.resolve(OS.current().executableFileName(resource.name()));
 					pathsToCheck.add(path);
 				}
 			}

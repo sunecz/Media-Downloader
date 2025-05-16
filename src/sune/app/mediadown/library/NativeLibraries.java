@@ -15,8 +15,8 @@ import sune.app.mediadown.event.Event;
 import sune.app.mediadown.event.EventRegistry;
 import sune.app.mediadown.event.Listener;
 import sune.app.mediadown.event.NativeLibraryLoaderEvent;
+import sune.app.mediadown.os.OS;
 import sune.app.mediadown.util.NIO;
-import sune.app.mediadown.util.OSUtils;
 import sune.app.mediadown.util.Pair;
 
 public final class NativeLibraries {
@@ -104,7 +104,7 @@ public final class NativeLibraries {
 		private final String osArch;
 		
 		public NativeLibraryCompatibilityChecker() {
-			this(OSUtils.getSystemName(), OSUtils.getSystemArch());
+			this(OS.shortName(), String.valueOf(OS.bits()));
 		}
 		
 		private NativeLibraryCompatibilityChecker(String osName, String osArch) {

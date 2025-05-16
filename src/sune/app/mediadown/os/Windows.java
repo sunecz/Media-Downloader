@@ -33,4 +33,9 @@ class Windows implements OS {
 		// Delegate to the existing method
 		FXUtils.openURI(uri);
 	}
+	
+	@Override
+	public String executableFileNameSuffix() {
+		return ".exe";
+	}
 }

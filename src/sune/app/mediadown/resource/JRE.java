@@ -25,12 +25,12 @@ import sune.app.mediadown.event.tracker.DownloadTracker;
 import sune.app.mediadown.event.tracker.TrackerManager;
 import sune.app.mediadown.net.Net;
 import sune.app.mediadown.net.Web.Request;
+import sune.app.mediadown.os.OS;
 import sune.app.mediadown.resource.JRE.JREEvent;
 import sune.app.mediadown.update.FileChecker;
 import sune.app.mediadown.update.Requirements;
 import sune.app.mediadown.update.Updater;
 import sune.app.mediadown.util.NIO;
-import sune.app.mediadown.util.OSUtils;
 import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.PathSystem;
 import sune.app.mediadown.util.Utils;
@@ -304,7 +304,7 @@ public final class JRE implements EventBindable<JREEvent> {
 			
 			if(success) {
 				// Make sure the `java` binary is executable
-				String name = OSUtils.getExecutableName("java");
+				String name = OS.current().executableFileName("java");
 				NIO.makeExecutable(baseDirNew.resolve("bin").resolve(name));
 			}
 			

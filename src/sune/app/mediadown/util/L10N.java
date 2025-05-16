@@ -17,6 +17,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import sune.app.mediadown.os.OS;
+
 public final class L10N {
 	
 	private static final CharsetEncoder ASCII_ENCODER = StandardCharsets.US_ASCII.newEncoder();
@@ -94,16 +96,7 @@ public final class L10N {
 		}
 		
 		private static final String currentOS() {
-			String os = OSUtils.getSystemName();
-			
-			switch(os) {
-				case OSUtils.OS_NAME_WINDOWS: os = "windows";  break;
-				case OSUtils.OS_NAME_MACOS:   os = "macos";    break;
-				case OSUtils.OS_NAME_UNIX:    os = "linux";    break;
-				default:                      /* Do nothing */ break;
-			}
-			
-			return os;
+			return OS.name();
 		}
 		
 		private static final String currentLocale() {

@@ -5,8 +5,8 @@ import java.util.function.Consumer;
 
 import sune.api.process.Processes;
 import sune.api.process.ReadOnlyProcess;
+import sune.app.mediadown.os.OS;
 import sune.app.mediadown.util.NIO;
-import sune.app.mediadown.util.OSUtils;
 
 /** @since 00.02.08 */
 public final class FFprobe {
@@ -19,7 +19,7 @@ public final class FFprobe {
 	
 	private static final Path ensureBinary() {
 		if(path == null) {
-			path = NIO.localPath("resources/binary", OSUtils.getExecutableName("ffprobe"));
+			path = NIO.localPath("resources/binary", OS.current().executableFileName("ffprobe"));
 			
 			if(!NIO.isRegularFile(path)) {
 				throw new IllegalStateException("FFprobe was not found at " + path.toAbsolutePath().toString());
