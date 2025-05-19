@@ -41,7 +41,10 @@ import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.concurrent.Threads;
 import sune.app.mediadown.entity.MediaEngine;
 import sune.app.mediadown.entity.MediaEngines;
+import sune.app.mediadown.event.Event;
+import sune.app.mediadown.event.EventType;
 import sune.app.mediadown.event.PipelineEvent;
+import sune.app.mediadown.event.PipelineInfoEvent;
 import sune.app.mediadown.event.QueueEvent;
 import sune.app.mediadown.event.tracker.ConversionTracker;
 import sune.app.mediadown.event.tracker.DownloadTracker;
@@ -57,18 +60,17 @@ import sune.app.mediadown.gui.GUI;
 import sune.app.mediadown.gui.ProgressWindow;
 import sune.app.mediadown.gui.ProgressWindow.ProgressAction;
 import sune.app.mediadown.gui.ProgressWindow.ProgressContext;
-import sune.app.mediadown.gui.clipboard.ClipboardUtils;
 import sune.app.mediadown.gui.Window;
+import sune.app.mediadown.gui.clipboard.ClipboardUtils;
 import sune.app.mediadown.gui.control.PipelineTableView;
 import sune.app.mediadown.gui.control.PipelineTableView.ColumnFactory;
 import sune.app.mediadown.gui.control.PipelineTableView.ContextMenuItem;
 import sune.app.mediadown.gui.control.PipelineTableView.ContextMenuItemFactory;
-import sune.app.mediadown.gui.control.PipelineTableView.PipelineInfo;
-import sune.app.mediadown.gui.control.PipelineTableView.PipelineInfoData;
 import sune.app.mediadown.gui.control.PipelineTableView.Stats;
 import sune.app.mediadown.gui.table.ResolvedMediaPipelineResult;
 import sune.app.mediadown.gui.table.TablePipelineResult;
 import sune.app.mediadown.gui.util.FXUtils;
+import sune.app.mediadown.gui.util.GUIPipelineInfo;
 import sune.app.mediadown.language.Translation;
 import sune.app.mediadown.language.Translator;
 import sune.app.mediadown.media.Media;
@@ -81,6 +83,8 @@ import sune.app.mediadown.os.OS;
 import sune.app.mediadown.pipeline.ConversionPipelineTask;
 import sune.app.mediadown.pipeline.DownloadPipelineTask;
 import sune.app.mediadown.pipeline.Pipeline;
+import sune.app.mediadown.pipeline.PipelineInfo;
+import sune.app.mediadown.pipeline.PipelineInfoData;
 import sune.app.mediadown.pipeline.PipelineTask;
 import sune.app.mediadown.pipeline.PipelineTransformer;
 import sune.app.mediadown.report.Report;
@@ -872,7 +876,7 @@ public final class MainWindow extends Window<BorderPane> {
 		PipelineTransformer pipelineTransformer = Transformer.of(transformers).pipelineTransformer();
 		
 		Pipeline pipeline = Pipeline.create(pipelineTransformer);
-		PipelineInfo info = new PipelineInfo(pipeline, media);
+		PipelineInfo info = new GUIPipelineInfo(pipeline, media);
 		TrackerVisitor visitor = new DefaultTrackerVisitor(info);
 		
 		pipeline.addEventListener(PipelineEvent.BEGIN, (o) -> {
@@ -940,6 +944,9 @@ public final class MainWindow extends Window<BorderPane> {
 			));
 		});
 		
+		PipelineInfoUpdater infoUpdater = new PipelineInfoUpdater(info);
+		info.addEventListener(PipelineInfoEvent.UPDATE, infoUpdater::update);
+		
 		return info;
 	}
 	
@@ -963,6 +970,42 @@ public final class MainWindow extends Window<BorderPane> {
 	/** @since 00.02.05 */
 	public final void addDownload(ResolvedMedia media) {
 		table.add(createPipelineInfo(media));
+	}
+	
+	/** @since 00.02.09 */
+	private static final class PipelineInfoUpdater {
+		
+		private static final long MIN_UPDATE_DIFF_TIME = 250L * 1000000L; // 250 ms
+		private static final Event<? extends EventType, ?>[] STATE_UPDATE_EVENTS = Utils.merge(
+			PipelineEvent.values(), QueueEvent.values()
+		);
+		
+		private final PipelineInfo info;
+		private long lastUpdateTime = Long.MIN_VALUE;
+		private volatile String lastState = null;
+		
+		public PipelineInfoUpdater(PipelineInfo info) {
+			this.info = Objects.requireNonNull(info);
+			info.pipeline().getEventRegistry().addMany((o) -> lastState = null, STATE_UPDATE_EVENTS);
+		}
+		
+		public void update(PipelineInfoData data) {
+			final long now = System.nanoTime();
+			String prevState = lastState;
+			String newState = data.state();
+			
+			boolean needsUpdate = (
+				(prevState == null || !prevState.equals(newState))
+					|| now - lastUpdateTime >= MIN_UPDATE_DIFF_TIME
+					|| lastUpdateTime == Long.MIN_VALUE
+			);
+			
+			if(needsUpdate) {
+				FXUtils.thread(() -> data.update(info));
+				lastState = newState;
+				lastUpdateTime = now;
+			}
+		}
 	}
 	
 	/** @since 00.02.04 */

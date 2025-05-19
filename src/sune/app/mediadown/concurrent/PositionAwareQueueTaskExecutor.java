@@ -6,6 +6,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 
 import sune.app.mediadown.util.Property;
+import sune.app.mediadown.util.SimpleProperty;
 import sune.app.mediadown.util.Utils;
 
 /** @since 00.02.08 */
@@ -164,7 +165,7 @@ public class PositionAwareQueueTaskExecutor<V> extends QueueTaskExecutor<V> {
 		
 		/** @since 00.02.09 */
 		protected final Property<Integer> createQueuePositionProperty() {
-			return new Property<>(state.queuePosition());
+			return new SimpleProperty<>(state.queuePosition());
 		}
 		
 		/** @since 00.02.09 */
