@@ -1,11 +1,8 @@
 package sune.app.mediadown.gui.control;
 
-import java.util.HashSet;
+
 import java.util.List;
 import java.util.Locale;
-import java.util.Set;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -30,14 +27,17 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.text.Text;
 import sune.app.mediadown.MediaDownloader;
-import sune.app.mediadown.concurrent.Threads;
 import sune.app.mediadown.entity.MediaGetter;
+import sune.app.mediadown.event.ListEvent;
+import sune.app.mediadown.event.ListEvent.ListChange;
 import sune.app.mediadown.event.tracker.PipelineProgress;
 import sune.app.mediadown.gui.util.FXUtils;
 import sune.app.mediadown.language.Translator;
 import sune.app.mediadown.os.OS;
 import sune.app.mediadown.pipeline.Pipeline;
 import sune.app.mediadown.pipeline.PipelineInfo;
+import sune.app.mediadown.pipeline.PipelineInfos;
+import sune.app.mediadown.pipeline.PipelineInfos.Stats;
 import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Utils.Ignore;
@@ -45,12 +45,29 @@ import sune.app.mediadown.util.Utils.Ignore;
 /** @since 00.02.08 */
 public class PipelineTableView extends TableView<PipelineInfo> {
 	
+	private final PipelineInfos pipelineInfos;
+	
 	private ColumnFactory columnFactory;
 	private ContextMenuItemFactory contextMenuItemFactory;
 	
 	private ObjectProperty<PipelineInfo> onItemDoubleClicked;
 	
 	public PipelineTableView() {
+		pipelineInfos = new PipelineInfos();
+		
+		pipelineInfos.addEventListener(ListEvent.CHANGED, (c) -> {
+			@SuppressWarnings("unchecked")
+			ListChange<PipelineInfo> change = (ListChange<PipelineInfo>) c;
+			
+			if(change.hasAdded()) {
+				FXUtils.thread(() -> getItems().addAll(change.added()));
+			}
+			
+			if(change.hasRemoved()) {
+				FXUtils.thread(() -> getItems().removeAll(change.removed()));
+			}
+		});
+		
 		setContextMenu(initializeContextMenu());
 		
 		addEventHandler(ContextMenuEvent.CONTEXT_MENU_REQUESTED, (e) -> {
@@ -93,28 +110,6 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 		BorderPane.setMargin(this, new Insets(15, 15, 5, 15));
 	}
 	
-	private static final boolean anyNonPaused(List<PipelineInfo> infos) {
-		return infos.stream().anyMatch((i) -> {
-			Pipeline p = i.pipeline();
-			return i.isPausing() || (p.isStarted() && p.isRunning());
-		});
-	}
-	
-	private static final boolean anyTerminable(List<PipelineInfo> infos) {
-		return infos.stream().anyMatch((i) -> {
-			Pipeline p = i.pipeline();
-			return i.isStopping() || (p.isStarted() && (p.isRunning() || p.isPaused()));
-		});
-	}
-	
-	/** @since 00.02.09 */
-	private static final boolean anyRetryable(List<PipelineInfo> infos) {
-		return infos.stream().anyMatch((i) -> {
-			Pipeline p = i.pipeline();
-			return i.isRetrying() || (p.isDone() || p.isStopped() || p.isError());
-		});
-	}
-	
 	private static final void showFile(PipelineInfo info) {
 		Ignore.callVoid(() -> OS.current().highlight(info.resolvedMedia().path()), MediaDownloader::error);
 	}
@@ -128,127 +123,45 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 		return contextMenu;
 	}
 	
-	private final void addMissing(List<PipelineInfo> infos) {
-		Set<PipelineInfo> existing = new HashSet<>(pipelines());
-		List<PipelineInfo> toAdd = infos.stream()
-			.filter(Predicate.not(existing::contains))
-			.collect(Collectors.toList());
-		FXUtils.thread(() -> getItems().addAll(toAdd));
-	}
-	
-	private final List<PipelineInfo> existingOnly(List<PipelineInfo> infos) {
-		Set<PipelineInfo> existing = new HashSet<>(pipelines());
-		return infos.stream().filter(existing::contains).collect(Collectors.toList());
-	}
-	
-	private final void start(List<PipelineInfo> infos, boolean checkMissing) {
-		if(checkMissing) {
-			addMissing(infos);
-		}
-		
-		List<PipelineInfo> notEnqueued = infos.stream()
-			.filter(Predicate.not(PipelineInfo::isQueued))
-			.collect(Collectors.toList());
-		
-		// Enqueue all the items, so that they can be sequentually added
-		notEnqueued.stream().forEachOrdered((i) -> i.isQueued(true));
-		
-		// Start all items in a thread with sequential ordering
-		Threads.executeEnsured(() -> {
-			notEnqueued.stream().forEachOrdered(PipelineInfo::start);
-		});
-	}
-	
-	private final void stop(List<PipelineInfo> infos, boolean filterNonExisting) {
-		if(filterNonExisting) {
-			infos = existingOnly(infos);
-		}
-		
-		final List<PipelineInfo> finalInfos = infos;
-		Threads.executeEnsured(() -> {
-			finalInfos.stream().forEachOrdered(PipelineInfo::stop);
-		});
-	}
-	
+	public void add(PipelineInfo info) { pipelineInfos.add(info); }
+	public void add(List<PipelineInfo> infos) { pipelineInfos.add(infos); }
+	public void remove(PipelineInfo info) { pipelineInfos.remove(info); }
+	public void remove(List<PipelineInfo> infos) { pipelineInfos.remove(infos); }
+	public void start(List<PipelineInfo> infos) { pipelineInfos.start(infos); }
+	public void startAll() { pipelineInfos.startAll(); }
+	public void stop(List<PipelineInfo> infos) { pipelineInfos.stop(infos); }
+	public void stopAll() { pipelineInfos.stopAll(); }
+	public void pause(List<PipelineInfo> infos) { pipelineInfos.pause(infos); }
+	public void pauseAll() { pipelineInfos.pauseAll(); }
+	public void resume(List<PipelineInfo> infos) { pipelineInfos.resume(infos); }
+	public void resumeAll() { pipelineInfos.resumeAll(); }
 	/** @since 00.02.09 */
-	private final boolean isActivePipeline(PipelineInfo info) {
-		Pipeline pipeline = info.pipeline();
-		return pipeline.isRunning() || pipeline.isPaused();
-	}
-	
-	public void add(PipelineInfo info) {
-		FXUtils.thread(() -> getItems().add(info));
-	}
-	
-	public void add(List<PipelineInfo> infos) {
-		FXUtils.thread(() -> getItems().addAll(infos));
-	}
-	
-	public void remove(PipelineInfo info) {
-		FXUtils.thread(() -> getItems().remove(info));
-	}
-	
-	public void remove(List<PipelineInfo> infos) {
-		FXUtils.thread(() -> getItems().removeAll(infos));
-	}
-	
-	public void start(List<PipelineInfo> infos) {
-		start(infos, true);
-	}
-	
-	public void startAll() {
-		start(pipelines(), false);
-	}
-	
-	public void startSelected() {
-		start(selectedPipelines(), false);
-	}
-	
-	public void stop(List<PipelineInfo> infos) {
-		stop(infos, true);
-	}
-	
-	public void stopAll() {
-		stop(pipelines(), false);
-	}
-	
-	public void stopSelected() {
-		stop(selectedPipelines(), false);
-	}
-	
-	public void pause(List<PipelineInfo> infos) {
-		Threads.executeEnsured(() -> {
-			infos.stream().forEachOrdered(PipelineInfo::pause);
-		});
-	}
-	
-	public void pauseAll() {
-		pause(pipelines());
-	}
-	
-	public void pauseSelected() {
-		pause(selectedPipelines());
-	}
-	
-	public void resume(List<PipelineInfo> infos) {
-		Threads.executeEnsured(() -> {
-			infos.stream().forEachOrdered(PipelineInfo::resume);
-		});
-	}
-	
-	public void resumeAll() {
-		resume(pipelines());
-	}
-	
-	public void resumeSelected() {
-		resume(selectedPipelines());
-	}
-	
+	public void retry(List<PipelineInfo> infos) { pipelineInfos.retry(infos); }
+	public List<PipelineInfo> pipelines() { return pipelineInfos.pipelines(); }
 	/** @since 00.02.09 */
-	public void retry(List<PipelineInfo> infos) {
-		Threads.executeEnsured(() -> {
-			infos.stream().forEachOrdered(PipelineInfo::retry);
-		});
+	public List<PipelineInfo> activePipelines() { return pipelineInfos.activePipelines(); }
+	/** @since 00.02.09 */
+	public boolean hasActivePipelines() { return pipelineInfos.hasActivePipelines(); }
+	
+	public void startSelected() { pipelineInfos.start(selectedPipelines()); }
+	public void stopSelected() { pipelineInfos.stop(selectedPipelines()); }
+	public void pauseSelected() { pipelineInfos.pause(selectedPipelines()); }
+	public void resumeSelected() { pipelineInfos.resume(selectedPipelines()); }
+	
+	public List<PipelineInfo> selectedPipelines() {
+		return getSelectionModel().getSelectedItems();
+	}
+	
+	public PipelineInfo selectedPipeline() {
+	        return getSelectionModel().getSelectedItem();
+	}
+	
+	public List<Integer> selectedIndexes() {
+	        return getSelectionModel().getSelectedIndices();
+	}
+	
+	public int selectedIndex() {
+	        return getSelectionModel().getSelectedIndex();
 	}
 	
 	public ObjectProperty<PipelineInfo> onItemDoubleClicked() {
@@ -273,36 +186,6 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 		}
 		
 		return columnFactory;
-	}
-	
-	public List<PipelineInfo> pipelines() {
-		return getItems();
-	}
-	
-	public List<PipelineInfo> selectedPipelines() {
-		return getSelectionModel().getSelectedItems();
-	}
-	
-	public PipelineInfo selectedPipeline() {
-		return getSelectionModel().getSelectedItem();
-	}
-	
-	public List<Integer> selectedIndexes() {
-		return getSelectionModel().getSelectedIndices();
-	}
-	
-	public int selectedIndex() {
-		return getSelectionModel().getSelectedIndex();
-	}
-	
-	/** @since 00.02.09 */
-	public List<PipelineInfo> activePipelines() {
-		return pipelines().stream().filter(this::isActivePipeline).collect(Collectors.toList());
-	}
-	
-	/** @since 00.02.09 */
-	public boolean hasActivePipelines() {
-		return pipelines().stream().anyMatch(this::isActivePipeline);
 	}
 	
 	private static final class DefaultContextMenuItemFactory implements ContextMenuItemFactory {
@@ -351,7 +234,7 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 					return; // Nothing to pause/resume
 				}
 				
-				if(anyNonPaused(infos)) {
+				if(PipelineInfos.anyNonPaused(infos)) {
 					table.pause(infos);
 				} else {
 					table.resume(infos);
@@ -384,7 +267,7 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 					return; // Nothing to terminate/remove
 				}
 				
-				if(anyTerminable(infos)) {
+				if(PipelineInfos.anyTerminable(infos)) {
 					table.stop(infos);
 				} else {
 					table.remove(infos);
@@ -415,7 +298,7 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 					return; // Nothing to retry
 				}
 				
-				if(anyRetryable(infos)) {
+				if(PipelineInfos.anyRetryable(infos)) {
 					table.retry(infos);
 				}
 			});
@@ -756,66 +639,6 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 		TableColumn<PipelineInfo, String> createTimeLeft(String title, double preferredWidth);
 		TableColumn<PipelineInfo, String> createDestination(String title, double preferredWidth);
 		TableColumn<PipelineInfo, String> createInformation(String title, double preferredWidth);
-	}
-	
-	public static class Stats {
-		
-		private final List<PipelineInfo> infos;
-		
-		private final int count;
-		private final int started;
-		private final int done;
-		private final int stopped;
-		/** @since 00.02.09 */
-		private final int error;
-		
-		protected Stats(List<PipelineInfo> infos, int count, int started, int done, int stopped, int error) {
-			this.infos = infos;
-			this.count = count;
-			this.started = started;
-			this.done = done;
-			this.stopped = stopped;
-			this.error = error;
-		}
-		
-		public static final Stats from(List<PipelineInfo> infos) {
-			int count = infos.size();
-			int started = (int) infos.stream().map(PipelineInfo::pipeline).filter(Pipeline::isStarted).count();
-			int done = (int) infos.stream().map(PipelineInfo::pipeline).filter(Pipeline::isDone).count();
-			int stopped = (int) infos.stream().map(PipelineInfo::pipeline).filter(Pipeline::isStopped).count();
-			int error = (int) infos.stream().map(PipelineInfo::pipeline).filter(Pipeline::isError).count();
-			
-			return new Stats(infos, count, started, done, stopped, error);
-		}
-		
-		public boolean anyNonPaused() {
-			return PipelineTableView.anyNonPaused(infos);
-		}
-		
-		public boolean anyTerminable() {
-			return PipelineTableView.anyTerminable(infos);
-		}
-		
-		public int count() {
-			return count;
-		}
-		
-		public int started() {
-			return started;
-		}
-		
-		public int done() {
-			return done;
-		}
-		
-		public int stopped() {
-			return stopped;
-		}
-		
-		/** @since 00.02.09 */
-		public int error() {
-			return error;
-		}
 	}
 	
 	public static class ContextMenuItem extends MenuItem {
