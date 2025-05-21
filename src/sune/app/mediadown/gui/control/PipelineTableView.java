@@ -373,7 +373,7 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 			String propertyName = "source";
 			TableColumn<PipelineInfo, String> column = new TableColumn<>(title);
 			column.setCellValueFactory(new PropertyValueFactory<>(propertyName));
-			column.setCellFactory((col) -> new IconTableCell());
+			column.setCellFactory((col) -> new PipelineInfoIconTableCell());
 			column.setPrefWidth(preferredWidth);
 			return column;
 		}
@@ -433,73 +433,28 @@ public class PipelineTableView extends TableView<PipelineInfo> {
 			return createText("information", title, preferredWidth);
 		}
 		
-		private static final class IconTableCell extends TableCell<PipelineInfo, String> {
-			
-			private ImageView icon;
-			
-			public IconTableCell() {
-				getStyleClass().add("has-icon");
-			}
+		private static final class PipelineInfoIconTableCell extends IconTableCell<PipelineInfo, String> {
 			
 			private final Image image() {
-				MediaGetter getter = (MediaGetter) getTableRow().getItem().resolvedMedia().media().source().instance();
+				MediaGetter getter = (MediaGetter) (
+					getTableRow().getItem().resolvedMedia().media().source().instance()
+				);
+				
 				return getter != null ? getter.icon() : null;
 			}
 			
-			private final void initialize() {
-				if(isInitialized()) {
-					return;
-				}
-				
-				if(getTableRow().getItem() == null) {
-					return;
-				}
-				
+			@Override
+			protected ImageView iconView(String value) {
 				Image image = image();
 				
 				if(image == null) {
-					return;
+					return null;
 				}
 				
-				icon = new ImageView(image);
-				icon.setFitWidth(24);
-				icon.setFitHeight(24);
-				
-				setGraphic(icon);
-				setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
-			}
-			
-			private final void dispose() {
-				if(!isInitialized()) {
-					return;
-				}
-				
-				icon = null;
-			}
-			
-			private final boolean isInitialized() {
-				return icon != null;
-			}
-			
-			private final void value(String value) {
-				initialize();
-			}
-			
-			@Override
-			protected void updateItem(String item, boolean empty) {
-				if(item == getItem() && isInitialized()) {
-					return;
-				}
-				
-				super.updateItem(item, empty);
-				
-				if(item == null) {
-					setText(null);
-					setGraphic(null);
-					dispose();
-				} else {
-					value(item);
-				}
+				ImageView view = new ImageView(image);
+				view.setFitWidth(24.0);
+				view.setFitHeight(24.0);
+				return view;
 			}
 		}
 		
