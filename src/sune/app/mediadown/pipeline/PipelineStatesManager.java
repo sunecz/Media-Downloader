@@ -324,14 +324,15 @@ public class PipelineStatesManager {
 			
 			ByteBuffer buf = ByteBuffer.wrap(bytes);
 			long pos = posTable.get(position);
-			long size = buf.limit();
+			long newSize = buf.limit();
 			
 			if(pos == PositionTable.UNSET) {
-				pos = posTable.add(size);
+				pos = posTable.add(newSize);
 			}
 			
-			channel.write(buf, pos);
-			posTable.set(position, size);
+			long oldSize = posTable.getSize(position);
+			posTable.set(position, newSize);
+			NIO.replace(channel, pos, oldSize, buf);
 			channel.force(false);
 		}
 		
