@@ -1,6 +1,8 @@
 package sune.app.mediadown.gui.window;
 
+import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -85,6 +87,7 @@ import sune.app.mediadown.pipeline.Pipeline;
 import sune.app.mediadown.pipeline.PipelineInfo;
 import sune.app.mediadown.pipeline.PipelineInfoData;
 import sune.app.mediadown.pipeline.PipelineInfos.Stats;
+import sune.app.mediadown.pipeline.PipelineStatesManager;
 import sune.app.mediadown.pipeline.PipelineTask;
 import sune.app.mediadown.pipeline.PipelineTransformer;
 import sune.app.mediadown.report.Report;
@@ -93,6 +96,7 @@ import sune.app.mediadown.report.ReportContext;
 import sune.app.mediadown.transformer.Transformer;
 import sune.app.mediadown.transformer.Transformers;
 import sune.app.mediadown.util.Pair;
+import sune.app.mediadown.util.PathSystem;
 import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Utils.Ignore;
 
@@ -116,6 +120,9 @@ public final class MainWindow extends Window<BorderPane> {
 	
 	private final AtomicBoolean closeRequest = new AtomicBoolean();
 	private final Actions actions = new Actions();
+	
+	/** @since 00.02.09 */
+	private PipelineStatesManager pipelineStatesManager;
 	
 	private PipelineTableView table;
 	private Button btnDownload;
@@ -352,6 +359,19 @@ public final class MainWindow extends Window<BorderPane> {
 		
 		showMessagesAsync();
 		maybeAutoEnableClipboardWatcher();
+		
+		initializePipelineStatesManager();
+	}
+	
+	/** @since 00.02.09 */
+	private final void initializePipelineStatesManager() {
+		Path path = PathSystem.getPath("state.jsonl"); // FIXME: Wrap the hardcoded path
+		
+		try {
+			pipelineStatesManager = new PipelineStatesManager(path);
+		} catch(IOException ex) {
+			MediaDownloader.error(ex);
+		}
 	}
 	
 	/** @since 00.02.02 */
@@ -946,6 +966,8 @@ public final class MainWindow extends Window<BorderPane> {
 		
 		PipelineInfoUpdater infoUpdater = new PipelineInfoUpdater(info);
 		info.addEventListener(PipelineInfoEvent.UPDATE, infoUpdater::update);
+		
+		pipelineStatesManager.add(pipeline);
 		
 		return info;
 	}
