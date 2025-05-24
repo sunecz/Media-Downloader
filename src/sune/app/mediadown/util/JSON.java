@@ -711,8 +711,6 @@ public final class JSON {
 			this.name = null;
 		}
 		
-		protected abstract void toString(StringBuilder builder, int depth, boolean compress);
-		
 		public abstract JSONNode copy();
 		public abstract boolean isObject();
 		public abstract boolean isCollection();
@@ -737,6 +735,9 @@ public final class JSON {
 			return prefix == null ? name : prefix + (char) CHAR_NAME_SEPARATOR + name;
 		}
 		
+		/** @since 00.02.09 */
+		public abstract void toString(StringBuilder builder, int depth, boolean compress);
+		
 		public String toString() { return toString(0, false); }
 		public String toString(boolean compress) { return toString(0, compress); }
 		
@@ -744,6 +745,16 @@ public final class JSON {
 			StringBuilder builder = new StringBuilder();
 			toString(builder, depth, compress);
 			return builder.toString();
+		}
+		
+		/** @since 00.02.09 */
+		public void toString(StringBuilder builder) {
+			toString(builder, 0, false);
+		}
+		
+		/** @since 00.02.09 */
+		public void toString(StringBuilder builder, boolean compress) {
+			toString(builder, 0, compress);
 		}
 		
 		@Override
