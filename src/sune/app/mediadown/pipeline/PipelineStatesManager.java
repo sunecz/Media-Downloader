@@ -93,9 +93,8 @@ public class PipelineStatesManager {
 	}
 	
 	private final void doUpdate(UpdateTask task) throws IOException {
-		PipelineState state = task.state;
 		Metrics oldMetrics = task.oldMetrics;
-		Metrics newMetrics = state.metrics();
+		Metrics newMetrics = task.newMetrics;
 		
 		if(shouldSerialize(oldMetrics, newMetrics)) {
 			ManagedPipeline pipeline = task.pipeline;
@@ -104,8 +103,8 @@ public class PipelineStatesManager {
 				return;
 			}
 			
-			file.save(pipeline, state.serialize());
 			pipeline.taskMetrics.put(pipeline.task, newMetrics);
+			file.save(pipeline, task.state.serialize());
 		}
 	}
 	
@@ -147,7 +146,8 @@ public class PipelineStatesManager {
 		}
 		
 		Metrics oldMetrics = pipeline.taskMetrics.get(task);
-		UpdateTask queueTask = new UpdateTask(pipeline, state, oldMetrics);
+		Metrics newMetrics = state.metrics();
+		UpdateTask queueTask = new UpdateTask(pipeline, state, oldMetrics, newMetrics);
 		enqueueTask(pipeline, queueTask);
 	}
 	
@@ -359,7 +359,7 @@ public class PipelineStatesManager {
 		
 		public AddTask(ManagedPipeline pipeline) {
 			this.creationTime = System.nanoTime();
-			this.pipeline = pipeline;
+			this.pipeline = Objects.requireNonNull(pipeline);
 		}
 		
 		@Override
@@ -380,13 +380,20 @@ public class PipelineStatesManager {
 		private final ManagedPipeline pipeline;
 		private final PipelineState state;
 		private final Metrics oldMetrics;
+		private final Metrics newMetrics;
 		private volatile boolean isStarted;
 		
-		public UpdateTask(ManagedPipeline pipeline, PipelineState state, Metrics oldMetrics) {
+		public UpdateTask(
+			ManagedPipeline pipeline,
+			PipelineState state,
+			Metrics oldMetrics,
+			Metrics newMetrics
+		) {
 			this.creationTime = System.nanoTime();
-			this.pipeline = pipeline;
-			this.state = state;
+			this.pipeline = Objects.requireNonNull(pipeline);
+			this.state = Objects.requireNonNull(state);
 			this.oldMetrics = oldMetrics;
+			this.newMetrics = newMetrics;
 		}
 		
 		@Override
@@ -409,7 +416,7 @@ public class PipelineStatesManager {
 		
 		public EndTask(ManagedPipeline pipeline) {
 			this.creationTime = System.nanoTime();
-			this.pipeline = pipeline;
+			this.pipeline = Objects.requireNonNull(pipeline);
 		}
 		
 		@Override
