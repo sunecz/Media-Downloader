@@ -497,25 +497,36 @@ public final class NIO {
 	
 	/** @since 00.02.09 */
 	public static final void truncate(FileChannel ch, long position, long count) throws IOException {
-		temporaryFileChannel((tempCh) -> {
-			long copySize = ch.size() - position - count;
-			transferTo(ch, position + count, copySize, tempCh);
+		long copySize = ch.size() - position - count;
+		
+		if(copySize > 0L) {
+			temporaryFileChannel((tempCh) -> {
+				transferTo(ch, position + count, copySize, tempCh);
+				ch.truncate(position);
+				tempCh.position(0L);
+				transferFrom(tempCh, ch, position, copySize);
+			});
+		} else {
 			ch.truncate(position);
-			tempCh.position(0L);
-			transferFrom(tempCh, ch, position, copySize);
-		});
+		}
 	}
 	
 	/** @since 00.02.09 */
 	public static final void replace(FileChannel ch, long position, long count, ByteBuffer buf) throws IOException {
-		temporaryFileChannel((tempCh) -> {
-			long copySize = ch.size() - position - count;
-			transferTo(ch, position + count, copySize, tempCh);
+		long copySize = ch.size() - position - count;
+		
+		if(copySize > 0L) {
+			temporaryFileChannel((tempCh) -> {
+				transferTo(ch, position + count, copySize, tempCh);
+				ch.truncate(position);
+				tempCh.position(0L);
+				int replaceSize = buf.remaining();
+				write(ch, position, buf);
+				transferFrom(tempCh, ch, position + replaceSize, copySize);
+			});
+		} else {
 			ch.truncate(position);
-			tempCh.position(0L);
-			int replaceSize = buf.remaining();
 			write(ch, position, buf);
-			transferFrom(tempCh, ch, position + replaceSize, copySize);
-		});
+		}
 	}
 }
