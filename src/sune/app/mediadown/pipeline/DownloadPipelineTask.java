@@ -6,12 +6,16 @@ import java.util.Objects;
 import sune.app.mediadown.download.Download;
 import sune.app.mediadown.download.DownloadConfiguration;
 import sune.app.mediadown.download.DownloadResult;
+import sune.app.mediadown.download.DownloadState;
 import sune.app.mediadown.download.MediaDownloadConfiguration;
 import sune.app.mediadown.event.DownloadEvent;
 import sune.app.mediadown.manager.DownloadManager;
+import sune.app.mediadown.manager.ManagerSubmitResult;
 import sune.app.mediadown.manager.PositionAwareManagerSubmitResult;
 import sune.app.mediadown.media.Media;
 import sune.app.mediadown.media.MediaDownloadContext;
+import sune.app.mediadown.util.JSON.JSONCollection;
+import sune.app.mediadown.util.JSON.JSONObject;
 import sune.app.mediadown.util.Utils;
 
 /** @since 00.01.26 */
@@ -21,9 +25,12 @@ public final class DownloadPipelineTask
 	
 	/** @since 00.02.08 */
 	private final PipelineMedia media;
+	/** @since 00.02.09 */
+	private final DownloadPipelineState state;
 	
 	private DownloadPipelineTask(PipelineMedia media) {
 		this.media = Objects.requireNonNull(media);
+		this.state = new DownloadPipelineState();
 	}
 	
 	/** @since 00.02.08 */
@@ -72,4 +79,43 @@ public final class DownloadPipelineTask
 	@Override public MediaDownloadConfiguration mediaConfiguration() { return media.mediaConfiguration(); }
 	/** @since 00.02.09 */
 	@Override public DownloadConfiguration configuration() { return media.configuration(); }
+	
+	/** @since 00.02.09 */
+	@Override
+	public PipelineState state() {
+		return state;
+	}
+	
+	/** @since 00.02.09 */
+	private final class DownloadPipelineState implements PipelineState {
+		
+		private static final String NAME = "download";
+		private final JSONCollection serialized;
+		
+		private DownloadPipelineState() {
+			serialized = JSONCollection.ofObject(
+				"name", JSONObject.ofString(NAME),
+				"input", PipelineStates.Serializator.serialize(media)
+			);
+		}
+		
+		private final DownloadState downloadState() {
+			ManagerSubmitResult<DownloadResult, Long> result = result();
+			return result == null ? null : result.value().download().state();
+		}
+		
+		@Override
+		public Metrics metrics() {
+			DownloadState state = downloadState();
+			return state == null ? null : state.metrics();
+		}
+		
+		@Override
+		public JSONCollection serialize() {
+			DownloadState state = downloadState();
+			JSONCollection copy = serialized.deepCopy();
+			copy.set("state", state == null ? JSONObject.ofNull() : state.serialize());
+			return copy;
+		}
+	}
 }

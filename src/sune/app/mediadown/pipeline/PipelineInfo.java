@@ -51,6 +51,19 @@ public class PipelineInfo implements TrackerView, EventBindable<PipelineInfoEven
 	public PipelineInfo(Pipeline pipeline, ResolvedMedia resolvedMedia) {
 		this.pipeline = Objects.requireNonNull(pipeline);
 		this.resolvedMedia = Objects.requireNonNull(resolvedMedia);
+		initialize();
+	}
+	
+	private final void initialize() {
+		PipelineMedia pipelineMedia = PipelineMedia.of(
+			resolvedMedia.media(),
+			resolvedMedia.path(),
+			resolvedMedia.configuration(),
+			DownloadConfiguration.ofDefault()
+		);
+		
+		pipeline.setInput(MediaPipelineResult.of(pipelineMedia));
+		media = pipelineMedia;
 	}
 	
 	public void update(PipelineInfoData data) {
@@ -62,18 +75,9 @@ public class PipelineInfo implements TrackerView, EventBindable<PipelineInfoEven
 			return;
 		}
 		
-		PipelineMedia pipelineMedia = PipelineMedia.of(
-			resolvedMedia.media(),
-			resolvedMedia.path(),
-			resolvedMedia.configuration(),
-			DownloadConfiguration.ofDefault()
-		);
-		
 		try {
-			media(pipelineMedia);
-			pipeline.setInput(MediaPipelineResult.of(pipelineMedia));
 			pipeline.start();
-			pipelineMedia.awaitSubmitted();
+			media.awaitSubmitted();
 		} catch(Exception ex) {
 			MediaDownloader.error(ex);
 		}
@@ -152,6 +156,7 @@ public class PipelineInfo implements TrackerView, EventBindable<PipelineInfoEven
 			pipeline.waitFor();
 			pipeline.reset();
 			isQueued(false);
+			initialize();
 			start();
 		} catch(Exception ex) {
 			MediaDownloader.error(ex);
@@ -257,10 +262,6 @@ public class PipelineInfo implements TrackerView, EventBindable<PipelineInfoEven
 	@Override
 	public void information(String information) {
 		informationProperty().set(information);
-	}
-	
-	public void media(PipelineMedia media) {
-		this.media = media;
 	}
 	
 	public String source() {

@@ -18,4 +18,8 @@ public interface DownloadContext extends EventBindable<DownloadEvent>, HasTaskSt
 	Response response();
 	long totalBytes();
 	Exception exception();
+	
+	default DownloadState state() {
+		return null; // No state by default
+	}
 }

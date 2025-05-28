@@ -23,6 +23,7 @@ import sune.app.mediadown.concurrent.Threads;
 import sune.app.mediadown.event.PipelineEvent;
 import sune.app.mediadown.event.tracker.TrackerEvent;
 import sune.app.mediadown.util.JSON.JSONCollection;
+import sune.app.mediadown.util.JSON.JSONObject;
 import sune.app.mediadown.util.NIO;
 
 /** @since 00.02.09 */
@@ -58,26 +59,17 @@ public class PipelineStatesManager {
 		}
 	}
 	
-	public void add(Pipeline pipeline) {
-		synchronized(managedPipelines) {
-			int position = taskPosition++;
-			int fence = taskRemovedCount;
-			ManagedPipeline managed = new ManagedPipeline(position, fence, pipeline);
-			enqueueAdd(managed);
-			managedPipelines.add(managed);
-		}
-	}
-	
 	private final boolean shouldSerialize(Metrics oldMetrics, Metrics newMetrics) {
-		// TODO: Implement
-		return true;
+		return MetricsComparator.compareWithRegistered(oldMetrics, newMetrics);
 	}
 	
 	private final JSONCollection startState(Pipeline pipeline) {
-		// TODO: Implement
+		MediaPipelineResult input = (MediaPipelineResult) pipeline.getResult();
+		PipelineMedia media = input.media();
+		
 		return JSONCollection.ofObject(
-			"state", "start",
-			"time", System.nanoTime()
+			"name", JSONObject.ofString("start"),
+			"input", PipelineStates.Serializator.serialize(media)
 		);
 	}
 	
@@ -92,7 +84,17 @@ public class PipelineStatesManager {
 		file.save(pipeline, startState(ref));
 	}
 	
-	private final void doUpdate(UpdateTask task) throws IOException {
+	private final void doPipelineUpdate(PipelineUpdateTask task) throws IOException {
+		ManagedPipeline pipeline = task.pipeline;
+		
+		if(!pipeline.isRunning) {
+			return;
+		}
+		
+		file.save(pipeline, task.state.serialize());
+	}
+	
+	private final void doStateUpdate(StateUpdateTask task) throws IOException {
 		Metrics oldMetrics = task.oldMetrics;
 		Metrics newMetrics = task.newMetrics;
 		
@@ -134,7 +136,22 @@ public class PipelineStatesManager {
 		enqueueTask(pipeline, queueTask);
 	}
 	
-	private final void enqueueUpdate(ManagedPipeline pipeline) {
+	private final void enqueuePipelineUpdate(ManagedPipeline pipeline) {
+		PipelineTask task;
+		if((task = pipeline.task) == null) {
+			return; // Nothing to do
+		}
+		
+		PipelineState state;
+		if((state = task.state()) == null) {
+			return; // Nothing to do
+		}
+		
+		PipelineUpdateTask queueTask = new PipelineUpdateTask(pipeline, state);
+		enqueueTask(pipeline, queueTask);
+	}
+	
+	private final void enqueueStateUpdate(ManagedPipeline pipeline) {
 		PipelineTask task;
 		if((task = pipeline.task) == null) {
 			return; // Nothing to do
@@ -147,7 +164,7 @@ public class PipelineStatesManager {
 		
 		Metrics oldMetrics = pipeline.taskMetrics.get(task);
 		Metrics newMetrics = state.metrics();
-		UpdateTask queueTask = new UpdateTask(pipeline, state, oldMetrics, newMetrics);
+		StateUpdateTask queueTask = new StateUpdateTask(pipeline, state, oldMetrics, newMetrics);
 		enqueueTask(pipeline, queueTask);
 	}
 	
@@ -156,7 +173,7 @@ public class PipelineStatesManager {
 		enqueueTask(pipeline, queueTask);
 	}
 	
-	private void pipelineRemoved(ManagedPipeline pipeline) {
+	private final void pipelineRemoved(ManagedPipeline pipeline) {
 		synchronized(managedPipelines) {
 			managedPipelines.remove(pipeline);
 			int position = pipeline.position;
@@ -166,6 +183,16 @@ public class PipelineStatesManager {
 			}
 			
 			++taskRemovedCount;
+		}
+	}
+	
+	public void add(Pipeline pipeline) {
+		synchronized(managedPipelines) {
+			int position = taskPosition++;
+			int fence = taskRemovedCount;
+			ManagedPipeline managed = new ManagedPipeline(position, fence, pipeline);
+			enqueueAdd(managed);
+			managedPipelines.add(managed);
 		}
 	}
 	
@@ -201,10 +228,11 @@ public class PipelineStatesManager {
 	
 	private static final class TaskType {
 		
-		private static final int COUNT = 3;
+		private static final int COUNT = 4;
 		private static final int TYPE_ADD = 0;
-		private static final int TYPE_UPDATE = 1;
-		private static final int TYPE_END = 2;
+		private static final int TYPE_PIPELINE_UPDATE = 1;
+		private static final int TYPE_STATE_UPDATE = 2;
+		private static final int TYPE_END = 3;
 		
 		private TaskType() {
 		}
@@ -374,7 +402,32 @@ public class PipelineStatesManager {
 		@Override public long creationTime() { return creationTime; }
 	}
 	
-	private final class UpdateTask implements Task {
+	private final class PipelineUpdateTask implements Task {
+		
+		private final long creationTime;
+		private final ManagedPipeline pipeline;
+		private final PipelineState state;
+		private volatile boolean isStarted;
+		
+		public PipelineUpdateTask(ManagedPipeline pipeline, PipelineState state) {
+			this.creationTime = System.nanoTime();
+			this.pipeline = Objects.requireNonNull(pipeline);
+			this.state = Objects.requireNonNull(state);
+		}
+		
+		@Override
+		public void run() throws Exception {
+			isStarted = true;
+			doPipelineUpdate(this);
+		}
+		
+		@Override public ManagedPipeline pipeline() { return pipeline; }
+		@Override public int typeOrdinal() { return TaskType.TYPE_PIPELINE_UPDATE; }
+		@Override public boolean isStarted() { return isStarted; }
+		@Override public long creationTime() { return creationTime; }
+	}
+	
+	private final class StateUpdateTask implements Task {
 		
 		private final long creationTime;
 		private final ManagedPipeline pipeline;
@@ -383,7 +436,7 @@ public class PipelineStatesManager {
 		private final Metrics newMetrics;
 		private volatile boolean isStarted;
 		
-		public UpdateTask(
+		public StateUpdateTask(
 			ManagedPipeline pipeline,
 			PipelineState state,
 			Metrics oldMetrics,
@@ -399,11 +452,11 @@ public class PipelineStatesManager {
 		@Override
 		public void run() throws Exception {
 			isStarted = true;
-			doUpdate(this);
+			doStateUpdate(this);
 		}
 		
 		@Override public ManagedPipeline pipeline() { return pipeline; }
-		@Override public int typeOrdinal() { return TaskType.TYPE_UPDATE; }
+		@Override public int typeOrdinal() { return TaskType.TYPE_STATE_UPDATE; }
 		@Override public boolean isStarted() { return isStarted; }
 		@Override public long creationTime() { return creationTime; }
 	}
@@ -459,10 +512,11 @@ public class PipelineStatesManager {
 			
 			pipeline.addEventListener(PipelineEvent.UPDATE, (p) -> {
 				task = p.b;
+				enqueuePipelineUpdate(this);
 			});
 			
 			pipeline.addEventListener(TrackerEvent.UPDATE, (tracker) -> {
-				enqueueUpdate(this);
+				enqueueStateUpdate(this);
 			});
 		}
 		
