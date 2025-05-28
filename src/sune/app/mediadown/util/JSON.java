@@ -711,9 +711,12 @@ public final class JSON {
 			this.name = null;
 		}
 		
-		public abstract JSONNode copy();
 		public abstract boolean isObject();
 		public abstract boolean isCollection();
+		
+		public abstract JSONNode copy();
+		/** @since 00.02.09 */
+		public abstract JSONNode deepCopy();
 		
 		/** @since 00.02.09 */
 		public void clear() {
@@ -852,9 +855,12 @@ public final class JSON {
 			value = null;
 		}
 		
-		@Override public JSONObject copy() { return new JSONObject(parent, name, type, value); }
 		@Override public boolean isObject() { return true; }
 		@Override public boolean isCollection() { return false; }
+		
+		@Override public JSONObject copy() { return new JSONObject(parent, name, type, value); }
+		/** @since 00.02.09 */
+		@Override public JSONObject deepCopy() { return copy(); }
 		
 		@SuppressWarnings("unchecked")
 		private final <T> T typedValue(Class<T> clazz) {
@@ -921,7 +927,7 @@ public final class JSON {
 		
 		private JSONCollection(JSONCollection parent, String name, JSONType type, Map<String, JSONNode> nodes) {
 			super(parent, name, type);
-			this.nodes = nodes != null ? new LinkedHashMap<>(nodes) : null;
+			this.nodes = nodes;
 		}
 		
 		private static final String indexName(int index) {
@@ -1417,9 +1423,34 @@ public final class JSON {
 			}
 		}
 		
-		@Override public JSONCollection copy() { return new JSONCollection(parent, name, type, nodes); }
 		@Override public boolean isObject() { return false; }
 		@Override public boolean isCollection() { return true; }
+		
+		@Override
+		public JSONCollection copy() {
+			return new JSONCollection(parent, name, type, new LinkedHashMap<>(nodes));
+		}
+		
+		/** @since 00.02.09 */
+		@Override
+		public JSONCollection deepCopy() {
+			if(nodes == null) {
+				return new JSONCollection(parent, name, type, null);
+			}
+			
+			// Taken from Java 19 HashMap::calculateHashMapCapacity with the default load factor.
+			final int size = (int) Math.ceil(nodes.size() / 0.75);
+			Map<String, JSONNode> nodesCopy = new LinkedHashMap<>(size);
+			JSONCollection copy = new JSONCollection(parent, name, type, nodesCopy);
+			
+			for(Entry<String, JSONNode> entry : nodes.entrySet()) {
+				JSONNode nodeCopy = entry.getValue().deepCopy();
+				nodeCopy.assign(copy, entry.getKey());
+				nodesCopy.put(entry.getKey(), nodeCopy);
+			}
+			
+			return copy;
+		}
 		
 		public int length() { return nodes == null ? 0 : nodes.size(); }
 		/** @since 00.02.09 */
