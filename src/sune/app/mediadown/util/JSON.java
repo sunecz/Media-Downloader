@@ -461,6 +461,10 @@ public final class JSON {
 								case ARRAY:  pair.b.add(lastParent.b);               break;
 								default:     /* Collections, should not happen */    break;
 							}
+						} else {
+							// We closed the first opened parent, i.e. the root parent,
+							// thus we're done reading.
+							return;
 						}
 						break;
 					case CHAR_SEPARATOR_ELEMENT:
