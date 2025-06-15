@@ -86,8 +86,8 @@ public final class JSON {
 	}
 	
 	public static final JSONCollection read(String string, Charset charset) {
-		try {
-			return newReader(string, charset).read();
+		try(JSONReader reader = newReader(string, charset)) {
+			return reader.read();
 		} catch(IOException ex) {
 			// Should not happen, but still throw it as unchecked
 			throw new UncheckedIOException(ex);
@@ -99,7 +99,9 @@ public final class JSON {
 	}
 	
 	public static final JSONCollection read(InputStream stream, Charset charset) throws IOException {
-		return newReader(stream, charset).read();
+		try(JSONReader reader = newReader(stream, charset)) {
+			return reader.read();
+		}
 	}
 	
 	public static final JSONCollection read(Path path) throws IOException {
@@ -107,10 +109,12 @@ public final class JSON {
 	}
 	
 	public static final JSONCollection read(Path path, Charset charset) throws IOException {
-		return newReader(path, charset).read();
+		try(JSONReader reader = newReader(path, charset)) {
+			return reader.read();
+		}
 	}
 	
-	public static final class JSONReader {
+	public static final class JSONReader implements AutoCloseable {
 		
 		/* Implementation note:
 		 * Use absolute CharBuffer::get(int) method for better performance, since Java allegedly generates
@@ -500,23 +504,28 @@ public final class JSON {
 		}
 		
 		public final JSONCollection read() throws IOException {
-			try(input) {
-				c = next(); // Bootstrap
-				
-				if(c == CHAR_BYTE_ORDER_MARK) {
-					// Skip the BOM
-					c = next();
-				}
-				
-				readNext();
-				return lastParent == null ? null : lastParent.b;
+			c = next(); // Bootstrap
+			
+			if(c == CHAR_BYTE_ORDER_MARK) {
+				// Skip the BOM
+				c = next();
 			}
+			
+			readNext();
+			return lastParent == null ? null : lastParent.b;
 		}
 		
 		/** @since 00.02.09 */
 		public final JSONReader allowUnquotedNames(boolean value) {
 			allowUnquotedNames = value;
 			return this;
+		}
+		
+		/** @since 00.02.09 */
+		@Override
+		public final void close() throws IOException {
+			parents.clear();
+			input.close();
 		}
 	}
 	
