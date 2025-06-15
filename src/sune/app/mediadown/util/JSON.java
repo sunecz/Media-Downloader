@@ -503,6 +503,15 @@ public final class JSON {
 			}
 		}
 		
+		/** @since 00.02.09 */
+		private final void clear() {
+			parents.clear();
+			lastParent = null;
+			lastStr = null;
+			lastType = JSONType.UNKNOWN;
+			str.setLength(0);
+		}
+		
 		public final JSONCollection read() throws IOException {
 			c = next(); // Bootstrap
 			
@@ -512,7 +521,10 @@ public final class JSON {
 			}
 			
 			readNext();
-			return lastParent == null ? null : lastParent.b;
+			JSONCollection root = lastParent == null ? null : lastParent.b;
+			clear(); // Allow subsequent calls
+			
+			return root;
 		}
 		
 		/** @since 00.02.09 */
@@ -524,7 +536,7 @@ public final class JSON {
 		/** @since 00.02.09 */
 		@Override
 		public final void close() throws IOException {
-			parents.clear();
+			clear();
 			input.close();
 		}
 	}
