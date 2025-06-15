@@ -509,7 +509,7 @@ public final class JSON {
 				}
 				
 				readNext();
-				return lastParent.b;
+				return lastParent == null ? null : lastParent.b;
 			}
 		}
 		
