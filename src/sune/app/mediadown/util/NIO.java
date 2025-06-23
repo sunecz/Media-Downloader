@@ -20,6 +20,7 @@ import java.nio.channels.WritableByteChannel;
 import java.nio.charset.Charset;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.DirectoryStream;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.OpenOption;
@@ -129,19 +130,15 @@ public final class NIO {
 		}
 	}
 	
-	public static final void createFile(Path file)
-			throws IOException {
-		if((exists(file)))
-			// Do not try to create already-existing file, since it throws IOException
-			return;
-		Files.createFile(file);
+	public static final void createFile(Path file) throws IOException {
+		try {
+			Files.createFile(file);
+		} catch(FileAlreadyExistsException ex) {
+			// Ignore
+		}
 	}
 	
-	public static final void createDir(Path dir)
-			throws IOException {
-		if((exists(dir)))
-			// Do not try to create already-existing directory, since it throws IOException
-			return;
+	public static final void createDir(Path dir) throws IOException {
 		Files.createDirectories(dir);
 	}
 	
