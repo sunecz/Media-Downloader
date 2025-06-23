@@ -80,6 +80,12 @@ public final class Web {
 	private static final AtomicInteger clientId = new AtomicInteger();
 	
 	/** @since 00.02.09 */
+	// Ref: https://httpwg.org/specs/rfc9110.html#field.content-range
+	private static final Regex REGEX_CONTENT_RANGE = Regex.of(
+		"^([!#$%&'*+\\-.^_`|~0-9A-Za-z]+) (?:(\\d+)-(\\d+)/(\\d+|\\*)|\\*/(\\d+))$"
+	);
+	
+	/** @since 00.02.09 */
 	public static final long UNKNOWN_SIZE = -1L;
 	
 	static {
@@ -268,11 +274,6 @@ public final class Web {
 		return doRequest(request, constructor, handler, 0, 0);
 	}
 	
-	private static final Regex regexContentRange() {
-		// Source: https://httpwg.org/specs/rfc9110.html#field.content-range
-		return Regex.of("^([!#$%&'*+\\-.^_`|~0-9A-Za-z]+) (?:(\\d+)-(\\d+)/(\\d+|\\*)|\\*/(\\d+))$");
-	}
-	
 	public static final Duration defaultConnectTimeout() {
 		return defaultConnectTimeout;
 	}
@@ -310,28 +311,28 @@ public final class Web {
 	}
 	
 	public static final long size(Response response) throws Exception {
-		return response.statusCode() != 200 ? UNKNOWN_SIZE : size(response.headers());
+		return size(response.headers());
 	}
 	
 	public static final long size(HttpHeaders headers) {
 		Optional<String> contentRange = headers.firstValue("content-range");
 		
 		if(contentRange.isPresent()) {
-			Matcher matcher = regexContentRange().matcher(contentRange.get());
+			Matcher matcher = REGEX_CONTENT_RANGE.matcher(contentRange.get());
 			
 			if(matcher.matches()) {
-				String unit = matcher.group(1);
+				String unit = matcher.group(1).toLowerCase();
 				
 				switch(unit) {
 					case "bytes": {
 						String strRangeStart = matcher.group(2);
 						
 						if(strRangeStart == null) {
-							return Long.valueOf(matcher.group(5));
+							return Long.parseLong(matcher.group(5));
 						}
 						
-						long rangeStart = Long.valueOf(strRangeStart);
-						long rangeEnd = Long.valueOf(matcher.group(3));
+						long rangeStart = Long.parseLong(strRangeStart);
+						long rangeEnd = Long.parseLong(matcher.group(3));
 						return rangeEnd - rangeStart + 1L;
 					}
 					default: {

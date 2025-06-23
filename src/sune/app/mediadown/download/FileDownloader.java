@@ -99,7 +99,7 @@ public class FileDownloader implements InternalDownloader, AutoCloseable {
 	}
 	
 	protected static final boolean isValidRange(Range<Long> range) {
-		return range.from() >= 0L && range.to() >= 0L;
+		return range.from() >= 0L && (range.to() < 0L || range.from() <= range.to());
 	}
 	
 	protected static final Range<Long> checkRange(Range<Long> range, long limit) {
