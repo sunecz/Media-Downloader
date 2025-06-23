@@ -128,9 +128,8 @@ public class FileDownloader implements InternalDownloader, AutoCloseable {
 		return range.from() < 0L || range.to() < 0L ? -1L : range.to() - range.from();
 	}
 	
-	protected void openFile(Destination destination, Range<Long> range) throws IOException {
+	protected void openFile(Destination destination) throws IOException {
 		final Destination prevDest = prevDestination;
-		FileChannel ch = channel;
 		
 		// Do not open multiple file channels if it is still the same file
 		// as in the previous run.
@@ -140,11 +139,9 @@ public class FileDownloader implements InternalDownloader, AutoCloseable {
 				prevDest.close();
 			}
 			
-			channel = ch = destination.channel();
+			channel = destination.channel();
 			prevDestination = destination;
 		}
-		
-		ch.position(Math.max(0L, range.from()));
 	}
 	
 	protected void closeFile() throws IOException {
@@ -175,7 +172,7 @@ public class FileDownloader implements InternalDownloader, AutoCloseable {
 	/** @since 00.02.09 */
 	protected String[] responseEncodings() {
 		return response.headers()
-			.firstValue("Content-Encoding")
+			.firstValue("content-encoding")
 			.map((s) -> Utils.OfString.split(s, ","))
 			.orElse(null);
 	}
@@ -346,7 +343,7 @@ public class FileDownloader implements InternalDownloader, AutoCloseable {
 		}
 		
 		try(ReadableByteChannel input = doRequest(rangeRequest)) {
-			openFile(destination, rangeOutput);
+			openFile(destination);
 			ByteBuffer buffer = buffer();
 			
 			for(int read, written; isRunning()
