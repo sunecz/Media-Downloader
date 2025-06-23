@@ -72,6 +72,16 @@ public final class JSON {
 	}
 	
 	/** @since 00.02.09 */
+	public static final JSONReader newReader(ReadableByteChannel channel) {
+		return newReader(channel, DEFAULT_CHARSET);
+	}
+	
+	/** @since 00.02.09 */
+	public static final JSONReader newReader(ReadableByteChannel channel, Charset charset) {
+		return JSONReader.create(channel, charset);
+	}
+	
+	/** @since 00.02.09 */
 	public static final JSONReader newReader(Path path) throws IOException {
 		return newReader(path, DEFAULT_CHARSET);
 	}
@@ -100,6 +110,18 @@ public final class JSON {
 	
 	public static final JSONCollection read(InputStream stream, Charset charset) throws IOException {
 		try(JSONReader reader = newReader(stream, charset)) {
+			return reader.read();
+		}
+	}
+	
+	/** @since 00.02.09 */
+	public static final JSONCollection read(ReadableByteChannel channel) throws IOException {
+		return read(channel, DEFAULT_CHARSET);
+	}
+	
+	/** @since 00.02.09 */
+	public static final JSONCollection read(ReadableByteChannel channel, Charset charset) throws IOException {
+		try(JSONReader reader = newReader(channel, charset)) {
 			return reader.read();
 		}
 	}
@@ -153,6 +175,11 @@ public final class JSON {
 		
 		public static final JSONReader create(InputStream stream, Charset charset) {
 			return new JSONReader(Channels.newChannel(Objects.requireNonNull(stream)), charset);
+		}
+		
+		/** @since 00.02.09 */
+		public static final JSONReader create(ReadableByteChannel channel, Charset charset) {
+			return new JSONReader(Objects.requireNonNull(channel), charset);
 		}
 		
 		public static final JSONReader create(Path path, Charset charset) throws IOException {
