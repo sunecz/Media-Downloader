@@ -25,6 +25,7 @@ import sune.app.mediadown.exception.RejectedResponseException;
 import sune.app.mediadown.net.Web;
 import sune.app.mediadown.net.Web.Request;
 import sune.app.mediadown.net.Web.Response;
+import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.Range;
 import sune.app.mediadown.util.Utils;
 
@@ -300,7 +301,7 @@ public class FileDownloader implements InternalDownloader, AutoCloseable {
 	
 	/** @since 00.02.09 */
 	protected ByteBuffer createBuffer() {
-		return DownloadCommon.newDirectBuffer(destination.path());
+		return NIO.newDirectBuffer(destination.path());
 	}
 	
 	protected ByteBuffer buffer() {

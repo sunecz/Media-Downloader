@@ -12,6 +12,7 @@ import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
@@ -525,5 +526,42 @@ public final class NIO {
 			ch.truncate(position);
 			write(ch, position, buf);
 		}
+	}
+	
+	/** @since 00.02.09 */
+	private static final int DEFAULT_BUFFER_SIZE = 8192;
+	/** @since 00.02.09 */
+	private static final int DEFAULT_FILE_STORE_BLOCKS_COUNT = 16;
+	
+	/** @since 00.02.09 */
+	public static final int bufferSize(Path path) {
+		return bufferSize(path, DEFAULT_FILE_STORE_BLOCKS_COUNT);
+	}
+	
+	/** @since 00.02.09 */
+	public static final int bufferSize(Path path, int numOfBlocks) {
+		if(path == null || numOfBlocks <= 0) {
+			return DEFAULT_BUFFER_SIZE;
+		}
+		
+		try {
+			return (int) (numOfBlocks * Files.getFileStore(path).getBlockSize());
+		} catch(IOException ex) {
+			// Ignore
+		}
+		
+		return DEFAULT_BUFFER_SIZE;
+	}
+	
+	/** @since 00.02.09 */
+	public static final ByteBuffer newDirectBuffer(Path path) {
+		return newDirectBuffer(path, DEFAULT_FILE_STORE_BLOCKS_COUNT);
+	}
+	
+	/** @since 00.02.09 */
+	public static final ByteBuffer newDirectBuffer(Path path, int numOfBlocks) {
+		return ByteBuffer
+					.allocateDirect(bufferSize(path, numOfBlocks))
+					.order(ByteOrder.nativeOrder());
 	}
 }
