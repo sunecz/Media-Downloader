@@ -1,4 +1,4 @@
-package sune.app.mediadown.pipeline;
+package sune.app.mediadown.pipeline.state;
 
 /** @since 00.02.09 */
 public interface HasPipelineState {

@@ -5,6 +5,7 @@ import java.util.Objects;
 
 import sune.app.mediadown.download.Download;
 import sune.app.mediadown.download.DownloadConfiguration;
+import sune.app.mediadown.download.DownloadInitialState;
 import sune.app.mediadown.download.DownloadResult;
 import sune.app.mediadown.download.DownloadState;
 import sune.app.mediadown.download.MediaDownloadConfiguration;
@@ -14,6 +15,9 @@ import sune.app.mediadown.manager.ManagerSubmitResult;
 import sune.app.mediadown.manager.PositionAwareManagerSubmitResult;
 import sune.app.mediadown.media.Media;
 import sune.app.mediadown.media.MediaDownloadContext;
+import sune.app.mediadown.pipeline.state.Metrics;
+import sune.app.mediadown.pipeline.state.PipelineState;
+import sune.app.mediadown.pipeline.state.PipelineStates;
 import sune.app.mediadown.util.JSON.JSONCollection;
 import sune.app.mediadown.util.JSON.JSONObject;
 import sune.app.mediadown.util.Utils;
@@ -26,22 +30,34 @@ public final class DownloadPipelineTask
 	/** @since 00.02.08 */
 	private final PipelineMedia media;
 	/** @since 00.02.09 */
+	private final DownloadInitialState initialState;
+	/** @since 00.02.09 */
 	private final DownloadPipelineState state;
 	
-	private DownloadPipelineTask(PipelineMedia media) {
+	private DownloadPipelineTask(PipelineMedia media, DownloadInitialState initialState) {
 		this.media = Objects.requireNonNull(media);
+		this.initialState = initialState;
 		this.state = new DownloadPipelineState();
 	}
 	
 	/** @since 00.02.08 */
 	public static final DownloadPipelineTask of(PipelineMedia media) {
-		return new DownloadPipelineTask(media);
+		return new DownloadPipelineTask(media, null);
+	}
+	
+	/** @since 00.02.09 */
+	public static final DownloadPipelineTask of(PipelineMedia media, DownloadInitialState initialState) {
+		return new DownloadPipelineTask(media, initialState);
 	}
 	
 	@Override
 	protected PositionAwareManagerSubmitResult<DownloadResult, Long> submit(Pipeline pipeline) throws Exception {
 		PositionAwareManagerSubmitResult<DownloadResult, Long> result = DownloadManager.instance().submit(
-			media.media(), media.destination(), media.mediaConfiguration(), media.configuration()
+			media.media(),
+			media.destination(),
+			media.mediaConfiguration(),
+			media.configuration(),
+			initialState
 		);
 		
 		// Notify the media of being submitted
@@ -89,13 +105,13 @@ public final class DownloadPipelineTask
 	/** @since 00.02.09 */
 	private final class DownloadPipelineState implements PipelineState {
 		
-		private static final String NAME = "download";
+		private static final String TYPE = "download";
 		private final JSONCollection serialized;
 		
 		private DownloadPipelineState() {
 			serialized = JSONCollection.ofObject(
-				"name", JSONObject.ofString(NAME),
-				"input", PipelineStates.Serializator.serialize(media)
+				"type", JSONObject.ofString(TYPE),
+				"input", PipelineStates.Serialization.serialize(media)
 			);
 		}
 		

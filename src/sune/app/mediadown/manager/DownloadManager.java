@@ -12,6 +12,7 @@ import sune.app.mediadown.concurrent.QueueTaskExecutor.QueueTask;
 import sune.app.mediadown.concurrent.VarLoader;
 import sune.app.mediadown.download.Download;
 import sune.app.mediadown.download.DownloadConfiguration;
+import sune.app.mediadown.download.DownloadInitialState;
 import sune.app.mediadown.download.DownloadResult;
 import sune.app.mediadown.download.MediaDownloadConfiguration;
 import sune.app.mediadown.entity.Downloader;
@@ -36,15 +37,19 @@ public final class DownloadManager implements QueueContext {
 		Disposables.add(this::dispose);
 	}
 	
-	private final DownloadResult createDownloadResult(Media media, Path destination,
-			MediaDownloadConfiguration mediaConfiguration) throws Exception {
+	private final DownloadResult createDownloadResult(
+		Media media,
+		Path destination,
+		MediaDownloadConfiguration mediaConfiguration,
+		DownloadInitialState initialState
+	) throws Exception {
 		Downloader downloader = Downloaders.forMedia(media);
 		
 		if(downloader == null) {
 			throw new NoSuchElementException("No downloader found for " + media);
 		}
 		
-		return downloader.download(media, destination, mediaConfiguration);
+		return downloader.download(media, destination, mediaConfiguration, initialState);
 	}
 	
 	private final DownloadManagerTask createTask(DownloadResult result, Media media, Path destination,
@@ -57,13 +62,18 @@ public final class DownloadManager implements QueueContext {
 		return instance.value();
 	}
 	
-	public final PositionAwareManagerSubmitResult<DownloadResult, Long> submit(Media media, Path destination,
-			MediaDownloadConfiguration mediaConfiguration, DownloadConfiguration configuration) throws Exception {
+	public final PositionAwareManagerSubmitResult<DownloadResult, Long> submit(
+		Media media,
+		Path destination,
+		MediaDownloadConfiguration mediaConfiguration,
+		DownloadConfiguration configuration,
+		DownloadInitialState initialState
+	) throws Exception {
 		if(media == null || destination == null || mediaConfiguration == null || configuration == null) {
 			throw new IllegalArgumentException();
 		}
 		
-		DownloadResult result = createDownloadResult(media, destination, mediaConfiguration);
+		DownloadResult result = createDownloadResult(media, destination, mediaConfiguration, initialState);
 		DownloadManagerTask task = createTask(result, media, destination, mediaConfiguration, configuration);
 		PositionAwareQueueTaskResult<Long> taskResult = executor.submit(task);
 		

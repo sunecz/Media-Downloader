@@ -1,4 +1,4 @@
-package sune.app.mediadown.pipeline;
+package sune.app.mediadown.pipeline.state;
 
 import java.util.ArrayList;
 import java.util.List;

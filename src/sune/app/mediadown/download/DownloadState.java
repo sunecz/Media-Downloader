@@ -1,8 +1,8 @@
 package sune.app.mediadown.download;
 
-import sune.app.mediadown.pipeline.Metrics;
 import sune.app.mediadown.util.JSON.JSONCollection;
 import sune.app.mediadown.util.JSON.JSONObject;
+import sune.app.mediadown.pipeline.state.Metrics;
 import sune.app.mediadown.util.JSONSerializable;
 
 /** @since 00.02.09 */

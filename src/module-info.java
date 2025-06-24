@@ -50,6 +50,7 @@ module sune.app.mediadown {
 	exports sune.app.mediadown.net;
 	exports sune.app.mediadown.os;
 	exports sune.app.mediadown.pipeline;
+	exports sune.app.mediadown.pipeline.state;
 	exports sune.app.mediadown.plugin;
 	exports sune.app.mediadown.registry;
 	exports sune.app.mediadown.report;

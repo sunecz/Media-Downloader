@@ -554,6 +554,18 @@ public final class NIO {
 	}
 	
 	/** @since 00.02.09 */
+	public static final ByteBuffer newBuffer(Path path) {
+		return newBuffer(path, DEFAULT_FILE_STORE_BLOCKS_COUNT);
+	}
+	
+	/** @since 00.02.09 */
+	public static final ByteBuffer newBuffer(Path path, int numOfBlocks) {
+		return ByteBuffer
+					.allocate(bufferSize(path, numOfBlocks))
+					.order(ByteOrder.nativeOrder());
+	}
+	
+	/** @since 00.02.09 */
 	public static final ByteBuffer newDirectBuffer(Path path) {
 		return newDirectBuffer(path, DEFAULT_FILE_STORE_BLOCKS_COUNT);
 	}

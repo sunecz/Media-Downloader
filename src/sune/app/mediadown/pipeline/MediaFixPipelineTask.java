@@ -9,6 +9,10 @@ import sune.app.mediadown.manager.PositionAwareManagerSubmitResult;
 import sune.app.mediadown.media.ResolvedMedia;
 import sune.app.mediadown.media.fix.MediaFixContext;
 import sune.app.mediadown.media.fix.MediaFixer;
+import sune.app.mediadown.pipeline.state.Metrics;
+import sune.app.mediadown.pipeline.state.PipelineState;
+import sune.app.mediadown.util.JSON.JSONCollection;
+import sune.app.mediadown.util.JSON.JSONObject;
 
 /** @since 00.02.09 */
 public final class MediaFixPipelineTask
@@ -18,6 +22,7 @@ public final class MediaFixPipelineTask
 	private final boolean needConversion;
 	private final List<ConversionMedia> inputs;
 	private final ResolvedMedia output;
+	private final MediaFixPipelineState state = new MediaFixPipelineState();
 	
 	private MediaFixPipelineTask(
 			boolean needConversion, List<ConversionMedia> inputs, ResolvedMedia output
@@ -69,4 +74,29 @@ public final class MediaFixPipelineTask
 	
 	@Override public List<ConversionMedia> inputs() { return inputs; }
 	@Override public ResolvedMedia output() { return output; }
+	
+	@Override
+	public PipelineState state() {
+		return state;
+	}
+	
+	private final class MediaFixPipelineState implements PipelineState {
+		
+		private static final String TYPE = "media_fix";
+		
+		private MediaFixPipelineState() {
+		}
+		
+		@Override
+		public Metrics metrics() {
+			return null; // No metrics supported
+		}
+		
+		@Override
+		public JSONCollection serialize() {
+			return JSONCollection.ofObject(
+				"type", JSONObject.ofString(TYPE)
+			);
+		}
+	}
 }

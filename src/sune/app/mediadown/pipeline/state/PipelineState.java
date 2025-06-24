@@ -1,4 +1,4 @@
-package sune.app.mediadown.pipeline;
+package sune.app.mediadown.pipeline.state;
 
 import sune.app.mediadown.util.JSONSerializable;
 

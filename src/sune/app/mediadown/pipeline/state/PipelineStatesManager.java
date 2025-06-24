@@ -1,6 +1,7 @@
-package sune.app.mediadown.pipeline;
+package sune.app.mediadown.pipeline.state;
 
 import java.io.IOException;
+import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
@@ -9,8 +10,10 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.WeakHashMap;
 import java.util.concurrent.BlockingQueue;
@@ -22,6 +25,11 @@ import sune.app.mediadown.Shared;
 import sune.app.mediadown.concurrent.Threads;
 import sune.app.mediadown.event.PipelineEvent;
 import sune.app.mediadown.event.tracker.TrackerEvent;
+import sune.app.mediadown.pipeline.MediaPipelineResult;
+import sune.app.mediadown.pipeline.Pipeline;
+import sune.app.mediadown.pipeline.PipelineMedia;
+import sune.app.mediadown.pipeline.PipelineTask;
+import sune.app.mediadown.util.JSON;
 import sune.app.mediadown.util.JSON.JSONCollection;
 import sune.app.mediadown.util.JSON.JSONObject;
 import sune.app.mediadown.util.NIO;
@@ -29,6 +37,7 @@ import sune.app.mediadown.util.NIO;
 /** @since 00.02.09 */
 public class PipelineStatesManager {
 	
+	private final Path path;
 	private final List<ManagedPipeline> managedPipelines;
 	private final StateFile file;
 	private final Thread thread;
@@ -38,7 +47,7 @@ public class PipelineStatesManager {
 	private int taskRemovedCount;
 	
 	public PipelineStatesManager(Path path) throws IOException {
-		Objects.requireNonNull(path);
+		this.path = Objects.requireNonNull(path);
 		managedPipelines = new ArrayList<>();
 		thread = Threads.newThread(this::run);
 		file = new StateFile(path);
@@ -55,6 +64,7 @@ public class PipelineStatesManager {
 				break;
 			} catch(Exception ex) {
 				// Ignore
+				ex.printStackTrace(); // FIXME: Remove
 			}
 		}
 	}
@@ -68,8 +78,8 @@ public class PipelineStatesManager {
 		PipelineMedia media = input.media();
 		
 		return JSONCollection.ofObject(
-			"name", JSONObject.ofString("start"),
-			"input", PipelineStates.Serializator.serialize(media)
+			"type", JSONObject.ofString("start"),
+			"input", PipelineStates.Serialization.serialize(media)
 		);
 	}
 	
@@ -82,6 +92,7 @@ public class PipelineStatesManager {
 		}
 		
 		file.save(pipeline, startState(ref));
+		Reference.reachabilityFence(ref);
 	}
 	
 	private final void doPipelineUpdate(PipelineUpdateTask task) throws IOException {
@@ -118,7 +129,13 @@ public class PipelineStatesManager {
 		}
 		
 		pipeline.isRunning = false;
-		file.remove(pipeline);
+		
+		// Remove the pipeline's data if and only if it has successfully ended,
+		// so that its state may be recovered on subsequent future load.
+		if(task.isSuccess) {
+			file.remove(pipeline);
+		}
+		
 		pipelineRemoved(pipeline);
 	}
 	
@@ -169,7 +186,13 @@ public class PipelineStatesManager {
 	}
 	
 	private final void enqueueEnd(ManagedPipeline pipeline) {
-		EndTask queueTask = new EndTask(pipeline);
+		Pipeline ref;
+		if((ref = pipeline.pipeline.get()) == null) {
+			return; // Nothing to do
+		}
+		
+		boolean isSuccess = ref.isStarted() && !ref.isError() && !ref.isStopped();
+		EndTask queueTask = new EndTask(pipeline, isSuccess);
 		enqueueTask(pipeline, queueTask);
 	}
 	
@@ -190,9 +213,64 @@ public class PipelineStatesManager {
 		synchronized(managedPipelines) {
 			int position = taskPosition++;
 			int fence = taskRemovedCount;
-			ManagedPipeline managed = new ManagedPipeline(position, fence, pipeline);
+			ManagedPipeline managed = new ManagedPipeline(pipeline, position, fence);
 			enqueueAdd(managed);
 			managedPipelines.add(managed);
+		}
+	}
+	
+	public void load() throws IOException {
+		file.load();
+	}
+	
+	public void clear() throws IOException {
+		file.clear();
+	}
+	
+	public Iterator<JSONCollection> contents() throws IOException {
+		return new ContentsIterator(path);
+	}
+	
+	private static final class ContentsIterator implements Iterator<JSONCollection> {
+		
+		private final JSON.JSONReader reader;
+		private boolean eof;
+		private JSONCollection item;
+		
+		public ContentsIterator(Path path) throws IOException {
+			this.reader = JSON.newReader(path);
+		}
+		
+		@Override
+		public boolean hasNext() {
+			if(eof) {
+				return false;
+			}
+			
+			if(item != null) {
+				return true; // Prefetched
+			}
+			
+			try {
+				item = reader.read();
+				eof = item == null;
+				return !eof;
+			} catch(IOException ex) {
+				eof = true;
+				return false;
+			}
+		}
+		
+		@Override
+		public JSONCollection next() {
+			JSONCollection result = item;
+			
+			if(result == null) {
+				throw new NoSuchElementException(); // Follow the Iterator contract
+			}
+			
+			item = null; // Reset
+			return result;
 		}
 	}
 	
@@ -322,6 +400,12 @@ public class PipelineStatesManager {
 			
 			return pos[idx + 1] - pos[idx];
 		}
+		
+		public void clear() {
+			Arrays.fill(pos, UNSET);
+			cap = 0; // Empty
+			pos[cap] = 0L; // End
+		}
 	}
 	
 	private static final class StateFile {
@@ -330,16 +414,50 @@ public class PipelineStatesManager {
 			StandardOpenOption.READ,
 			StandardOpenOption.WRITE,
 			StandardOpenOption.CREATE,
-			StandardOpenOption.TRUNCATE_EXISTING
 		};
 		
+		private final Path path;
 		private final FileChannel channel;
-		private final PositionTable posTable;
+		private final PositionTable table;
 		
 		public StateFile(Path path) throws IOException {
-			Objects.requireNonNull(path);
-			channel = FileChannel.open(path, OPEN_OPTIONS);
-			posTable = new PositionTable();
+			this.path = Objects.requireNonNull(path);
+			this.channel = FileChannel.open(path, OPEN_OPTIONS);
+			this.table = new PositionTable();
+		}
+		
+		public void load() throws IOException {
+			if(table.cap > 0) {
+				// Clear beforehand so that the table is synchronized with the file content,
+				// i.e. the first line should be the first entry in the table.
+				table.clear();
+			}
+			
+			ByteBuffer buf = NIO.newBuffer(path);
+			int num, size = 0;
+			
+			for(long pos = 0L;
+					(num = channel.read(buf, pos)) >= 0;
+					 pos += num) {
+				buf.flip();
+				int i = 0, l = buf.limit(), p = 0;
+				
+				for(int c; i < l; ++i) {
+					c = buf.get(i) & 0xff;
+					
+					if(c == '\n') {
+						table.add(size + (i + 1 - p));
+						size = 0; p = i + 1;
+					}
+				}
+				
+				size += l - p;
+				buf.clear();
+			}
+			
+			if(size > 0) {
+				table.add(size);
+			}
 		}
 		
 		public void save(ManagedPipeline pipeline, JSONCollection state) throws IOException {
@@ -351,30 +469,35 @@ public class PipelineStatesManager {
 			byte[] bytes = sb.toString().getBytes(Shared.CHARSET);
 			
 			ByteBuffer buf = ByteBuffer.wrap(bytes);
-			long pos = posTable.get(position);
+			long pos = table.get(position);
 			long newSize = buf.limit();
 			
 			if(pos == PositionTable.UNSET) {
-				pos = posTable.add(newSize);
+				pos = table.add(newSize);
 			}
 			
-			long oldSize = posTable.getSize(position);
-			posTable.set(position, newSize);
+			long oldSize = table.getSize(position);
+			table.set(position, newSize);
 			NIO.replace(channel, pos, oldSize, buf);
 			channel.force(false);
 		}
 		
 		public void remove(ManagedPipeline pipeline) throws IOException {
 			int position = pipeline.savePosition();
-			long pos = posTable.get(position);
+			long pos = table.get(position);
 			
 			if(pos == PositionTable.UNSET) {
 				return; // Does not exist
 			}
 			
-			long size = posTable.getSize(position);
-			posTable.del(position);
+			long size = table.getSize(position);
+			table.del(position);
 			NIO.truncate(channel, pos, size);
+			channel.force(false);
+		}
+		
+		public void clear() throws IOException {
+			channel.truncate(0L);
 			channel.force(false);
 		}
 	}
@@ -465,11 +588,13 @@ public class PipelineStatesManager {
 		
 		private final long creationTime;
 		private final ManagedPipeline pipeline;
+		private final boolean isSuccess;
 		private volatile boolean isStarted;
 		
-		public EndTask(ManagedPipeline pipeline) {
+		public EndTask(ManagedPipeline pipeline, boolean isSuccess) {
 			this.creationTime = System.nanoTime();
 			this.pipeline = Objects.requireNonNull(pipeline);
+			this.isSuccess = isSuccess;
 		}
 		
 		@Override
@@ -494,7 +619,7 @@ public class PipelineStatesManager {
 		private volatile PipelineTask task;
 		private volatile boolean isRunning;
 		
-		public ManagedPipeline(int position, int lowerFence, Pipeline pipeline) {
+		public ManagedPipeline(Pipeline pipeline, int position, int lowerFence) {
 			Objects.requireNonNull(pipeline);
 			this.pipeline = new WeakReference<>(pipeline);
 			this.position = position;

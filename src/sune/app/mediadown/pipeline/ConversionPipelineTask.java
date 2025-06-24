@@ -9,6 +9,10 @@ import sune.app.mediadown.manager.ConversionManager;
 import sune.app.mediadown.manager.PositionAwareManagerSubmitResult;
 import sune.app.mediadown.media.MediaConversionContext;
 import sune.app.mediadown.media.ResolvedMedia;
+import sune.app.mediadown.pipeline.state.Metrics;
+import sune.app.mediadown.pipeline.state.PipelineState;
+import sune.app.mediadown.util.JSON.JSONCollection;
+import sune.app.mediadown.util.JSON.JSONObject;
 
 /** @since 00.01.26 */
 public final class ConversionPipelineTask
@@ -19,6 +23,8 @@ public final class ConversionPipelineTask
 	private final List<ConversionMedia> inputs;
 	/** @since 00.02.08 */
 	private final ResolvedMedia output;
+	/** @since 00.02.09 */
+	private final ConversionPipelineState state = new ConversionPipelineState();
 	
 	/** @since 00.02.08 */
 	private ConversionPipelineTask(List<ConversionMedia> inputs, ResolvedMedia output) {
@@ -65,4 +71,31 @@ public final class ConversionPipelineTask
 	@Override public List<ConversionMedia> inputs() { return inputs; }
 	/** @since 00.02.09 */
 	@Override public ResolvedMedia output() { return output; }
+	
+	/** @since 00.02.09 */
+	@Override
+	public PipelineState state() {
+		return state;
+	}
+	
+	/** @since 00.02.09 */
+	private final class ConversionPipelineState implements PipelineState {
+		
+		private static final String TYPE = "conversion";
+		
+		private ConversionPipelineState() {
+		}
+		
+		@Override
+		public Metrics metrics() {
+			return null; // No metrics supported
+		}
+		
+		@Override
+		public JSONCollection serialize() {
+			return JSONCollection.ofObject(
+				"type", JSONObject.ofString(TYPE)
+			);
+		}
+	}
 }

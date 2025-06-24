@@ -1,6 +1,7 @@
 package sune.app.mediadown.pipeline;
 
 import sune.app.mediadown.HasTaskState;
+import sune.app.mediadown.pipeline.state.HasPipelineState;
 
 /** @since 00.01.26 */
 public interface PipelineTask extends HasTaskState, HasPipelineState {
