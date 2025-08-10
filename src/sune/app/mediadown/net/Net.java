@@ -220,7 +220,7 @@ public final class Net {
 			String token = tokenizer.nextToken();
 			String[] split = token.split("=");
 			String name = decodeURL(split[0]);
-			String value = decodeURL(split[1]);
+			String value = split.length > 1 ? decodeURL(split[1]) : "";
 			
 			// Handle an array arguments
 			int start;
