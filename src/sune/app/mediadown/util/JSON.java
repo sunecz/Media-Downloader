@@ -235,8 +235,8 @@ public final class JSON {
 			str.setLength(0);
 			
 			switch(parentType) {
-				case OBJECT: pair.b.set(lastStr, object);         break;
-				case ARRAY:  pair.b.add         (object);         break;
+				case OBJECT: pair.b.directSet(lastStr, object);   break;
+				case ARRAY:  pair.b.add               (object);   break;
 				default:     /* Collections, should not happen */ break;
 			}
 			
@@ -457,9 +457,9 @@ public final class JSON {
 						if(!parents.isEmpty()) {
 							pair = parents.peekFirst();
 							switch(pair.b.type()) {
-								case OBJECT: pair.b.set(lastParent.a, lastParent.b); break;
-								case ARRAY:  pair.b.add(lastParent.b);               break;
-								default:     /* Collections, should not happen */    break;
+								case OBJECT: pair.b.directSet(lastParent.a, lastParent.b); break;
+								case ARRAY:  pair.b.add                    (lastParent.b); break;
+								default:     /* Collections, should not happen */          break;
 							}
 						}
 						break;
