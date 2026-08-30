@@ -12,8 +12,7 @@
 	<property name="md.path.scripts" location="${md.path.etc}/scripts" />
 	
 	<property name="debuglevel" value="source,lines,vars" />
-	<property name="target" value="11" />
-	<property name="source" value="11" />
+	<property name="release" value="11" />
 	
 	<resources id="modules">
 		<string>javafx.controls</string>
@@ -97,7 +96,7 @@
 	
 	<target name="compile-java" depends="init-compile">
 		<echo message="Compiling Java files..." />
-		<javac debug="true" debuglevel="${debuglevel}" encoding="UTF-8" destdir="${md.path.bin}" deprecation="false" includeantruntime="false" source="${source}" target="${target}" modulepathref="modulepath.mediadownloader">
+		<javac debug="true" debuglevel="${debuglevel}" encoding="UTF-8" destdir="${md.path.bin}" deprecation="false" includeantruntime="false" release="${release}" modulepathref="modulepath.mediadownloader">
 			<src path="${md.path.src}" />
 			<classpath refid="classpath.mediadownloader" />
 			<compilerarg line="--add-modules ${modules}" />
