@@ -25,7 +25,11 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.Spliterator;
+import java.util.Spliterators;
 import java.util.function.Function;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 /**
  * Contains utilities for JSON strings, input streams and files.
@@ -1424,6 +1428,17 @@ public final class JSON {
 		public List<JSONNode> nodes() { return iterableToUnmodifiableList(nodesIterable()); }
 		public List<JSONObject> objects() { return iterableToUnmodifiableList(objectsIterable()); }
 		public List<JSONCollection> collections() { return iterableToUnmodifiableList(collectionsIterable()); }
+		
+		private final <T> Stream<T> stream(Iterator<T> iterator) {
+			return StreamSupport.stream(Spliterators.spliteratorUnknownSize(iterator, Spliterator.ORDERED), false);
+		}
+		
+		/** @since 00.02.09 */
+		public Stream<JSONNode> nodesStream() { return stream(nodesIterator()); }
+		/** @since 00.02.09 */
+		public Stream<JSONObject> objectsStream() { return stream(objectsIterator()); }
+		/** @since 00.02.09 */
+		public Stream<JSONCollection> collectionsStream() { return stream(collectionsIterator()); }
 		
 		@Override
 		public void toString(StringBuilder builder, int depth, boolean compress) {
