@@ -120,6 +120,11 @@ public final class NIO {
 	public static final void mergeDirectories(Path src, Path dest, BiPredicate<Path, Path> filter) throws IOException {
 		if(src == null || dest == null || filter == null)
 			throw new IllegalArgumentException();
+		
+		if(!exists(src)) {
+			return; // Nothing to merge
+		}
+		
 		for(Path path : iterable(Files.walk(src).iterator())) {
 			Path newPath = dest.resolve(src.relativize(path));
 			if(filter.test(path, newPath)) {
