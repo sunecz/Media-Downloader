@@ -17,7 +17,9 @@ public @interface Plugin {
 	/** @since 00.02.02 */
 	String moduleName() default "";
 	// Update-related properties
+	@Deprecated
 	boolean updatable() default false;
+	@Deprecated
 	String updateBaseURL() default "";
 	// Miscellaneous properties
 	String url() default "";

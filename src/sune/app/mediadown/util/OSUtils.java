@@ -1,5 +1,6 @@
 package sune.app.mediadown.util;
 
+@Deprecated
 public final class OSUtils {
 	
 	private static final String OS_NAME_RAW = System.getProperty("os.name").toLowerCase();
