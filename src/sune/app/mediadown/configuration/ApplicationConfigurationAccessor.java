@@ -1,14 +1,14 @@
 package sune.app.mediadown.configuration;
 
 import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.stream.Stream;
+import java.util.List;
 
 import sune.app.mediadown.conversion.ConversionProvider;
 import sune.app.mediadown.language.Language;
 import sune.app.mediadown.media.MediaFormat;
 import sune.app.mediadown.media.MediaTitleFormat;
 import sune.app.mediadown.theme.Theme;
+import sune.app.mediadown.update.Channel;
 import sune.app.mediadown.update.Version;
 import sune.util.ssdf2.SSDCollection;
 
@@ -57,8 +57,6 @@ public interface ApplicationConfigurationAccessor extends ConfigurationLocatable
 	/** @since 00.02.05 */
 	public static final String PROPERTY_NAMING_CUSTOM_MEDIA_TITLE_FORMAT = "naming.customMediaTitleFormat";
 	/** @since 00.02.07 */
-	public static final String PROPERTY_USE_PRE_RELEASE_VERSIONS = "usePreReleaseVersions";
-	/** @since 00.02.07 */
 	public static final String PROPERTY_AUTO_ENABLE_CLIPBOARD_WATCHER = "autoEnableClipboardWatcher";
 	/** @since 00.02.09 */
 	public static final String PROPERTY_CONVERSION_PROVIDER = "conversionProvider";
@@ -66,6 +64,10 @@ public interface ApplicationConfigurationAccessor extends ConfigurationLocatable
 	public static final String PROPERTY_CHECK_MESSAGES_ON_STARTUP = "checkMessagesOnStartup";
 	/** @since 00.02.09 */
 	public static final String PROPERTY_REPORT_EMAIL = "report.email";
+	/** @since 00.02.09 */
+	public static final String PROPERTY_UPDATE_CHANNEL = "update.channel";
+	/** @since 00.02.09 */
+	public static final String PROPERTY_UPDATE_REGISTRIES = "update.registries";
 	
 	Version version();
 	Language language();
@@ -92,8 +94,6 @@ public interface ApplicationConfigurationAccessor extends ConfigurationLocatable
 	/** @since 00.02.05 */
 	String customMediaTitleFormat();
 	/** @since 00.02.07 */
-	UsePreReleaseVersions usePreReleaseVersions();
-	/** @since 00.02.07 */
 	boolean autoEnableClipboardWatcher();
 	/** @since 00.02.09 */
 	ConversionProvider conversionProvider();
@@ -101,35 +101,10 @@ public interface ApplicationConfigurationAccessor extends ConfigurationLocatable
 	boolean checkMessagesOnStartup();
 	/** @since 00.02.09 */
 	String reportEmail();
+	/** @since 00.02.09 */
+	Channel updateChannel();
+	/** @since 00.02.09 */
+	List<String> updateRegistries();
 	
 	SSDCollection data();
-	
-	/** @since 00.02.07 */
-	public static enum UsePreReleaseVersions {
-		
-		ALWAYS, TILL_NEXT_RELEASE, NEVER, UNKNOWN;
-		
-		private static UsePreReleaseVersions[] validValues;
-		
-		public static final UsePreReleaseVersions[] validValues() {
-			if(validValues == null) {
-				UsePreReleaseVersions[] values = values();
-				validValues = Arrays.copyOfRange(values, 0, values.length - 1);
-			}
-			
-			return validValues;
-		}
-		
-		// Utility method for use where the exception of Enum#valueOf(String) method
-		// would cause problems.
-		public static final UsePreReleaseVersions of(String string) {
-			if(string == null || string.isBlank())
-				return UNKNOWN;
-			
-			String normalized = string.strip().toUpperCase();
-			return Stream.of(values())
-					     .filter((v) -> normalized.equals(v.name()))
-					     .findFirst().orElse(UNKNOWN);
-		}
-	}
 }

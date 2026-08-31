@@ -1,6 +1,6 @@
 {
 	name:    "english",
-	version: "17",
+	version: "18",
 	title:   "English",
 	code:    "eng",
 	windows: {
@@ -335,10 +335,13 @@
 				requestConnectTimeout:      "Request connect timeout",
 				requestReadTimeout:         "Request read timeout",
 				checkResourcesIntegrity:    "Check integrity of resources",
-				usePreReleaseVersions:      "Use pre-release versions",
 				autoEnableClipboardWatcher: "Automatically enable the Clipboard watcher",
 				conversionProvider:         "Conversion provider",
 				checkMessagesOnStartup:     "Check messages on startup",
+				update: {
+					channel:    "Update channel",
+					registries: "Update sources"
+				},
 				plugins: {
 					autoUpdateCheck: "Automatic plugin updates"
 				},
@@ -361,11 +364,11 @@
 				save_fail:    "Cannot save configuration. Please, try that again."
 			},
 			values: {
-				usePreReleaseVersions: {
-					ALWAYS:            "Always",
-					TILL_NEXT_RELEASE: "Till the next release",
-					NEVER:             "Never",
-					UNKNOWN:           "Unknown value"
+				update: {
+					channel: {
+						STABLE: "Stable",
+						DEV:    "Development"
+					}
 				},
 				conversionProvider: {
 					ffmpeg: "FFmpeg"
@@ -488,18 +491,6 @@
 		update_available: {
 			title: "Update available",
 			text:  "A new version is available! Do you want to update the application?"
-		},
-		pre_release_versions: {
-			application_updated: {
-				title: "Pre-release versions",
-				text:  "The application has been updated to a newer release version. "
-				     + "Do you want to keep using pre-release versions?"
-			},
-			configuration_changed: {
-				title: "Pre-release versions",
-				text:  "Configuration has been changed to not use pre-release versions. "
-				     + "Do you want to revert back to the release version?"
-			}
 		},
 		report: {
 			success: {

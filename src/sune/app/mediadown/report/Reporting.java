@@ -113,7 +113,8 @@ public class Reporting {
 			configuration.set("parallel_downloads", appConfig.parallelDownloads());
 			configuration.set("request_connect_timeout", appConfig.requestConnectTimeout());
 			configuration.set("request_read_timeout", appConfig.requestReadTimeout());
-			configuration.set("use_pre_release_versions", appConfig.usePreReleaseVersions().name());
+			configuration.set("update_channel", appConfig.updateChannel().name());
+			configuration.set("update_registries", JSONCollection.ofArray(appConfig.updateRegistries()));
 			
 			return configuration;
 		}

@@ -33,12 +33,8 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
-import sune.app.mediadown.Arguments;
 import sune.app.mediadown.MediaDownloader;
-import sune.app.mediadown.MediaDownloader.JarUpdater;
-import sune.app.mediadown.configuration.ApplicationConfiguration;
 import sune.app.mediadown.configuration.ApplicationConfigurationAccessor;
-import sune.app.mediadown.configuration.ApplicationConfigurationAccessor.UsePreReleaseVersions;
 import sune.app.mediadown.configuration.Configuration;
 import sune.app.mediadown.configuration.Configuration.ConfigurationProperty;
 import sune.app.mediadown.configuration.Configuration.ConfigurationPropertyType;
@@ -60,9 +56,6 @@ import sune.app.mediadown.gui.form.field.TranslatableSelectField.ValueTransforme
 import sune.app.mediadown.language.Translation;
 import sune.app.mediadown.plugin.PluginFile;
 import sune.app.mediadown.plugin.Plugins;
-import sune.app.mediadown.resource.Resources.StringReceiver;
-import sune.app.mediadown.update.Version;
-import sune.app.mediadown.update.VersionType;
 import sune.app.mediadown.util.FXUtils;
 import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.Regex;
@@ -377,13 +370,9 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 			return; // Return, if error
 		}
 		
-		ApplicationConfiguration appConfiguration = MediaDownloader.configuration();
 		String dialogTitle = translation.getSingle("dialog.save_title");
 		StringBuilder errorContentBuilder = null;
 		Set<Configuration> configurations = new LinkedHashSet<>();
-		
-		// Remember the old value for detecting changes
-		UsePreReleaseVersions preReleaseVersionsOldValue = appConfiguration.usePreReleaseVersions();
 		
 		// Save all fields data in memory
 		for(FormField<?> f : Utils.iterable(forms.stream().flatMap((f) -> f.fields().stream()).iterator())) {
@@ -419,41 +408,6 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 		
 		if(errorContentBuilder == null) {
 			Dialog.showInfo(dialogTitle, translation.getSingle("dialog.save_success"));
-			
-			// Before closing, check for changes with using pre-release versions
-			UsePreReleaseVersions preReleaseVersionsNewValue = appConfiguration.usePreReleaseVersions();
-			if(MediaDownloader.version().type() != VersionType.RELEASE
-					&&  preReleaseVersionsNewValue == UsePreReleaseVersions.NEVER
-					&& (preReleaseVersionsOldValue == UsePreReleaseVersions.TILL_NEXT_RELEASE
-							|| preReleaseVersionsOldValue == UsePreReleaseVersions.ALWAYS)) {
-				String trPath = "dialogs.pre_release_versions.configuration_changed";
-				Translation tr = MediaDownloader.translation().getTranslation(trPath);
-				
-				if(Dialog.showPrompt(tr.getSingle("title"), tr.getSingle("text"))) {
-					Version versionCurrentRelease = MediaDownloader.version().release();
-					Version versionPreviousRelease = Version.UNKNOWN;
-					
-					// This will only work for 00.02.** versions but is should suffice
-					if(versionCurrentRelease.patch() > 0) {
-						versionPreviousRelease = Version.of(
-							versionCurrentRelease.type(),
-							versionCurrentRelease.major(),
-							versionCurrentRelease.minor(),
-							versionCurrentRelease.patch() - 1,
-							versionCurrentRelease.value()
-						);
-					}
-					
-					if(versionPreviousRelease != Version.UNKNOWN) {
-						Version targetVersion = versionPreviousRelease;
-						Arguments args = MediaDownloader.arguments();
-						StringReceiver receiver = ((s) -> { /* Do nothing */ });
-						Ignore.callVoid(() -> JarUpdater.doUpdateProcess(targetVersion, false, args, receiver),
-						                MediaDownloader::error);
-					}
-				}
-			}
-			
 			close();
 		} else {
 			Dialog.showContentError(dialogTitle, translation.getSingle("dialog.save_fail"),

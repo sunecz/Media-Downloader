@@ -2,6 +2,7 @@ package sune.app.mediadown.configuration;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,8 +23,8 @@ import sune.app.mediadown.media.MediaTitleFormats.NamedMediaTitleFormat;
 import sune.app.mediadown.net.Web;
 import sune.app.mediadown.resource.ResourceRegistry;
 import sune.app.mediadown.theme.Theme;
+import sune.app.mediadown.update.Channel;
 import sune.app.mediadown.update.Version;
-import sune.app.mediadown.update.VersionType;
 import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.Utils.Ignore;
 import sune.util.ssdf2.SSDCollection;
@@ -60,8 +61,6 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 	/** @since 00.02.05 */
 	private String naming_customMediaTitleFormat;
 	/** @since 00.02.07 */
-	private UsePreReleaseVersions usePreReleaseVersions;
-	/** @since 00.02.07 */
 	private boolean autoEnableClipboardWatcher;
 	/** @since 00.02.09 */
 	private ConversionProvider conversionProvider;
@@ -69,6 +68,10 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 	private boolean checkMessagesOnStartup;
 	/** @since 00.02.09 */
 	private String reportEmail;
+	/** @since 00.02.09 */
+	private Channel update_channel;
+	/** @since 00.02.09 */
+	private List<String> update_registries;
 	
 	private ApplicationConfiguration(Path path, String name, SSDCollection data, Map<String, ConfigurationProperty<?>> properties) {
 		super(name, data, properties);
@@ -112,20 +115,18 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 		builder.addProperty(ConfigurationProperty.ofBoolean(PROPERTY_CHECK_RESOURCES_INTEGRITY)
 			.inGroup(GROUP_GENERAL)
 			.withDefaultValue(false));
-		builder.addProperty(ConfigurationProperty.ofType(PROPERTY_USE_PRE_RELEASE_VERSIONS, UsePreReleaseVersions.class)
+		
+		// ----- Update
+		builder.addProperty(ConfigurationProperty.ofType(PROPERTY_UPDATE_CHANNEL, Channel.class)
 			.inGroup(GROUP_GENERAL)
-			.withFactory(() -> Stream.concat(
-			                       // Compatibility with old boolean values
-			                       Stream.of("true", "false"),
-			                       Stream.of(UsePreReleaseVersions.values())
-			                             .map(Enum::name)
-			                   ).collect(Collectors.toList()))
-			.withTransformer(Enum::name,
-			                 UsePreReleaseVersions::of)
-			.withDefaultValue((MediaDownloader.version().type() != VersionType.RELEASE
-			                      ? UsePreReleaseVersions.ALWAYS
-			                      : UsePreReleaseVersions.NEVER
-			                  ).name()));
+			.withFactory(() -> Arrays.stream(Channel.values())
+				                     .map(Channel::name)
+				                     .collect(Collectors.toList()))
+			.withTransformer(Enum::name, Channel::valueOf)
+			.withDefaultValue(Channel.STABLE.name()));
+		builder.addProperty(ConfigurationProperty.ofArray(PROPERTY_UPDATE_REGISTRIES)
+			.inGroup(GROUP_GENERAL)
+			.withDefaultValues(MediaDownloader.Common.defaultComponentRegistries()));
 		
 		// ----- Download
 		builder.addProperty(ConfigurationProperty.ofInteger(PROPERTY_ACCELERATED_DOWNLOAD)
@@ -242,11 +243,14 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 				                          .map(NamedMediaTitleFormat::format)
 				                          .orElseGet(MediaTitleFormats::ofDefault);
 		
-		usePreReleaseVersions = UsePreReleaseVersions.of(stringValue(PROPERTY_USE_PRE_RELEASE_VERSIONS));
 		autoEnableClipboardWatcher = booleanValue(PROPERTY_AUTO_ENABLE_CLIPBOARD_WATCHER);
 		conversionProvider = Conversions.Providers.ofName(stringValue(PROPERTY_CONVERSION_PROVIDER));
 		checkMessagesOnStartup = booleanValue(PROPERTY_CHECK_MESSAGES_ON_STARTUP);
 		reportEmail = stringValue(PROPERTY_REPORT_EMAIL);
+		update_channel = Channel.valueOf(stringValue(PROPERTY_UPDATE_CHANNEL));
+		update_registries = arrayValue(PROPERTY_UPDATE_REGISTRIES).values().stream()
+			.map(String::valueOf)
+			.collect(Collectors.toList());
 	}
 	
 	/** @since 00.02.07 */
@@ -356,12 +360,6 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 	
 	/** @since 00.02.07 */
 	@Override
-	public UsePreReleaseVersions usePreReleaseVersions() {
-		return usePreReleaseVersions;
-	}
-	
-	/** @since 00.02.07 */
-	@Override
 	public boolean autoEnableClipboardWatcher() {
 		return autoEnableClipboardWatcher;
 	}
@@ -382,6 +380,16 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 	@Override
 	public String reportEmail() {
 		return reportEmail;
+	}
+	
+	/** @since 00.02.09 */
+	public Channel updateChannel() {
+		return update_channel;
+	}
+	
+	/** @since 00.02.09 */
+	public List<String> updateRegistries() {
+		return update_registries;
 	}
 	
 	public static final class Builder extends Configuration.Builder implements ApplicationConfigurationAccessor {
@@ -500,12 +508,6 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 		
 		/** @since 00.02.07 */
 		@Override
-		public UsePreReleaseVersions usePreReleaseVersions() {
-			return UsePreReleaseVersions.of(accessor().stringValue(PROPERTY_USE_PRE_RELEASE_VERSIONS));
-		}
-		
-		/** @since 00.02.07 */
-		@Override
 		public boolean autoEnableClipboardWatcher() {
 			return accessor().booleanValue(PROPERTY_AUTO_ENABLE_CLIPBOARD_WATCHER);
 		}
@@ -526,6 +528,18 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 		@Override
 		public String reportEmail() {
 			return accessor().stringValue(PROPERTY_REPORT_EMAIL);
+		}
+		
+		/** @since 00.02.09 */
+		public Channel updateChannel() {
+			return Channel.valueOf(accessor().stringValue(PROPERTY_UPDATE_CHANNEL));
+		}
+		
+		/** @since 00.02.09 */
+		public List<String> updateRegistries() {
+			return accessor().arrayValue(PROPERTY_UPDATE_REGISTRIES).values().stream()
+						.map(String::valueOf)
+						.collect(Collectors.toList());
 		}
 		
 		@Override

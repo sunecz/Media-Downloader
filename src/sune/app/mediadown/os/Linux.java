@@ -8,9 +8,9 @@ import java.nio.file.Path;
 import sune.app.mediadown.util.FXUtils;
 
 /** @since 00.02.07 */
-class Linux implements OS {
+final class Linux implements OS {
 	
-	private static Linux INSTANCE;
+	static Linux INSTANCE = new Linux();
 	
 	/** @since 00.02.08 */
 	private final PathHighlighter pathHighlighter;
@@ -18,10 +18,6 @@ class Linux implements OS {
 	// Forbid anyone to create an instance of this class
 	private Linux() {
 		pathHighlighter = new PathHighlighter();
-	}
-	
-	public static final Linux instance() {
-		return INSTANCE == null ? (INSTANCE = new Linux()) : INSTANCE;
 	}
 	
 	@Override
@@ -33,6 +29,11 @@ class Linux implements OS {
 	public void browse(URI uri) throws IOException {
 		// Delegate to the existing method
 		FXUtils.openURI(uri);
+	}
+	
+	@Override
+	public Name name() {
+		return Name.LINUX;
 	}
 	
 	/** @since 00.02.08 */

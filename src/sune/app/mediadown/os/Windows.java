@@ -7,16 +7,12 @@ import java.nio.file.Path;
 import sune.app.mediadown.util.FXUtils;
 
 /** @since 00.02.07 */
-class Windows implements OS {
+final class Windows implements OS {
 	
-	private static Windows INSTANCE;
+	static Windows INSTANCE = new Windows();
 	
 	// Forbid anyone to create an instance of this class
 	private Windows() {
-	}
-	
-	public static final Windows instance() {
-		return INSTANCE == null ? (INSTANCE = new Windows()) : INSTANCE;
 	}
 	
 	@Override
@@ -32,5 +28,10 @@ class Windows implements OS {
 	public void browse(URI uri) throws IOException {
 		// Delegate to the existing method
 		FXUtils.openURI(uri);
+	}
+	
+	@Override
+	public Name name() {
+		return Name.WINDOWS;
 	}
 }

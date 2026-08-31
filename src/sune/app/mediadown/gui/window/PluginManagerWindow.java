@@ -4,8 +4,12 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 
 import javafx.beans.property.SimpleStringProperty;
 import javafx.geometry.Insets;
@@ -22,9 +26,11 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import sune.app.mediadown.MediaDownloader;
-import sune.app.mediadown.download.Download;
+import sune.app.mediadown.MediaDownloader.Common;
+import sune.app.mediadown.configuration.ApplicationConfiguration;
 import sune.app.mediadown.event.DownloadEvent;
 import sune.app.mediadown.event.tracker.DownloadTracker;
+import sune.app.mediadown.event.tracker.TrackerManager;
 import sune.app.mediadown.gui.Dialog;
 import sune.app.mediadown.gui.DraggableWindow;
 import sune.app.mediadown.gui.ProgressWindow;
@@ -35,8 +41,15 @@ import sune.app.mediadown.language.Translation;
 import sune.app.mediadown.net.Net;
 import sune.app.mediadown.os.OS;
 import sune.app.mediadown.plugin.PluginFile;
-import sune.app.mediadown.plugin.PluginUpdater;
 import sune.app.mediadown.plugin.Plugins;
+import sune.app.mediadown.update.Artifact;
+import sune.app.mediadown.update.ArtifactCheckEvent;
+import sune.app.mediadown.update.ArtifactChecker;
+import sune.app.mediadown.update.ArtifactDownloader;
+import sune.app.mediadown.update.Artifacts;
+import sune.app.mediadown.update.Channel;
+import sune.app.mediadown.update.ComponentRegistry;
+import sune.app.mediadown.update.Manifest;
 import sune.app.mediadown.util.FXUtils;
 import sune.app.mediadown.util.MathUtils;
 
@@ -193,70 +206,116 @@ public class PluginManagerWindow extends DraggableWindow<VBox> {
 		private final Translation translation = trtr("progress.update");
 		private final AtomicBoolean cancelled = new AtomicBoolean();
 		private ProgressContext context;
+		
+		private volatile ArtifactDownloader downloader;
+		private int ctr;
 		private double pluginsCount;
-		private Download download;
 		
 		protected ActionUpdatePlugins(Collection<PluginFile> plugins) {
 			this.plugins = plugins;
 		}
 		
-		private final boolean update(PluginFile pluginFile) {
-			String pluginURL = null;
+		private final ArtifactDownloader artifactDownloader(Path root) {
+			ArtifactDownloader downloader = new ArtifactDownloader(new TrackerManager(), root);
 			
-			try {
-				pluginURL = PluginUpdater.check(pluginFile);
-				
-				// Check whether there is a newer version of the plugin
-				if(pluginURL == null) {
-					return false;
-				}
-			} catch(Exception ex) {
-				MediaDownloader.error(ex);
+			downloader.addEventListener(DownloadEvent.BEGIN, (ctx) -> {
+				context.setText(translation.getSingle(
+					"download.begin",
+					"name", ctx.output().getFileName().toString()
+				));
+			});
+			downloader.addEventListener(DownloadEvent.UPDATE, (ctx) -> {
+				DownloadTracker tracker = (DownloadTracker) ctx.trackerManager().tracker();
+				context.setText(translation.getSingle(
+					"download.progress",
+					"name",    ctx.output().getFileName().toString(),
+					"current", tracker.current(),
+					"total",   tracker.total(),
+					"percent", MathUtils.round(tracker.progress() * 100.0, 2)
+				));
+			});
+			downloader.addEventListener(DownloadEvent.END, (ctx) -> {
+				context.setText(translation.getSingle(
+					"download.end",
+					"name", ctx.output().getFileName().toString()
+				));
+				context.setProgress(++ctr / pluginsCount);
+			});
+			downloader.addEventListener(DownloadEvent.ERROR, (ctx) -> {
+				context.setText(translation.getSingle(
+					"download.error",
+					"message", ctx.exception()
+				));
+			});
+			
+			return downloader;
+		}
+		
+		private final ArtifactChecker artifactChecker(Path root) {
+			ArtifactChecker checker = new ArtifactChecker(root);
+			
+			checker.addEventListener(ArtifactCheckEvent.BEGIN, (ctx) -> {
+				context.setText(String.format(
+					"Checking %s...",
+					ctx.artifact().installPath()
+				));
+			});
+			checker.addEventListener(ArtifactCheckEvent.END, (ctx) -> {
+				context.setText(String.format(
+					"Checking %s... %s",
+					ctx.artifact().installPath(),
+					ctx.result()
+				));
+			});
+			checker.addEventListener(ArtifactCheckEvent.ERROR, (ctx) -> {
+				context.setText("Checking %s... error");
+			});
+			
+			return checker;
+		}
+		
+		private final boolean update(List<String> names) throws Exception {
+			Set<String> setOfNames = new TreeSet<>(names);
+			ApplicationConfiguration configuration = MediaDownloader.configuration();
+			
+			List<ComponentRegistry> registries = (
+				configuration.updateRegistries().stream()
+					.map(ComponentRegistry::new)
+					.collect(Collectors.toList())
+			);
+			
+			if(registries.isEmpty()) {
+				return false; // Nothing to be checked
 			}
 			
-			String pluginTitle = pluginFile.getPlugin().instance().title();
-			Path pluginPath = Path.of(pluginFile.getPath());
+			Channel channel = configuration.updateChannel();
+			Artifacts.Builder builder = Artifacts.builderOf(channel);
+			Path root = builder.root();
+			Path manifestPath = Common.manifestPath();
+			Manifest manifest = Manifest.ofLocal(manifestPath);
 			
-			try(Download download = PluginUpdater.update(pluginURL, pluginPath)) {
-				this.download = download; // Assign so that the download is stoppable
-				
-				download.addEventListener(DownloadEvent.BEGIN, (ctx) -> {
-					context.setText(translation.getSingle("download.begin", "name", pluginTitle));
-				});
-				download.addEventListener(DownloadEvent.UPDATE, (ctx) -> {
-					DownloadTracker tracker = (DownloadTracker) ctx.trackerManager().tracker();
-					context.setText(translation.getSingle(
-						"download.progress",
-						"name",    pluginTitle,
-						"current", tracker.current(),
-						"total",   tracker.total(),
-						"percent", MathUtils.round(tracker.progress() * 100.0, 2)
-					));
-				});
-				download.addEventListener(DownloadEvent.ERROR, (ctx) -> {
-					context.setText(translation.getSingle("download.error", "message", ctx.exception()));
-				});
-				download.addEventListener(DownloadEvent.END, (ctx) -> {
-					context.setText(translation.getSingle("download.end", "name", pluginTitle));
-				});
-				
-				download.start();
-				return !download.isError();
-			} catch(Exception ex) {
-				// Ignore
+			builder = builder.withIntegrityCheck((a) -> artifactChecker(root));
+			builder = builder.skipArtifactFilter((a) -> !setOfNames.contains(a.component()));
+			
+			Artifacts artifacts = builder.build(manifest, registries);
+			List<Artifact> downloaded;
+			
+			try(ArtifactDownloader downloader = artifactDownloader(root)) {
+				this.downloader = downloader;
+				downloaded = artifacts.download(downloader);
+			} finally {
+				this.downloader = null;
 			}
 			
-			return false;
+			artifacts.remoteManifest().writeTo(manifestPath);
+			
+			return !downloaded.isEmpty();
 		}
 		
 		private final void stopDownload() {
-			try {
-				if(download != null) {
-					download.stop();
-					download.close();
-				}
-			} catch(Exception ex) {
-				// Ignore
+			ArtifactDownloader downloader;
+			if((downloader = this.downloader) != null) {
+				downloader.stop();
 			}
 		}
 		
@@ -270,35 +329,32 @@ public class PluginManagerWindow extends DraggableWindow<VBox> {
 			}
 			
 			context.setProgress(ProgressContext.PROGRESS_NONE);
+			ctr = 0;
 			pluginsCount = plugins.size();
 			
-			boolean updated = false;
-			int ctr = 0;
-			
-			for(PluginFile pluginFile : plugins) {
-				if(cancelled.get()) {
-					stopDownload();
-					break; // Do not continue
-				}
+			List<String> names = plugins.stream()
+				.map((p) -> "plugin." + p.getPlugin().instance().name())
+				.collect(Collectors.toList());
+
+			try {
+				boolean updated = update(names);
+				context.setText(translation.getSingle("done"));
 				
-				String pluginTitle = MediaDownloader.translation().getSingle(pluginFile.getPlugin().instance().title());
-				context.setText(translation.getSingle("item_init", "name", pluginTitle));
-				updated = update(pluginFile) || updated;
-				context.setProgress(++ctr / pluginsCount);
-				context.setText(translation.getSingle("item_done", "name", pluginTitle));
+				Dialog.showInfo(
+					translation.getSingle("title"),
+					translation.getSingle(updated ? "done_any" : "done_none")
+				);
+			} catch(InterruptedException ex) {
+				// Ignore
+			} catch(Exception ex) {
+				MediaDownloader.error(ex);
 			}
-			
-			context.setText(translation.getSingle("done"));
-			
-			Dialog.showInfo(
-				translation.getSingle("title"),
-				translation.getSingle(updated ? "done_any" : "done_none")
-			);
 		}
 		
 		@Override
 		public void cancel() {
 			cancelled.set(true);
+			stopDownload();
 			context.setText(translation.getSingle("cancelled"));
 		}
 	}

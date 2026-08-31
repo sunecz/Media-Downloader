@@ -7,16 +7,12 @@ import java.nio.file.Path;
 import sune.app.mediadown.util.FXUtils;
 
 /** @since 00.02.07 */
-class MacOS implements OS {
+final class MacOS implements OS {
 	
-	private static MacOS INSTANCE;
+	static MacOS INSTANCE = new MacOS();
 	
 	// Forbid anyone to create an instance of this class
 	private MacOS() {
-	}
-	
-	public static final MacOS instance() {
-		return INSTANCE == null ? (INSTANCE = new MacOS()) : INSTANCE;
 	}
 	
 	@Override
@@ -30,5 +26,10 @@ class MacOS implements OS {
 	public void browse(URI uri) throws IOException {
 		// Delegate to the existing method
 		FXUtils.openURI(uri);
+	}
+	
+	@Override
+	public Name name() {
+		return Name.MACOS;
 	}
 }

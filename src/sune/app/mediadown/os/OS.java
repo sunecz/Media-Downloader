@@ -4,24 +4,32 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
 
-import sune.app.mediadown.util.OSUtils;
-
 /** @since 00.02.07 */
 public interface OS {
 	
 	void highlight(Path path) throws IOException;
 	void browse(URI uri) throws IOException;
 	
-	public static OS windows() { return Windows.instance(); }
-	public static OS linux()   { return Linux.instance(); }
-	public static OS macOS()   { return MacOS.instance(); }
+	/** @since 00.02.09 */
+	default Name name() { return OSUtils.currentName(); }
+	/** @since 00.02.09 */
+	default Arch arch() { return OSUtils.currentArch(); }
 	
-	public static OS current() {
-		switch(OSUtils.getSystemName()) {
-			case OSUtils.OS_NAME_WINDOWS: return windows();
-			case OSUtils.OS_NAME_UNIX:    return linux();
-			case OSUtils.OS_NAME_MACOS:   return macOS();
+	static OS windows() { return Windows.INSTANCE; }
+	static OS linux()   { return Linux.INSTANCE; }
+	static OS macOS()   { return MacOS.INSTANCE; }
+	
+	static OS current() {
+		switch(OSUtils.currentName()) {
+			case WINDOWS: return windows();
+			case LINUX:   return linux();
+			case MACOS:   return macOS();
 			default: throw new IllegalStateException("Unsupported operating system");
 		}
 	}
+	
+	/** @since 00.02.09 */
+	static enum Name { WINDOWS, LINUX, MACOS, OTHER; }
+	/** @since 00.02.09 */
+	static enum Arch { AMD64, ARM64, OTHER; }
 }
