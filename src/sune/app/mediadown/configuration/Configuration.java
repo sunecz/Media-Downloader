@@ -968,7 +968,7 @@ public class Configuration implements ConfigurationAccessor {
 			}
 			
 			@Override
-			public final Builder<T> asHidden(boolean isHidden) {
+			public Builder<T> asHidden(boolean isHidden) {
 				return (Builder<T>) super.asHidden(isHidden);
 			}
 			
@@ -980,7 +980,7 @@ public class Configuration implements ConfigurationAccessor {
 			/** @since 00.02.07 */
 			@Override
 			public Map<String, Object> value() {
-				return value;
+				return useValue ? value : defaultValue;
 			}
 			
 			/** @since 00.02.07 */
@@ -1036,13 +1036,7 @@ public class Configuration implements ConfigurationAccessor {
 			}
 			
 			/** @since 00.02.07 */
-			protected final void addValues(MapAsArray array, List<Object> values) {
-				int size = values.size();
-				
-				if((size & 1) != 0) {
-					throw new IllegalArgumentException("Number of values must be even");
-				}
-				
+			protected final void addValues(MapAsArray array, List<?> values) {
 				values.forEach(array::add);
 			}
 			
@@ -1051,15 +1045,27 @@ public class Configuration implements ConfigurationAccessor {
 				return new ArrayConfigurationProperty(name, value(), isHidden, group, order);
 			}
 			
+			@Override
+			public Builder asHidden(boolean isHidden) {
+				return (Builder) super.asHidden(isHidden);
+			}
+			
+			@Override
+			public Builder inGroup(String group) {
+				return (Builder) super.inGroup(group);
+			}
+			
 			/** @since 00.02.07 */
 			public final Builder addValue(Object value) {
 				valueArray.add(value);
+				useValue = !valueArray.isEmpty();
 				return this;
 			}
 			
 			/** @since 00.02.07 */
 			public final Builder removeValue(int index) {
 				valueArray.remove(index);
+				useValue = !valueArray.isEmpty();
 				return this;
 			}
 			
@@ -1071,7 +1077,7 @@ public class Configuration implements ConfigurationAccessor {
 			/** @since 00.02.07 */
 			public final Builder withValues(List<Object> values) {
 				addValues(valueArray, values);
-				useValue = true;
+				useValue = !valueArray.isEmpty();
 				return this;
 			}
 			
@@ -1081,7 +1087,7 @@ public class Configuration implements ConfigurationAccessor {
 			}
 			
 			/** @since 00.02.07 */
-			public final Builder withDefaultValues(List<Object> values) {
+			public final <T> Builder withDefaultValues(List<T> values) {
 				addValues(defaultValueArray, values);
 				return this;
 			}
@@ -1096,6 +1102,7 @@ public class Configuration implements ConfigurationAccessor {
 				
 				// Make sure that the indicies are correct
 				valueArray.check();
+				useValue = !valueArray.isEmpty();
 				
 				return this;
 			}
@@ -1139,6 +1146,10 @@ public class Configuration implements ConfigurationAccessor {
 				public void remove(int index) {
 					map.remove(index(index));
 					reindex(index);
+				}
+				
+				public boolean isEmpty() {
+					return map.isEmpty();
 				}
 				
 				public void check() {
@@ -1249,15 +1260,27 @@ public class Configuration implements ConfigurationAccessor {
 				return new ObjectConfigurationProperty(name, value(), isHidden, group, order);
 			}
 			
+			@Override
+			public Builder asHidden(boolean isHidden) {
+				return (Builder) super.asHidden(isHidden);
+			}
+			
+			@Override
+			public Builder inGroup(String group) {
+				return (Builder) super.inGroup(group);
+			}
+			
 			/** @since 00.02.07 */
 			public final Builder addValue(String name, Object value) {
 				this.value.put(name, value);
+				useValue = !this.value.isEmpty();
 				return this;
 			}
 			
 			/** @since 00.02.07 */
 			public final Builder removeValue(String name) {
 				this.value.remove(name);
+				useValue = !this.value.isEmpty();
 				return this;
 			}
 			
@@ -1269,7 +1292,7 @@ public class Configuration implements ConfigurationAccessor {
 			/** @since 00.02.07 */
 			public final Builder withValues(List<Object> values) {
 				addValues(this.value, values);
-				useValue = true;
+				useValue = !this.value.isEmpty();
 				return this;
 			}
 			
@@ -1281,6 +1304,17 @@ public class Configuration implements ConfigurationAccessor {
 			/** @since 00.02.07 */
 			public final Builder withDefaultValues(List<Object> values) {
 				addValues(this.defaultValue, values);
+				return this;
+			}
+			
+			/** @since 00.02.07 */
+			@Override
+			public Builder loadData(SSDNode node) {
+				if(!node.isCollection()) return this;
+				
+				super.loadData(node);
+				useValue = !this.value.isEmpty();
+				
 				return this;
 			}
 		}
