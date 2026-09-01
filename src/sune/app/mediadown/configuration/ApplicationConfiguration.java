@@ -109,23 +109,23 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 			                            .filter((t) -> t.name().equals(s))
 			                            .findFirst().orElse(null))
 			.withDefaultValue(Theme.ofDefault().name()));
-		builder.addProperty(ConfigurationProperty.ofBoolean(PROPERTY_AUTO_UPDATE_CHECK)
-			.inGroup(GROUP_GENERAL)
-			.withDefaultValue(true));
-		builder.addProperty(ConfigurationProperty.ofBoolean(PROPERTY_CHECK_RESOURCES_INTEGRITY)
-			.inGroup(GROUP_GENERAL)
-			.withDefaultValue(false));
 		
 		// ----- Update
 		builder.addProperty(ConfigurationProperty.ofType(PROPERTY_UPDATE_CHANNEL, Channel.class)
-			.inGroup(GROUP_GENERAL)
+			.inGroup(GROUP_UPDATE)
 			.withFactory(() -> Arrays.stream(Channel.values())
 				                     .map(Channel::name)
 				                     .collect(Collectors.toList()))
 			.withTransformer(Enum::name, Channel::valueOf)
 			.withDefaultValue(Channel.STABLE.name()));
+		builder.addProperty(ConfigurationProperty.ofBoolean(PROPERTY_AUTO_UPDATE_CHECK)
+			.inGroup(GROUP_UPDATE)
+			.withDefaultValue(true));
+		builder.addProperty(ConfigurationProperty.ofBoolean(PROPERTY_CHECK_RESOURCES_INTEGRITY)
+			.inGroup(GROUP_UPDATE)
+			.withDefaultValue(false));
 		builder.addProperty(ConfigurationProperty.ofArray(PROPERTY_UPDATE_REGISTRIES)
-			.inGroup(GROUP_GENERAL)
+			.inGroup(GROUP_UPDATE)
 			.withDefaultValues(MediaDownloader.Common.defaultComponentRegistries()));
 		
 		// ----- Download

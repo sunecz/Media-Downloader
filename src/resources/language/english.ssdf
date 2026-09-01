@@ -1,6 +1,6 @@
 {
 	name:    "english",
-	version: "18",
+	version: "19",
 	title:   "English",
 	code:    "eng",
 	windows: {
@@ -318,6 +318,7 @@
 			title: "Configuration",
 			group: {
 				general:    "General",
+				update:     "Updates",
 				download:   "Download",
 				conversion: "Conversion",
 				naming:     "Naming",
@@ -334,7 +335,7 @@
 				computeStreamSize:          "Compute data stream size",
 				requestConnectTimeout:      "Request connect timeout",
 				requestReadTimeout:         "Request read timeout",
-				checkResourcesIntegrity:    "Check integrity of resources",
+				checkResourcesIntegrity:    "Check integrity",
 				autoEnableClipboardWatcher: "Automatically enable the Clipboard watcher",
 				conversionProvider:         "Conversion provider",
 				checkMessagesOnStartup:     "Check messages on startup",
@@ -483,6 +484,20 @@
 				button: {
 					save:   "Save",
 					cancel: "Cancel"
+				}
+			}
+		}
+	},
+	forms: {
+		fields: {
+			table: {
+				columns: {
+					name:  "Name",
+					value: "Value"
+				},
+				buttons: {
+					add:    "Add",
+					remove: "Remove"
 				}
 			}
 		}

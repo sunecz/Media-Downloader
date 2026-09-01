@@ -15,6 +15,7 @@ import javafx.stage.Stage;
 import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.gui.form.Form;
 import sune.app.mediadown.gui.form.FormField;
+import sune.app.mediadown.gui.form.FormFieldType;
 import sune.app.mediadown.gui.window.PreviewWindow;
 import sune.app.mediadown.language.Translation;
 import sune.app.mediadown.media.MediaTitleFormat;
@@ -24,8 +25,8 @@ import sune.app.mediadown.media.MediaTitleFormats.NamedMediaTitleFormat;
 import sune.app.mediadown.net.Net;
 import sune.app.mediadown.os.OS;
 import sune.app.mediadown.util.Utils.Ignore;
-import sune.util.ssdf2.SSDType;
-import sune.util.ssdf2.SSDValue;
+import sune.util.ssdf2.SSDNode;
+import sune.util.ssdf2.SSDObject;
 
 public class TextFieldMediaTitleFormat<T> extends FormField<T> {
 	
@@ -42,7 +43,7 @@ public class TextFieldMediaTitleFormat<T> extends FormField<T> {
 	private final Hyperlink linkHelp;
 	
 	public TextFieldMediaTitleFormat(T property, String name, String title) {
-		super(property, name, title);
+		super(property, FormFieldType.TEXT, name, title);
 		wrapper = new VBox(0.0);
 		inline = new HBox(5.0);
 		control = new javafx.scene.control.TextField();
@@ -145,8 +146,8 @@ public class TextFieldMediaTitleFormat<T> extends FormField<T> {
 	}
 	
 	@Override
-	public void value(SSDValue value, SSDType type) {
-		control.setText(type == SSDType.NULL ? "" : value.stringValue());
+	public void value(SSDNode node) {
+		control.setText(((SSDObject) node).getFormattedValue().stringValue());
 	}
 	
 	@Override

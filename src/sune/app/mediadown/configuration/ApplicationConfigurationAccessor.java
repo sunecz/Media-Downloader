@@ -18,6 +18,8 @@ public interface ApplicationConfigurationAccessor extends ConfigurationLocatable
 	// ----- Names of configuration groups
 	/** @since 00.02.07 */
 	public static final String GROUP_GENERAL = "general";
+	/** @since 00.02.09 */
+	public static final String GROUP_UPDATE = "update";
 	/** @since 00.02.07 */
 	public static final String GROUP_DOWNLOAD = "download";
 	/** @since 00.02.07 */

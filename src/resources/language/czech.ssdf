@@ -1,6 +1,6 @@
 {
 	name:    "czech",
-	version: "18",
+	version: "19",
 	title:   "Čeština",
 	code:    "ces",
 	windows: {
@@ -318,6 +318,7 @@
 			title: "Nastavení",
 			group: {
 				general:    "Obecné",
+				update:     "Aktualizace",
 				download:   "Stahování",
 				conversion: "Konverze",
 				naming:     "Pojmenování",
@@ -334,7 +335,7 @@
 				computeStreamSize:          "Vypočítat velikost datového proudu",
 				requestConnectTimeout:      "Časový limit požadavku pro připojení",
 				requestReadTimeout:         "Časový limit požadavku pro čtení",
-				checkResourcesIntegrity:    "Kontrola integrity prostředků",
+				checkResourcesIntegrity:    "Kontrola integrity",
 				autoEnableClipboardWatcher: "Automaticky aktivovat Sledování schránky",
 				conversionProvider:         "Poskytovatel konverzí",
 				checkMessagesOnStartup:     "Kontrolovat zprávy při spuštění",
@@ -483,6 +484,20 @@
 				button: {
 					save:   "Uložit",
 					cancel: "Zrušit"
+				}
+			}
+		}
+	},
+	forms: {
+		fields: {
+			table: {
+				columns: {
+					name:  "Název",
+					value: "Hodnota"
+				},
+				buttons: {
+					add:    "Přidat",
+					remove: "Odebrat"
 				}
 			}
 		}

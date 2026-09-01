@@ -27,3 +27,21 @@
 .buttons-panel .buttons-panel-wrapper {
 	-fx-padding: 10;
 }
+
+.form-field-label.form-field-label-text,
+.form-field-label.form-field-label-number,
+.form-field-label.form-field-label-select,
+.form-field-label.form-field-label-table,
+.form-field-label.form-field-label-other {
+	-fx-translate-y: 4;
+}
+
+.form-field-label.form-field-label-checkbox {
+	-fx-translate-y: 0;
+}
+
+.table-view.column-count-1 .column-header-background {
+	-fx-min-height: 0;
+	-fx-pref-height: 0;
+	-fx-max-height: 0;
+}

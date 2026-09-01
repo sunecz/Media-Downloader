@@ -9,9 +9,10 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.ListCell;
 import sune.app.mediadown.gui.form.Form;
 import sune.app.mediadown.gui.form.FormField;
+import sune.app.mediadown.gui.form.FormFieldType;
 import sune.app.mediadown.util.Utils;
-import sune.util.ssdf2.SSDType;
-import sune.util.ssdf2.SSDValue;
+import sune.util.ssdf2.SSDNode;
+import sune.util.ssdf2.SSDObject;
 
 /** @since 00.02.07 */
 public class TranslatableSelectField<T, V> extends FormField<T> {
@@ -21,7 +22,7 @@ public class TranslatableSelectField<T, V> extends FormField<T> {
 	
 	public TranslatableSelectField(T property, String name, String title, Collection<V> items,
 			ValueTransformer<V> transformer) {
-		super(property, name, title);
+		super(property, FormFieldType.SELECT, name, title);
 		control = new ComboBox<>();
 		control.getItems().setAll(items);
 		control.setCellFactory((p) -> new TranslatableCell<>(this));
@@ -36,8 +37,8 @@ public class TranslatableSelectField<T, V> extends FormField<T> {
 	}
 	
 	@Override
-	public void value(SSDValue value, SSDType type) {
-		String string = Utils.removeStringQuotes(value.stringValue());
+	public void value(SSDNode node) {
+		String string = Utils.removeStringQuotes(((SSDObject) node).getFormattedValue().stringValue());
 		control.getSelectionModel().select(transformer.value(string));
 	}
 	

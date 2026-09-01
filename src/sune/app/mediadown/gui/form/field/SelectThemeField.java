@@ -6,18 +6,19 @@ import javafx.scene.control.ListCell;
 import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.gui.form.Form;
 import sune.app.mediadown.gui.form.FormField;
+import sune.app.mediadown.gui.form.FormFieldType;
 import sune.app.mediadown.resource.ResourceRegistry;
 import sune.app.mediadown.theme.Theme;
 import sune.app.mediadown.util.Utils;
-import sune.util.ssdf2.SSDType;
-import sune.util.ssdf2.SSDValue;
+import sune.util.ssdf2.SSDNode;
+import sune.util.ssdf2.SSDObject;
 
 public class SelectThemeField<T> extends FormField<T> {
 	
 	private final ComboBox<Theme> control;
 	
 	public SelectThemeField(T property, String name, String title) {
-		super(property, name, title);
+		super(property, FormFieldType.SELECT, name, title);
 		control = new ComboBox<>();
 		control.getItems().setAll(ResourceRegistry.themes.values());
 		control.setCellFactory((p) -> new ThemeCell());
@@ -31,8 +32,8 @@ public class SelectThemeField<T> extends FormField<T> {
 	}
 	
 	@Override
-	public void value(SSDValue value, SSDType type) {
-		String name = Utils.removeStringQuotes(value.stringValue());
+	public void value(SSDNode node) {
+		String name = Utils.removeStringQuotes(((SSDObject) node).getFormattedValue().stringValue());
 		control.getSelectionModel().select(ResourceRegistry.theme(name));
 	}
 	

@@ -1918,6 +1918,7 @@ public final class MediaDownloader {
 		// Ensure that main groups are in a specific order
 		predefineGroups(
 			ApplicationConfigurationAccessor.GROUP_GENERAL,
+			ApplicationConfigurationAccessor.GROUP_UPDATE,
 			ApplicationConfigurationAccessor.GROUP_DOWNLOAD,
 			ApplicationConfigurationAccessor.GROUP_CONVERSION,
 			ApplicationConfigurationAccessor.GROUP_NAMING,

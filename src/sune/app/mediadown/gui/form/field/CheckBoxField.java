@@ -4,15 +4,16 @@ import javafx.scene.Node;
 import javafx.scene.control.CheckBox;
 import sune.app.mediadown.gui.form.Form;
 import sune.app.mediadown.gui.form.FormField;
-import sune.util.ssdf2.SSDType;
-import sune.util.ssdf2.SSDValue;
+import sune.app.mediadown.gui.form.FormFieldType;
+import sune.util.ssdf2.SSDNode;
+import sune.util.ssdf2.SSDObject;
 
 public class CheckBoxField<T> extends FormField<T> {
 	
 	private final CheckBox control;
 	
 	public CheckBoxField(T property, String name, String title) {
-		super(property, name, title);
+		super(property, FormFieldType.CHECKBOX, name, title);
 		control = new CheckBox();
 	}
 	
@@ -22,8 +23,8 @@ public class CheckBoxField<T> extends FormField<T> {
 	}
 	
 	@Override
-	public void value(SSDValue value, SSDType type) {
-		control.setSelected(value.booleanValue());
+	public void value(SSDNode node) {
+		control.setSelected(((SSDObject) node).getFormattedValue().booleanValue());
 	}
 	
 	@Override

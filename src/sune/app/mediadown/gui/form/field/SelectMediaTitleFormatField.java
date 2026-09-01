@@ -14,6 +14,7 @@ import javafx.util.StringConverter;
 import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.gui.form.Form;
 import sune.app.mediadown.gui.form.FormField;
+import sune.app.mediadown.gui.form.FormFieldType;
 import sune.app.mediadown.gui.window.PreviewWindow;
 import sune.app.mediadown.language.Translation;
 import sune.app.mediadown.media.MediaTitleFormats;
@@ -21,8 +22,8 @@ import sune.app.mediadown.media.MediaTitleFormats.NamedMediaTitleFormat;
 import sune.app.mediadown.util.Previews;
 import sune.app.mediadown.util.Previews.MediaTitleFormatPreviewMask;
 import sune.app.mediadown.util.Utils;
-import sune.util.ssdf2.SSDType;
-import sune.util.ssdf2.SSDValue;
+import sune.util.ssdf2.SSDNode;
+import sune.util.ssdf2.SSDObject;
 
 /** @since 00.02.05 */
 public class SelectMediaTitleFormatField<T> extends FormField<T> {
@@ -35,7 +36,7 @@ public class SelectMediaTitleFormatField<T> extends FormField<T> {
 	private final Button btnPreview;
 	
 	public SelectMediaTitleFormatField(T property, String name, String title) {
-		super(property, name, title);
+		super(property, FormFieldType.SELECT, name, title);
 		wrapper = new HBox(5.0);
 		control = new ComboBox<>();
 		btnPreview = new Button(MediaDownloader.translation().getSingle("generic.preview"));
@@ -76,8 +77,8 @@ public class SelectMediaTitleFormatField<T> extends FormField<T> {
 	}
 	
 	@Override
-	public void value(SSDValue value, SSDType type) {
-		String name = Utils.removeStringQuotes(value.stringValue());
+	public void value(SSDNode node) {
+		String name = Utils.removeStringQuotes(((SSDObject) node).getFormattedValue().stringValue());
 		control.getSelectionModel().select(MediaTitleFormats.namedOfName(name));
 	}
 	

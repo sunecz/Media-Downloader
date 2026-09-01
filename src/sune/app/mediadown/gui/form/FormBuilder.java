@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.layout.GridPane;
@@ -24,10 +25,15 @@ public class FormBuilder {
 	private final void addFieldGUI(Form form, FormField<?> field) {
 		Node node = field.render(form);
 		Label lblTitle = new Label(field.title());
+		lblTitle.getStyleClass().addAll(
+			"form-field-label",
+			"form-field-label-" + field.type().name().toLowerCase()
+		);
 		lblTitle.setWrapText(true);
 		form.paneFields().getChildren().addAll(lblTitle, node);
 		GridPane.setConstraints(lblTitle, 0, row);
 		GridPane.setConstraints(node, 1, row);
+		GridPane.setValignment(lblTitle, VPos.TOP);
 		GridPane.setHgrow(node, Priority.ALWAYS);
 		++row;
 	}

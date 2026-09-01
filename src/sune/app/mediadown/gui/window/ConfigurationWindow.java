@@ -50,6 +50,7 @@ import sune.app.mediadown.gui.form.FormField;
 import sune.app.mediadown.gui.form.field.CheckBoxField;
 import sune.app.mediadown.gui.form.field.IntegerField;
 import sune.app.mediadown.gui.form.field.SelectField;
+import sune.app.mediadown.gui.form.field.TableField;
 import sune.app.mediadown.gui.form.field.TextField;
 import sune.app.mediadown.gui.form.field.TranslatableSelectField;
 import sune.app.mediadown.gui.form.field.TranslatableSelectField.ValueTransformer;
@@ -326,11 +327,10 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 	
 	/** @since 00.02.08 */
 	private final FormField<ConfigurationFormFieldProperty> propertyField(ConfigurationPropertyEntry entry) {
-		SSDObject object = (SSDObject) entry.property().toNode();
 		FormField<ConfigurationFormFieldProperty> field = getFormField(
 			entry.configuration(), entry.property(), entry.name(), entry.title()
 		);
-		field.value(object.getFormattedValue(), object.getType());
+		field.value(entry.property().toNode());
 		return field;
 	}
 	
@@ -355,9 +355,10 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 			case BOOLEAN: return new CheckBoxField<>(fieldProperty, name, title);
 			case INTEGER: return new IntegerField<>(fieldProperty, name, title);
 			case DECIMAL: return new TextField<>(fieldProperty, name, title); // Currently no decimal field type
-			case STRING:
-			case NULL:
-				return new TextField<>(fieldProperty, name, title);
+			case STRING:  return new TextField<>(fieldProperty, name, title);
+			case NULL:    return new TextField<>(fieldProperty, name, title); // Just use the text field
+			case ARRAY:   return new TableField<>(fieldProperty, name, title, false);
+			case OBJECT:  return new TableField<>(fieldProperty, name, title, true);
 			default:
 				throw new IllegalStateException("Unsupported field type for type: " + type); // Should not happen
 		}
@@ -479,14 +480,6 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 			for(Entry<String, ConfigurationProperty<?>> entry : properties.entrySet()) {
 				ConfigurationProperty<?> property = entry.getValue();
 				if(property.isHidden()) continue;
-				
-				// Currently objects and arrays are not supported
-				ConfigurationPropertyType type = property.type();
-				if(type == ConfigurationPropertyType.ARRAY
-						|| type == ConfigurationPropertyType.OBJECT) {
-					continue;
-				}
-				
 				String name = (formName != null ? formName + '.' : "") + entry.getKey();
 				String title = translation.getSingle("fields." + name.replaceFirst(regexConfigName, ""));
 				entries.add(new ConfigurationPropertyEntry(configuration, property, name, title));

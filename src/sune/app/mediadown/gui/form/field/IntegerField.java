@@ -4,15 +4,16 @@ import javafx.scene.Node;
 import sune.app.mediadown.gui.control.IntegerTextField;
 import sune.app.mediadown.gui.form.Form;
 import sune.app.mediadown.gui.form.FormField;
-import sune.util.ssdf2.SSDType;
-import sune.util.ssdf2.SSDValue;
+import sune.app.mediadown.gui.form.FormFieldType;
+import sune.util.ssdf2.SSDNode;
+import sune.util.ssdf2.SSDObject;
 
 public class IntegerField<T> extends FormField<T> {
 	
 	private final IntegerTextField control;
 	
 	public IntegerField(T property, String name, String title) {
-		super(property, name, title);
+		super(property, FormFieldType.NUMBER, name, title);
 		control = new IntegerTextField();
 	}
 	
@@ -22,8 +23,8 @@ public class IntegerField<T> extends FormField<T> {
 	}
 	
 	@Override
-	public void value(SSDValue value, SSDType type) {
-		control.setValue(value.intValue());
+	public void value(SSDNode node) {
+		control.setValue(((SSDObject) node).getFormattedValue().intValue());
 	}
 	
 	@Override
