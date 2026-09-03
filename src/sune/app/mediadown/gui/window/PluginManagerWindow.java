@@ -27,7 +27,6 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.MediaDownloader.Common;
-import sune.app.mediadown.configuration.ApplicationConfiguration;
 import sune.app.mediadown.event.DownloadEvent;
 import sune.app.mediadown.event.tracker.DownloadTracker;
 import sune.app.mediadown.event.tracker.TrackerManager;
@@ -268,27 +267,23 @@ public class PluginManagerWindow extends DraggableWindow<VBox> {
 				));
 			});
 			checker.addEventListener(ArtifactCheckEvent.ERROR, (ctx) -> {
-				context.setText("Checking %s... error");
+				context.setText(String.format(
+					"Checking %s... error",
+					ctx.artifact().installPath()
+				));
 			});
 			
 			return checker;
 		}
 		
 		private final boolean update(List<String> names) throws Exception {
-			Set<String> setOfNames = new TreeSet<>(names);
-			ApplicationConfiguration configuration = MediaDownloader.configuration();
-			
-			List<ComponentRegistry> registries = (
-				configuration.updateRegistries().stream()
-					.map(ComponentRegistry::new)
-					.collect(Collectors.toList())
-			);
-			
-			if(registries.isEmpty()) {
+			List<ComponentRegistry> registries;
+			if((registries = MediaDownloader.Common.componentRegistries()).isEmpty()) {
 				return false; // Nothing to be checked
 			}
 			
-			Channel channel = configuration.updateChannel();
+			Set<String> setOfNames = new TreeSet<>(names);
+			Channel channel = MediaDownloader.Common.updateChannel();
 			Artifacts.Builder builder = Artifacts.builderOf(channel);
 			Path root = builder.root();
 			Path manifestPath = Common.manifestPath();

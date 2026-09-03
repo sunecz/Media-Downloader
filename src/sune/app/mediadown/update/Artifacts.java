@@ -8,6 +8,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 import sune.app.mediadown.MediaDownloader.Common;
+import sune.app.mediadown.update.Manifest.ManagedPath;
 import sune.app.mediadown.util.Utils;
 
 /** @since 00.02.09 */
@@ -33,14 +34,20 @@ public final class Artifacts {
 	
 	private final void load(Manifest localManifest, List<ComponentRegistry> registries) throws Exception {
 		Objects.requireNonNull(localManifest);
+		Objects.requireNonNull(registries);
+		
 		List<Artifact> allArtifacts = new ArrayList<>();
 		Manifest manifest = Manifest.empty();
 		
 		for(ComponentRegistry registry : registries) {
-			List<Artifact> artifacts = registry.artifacts(environment, channel);
-			
-			manifest = manifest.merge(Manifest.ofArtifacts(artifacts));
-			allArtifacts.addAll(artifacts);
+			try {
+				List<Artifact> artifacts = registry.artifacts(environment, channel);
+				manifest = manifest.merge(Manifest.ofArtifacts(artifacts));
+				allArtifacts.addAll(artifacts);
+			} catch(Exception ex) {
+				Manifest keepManifest = localManifest.subManifest(registry);
+				manifest = manifest.merge(keepManifest);
+			}
 		}
 		
 		this.localManifest = localManifest;
@@ -67,7 +74,7 @@ public final class Artifacts {
 		return state.manifest().unchangedComponents(localManifest);
 	}
 	
-	public List<String> deletedPaths() {
+	public List<ManagedPath> deletedPaths() {
 		return state.manifest().deletedPaths(localManifest);
 	}
 	

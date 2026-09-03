@@ -1,5 +1,7 @@
 package sune.app.mediadown.update;
 
+import java.util.Objects;
+
 import sune.app.mediadown.net.Net;
 import sune.app.mediadown.util.JSON.JSONCollection;
 
@@ -24,6 +26,12 @@ public class ArtifactParser {
 		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 	};
+	
+	protected final ComponentRegistry registry;
+	
+	public ArtifactParser(ComponentRegistry registry) {
+		this.registry = Objects.requireNonNull(registry);
+	}
 	
 	protected byte[] decodeHex(String value) {
 		int l = value.length();
@@ -73,6 +81,7 @@ public class ArtifactParser {
 		}
 		
 		return new Artifact(
+			registry,
 			data.getString("component"),
 			data.getString("version"),
 			Net.uri(data.getString("url")),

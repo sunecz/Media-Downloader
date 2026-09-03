@@ -13,12 +13,14 @@ import java.io.InputStream;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLStreamHandler;
+import java.nio.file.DirectoryNotEmptyException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -169,14 +171,6 @@ public final class MediaDownloader {
 	/** @since 00.02.09 */
 	public static final class Common {
 		
-		public static final List<String> defaultComponentRegistries() {
-			return (
-				isLocalDevelopment()
-					? List.of("http://127.0.0.1:8000/artifacts?%{args}s")
-					: List.of("https://cr.md.sune.app/v1/artifacts?%{args}s")
-			);
-		}
-		
 		public static final Path rootPath() { return NIO.localPath(); }
 		
 		public static final String oldJarName() { return "media-downloader.jar"; }
@@ -192,6 +186,42 @@ public final class MediaDownloader {
 		public static final Path newJrePath() { return rootPath().resolve(newJreName()); }
 		public static final Path manifestPath() { return rootPath().resolve(manifestName()); }
 		public static final Path deletedIndexPath() { return rootPath().resolve(deletedIndexName()); }
+		
+		public static final List<String> defaultComponentRegistries() {
+			return (
+				isLocalDevelopment()
+					? List.of("http://127.0.0.1:8000/artifacts?%{args}s")
+					: List.of("https://cr.md.sune.app/v1/artifacts?%{args}s")
+			);
+		}
+		
+		public static final Set<String> defaultSkipComponents() {
+			return new TreeSet<>(
+				isLocalDevelopment()
+					? Set.of(
+						"application",
+						"jre",
+						"infomas-asl",
+						"jsoup",
+						"sune-memory",
+						"sune-process-api",
+						"sune-utils-load"
+					)
+					: Set.of()
+			);
+		}
+		
+		public static final Channel updateChannel() {
+			return configuration.updateChannel();
+		}
+		
+		public static final List<ComponentRegistry> componentRegistries() {
+			return (
+				configuration.updateRegistries().stream()
+					.map(ComponentRegistry::new)
+					.collect(Collectors.toList())
+			);
+		}
 	}
 	
 	/** @since 00.02.08 */
@@ -358,35 +388,16 @@ public final class MediaDownloader {
 			}
 			
 			private final void doRun(Arguments args) throws Exception {
-				boolean isLocalDevelopment = isLocalDevelopment();
-				boolean checkIntegrity = isCheckIntegrityEnabled();
+				List<ComponentRegistry> registries;
 				
-				Set<String> skipComponents = new TreeSet<>(
-					isLocalDevelopment
-						? Set.of(
-							"application",
-							"jre",
-							"infomas-asl",
-							"jsoup",
-							"sune-memory",
-							"sune-process-api",
-							"sune-utils-load"
-						)
-						: Set.of()
-				);
-				
-				List<ComponentRegistry> registries = (
-					configuration.updateRegistries().stream()
-						.map(ComponentRegistry::new)
-						.collect(Collectors.toList())
-				);
-				
-				if(registries.isEmpty()) {
-					updatedComponents = new Manifest.ComponentChanges(List.of());
+				if(!AppArguments.isUpdateEnabled()
+						|| (registries = Common.componentRegistries()).isEmpty()) {
+					updatedComponents = Manifest.ComponentChanges.empty();
 					return; // Nothing to be checked
 				}
 				
-				Channel channel = configuration.updateChannel();
+				Set<String> skipComponents = Common.defaultSkipComponents();
+				Channel channel = Common.updateChannel();
 				Artifacts.Builder builder = Artifacts.builderOf(channel);
 				Path root = builder.root();
 				Path manifestPath = Common.manifestPath();
@@ -394,14 +405,14 @@ public final class MediaDownloader {
 				
 				builder = builder.skipArtifactFilter((a) -> skipComponents.contains(a.component()));
 				builder = (
-					checkIntegrity
+					isCheckIntegrityEnabled()
 						? builder.withIntegrityCheck((a) -> artifactChecker(root))
 						: builder.noIntegrityCheck()
 				);
 				
 				Artifacts artifacts = builder.build(manifest, registries);
 				Manifest.ComponentChanges changedComponents = artifacts.changedComponents();
-				List<String> deletedPaths = artifacts.deletedPaths();
+				List<Manifest.ManagedPath> deletedPaths = artifacts.deletedPaths();
 				
 				// If the application will be updated and the user doesn't have auto-update
 				// enabled, ask them. Update the application only if they accept.
@@ -418,7 +429,9 @@ public final class MediaDownloader {
 				updatedComponents = changedComponents.removeAll(skipComponents);
 				
 				if(!deletedPaths.isEmpty()) {
-					String content = deletedPaths.stream().reduce(null, (a, b) -> (a != null ? a + "\n" : "") + b);
+					String content = deletedPaths.stream()
+						.map(Manifest.ManagedPath::path)
+						.reduce(null, (a, b) -> (a != null ? a + "\n" : "") + b);
 					NIO.save(Common.deletedIndexPath(), content);
 				}
 			}
@@ -768,8 +781,38 @@ public final class MediaDownloader {
 					return; // Nothing to do
 				}
 				
+				Set<Path> dirsToCheck = new TreeSet<>(Comparator.reverseOrder());
+				Path root = NIO.localPath().toAbsolutePath().normalize();
+				
 				for(String line : Files.readAllLines(indexPath)) {
-					NIO.delete(PathSystem.getPath(line));
+					Path path = NIO.localPath(line).normalize();
+					
+					if(!path.startsWith(root) || path.equals(root)) {
+						continue;
+					}
+					
+					try {
+						Files.deleteIfExists(path);
+						dirsToCheck.add(path.getParent());
+					} catch(IOException ex) {
+						// Ignore for now
+					}
+				}
+				
+				for(Path dir : dirsToCheck) {
+					while(dir.startsWith(root) && !dir.equals(root)) {
+						try {
+							if(!Files.isDirectory(dir)) {
+								break;
+							}
+							
+							Files.delete(dir);
+						} catch(DirectoryNotEmptyException ex) {
+							break;
+						}
+						
+						dir = dir.getParent();
+					}
 				}
 				
 				NIO.delete(indexPath);
@@ -2058,6 +2101,8 @@ public final class MediaDownloader {
 	}
 	
 	private static final void initDefaultPlugins() throws Exception {
+		if(updatedComponents == null) return; // Skip the initialization
+		
 		Regex regexPluginPrefix = Regex.of("^plugin\\.(?<name>.*)$");
 		Matcher matcher = regexPluginPrefix.matcher();
 		

@@ -6,6 +6,7 @@ import java.util.Objects;
 /** @since 00.02.09 */
 public final class Artifact {
 	
+	private final ComponentRegistry registry;
 	private final String component;
 	private final String version;
 	private final URI uri;
@@ -17,6 +18,7 @@ public final class Artifact {
 	private final boolean executable;
 	
 	public Artifact(
+		ComponentRegistry registry,
 		String component,
 		String version,
 		URI uri,
@@ -27,6 +29,7 @@ public final class Artifact {
 		long encodedSize,
 		boolean executable
 	) {
+		this.registry = Objects.requireNonNull(registry);
 		this.component = Objects.requireNonNull(component);
 		this.version = Objects.requireNonNull(version);
 		this.uri = Objects.requireNonNull(uri);
@@ -38,6 +41,7 @@ public final class Artifact {
 		this.executable = executable;
 	}
 	
+	public ComponentRegistry registry() { return registry; }
 	public String component() { return component; }
 	public String version() { return version; }
 	public URI uri() { return uri; }

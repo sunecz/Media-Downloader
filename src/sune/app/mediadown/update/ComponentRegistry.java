@@ -50,7 +50,7 @@ public class ComponentRegistry {
 		
 		URI uri = Net.uri(Utils.format(endpointUri, args));
 		JSONCollection result = request(Web.Request.of(uri).GET());
-		ArtifactParser parser = new ArtifactParser();
+		ArtifactParser parser = new ArtifactParser(this);
 		
 		return (
 			result.collectionsStream()
@@ -65,5 +65,18 @@ public class ComponentRegistry {
 	
 	public String endpointUri() {
 		return endpointUri;
+	}
+	
+	@Override
+	public int hashCode() {
+		return endpointUri.hashCode();
+	}
+	
+	@Override
+	public boolean equals(Object obj) {
+		if(this == obj) return true;
+		if(!(obj instanceof ComponentRegistry)) return false;
+		ComponentRegistry other = (ComponentRegistry) obj;
+		return endpointUri.equals(other.endpointUri);
 	}
 }
