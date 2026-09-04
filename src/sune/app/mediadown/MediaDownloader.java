@@ -134,7 +134,7 @@ import sune.util.ssdf2.SSDObject;
 public final class MediaDownloader {
 	
 	public static final String  TITLE   = "Media Downloader";
-	public static final Version VERSION = Version.of("00.02.09-dev.26");
+	public static final Version VERSION = Version.of("0.2.9-dev.26");
 	public static final String  DATE    = "2025-05-08";
 	public static final String  AUTHOR  = "Sune";
 	public static final Image   ICON    = icon("app.png");
@@ -1204,13 +1204,13 @@ public final class MediaDownloader {
 					}
 				}
 				
-				if(previousVersion.compareTo(Version.of("00.02.07-dev.10")) <= 0) {
+				if(previousVersion.compareTo(Version.of("0.2.7-dev.10")) <= 0) {
 					// Uncheck resources integrity checking
 					current.set(ApplicationConfiguration.PROPERTY_CHECK_RESOURCES_INTEGRITY, false);
 				}
 				
-				if(previousVersion.compareTo(Version.of("00.02.09-dev.1")) >= 0
-						&& previousVersion.compareTo(Version.of("00.02.09-dev.26")) <= 0) {
+				if(previousVersion.compareTo(Version.of("0.2.9-dev.1")) >= 0
+						&& previousVersion.compareTo(Version.of("0.2.9-dev.26")) <= 0) {
 					// Set DEV channel as the update channel for old pre-release versions
 					configuration.configuration().writer()
 						.set(ApplicationConfiguration.PROPERTY_UPDATE_CHANNEL, Channel.DEV.name());
@@ -1301,7 +1301,7 @@ public final class MediaDownloader {
 		/** @since 00.02.05 */
 		public static final void messages(Version previousVersion) {
 			// 00.02.04 -> 00.02.05: Messages format update (V0 -> V1)
-			if(previousVersion.compareTo(Version.of("00.02.04")) <= 0) {
+			if(previousVersion.compareTo(Version.of("0.2.4")) <= 0) {
 				// Do not bother with conversion and just remove the messages.ssdf file
 				Ignore.callVoid(() -> NIO.deleteFile(NIO.localPath(BASE_RESOURCE).resolve("messages.ssdf")),
 				                MediaDownloader::error);
@@ -1328,7 +1328,7 @@ public final class MediaDownloader {
 			}
 			
 			// Delete libraries that are not used anymore (are now built-in)
-			if(previousVersion.compareTo(Version.of("00.02.07-dev.10")) <= 0) {
+			if(previousVersion.compareTo(Version.of("0.2.7-dev.10")) <= 0) {
 				// Delete the libraries ONLY if run from the JAR file (not from a development environment)
 				if(SelfProcess.inJAR()) {
 					Ignore.callVoid(() -> NIO.deleteFile(NIO.localPath("lib/ssdf2.jar")),
@@ -1481,7 +1481,7 @@ public final class MediaDownloader {
 		UpdateTriggers.OfApplication.add(
 			UpdateTriggers.OfApplication.Stage.EARLY,
 			Version.ZERO,
-			Version.of("00.02.09-dev.18"),
+			Version.of("0.2.9-dev.18"),
 			() -> {
 				Configuration.BooleanConfigurationProperty.Builder property
 					= (Configuration.BooleanConfigurationProperty.Builder) configuration.builder.getProperty("computeStreamSize");
