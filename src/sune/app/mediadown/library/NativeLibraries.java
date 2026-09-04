@@ -15,14 +15,14 @@ import sune.app.mediadown.event.Event;
 import sune.app.mediadown.event.EventRegistry;
 import sune.app.mediadown.event.Listener;
 import sune.app.mediadown.event.NativeLibraryLoaderEvent;
+import sune.app.mediadown.os.OS;
 import sune.app.mediadown.util.NIO;
-import sune.app.mediadown.util.OSUtils;
 import sune.app.mediadown.util.Pair;
 
 public final class NativeLibraries {
 	
 	private static final Set<NativeLibrary> libraries = new LinkedHashSet<>();
-	private static final NativeLibraryCompatibilityChecker checker = new NativeLibraryCompatibilityChecker();
+	private static final NativeLibraryCompatibilityChecker checker = NativeLibraryCompatibilityChecker.ofCurrent();
 	private static final EventRegistry<NativeLibraryLoaderEvent> eventRegistry = new EventRegistry<>();
 	
 	// Forbid anyone to create an instance of this class
@@ -103,13 +103,31 @@ public final class NativeLibraries {
 		private final String osName;
 		private final String osArch;
 		
-		public NativeLibraryCompatibilityChecker() {
-			this(OSUtils.getSystemName(), OSUtils.getSystemArch());
-		}
-		
 		private NativeLibraryCompatibilityChecker(String osName, String osArch) {
 			this.osName = checkString(osName);
 			this.osArch = checkString(osArch);
+		}
+		
+		// Temporary compatibility method
+		public static final NativeLibraryCompatibilityChecker ofCurrent() {
+			OS current = OS.current();
+			
+			String osName;
+			switch(current.name()) {
+				case WINDOWS: osName = "win"; break;
+				case LINUX:   osName = "unx"; break;
+				case MACOS:   osName = "mac"; break;
+				default:      osName = "unk"; break;
+			}
+			
+			String osArch;
+			switch(current.arch()) {
+				case AMD64: osArch = "64"; break;
+				case ARM64: osArch = "64"; break;
+				default:    osArch = "64"; break; // 32-bit not supported
+			}
+			
+			return new NativeLibraryCompatibilityChecker(osName, osArch);
 		}
 		
 		private static final String checkString(String string) {

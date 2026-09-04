@@ -3,17 +3,12 @@ package sune.app.mediadown.message;
 import java.util.Objects;
 import java.util.Set;
 
-import sune.app.mediadown.util.OSUtils;
-
 /** @since 00.02.05 */
 public final class MessageOS {
 	
 	private static final Set<String> setNone = Set.of();
-	private static final Set<String> setAll = Set.of(
-		OSUtils.OS_NAME_WINDOWS,
-		OSUtils.OS_NAME_UNIX,
-		OSUtils.OS_NAME_MACOS
-	);
+	// Hardcode the values till the message system is redesigned
+	private static final Set<String> setAll = Set.of("win", "unx", "mac");
 	
 	private static MessageOS NONE;
 	private static MessageOS ALL;

@@ -9,6 +9,8 @@ public interface OS {
 	
 	void highlight(Path path) throws IOException;
 	void browse(URI uri) throws IOException;
+	/** @since 00.02.09 */
+	String executableFileName(String name);
 	
 	/** @since 00.02.09 */
 	default Name name() { return OSUtils.currentName(); }

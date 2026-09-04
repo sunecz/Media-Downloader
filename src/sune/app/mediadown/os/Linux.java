@@ -32,6 +32,11 @@ final class Linux implements OS {
 	}
 	
 	@Override
+	public String executableFileName(String name) {
+		return name;
+	}
+	
+	@Override
 	public Name name() {
 		return Name.LINUX;
 	}

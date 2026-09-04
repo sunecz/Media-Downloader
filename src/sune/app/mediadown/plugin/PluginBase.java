@@ -52,14 +52,6 @@ public abstract class PluginBase implements PluginInstance {
 		return plugin.author();
 	}
 	
-	public String getUpdateBaseURL() {
-		return plugin.updateBaseURL();
-	}
-	
-	public boolean isUpdatable() {
-		return plugin.updatable();
-	}
-	
 	public String getURL() {
 		return plugin.url();
 	}

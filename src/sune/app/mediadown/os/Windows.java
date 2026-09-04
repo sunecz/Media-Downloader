@@ -31,6 +31,11 @@ final class Windows implements OS {
 	}
 	
 	@Override
+	public String executableFileName(String name) {
+		return name + ".exe";
+	}
+	
+	@Override
 	public Name name() {
 		return Name.WINDOWS;
 	}
