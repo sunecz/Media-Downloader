@@ -423,7 +423,13 @@ public final class MediaDownloader {
 					artifacts.download(downloader);
 				}
 				
-				artifacts.remoteManifest().writeTo(manifestPath);
+				Manifest finalManifest = artifacts.remoteManifest();
+				
+				if(!skipComponents.isEmpty()) {
+					finalManifest = finalManifest.replaceComponents(skipComponents, manifest);
+				}
+				
+				finalManifest.writeTo(manifestPath);
 				updatedComponents = changedComponents.removeAll(skipComponents);
 				
 				if(!deletedPaths.isEmpty()) {
