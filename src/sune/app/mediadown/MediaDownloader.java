@@ -164,11 +164,6 @@ public final class MediaDownloader {
 	}
 	
 	/** @since 00.02.09 */
-	private static final boolean isLocalDevelopment() {
-		return !SelfProcess.inJAR();
-	}
-	
-	/** @since 00.02.09 */
 	public static final class Common {
 		
 		public static final Path rootPath() { return NIO.localPath(); }
@@ -189,26 +184,29 @@ public final class MediaDownloader {
 		
 		public static final List<String> defaultComponentRegistries() {
 			return (
-				isLocalDevelopment()
+				AppArguments.isLocalDevelopment()
 					? List.of("http://127.0.0.1:8000/artifacts?%{args}s")
 					: List.of("https://cr.md.sune.app/v1/artifacts?%{args}s")
 			);
 		}
 		
 		public static final Set<String> defaultSkipComponents() {
-			return new TreeSet<>(
-				isLocalDevelopment()
-					? Set.of(
-						"application",
-						"jre",
-						"infomas-asl",
-						"jsoup",
-						"sune-memory",
-						"sune-process-api",
-						"sune-utils-load"
-					)
-					: Set.of()
-			);
+			int level = AppArguments.localDevelopmentLevel();
+			Set<String> components = new TreeSet<>();
+			
+			if(level >= AppArguments.LocalDevelopmentLevel.IDE) {
+				components.addAll(Set.of(
+					"application",
+					"jre",
+					"infomas-asl",
+					"jsoup",
+					"sune-memory",
+					"sune-process-api",
+					"sune-utils-load"
+				));
+			}
+			
+			return components;
 		}
 		
 		public static final Channel updateChannel() {
@@ -1046,6 +1044,45 @@ public final class MediaDownloader {
 		
 		public static final boolean isOnlyInitializationEnabled() {
 			return arguments.booleanValue("only-init");
+		}
+		
+		/** @since 00.02.09 */
+		public static final int localDevelopmentLevel() {
+			String level = arguments.stringValue("dev-level");
+			try { return LocalDevelopmentLevel.of(Integer.parseInt(level)); }
+			catch(NumberFormatException ex) { /* Ignore */ }
+			return LocalDevelopmentLevel.of(level);
+		}
+		
+		/** @since 00.02.09 */
+		public static final boolean isLocalDevelopment() {
+			return localDevelopmentLevel() > LocalDevelopmentLevel.NONE;
+		}
+		
+		/** @since 00.02.09 */
+		public static final class LocalDevelopmentLevel {
+			
+			public static final int NONE = 0;
+			public static final int NORMAL = 1;
+			public static final int IDE = 2;
+			
+			private LocalDevelopmentLevel() { throw new AssertionError("No instances"); }
+			
+			public static final int of(int value) {
+				switch(value) {
+					case NORMAL: return NORMAL;
+					case IDE:    return IDE;
+					default:     return NONE;
+				}
+			}
+			
+			public static final int of(String value) {
+				switch(value.toUpperCase()) {
+					case "NORMAL": return NORMAL;
+					case "IDE":    return IDE;
+					default:       return NONE;
+				}
+			}
 		}
 	}
 	

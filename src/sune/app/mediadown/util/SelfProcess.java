@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import sune.app.mediadown.MediaDownloader.AppArguments;
 import sune.app.mediadown.util.Utils.Ignore;
 
 /** @since 00.02.02 */
@@ -51,6 +52,15 @@ public final class SelfProcess {
 			commands.add(path.toAbsolutePath().toString());
 			extractCommands(commands, command);
 		}
+		
+		// Keep the Development level across launches
+		int devLevel;
+		if((devLevel = AppArguments.localDevelopmentLevel()) > AppArguments.LocalDevelopmentLevel.NONE) {
+			commands.addAll(List.of(
+				"--dev-level", String.valueOf(devLevel)
+			));
+		}
+		
 		return launchProcess(path, commands, dir);
 	}
 	
