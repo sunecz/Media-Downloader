@@ -415,7 +415,7 @@ public final class MediaDownloader {
 				// If the application will be updated and the user doesn't have auto-update
 				// enabled, ask them. Update the application only if they accept.
 				if(changedComponents.has("application")
-							&& (configuration.isAutoUpdateCheck() || showUpdateDialog())) {
+							&& (!configuration.isAutoUpdateCheck() && !showUpdateDialog())) {
 					skipComponents.add("application");
 				}
 				
