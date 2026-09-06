@@ -323,18 +323,28 @@ public final class Manifest {
 		}
 		
 		public static final <T> Mapping<String, T> from(JSONCollection data, Function<String, T> mapper) {
+			if(data == null) {
+				return new Mapping<>(Map.of());
+			}
+			
+			Objects.requireNonNull(mapper);
 			return new Mapping<>(
 				data.objectsStream()
-				.collect(Collectors.toMap(
-					JSONObject::name,
-					(o) -> mapper.apply(o.stringValue()),
-					(a, b) -> a,
-					LinkedHashMap::new
-				))
+					.collect(Collectors.toMap(
+						JSONObject::name,
+						(o) -> mapper.apply(o.stringValue()),
+						(a, b) -> a,
+						LinkedHashMap::new
+					))
 			);
 		}
 		
 		public static final <T, R> Mapping<String, R> from(Stream<T> stream, Function<T, R> mapper) {
+			if(stream == null) {
+				return new Mapping<>(Map.of());
+			}
+			
+			Objects.requireNonNull(mapper);
 			return new Mapping<>(
 				stream
 					.distinct()

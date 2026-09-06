@@ -26,13 +26,6 @@ public final class IntegrityArtifactsIterator extends ArtifactsIteratorBase {
 	
 	@Override
 	protected final boolean isArtifactOk(Artifact artifact) throws IOException {
-		if(artifact.component().equals("application")) {
-			System.out.println(skipArtifactFilter.test(artifact));
-			System.out.println(unchangedComponents.contains(artifact.component()));
-			System.out.println(checker.checkExistanceOnly(artifact));
-			System.out.println(checker.check(artifact));
-		}
-		
 		return skipArtifactFilter.test(artifact)
 					|| (
 						unchangedComponents.contains(artifact.component())
