@@ -289,7 +289,7 @@ public class PluginManagerWindow extends DraggableWindow<VBox> {
 			Path manifestPath = Common.manifestPath();
 			Manifest manifest = Manifest.ofLocal(manifestPath);
 			
-			builder = builder.withIntegrityCheck((a) -> artifactChecker(root));
+			builder = builder.withStrictIntegrityCheck((a) -> artifactChecker(root));
 			builder = builder.skipArtifactFilter((a) -> !setOfNames.contains(a.component()));
 			
 			Artifacts artifacts = builder.build(manifest, registries);

@@ -59,7 +59,17 @@ public class ArtifactChecker implements EventBindable<ArtifactCheckEvent> {
 		}
 	}
 	
-	protected ArtifactCheckResult doCheck(Artifact artifact) throws IOException {
+	protected ArtifactCheckResult doCheckExistanceOnly(Artifact artifact) throws IOException {
+		Path path = root.resolve(artifact.installPath());
+		
+		if(!NIO.isRegularFile(path)) {
+			return ArtifactCheckResult.MISSING;
+		}
+		
+		return ArtifactCheckResult.OK;
+	}
+	
+	protected ArtifactCheckResult doCheckFull(Artifact artifact) throws IOException {
 		Path path = root.resolve(artifact.installPath());
 		
 		if(!NIO.isRegularFile(path)) {
@@ -76,12 +86,12 @@ public class ArtifactChecker implements EventBindable<ArtifactCheckEvent> {
 		return ArtifactCheckResult.OK;
 	}
 	
-	protected ArtifactCheckResult check(Artifact artifact) throws IOException {
+	protected ArtifactCheckResult check(CheckImpl impl, Artifact artifact) throws IOException {
 		context.begin(artifact);
 		eventRegistry.call(ArtifactCheckEvent.BEGIN, context);
 		
 		try {
-			ArtifactCheckResult result = doCheck(artifact);
+			ArtifactCheckResult result = impl.check(artifact);
 			context.end(result);
 			return result;
 		} catch(IOException ex) {
@@ -91,6 +101,14 @@ public class ArtifactChecker implements EventBindable<ArtifactCheckEvent> {
 		} finally {
 			eventRegistry.call(ArtifactCheckEvent.END, context);
 		}
+	}
+	
+	public ArtifactCheckResult checkExistanceOnly(Artifact artifact) throws IOException {
+		return check(this::doCheckExistanceOnly, artifact);
+	}
+	
+	public ArtifactCheckResult check(Artifact artifact) throws IOException {
+		return check(this::doCheckFull, artifact);
 	}
 	
 	@Override
@@ -107,6 +125,12 @@ public class ArtifactChecker implements EventBindable<ArtifactCheckEvent> {
 		Listener<V> listener
 	) {
 		eventRegistry.remove(event, listener);
+	}
+	
+	@FunctionalInterface
+	private static interface CheckImpl {
+		
+		ArtifactCheckResult check(Artifact artifact) throws IOException;
 	}
 	
 	protected class Context implements ArtifactCheckContext {

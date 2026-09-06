@@ -404,8 +404,8 @@ public final class MediaDownloader {
 				builder = builder.skipArtifactFilter((a) -> skipComponents.contains(a.component()));
 				builder = (
 					isCheckIntegrityEnabled()
-						? builder.withIntegrityCheck((a) -> artifactChecker(root))
-						: builder.noIntegrityCheck()
+						? builder.withStrictIntegrityCheck((a) -> artifactChecker(root))
+						: builder.withIntegrityCheck((a) -> artifactChecker(root))
 				);
 				
 				Artifacts artifacts = builder.build(manifest, registries);

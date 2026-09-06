@@ -5,15 +5,15 @@ import java.util.List;
 import java.util.function.Predicate;
 
 /** @since 00.02.09 */
-public final class ArtifactsIteratorWithIntegrity extends ArtifactsIteratorBase {
+public final class StrictIntegrityArtifactsIterator extends ArtifactsIteratorBase {
 	
 	private final Predicate<Artifact> skipArtifactFilter;
 	private final ArtifactChecker checker;
 	
-	public ArtifactsIteratorWithIntegrity(
+	public StrictIntegrityArtifactsIterator(
 		List<Artifact> artifacts,
-		ArtifactChecker checker,
-		Predicate<Artifact> skipArtifactFilter
+		Predicate<Artifact> skipArtifactFilter,
+		ArtifactChecker checker
 	) {
 		super(artifacts);
 		this.skipArtifactFilter = skipArtifactFilter;

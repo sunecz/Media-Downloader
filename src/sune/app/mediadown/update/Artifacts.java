@@ -111,12 +111,12 @@ public final class Artifacts {
 			this.channel = channel;
 		}
 		
-		public Builder noIntegrityCheck() {
+		public Builder withIntegrityCheck(Function<Artifacts, ArtifactChecker> supplier) {
 			iteratorSupplier = (artifacts) -> (
-				new ArtifactsIteratorNoIntegrity(
+				new IntegrityArtifactsIterator(
 					artifacts.artifacts(),
-					root,
 					skipArtifactFilter,
+					supplier.apply(artifacts),
 					artifacts.unchangedComponents().components()
 				)
 			);
@@ -124,12 +124,12 @@ public final class Artifacts {
 			return this;
 		}
 		
-		public Builder withIntegrityCheck(Function<Artifacts, ArtifactChecker> supplier) {
+		public Builder withStrictIntegrityCheck(Function<Artifacts, ArtifactChecker> supplier) {
 			iteratorSupplier = (artifacts) -> (
-				new ArtifactsIteratorWithIntegrity(
+				new StrictIntegrityArtifactsIterator(
 					artifacts.artifacts(),
-					supplier.apply(artifacts),
-					skipArtifactFilter
+					skipArtifactFilter,
+					supplier.apply(artifacts)
 				)
 			);
 			
@@ -143,7 +143,7 @@ public final class Artifacts {
 		
 		public Artifacts build(Manifest localManifest, List<ComponentRegistry> registries) throws Exception {
 			if(iteratorSupplier == null) {
-				noIntegrityCheck();
+				throw new IllegalStateException("Choose integrity check mode");
 			}
 			
 			if(skipArtifactFilter == null) {
