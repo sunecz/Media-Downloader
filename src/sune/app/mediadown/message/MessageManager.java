@@ -14,6 +14,7 @@ import sune.app.mediadown.net.Net;
 import sune.app.mediadown.net.Web;
 import sune.app.mediadown.net.Web.Request;
 import sune.app.mediadown.net.Web.Response;
+import sune.app.mediadown.update.Version;
 import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.PathSystem;
 import sune.app.mediadown.util.Utils.Ignore;
@@ -42,8 +43,14 @@ public final class MessageManager {
 		return MessageListObtainer.ofVersion(version).list();
 	}
 	
+	/** @since 00.02.09 */
+	// Introduced for backward-compatibility only
+	private static final String versionString(Version version) {
+		return String.format("%02d.%02d.%02d", version.major(), version.minor(), version.patch());
+	}
+	
 	public static final MessageList current() throws Exception {
-		return ofVersion(MediaDownloader.version().stringRelease());
+		return ofVersion(versionString(MediaDownloader.version()));
 	}
 	
 	public static final MessageList local() throws Exception {
@@ -103,7 +110,7 @@ public final class MessageManager {
 				}
 			}
 			
-			String version = MediaDownloader.version().stringRelease();
+			String version = versionString(MediaDownloader.version());
 			URI baseURI = versionBaseURI(version);
 			obtainer = new MessageListObtainer(new MessageList(baseURI, version, data));
 			cache.put(null, obtainer);

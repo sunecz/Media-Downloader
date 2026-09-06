@@ -1,5 +1,6 @@
 package sune.app.mediadown.update;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Matcher;
@@ -10,38 +11,35 @@ public final class Version implements Comparable<Version> {
 	
 	public static final Version UNKNOWN = new Version();
 	/** @since 00.02.07 */
-	public static final Version ZERO    = new Version(VersionType.UNKNOWN, 0, 0, 0, 0, 0);
+	public static final Version ZERO    = new Version(0, 0, 0, List.of(), "");
 	
-	private final VersionType type;
 	/** @since 00.02.07 */
 	private final int major;
 	/** @since 00.02.07 */
 	private final int minor;
 	/** @since 00.02.07 */
 	private final int patch;
-	/** @since 00.02.07 */
-	private final int value;
 	/** @since 00.02.09 */
-	private final int buildNumber;
+	private final List<String> prerelease;
+	/** @since 00.02.09 */
+	private final String build;
 	
 	/** @since 00.02.07 */
 	private Version() {
-		this.type = VersionType.UNKNOWN;
 		this.major = -1;
 		this.minor = -1;
 		this.patch = -1;
-		this.value = -1;
-		this.buildNumber = -1;
+		this.prerelease = List.of();
+		this.build = "";
 	}
 	
-	/** @since 00.02.07 */
-	private Version(VersionType type, int major, int minor, int patch, int value, int buildNumber) {
-		this.type = Objects.requireNonNull(type);
+	/** @since 00.02.09 */
+	private Version(int major, int minor, int patch, List<String> prerelease, String build) {
 		this.major = checkInteger(major);
 		this.minor = checkInteger(minor);
 		this.patch = checkInteger(patch);
-		this.value = checkInteger(value);
-		this.buildNumber = checkInteger(buildNumber);
+		this.prerelease = List.copyOf(Objects.requireNonNull(prerelease));
+		this.build = Objects.requireNonNull(build);
 	}
 	
 	/** @since 00.02.07 */
@@ -53,9 +51,55 @@ public final class Version implements Comparable<Version> {
 		return value;
 	}
 	
-	/** @since 00.02.08 */
-	private static final FormatterSettings formatterSettings(boolean isCompact) {
-		return isCompact ? FormatterSettings.ofCompact() : FormatterSettings.ofDefault();
+	/** @since 00.02.09 */
+	private static final boolean isNumeric(String string) {
+		if(string.isEmpty()) {
+			return false;
+		}
+		
+		for(int i = 0, l = string.length(); i < l; ++i) {
+			if(!Character.isDigit(string.charAt(i))) {
+				return false;
+			}
+		}
+		
+		return true;
+	}
+	
+	/** @since 00.02.09 */
+	private static final int compareIdentifier(String a, String b) {
+		boolean aNumeric = isNumeric(a), bNumeric = isNumeric(b);
+		
+		if(aNumeric && bNumeric) {
+			return Integer.compare(Integer.parseInt(a), Integer.parseInt(b));
+		}
+		
+		if(aNumeric != bNumeric) {
+			// Numeric identifiers always have lower precedence than alphanumeric ones
+			return aNumeric ? -1 : 1;
+		}
+		
+		return a.compareTo(b);
+	}
+	
+	/** @since 00.02.09 */
+	private static final int comparePrerelease(List<String> a, List<String> b) {
+		boolean aEmpty = a.isEmpty(), bEmpty = b.isEmpty();
+		
+		if(aEmpty && bEmpty) return 0;
+		// A version without a prerelease has a higher precedence than one with a prerelease.
+		if(aEmpty) return  1;
+		if(bEmpty) return -1;
+		
+		for(int i = 0, l = Math.min(a.size(), b.size()), cmp; i < l; ++i) {
+			if((cmp = compareIdentifier(a.get(i), b.get(i))) != 0) {
+				return cmp;
+			}
+		}
+		
+		// A larger set has higher precedence than a smaller set, if all identifiers
+		// in the smaller set are equal.
+		return Integer.compare(a.size(), b.size());
 	}
 	
 	/** @since 00.02.07 */
@@ -63,14 +107,14 @@ public final class Version implements Comparable<Version> {
 		return Parser.instance().parse(string);
 	}
 	
-	/** @since 00.02.07 */
-	public static final Version of(VersionType type, int major, int minor, int patch, int value) {
-		return builder().type(type).major(major).minor(minor).patch(patch).value(value).build();
+	/** @since 00.02.09 */
+	public static final Version of(int major, int minor, int patch) {
+		return builder().major(major).minor(minor).patch(patch).build();
 	}
 	
 	/** @since 00.02.09 */
-	public static final Version of(VersionType type, int major, int minor, int patch, int value, int buildNumber) {
-		return builder().type(type).major(major).minor(minor).patch(patch).value(value).buildNumber(buildNumber).build();
+	public static final Version of(int major, int minor, int patch, String... prerelease) {
+		return builder().major(major).minor(minor).patch(patch).prerelease(prerelease).build();
 	}
 	
 	/** @since 00.02.07 */
@@ -79,22 +123,8 @@ public final class Version implements Comparable<Version> {
 	}
 	
 	/** @since 00.02.07 */
-	private final String string(boolean isCompact) {
-		return string(formatterSettings(isCompact));
-	}
-	
-	/** @since 00.02.07 */
-	private final String stringRelease(boolean isCompact) {
-		return stringRelease(formatterSettings(isCompact));
-	}
-	
-	/** @since 00.02.07 */
 	public Version release() {
-		return this == UNKNOWN ? UNKNOWN : new Version(VersionType.RELEASE, major, minor, patch, 0, 0);
-	}
-	
-	public VersionType type() {
-		return type;
+		return this == UNKNOWN ? UNKNOWN : new Version(major, minor, patch, List.of(), "");
 	}
 	
 	/** @since 00.02.07 */
@@ -112,77 +142,52 @@ public final class Version implements Comparable<Version> {
 		return patch;
 	}
 	
-	public int value() {
-		return value;
+	/** @since 00.02.09 */
+	public List<String> prerelease() {
+		return prerelease;
 	}
 	
 	/** @since 00.02.09 */
-	public int buildNumber() {
-		return buildNumber;
-	}
-	
-	/** @since 00.02.07 */
-	public String string() {
-		return string(false);
-	}
-	
-	/** @since 00.02.07 */
-	public String stringRelease() {
-		return stringRelease(false);
-	}
-	
-	/** @since 00.02.07 */
-	public String compactString() {
-		return string(true);
-	}
-	
-	/** @since 00.02.07 */
-	public String compactStringRelease() {
-		return stringRelease(true);
+	public String build() {
+		return build;
 	}
 	
 	/** @since 00.02.08 */
-	public final String string(FormatterSettings settings) {
-		return Formatter.instance().full(this, Objects.requireNonNull(settings));
+	public final String string() {
+		return Formatter.instance().full(this);
 	}
 	
 	/** @since 00.02.08 */
-	public final String stringRelease(FormatterSettings settings) {
-		return Formatter.instance().release(this, Objects.requireNonNull(settings));
+	public final String stringRelease() {
+		return Formatter.instance().release(this);
 	}
 	
 	@Override
 	public int hashCode() {
-		return Objects.hash(major, minor, patch, type, value, buildNumber);
+		return Objects.hash(major, minor, patch, prerelease, build);
 	}
 	
 	@Override
 	public boolean equals(Object obj) {
-		if(this == obj)
-			return true;
-		if(obj == null)
-			return false;
-		if(getClass() != obj.getClass())
-			return false;
+		if(this == obj) return true;
+		if(!(obj instanceof Version)) return false;
 		Version other = (Version) obj;
-		return major == other.major
-		        && minor == other.minor
-		        && patch == other.patch
-		        && type == other.type
-		        && value == other.value
-		        && buildNumber == other.buildNumber;
+		return (
+			   major == other.major
+			&& minor == other.minor
+			&& patch == other.patch
+			&& prerelease.equals(other.prerelease)
+			&& build.equals(other.build)
+		);
 	}
 	
 	@Override
 	public int compareTo(Version other) {
 		int cmp;
-		if((cmp = Integer.compare(major, other.major))             != 0) return cmp;
-		if((cmp = Integer.compare(minor, other.minor))             != 0) return cmp;
-		if((cmp = Integer.compare(patch, other.patch))             != 0) return cmp;
-		if((cmp = type.compareTo(other.type))                      != 0) return cmp;
-		if((cmp = Integer.compare(value, other.value))             != 0) return cmp;
-		if((cmp = Integer.compare(buildNumber, other.buildNumber)) != 0) return cmp;
-		return 0;
+		if((cmp = Integer.compare(major, other.major)) != 0) return cmp;
+		if((cmp = Integer.compare(minor, other.minor)) != 0) return cmp;
+		if((cmp = Integer.compare(patch, other.patch)) != 0) return cmp;
+		return comparePrerelease(prerelease, other.prerelease);
 	}
 	
 	@Override
@@ -194,8 +199,13 @@ public final class Version implements Comparable<Version> {
 	private static final class Parser {
 		
 		private static final Parser INSTANCE = new Parser();
+		// Semver-like syntax with optional minor and patch parts
 		private static final Regex REGEX = Regex.of(
-			"^(\\d+)(?:\\.(\\d+)(?:\\.(\\d+)(?:-(?:([a-z]+)\\.)?(\\d+))?)?)?(?:\\+(\\d+))?$"
+			       "^(?<major>0|[1-9]\\d*)"
+			+ "(?:\\.(?<minor>0|[1-9]\\d*))?"
+			+ "(?:\\.(?<patch>0|[1-9]\\d*))?"
+			+ "(?:-(?<prerelease>[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*))?"
+			+ "(?:\\+(?<build>[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*))?$"
 		);
 		
 		// Forbid anyone to create an instance of this class
@@ -217,13 +227,14 @@ public final class Version implements Comparable<Version> {
 				return UNKNOWN;
 			}
 			
-			int major = Integer.valueOf(matcher.group(1));
-			int minor = Optional.ofNullable(matcher.group(2)).map(Integer::valueOf).orElse(0);
-			int patch = Optional.ofNullable(matcher.group(3)).map(Integer::valueOf).orElse(0);
-			VersionType type = Optional.ofNullable(matcher.group(4)).map(VersionType::from).orElse(VersionType.RELEASE);
-			int value = Optional.ofNullable(matcher.group(5)).map(Integer::valueOf).orElse(0);
-			int buildNumber = Optional.ofNullable(matcher.group(6)).map(Integer::valueOf).orElse(0);
-			return new Version(type, major, minor, patch, value, buildNumber);
+			int major = Integer.valueOf(matcher.group("major"));
+			int minor = Optional.ofNullable(matcher.group("minor")).map(Integer::valueOf).orElse(0);
+			int patch = Optional.ofNullable(matcher.group("patch")).map(Integer::valueOf).orElse(0);
+			List<String> prerelease = Optional.ofNullable(matcher.group("prerelease"))
+				.map((s) -> List.of(s.split("\\.")))
+				.orElse(List.of());
+			String build = Optional.ofNullable(matcher.group("build")).orElse("");
+			return new Version(major, minor, patch, prerelease, build);
 		}
 	}
 	
@@ -240,167 +251,75 @@ public final class Version implements Comparable<Version> {
 			return INSTANCE;
 		}
 		
-		/** @since 00.02.08 */
-		private static final String format(int value, int numberOfDigits) {
-			return numberOfDigits <= 1 ? Integer.toString(value) : String.format("%0" + numberOfDigits + "d", value);
+		/** @since 00.02.09 */
+		private static final String formatIdentifier(String identifier) {
+			return isNumeric(identifier) ? Long.toString(Long.parseLong(identifier)) : identifier;
 		}
 		
-		private final void release(Version version, StringBuilder builder, FormatterSettings settings) {
-			if(version == null || version.type() == VersionType.UNKNOWN) {
+		private final void release(Version version, StringBuilder builder) {
+			if(version == null || version == UNKNOWN) {
 				builder.append("UNKNOWN");
 			} else {
-				builder.append(format(version.major(), settings.numberOfDigits(FormatterDigitsType.MAJOR))).append('.');
-				builder.append(format(version.minor(), settings.numberOfDigits(FormatterDigitsType.MINOR))).append('.');
-				builder.append(format(version.patch(), settings.numberOfDigits(FormatterDigitsType.PATCH)));
+				builder.append(version.major()).append('.');
+				builder.append(version.minor()).append('.');
+				builder.append(version.patch());
 			}
 		}
 		
-		private final void full(Version version, StringBuilder builder, FormatterSettings settings) {
-			release(version, builder, settings);
+		private final void full(Version version, StringBuilder builder) {
+			release(version, builder);
 			
-			VersionType type;
-			if((type = version.type()) == VersionType.UNKNOWN) {
+			if(version == null || version == UNKNOWN) {
 				return; // Nothing else to do
 			}
 			
-			boolean isTypePresent = !type.string().isEmpty();
-			
-			if(isTypePresent) {
-				builder.append('-').append(type.string());
+			List<String> prerelease = version.prerelease();
+			for(int i = 0, l = prerelease.size(); i < l; ++i) {
+				builder.append(i == 0 ? '-' : '.');
+				builder.append(formatIdentifier(prerelease.get(i)));
 			}
 			
-			if(version.value() > 0) {
-				if(isTypePresent) {
-					builder.append('.');
-				} else {
-					builder.append('-');
-				}
-				
-				builder.append(format(
-					version.value(),
-					settings.numberOfDigits(FormatterDigitsType.VALUE)
-				));
-			}
-			
-			if(version.buildNumber() > 0) {
+			String build = version.build();
+			if(!build.isEmpty()) {
 				builder.append('+');
-				builder.append(format(
-					version.buildNumber(),
-					settings.numberOfDigits(FormatterDigitsType.BUILD_NUMBER)
-				));
+				builder.append(formatIdentifier(build));
 			}
 		}
 		
-		public final String release(Version version, FormatterSettings settings) {
+		public final String release(Version version) {
 			StringBuilder builder = new StringBuilder();
-			release(version, builder, settings);
+			release(version, builder);
 			return builder.toString();
 		}
 		
-		public final String full(Version version, FormatterSettings settings) {
+		public final String full(Version version) {
 			StringBuilder builder = new StringBuilder();
-			full(version, builder, settings);
+			full(version, builder);
 			return builder.toString();
-		}
-	}
-	
-	/** @since 00.02.08 */
-	public static final class FormatterSettings {
-		
-		private static final FormatterSettings DEFAULT = of();
-		private static final FormatterSettings COMPACT = of(1, 1, 1, 1, 1);
-		
-		private final int[] numberOfDigits;
-		
-		private FormatterSettings(int... numberOfDigits) {
-			this.numberOfDigits = Objects.requireNonNull(numberOfDigits);
-		}
-		
-		public static final FormatterSettings of(int... numberOfDigits) {
-			Objects.requireNonNull(numberOfDigits);
-			FormatterDigitsType[] digitsTypes = FormatterDigitsType.values();
-			
-			for(int i = 0, l = numberOfDigits.length; i < l; ++i) {
-				numberOfDigits[i] = Math.max(numberOfDigits[i], FormatterDigitsType.MIN_DIGITS);
-			}
-			
-			if(numberOfDigits.length < digitsTypes.length) {
-				int[] complete = new int[digitsTypes.length];
-				System.arraycopy(numberOfDigits, 0, complete, 0, numberOfDigits.length);
-				
-				for(int i = numberOfDigits.length, l = digitsTypes.length; i < l; ++i) {
-					complete[i] = digitsTypes[i].defaultNumberOfDigits();
-				}
-				
-				numberOfDigits = complete;
-			}
-			
-			return new FormatterSettings(numberOfDigits);
-		}
-		
-		public static final FormatterSettings ofDefault() {
-			return DEFAULT;
-		}
-		
-		public static final FormatterSettings ofCompact() {
-			return COMPACT;
-		}
-		
-		public int numberOfDigits(FormatterDigitsType digitsType) {
-			return numberOfDigits[Objects.requireNonNull(digitsType).ordinal()];
-		}
-	}
-	
-	/** @since 00.02.08 */
-	public static enum FormatterDigitsType {
-		
-		MAJOR(2),
-		MINOR(2),
-		PATCH(2),
-		VALUE(1),
-		/** @since 00.02.09 */
-		BUILD_NUMBER(1);
-		
-		public static final int MIN_DIGITS = 1;
-		
-		private final int defaultNumberOfDigits;
-		
-		private FormatterDigitsType(int defaultNumberOfDigits) {
-			this.defaultNumberOfDigits = defaultNumberOfDigits;
-		}
-		
-		public int defaultNumberOfDigits() {
-			return defaultNumberOfDigits;
 		}
 	}
 	
 	/** @since 00.02.07 */
 	public static final class Builder {
 		
-		private VersionType type;
 		private int major;
 		private int minor;
 		private int patch;
-		private int value;
 		/** @since 00.02.09 */
-		private int buildNumber;
+		private List<String> prerelease;
+		/** @since 00.02.09 */
+		private String build;
 		
 		private Builder() {
-			this.type = VersionType.UNKNOWN;
 			this.major = 0;
 			this.minor = 0;
 			this.patch = 0;
-			this.value = 0;
-			this.buildNumber = 0;
+			this.prerelease = List.of();
+			this.build = "";
 		}
 		
 		public Version build() {
-			return new Version(type, major, minor, patch, value, buildNumber);
-		}
-		
-		public Builder type(VersionType type) {
-			this.type = type;
-			return this;
+			return new Version(major, minor, patch, prerelease, build);
 		}
 		
 		public Builder major(int major) {
@@ -418,40 +337,22 @@ public final class Version implements Comparable<Version> {
 			return this;
 		}
 		
-		public Builder value(int value) {
-			this.value = value;
+		/** @since 00.02.09 */
+		public Builder prerelease(String... prerelease) {
+			this.prerelease = List.of(prerelease);
 			return this;
 		}
 		
 		/** @since 00.02.09 */
-		public Builder buildNumber(int buildNumber) {
-			this.buildNumber = buildNumber;
+		public Builder prerelease(List<String> prerelease) {
+			this.prerelease = List.copyOf(prerelease);
 			return this;
 		}
 		
-		public VersionType type() {
-			return type;
-		}
-		
-		public int major() {
-			return major;
-		}
-		
-		public int minor() {
-			return minor;
-		}
-		
-		public int patch() {
-			return patch;
-		}
-		
-		public int value() {
-			return value;
-		}
-		
 		/** @since 00.02.09 */
-		public int buildNumber() {
-			return buildNumber;
+		public Builder build(String build) {
+			this.build = Objects.requireNonNull(build);
+			return this;
 		}
 	}
 }
