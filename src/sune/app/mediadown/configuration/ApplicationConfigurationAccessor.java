@@ -9,7 +9,6 @@ import sune.app.mediadown.media.MediaFormat;
 import sune.app.mediadown.media.MediaTitleFormat;
 import sune.app.mediadown.theme.Theme;
 import sune.app.mediadown.update.Channel;
-import sune.app.mediadown.update.Version;
 import sune.util.ssdf2.SSDCollection;
 
 /** @since 00.02.04 */
@@ -32,9 +31,6 @@ public interface ApplicationConfigurationAccessor extends ConfigurationLocatable
 	public static final String GROUP_OTHER = "other";
 	
 	// ----- Names of configuration properties
-	public static final String PROPERTY_VERSION = "version";
-	/** @since 00.02.07 */
-	public static final String PROPERTY_REMOVE_AT_INIT = "removeAtInit";
 	public static final String PROPERTY_LANGUAGE = "language";
 	public static final String PROPERTY_THEME = "theme";
 	public static final String PROPERTY_AUTO_UPDATE_CHECK = "autoUpdateCheck";
@@ -71,7 +67,6 @@ public interface ApplicationConfigurationAccessor extends ConfigurationLocatable
 	/** @since 00.02.09 */
 	public static final String PROPERTY_UPDATE_REGISTRIES = "update.registries";
 	
-	Version version();
 	Language language();
 	Theme theme();
 	boolean isAutoUpdateCheck();

@@ -140,7 +140,6 @@ public final class MediaDownloader {
 	public static final Image   ICON    = icon("app.png");
 	
 	private static ApplicationConfigurationWrapper configuration;
-	private static boolean applicationUpdated;
 	/** @since 00.02.02 */
 	private static Arguments arguments;
 	/** @since 00.02.08 */
@@ -151,6 +150,8 @@ public final class MediaDownloader {
 	private static Log log;
 	/** @since 00.02.09 */
 	private static Manifest.ComponentChanges updatedComponents;
+	/** @since 00.02.09 */
+	private static Version previousVersion = VERSION;
 	
 	private static final AtomicBoolean isDisposed = new AtomicBoolean();
 	private static final String BASE_RESOURCE = "/resources/";
@@ -540,6 +541,95 @@ public final class MediaDownloader {
 					error(ex);
 				}
 				
+				return new CheckVersion();
+			}
+		}
+		
+		private static final class CheckVersion implements InitializationState {
+			
+			private final void doRun(Arguments args) throws Exception {
+				Path oldPath = Common.oldJarPath();
+				Path newPath = Common.newJarPath();
+				
+				if(args.has("jar-update") && args.has("pid")) {
+					long pid = Long.valueOf(args.getValue("pid"));
+					
+					if(pid <= 0L) {
+						throw new IllegalStateException("Invalid PID");
+					}
+					
+					// Get the parent process
+					ProcessHandle handle = ProcessHandle.of(pid).orElse(null);
+					
+					// Check whether the old process still exists
+					if(handle != null) {
+						// Wait for it to finish
+						setText("Waiting for the previous process to finish...");
+						handle.onExit().get();
+					}
+					
+					// Copy the new (current) JAR file to the required one
+					setText("Replacing the old JAR file...");
+					NIO.copyFile(newPath, oldPath);
+					
+					// Launch the previous process again
+					setText("Launching the new version...");
+					String runCommand = args.getValue("run-command");
+					runCommand = new String(Base64.getDecoder().decode(runCommand), Shared.CHARSET);
+					runCommand += " --jar-update-finish";
+					runCommand += " --is-jar-update";
+					runCommand += " --jar-previous-version '" + args.getValue("jar-previous-version") + "'";
+					SelfProcess.launch(runCommand);
+					
+					// Exit normally
+					System.exit(0);
+				} else if(args.has("jar-update-finish")) {
+					// Finish the whole JAR update process by deleting the new JAR version
+					setText("Deleting the temporary JAR file...");
+					NIO.deleteFile(newPath);
+					// Since we're done relaunching the application at this point (both JRE and
+					// the JAR are updated), we can just set the information to a global variable.
+					previousVersion = Version.of(args.getValue("jar-previous-version"));
+				} else if(NIO.exists(newPath)) {
+					// Get the current run command, so that the application can be run again
+					String runCommand = SelfProcess.command(args.argsList());
+					runCommand = Base64.getEncoder().encodeToString(runCommand.getBytes(Shared.CHARSET));
+					Path exePath = SelfProcess.exePath();
+					
+					// Start a new process to finish updating the application
+					SelfProcess.launchJAR(newPath, exePath, List.of(
+						"--jar-update",
+						"--pid", String.valueOf(SelfProcess.pid()),
+						"--run-command", runCommand,
+						"--is-jar-update",
+						"--jar-previous-version", VERSION.string()
+					));
+					
+					// Exit normally
+					System.exit(0);
+				}
+			}
+			
+			@Override
+			public InitializationState run(Arguments args) {
+				try {
+					doRun(args);
+				} catch(Exception ex) {
+					error(ex);
+				}
+				
+				return new InitializeApplicationUpdateTriggers();
+			}
+			
+			@Override public String getTitle() { return "Checking new versions..."; }
+		}
+		
+		/** @since 00.02.09 */
+		private static final class InitializeApplicationUpdateTriggers implements InitializationState {
+			
+			@Override
+			public InitializationState run(Arguments args) {
+				initApplicationUpdateTriggers();
 				return new RegisterLibrariesAndResources();
 			}
 		}
@@ -698,82 +788,8 @@ public final class MediaDownloader {
 			@Override
 			public InitializationState run(Arguments args) {
 				finalizeConfiguration();
-				return new CheckVersion();
-			}
-		}
-		
-		private static final class CheckVersion implements InitializationState {
-			
-			private final void doRun(Arguments args) throws Exception {
-				Path oldPath = Common.oldJarPath();
-				Path newPath = Common.newJarPath();
-				
-				if(args.has("jar-update") && args.has("pid")) {
-					long pid = Long.valueOf(args.getValue("pid"));
-					
-					if(pid <= 0L) {
-						throw new IllegalStateException("Invalid PID");
-					}
-					
-					// Get the parent process
-					ProcessHandle handle = ProcessHandle.of(pid).orElse(null);
-					
-					// Check whether the old process still exists
-					if(handle != null) {
-						// Wait for it to finish
-						setText("Waiting for the previous process to finish...");
-						handle.onExit().get();
-					}
-					
-					// Copy the new (current) JAR file to the required one
-					setText("Replacing the old JAR file...");
-					NIO.copyFile(newPath, oldPath);
-					
-					// Launch the previous process again
-					setText("Launching the new version...");
-					String runCommand = args.getValue("run-command");
-					runCommand = new String(Base64.getDecoder().decode(runCommand), Shared.CHARSET);
-					runCommand += " --jar-update-finish";
-					runCommand += " --is-jar-update";
-					SelfProcess.launch(runCommand);
-					
-					// Exit normally
-					System.exit(0);
-				} else if(args.has("jar-update-finish")) {
-					// Finish the whole JAR update process by deleting the new JAR version
-					setText("Deleting the temporary JAR file...");
-					NIO.deleteFile(newPath);
-				} else if(NIO.exists(newPath)) {
-					// Get the current run command, so that the application can be run again
-					String runCommand = SelfProcess.command(args.argsList());
-					runCommand = Base64.getEncoder().encodeToString(runCommand.getBytes(Shared.CHARSET));
-					Path exePath = SelfProcess.exePath();
-					
-					// Start a new process to finish updating the application
-					SelfProcess.launchJAR(newPath, exePath, List.of(
-						"--jar-update",
-						"--pid", String.valueOf(SelfProcess.pid()),
-						"--run-command", runCommand,
-						"--is-jar-update"
-					));
-					
-					// Exit normally
-					System.exit(0);
-				}
-			}
-			
-			@Override
-			public InitializationState run(Arguments args) {
-				try {
-					doRun(args);
-				} catch(Exception ex) {
-					error(ex);
-				}
-				
 				return new CleanUpDeletedPaths();
 			}
-			
-			@Override public String getTitle() { return "Checking new versions..."; }
 		}
 		
 		private static final class CleanUpDeletedPaths implements InitializationState {
@@ -921,7 +937,7 @@ public final class MediaDownloader {
 			public InitializationState run(Arguments args) {
 				Set<Configuration> configurations = null;
 				
-				if(applicationUpdated) {
+				if(!VERSION.equals(previousVersion)) {
 					UpdateTriggers.OfApplication.run(
 						UpdateTriggers.OfApplication.Stage.AFTER_CONFIGURATION_FINALIZATION
 					);
@@ -1191,15 +1207,15 @@ public final class MediaDownloader {
 		configuration = new ApplicationConfigurationWrapper(configPath);
 		configuration.loadData(data);
 		
-		// Check whether the application was probably updated
-		applicationUpdated = !VERSION.equals(configuration.version());
-		
 		// Set configuration-dependant values early
 		Web.defaultConnectTimeout(Duration.ofMillis(configuration.requestConnectTimeout()));
 		Web.defaultReadTimeout(Duration.ofMillis(configuration.requestReadTimeout()));
-		
-		if(applicationUpdated) {
-			UpdateTriggers.OfApplication.init(configuration.version(), VERSION);
+	}
+	
+	/** @since 00.02.09 */
+	private static final void initApplicationUpdateTriggers() {
+		if(!VERSION.equals(previousVersion)) {
+			UpdateTriggers.OfApplication.init(previousVersion, VERSION);
 			addApplicationUpdateTriggers();
 			UpdateTriggers.OfApplication.run(UpdateTriggers.OfApplication.Stage.EARLY);
 		}
@@ -1207,9 +1223,7 @@ public final class MediaDownloader {
 	
 	private static final class ResourcesUpdater {
 		
-		private static final Set<String> keepFiles = Set.of(
-			"versions.ssdf", "messages.ssdf", "cm.store", "crd.store"
-		);
+		private static final Set<String> keepFiles = Set.of("messages.ssdf", "cm.store", "crd.store");
 		
 		public static final void configuration(Version previousVersion) {
 			Path configDir  = NIO.localPath(BASE_RESOURCE).resolve("config");
@@ -1358,17 +1372,7 @@ public final class MediaDownloader {
 			Ignore.callVoid(() -> NIO.deleteDir(dir.resolve("plugins")), MediaDownloader::error);
 			
 			// Delete the old default theme
-			try {
-				NIO.deleteDir(dir.resolve("theme/default"));
-			} catch(Exception ex) {
-				SSDCollection data = configuration.data();
-				if(!data.has("removeAtInit"))
-					data.set("removeAtInit", SSDCollection.emptyArray());
-				SSDCollection removeAtInit = data.getCollection("removeAtInit");
-				Path path = dir.resolve("theme/default").toAbsolutePath();
-				removeAtInit.add(path.toString().replace('\\', '/'));
-				saveConfiguration();
-			}
+			Ignore.callVoid(() -> NIO.deleteDir(dir.resolve("theme/default")), MediaDownloader::error);
 			
 			// Delete libraries that are not used anymore (are now built-in)
 			if(previousVersion.compareTo(Version.of("0.2.7-dev.10")) <= 0) {
@@ -1484,37 +1488,12 @@ public final class MediaDownloader {
 		ResourcesUpdater.clean(previousVersion);
 	}
 	
-	private static final void saveConfiguration() {
-		Ignore.callVoid(() -> NIO.save(configuration.path(), configuration.data().toString()), MediaDownloader::error);
-	}
-	
 	private static final void finalizeConfiguration() {
 		configuration.build();
 		
-		SSDCollection data = configuration.data();
-		String propertyName;
-		
-		// Remove specified files, if any
-		propertyName = ApplicationConfiguration.PROPERTY_REMOVE_AT_INIT;
-		if(data.hasCollection(propertyName)) {
-			for(SSDObject path : data.getCollection(propertyName).objectsIterable()) {
-				Ignore.callVoid(() -> NIO.delete(NIO.path(path.stringValue())), MediaDownloader::error);
-			}
-			
-			data.remove(propertyName);
-			saveConfiguration();
-		}
-		
-		if(applicationUpdated) {
-			propertyName = ApplicationConfiguration.PROPERTY_VERSION;
-			Version previousVersion = Version.of(data.getString(propertyName, VERSION.string()));
-			
+		if(!VERSION.equals(previousVersion)) {
 			// Automatically (i.e. without a prompt) update the resources directory
 			updateResourcesDirectory(previousVersion, false);
-			
-			// Update the version in the configuration file (even if the resources directory is not updated)
-			data.set(propertyName, VERSION.string());
-			saveConfiguration();
 		}
 	}
 	
@@ -1537,6 +1516,16 @@ public final class MediaDownloader {
 				if(currentValue == oldDefaultValue) {
 					property.withValue(newDefaultValue);
 				}
+			}
+		);
+		
+		// Remove files of the old update system
+		UpdateTriggers.OfApplication.add(
+			UpdateTriggers.OfApplication.Stage.EARLY,
+			Version.ZERO,
+			Version.of("0.2.9-dev.27"),
+			() -> {
+				NIO.deleteFile(NIO.localPath("resources/versions.ssdf"));
 			}
 		);
 	}
@@ -1979,7 +1968,7 @@ public final class MediaDownloader {
 		// Always check integrity when the application is updated to ensure valid files,
 		// but still respect the no-update flag.
 		return AppArguments.isUpdateEnabled()
-					&& (applicationUpdated || configuration.isCheckResourcesIntegrity());
+					&& (!VERSION.equals(previousVersion) || configuration.isCheckResourcesIntegrity());
 	}
 	
 	private static final void disposeExternalResources() {
@@ -2402,7 +2391,6 @@ public final class MediaDownloader {
 			configuration = (ApplicationConfiguration) builder.build();
 		}
 		
-		@Override public Version version() { return accessor().version(); }
 		@Override public Language language() { return accessor().language(); }
 		@Override public Theme theme() { return accessor().theme(); }
 		@Override public boolean isAutoUpdateCheck() { return accessor().isAutoUpdateCheck(); }

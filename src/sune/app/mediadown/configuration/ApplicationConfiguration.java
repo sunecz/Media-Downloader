@@ -24,7 +24,6 @@ import sune.app.mediadown.net.Web;
 import sune.app.mediadown.resource.ResourceRegistry;
 import sune.app.mediadown.theme.Theme;
 import sune.app.mediadown.update.Channel;
-import sune.app.mediadown.update.Version;
 import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.Utils.Ignore;
 import sune.util.ssdf2.SSDCollection;
@@ -36,7 +35,6 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 	
 	private final Path path;
 	
-	private Version version;
 	private Language language;
 	private Theme theme;
 	private boolean autoUpdateCheck;
@@ -81,11 +79,6 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 	
 	public static final ApplicationConfiguration.Builder builder(Path path) {
 		ApplicationConfiguration.Builder builder = new ApplicationConfiguration.Builder(path);
-		
-		// ----- Hidden
-		builder.addProperty(ConfigurationProperty.ofString(PROPERTY_VERSION).asHidden(true)
-			.withDefaultValue(MediaDownloader.version().toString()));
-		builder.addProperty(ConfigurationProperty.ofArray(PROPERTY_REMOVE_AT_INIT).asHidden(true));
 		
 		// ----- General
 		builder.addProperty(ConfigurationProperty.ofType(PROPERTY_LANGUAGE, Language.class)
@@ -206,7 +199,6 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 	
 	/** @since 00.02.05 */
 	private final void loadFields() {
-		version = Version.of(stringValue(PROPERTY_VERSION));
 		autoUpdateCheck = booleanValue(PROPERTY_AUTO_UPDATE_CHECK);
 		acceleratedDownload = intValue(PROPERTY_ACCELERATED_DOWNLOAD);
 		parallelDownloads = intValue(PROPERTY_PARALLEL_DOWNLOADS);
@@ -264,11 +256,6 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 	@Override
 	public Path path() {
 		return path;
-	}
-	
-	@Override
-	public Version version() {
-		return version;
 	}
 	
 	@Override
@@ -406,11 +393,6 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 			Map<String, ConfigurationProperty<?>> builtProperties = new LinkedHashMap<>();
 			SSDCollection data = data(builtProperties);
 			return new ApplicationConfiguration(path, name, data, builtProperties);
-		}
-		
-		@Override
-		public Version version() {
-			return Version.of(accessor().stringValue(PROPERTY_VERSION));
 		}
 		
 		@Override
