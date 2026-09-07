@@ -110,7 +110,11 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 				                     .map(Channel::name)
 				                     .collect(Collectors.toList()))
 			.withTransformer(Enum::name, Channel::valueOf)
-			.withDefaultValue(Channel.STABLE.name()));
+			.withDefaultValue(
+				!MediaDownloader.VERSION.prerelease().isEmpty()
+					? Channel.DEV.name()
+					: Channel.STABLE.name()
+			));
 		builder.addProperty(ConfigurationProperty.ofBoolean(PROPERTY_AUTO_UPDATE_CHECK)
 			.inGroup(GROUP_UPDATE)
 			.withDefaultValue(true));

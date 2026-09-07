@@ -175,6 +175,7 @@ public final class MediaDownloader {
 		public static final String newJreName() { return "jre-new"; }
 		public static final String manifestName() { return "resources/manifest.json"; }
 		public static final String deletedIndexName() { return "resources/.deleted"; }
+		public static final String configurationName() { return "resources/config/application.ssdf"; }
 		
 		public static final Path oldJarPath() { return rootPath().resolve(oldJarName()); }
 		public static final Path newJarPath() { return rootPath().resolve(newJarName()); }
@@ -182,6 +183,7 @@ public final class MediaDownloader {
 		public static final Path newJrePath() { return rootPath().resolve(newJreName()); }
 		public static final Path manifestPath() { return rootPath().resolve(manifestName()); }
 		public static final Path deletedIndexPath() { return rootPath().resolve(deletedIndexName()); }
+		public static final Path configurationPath() { return rootPath().resolve(configurationName()); }
 		
 		public static final List<String> defaultComponentRegistries() {
 			return (
@@ -1197,14 +1199,17 @@ public final class MediaDownloader {
 	}
 	
 	private static final void initConfiguration() {
-		Path configDir = NIO.localPath(BASE_RESOURCE).resolve("config");
-		Ignore.callVoid(() -> NIO.createDir(configDir), MediaDownloader::error);
+		Path path = Common.configurationPath();
+		Ignore.callVoid(() -> NIO.createDir(path.getParent()), MediaDownloader::error);
 		
-		Path configPath = configDir.resolve("application.ssdf");
-		SSDCollection data = NIO.exists(configPath) ? SSDF.read(configPath.toFile()) : SSDCollection.empty();
+		SSDCollection data = (
+			NIO.isRegularFile(path)
+				? SSDF.read(path.toFile())
+				: SSDCollection.empty()
+		);
 		
 		// Load the configuration
-		configuration = new ApplicationConfigurationWrapper(configPath);
+		configuration = new ApplicationConfigurationWrapper(path);
 		configuration.loadData(data);
 		
 		// Set configuration-dependant values early
@@ -1226,8 +1231,8 @@ public final class MediaDownloader {
 		private static final Set<String> keepFiles = Set.of("messages.ssdf", "cm.store", "crd.store");
 		
 		public static final void configuration(Version previousVersion) {
-			Path configDir  = NIO.localPath(BASE_RESOURCE).resolve("config");
-			Path configPath = configDir.resolve("application.ssdf");
+			Path configPath = Common.configurationPath();
+			Path configDir  = configPath.getParent();
 			
 			if(!NIO.exists(configDir)
 					&& !Ignore.callAndCheck(() -> NIO.createDir(configDir), MediaDownloader::error)) {
@@ -1267,7 +1272,7 @@ public final class MediaDownloader {
 				}
 				
 				if(previousVersion.compareTo(Version.of("0.2.9-dev.1")) >= 0
-						&& previousVersion.compareTo(Version.of("0.2.9-dev.26")) <= 0) {
+						&& previousVersion.compareTo(Version.of("0.2.9")) <= 0) {
 					// Set DEV channel as the update channel for old pre-release versions
 					configuration.configuration().writer()
 						.set(ApplicationConfiguration.PROPERTY_UPDATE_CHANNEL, Channel.DEV.name());
@@ -1490,6 +1495,12 @@ public final class MediaDownloader {
 	
 	private static final void finalizeConfiguration() {
 		configuration.build();
+		
+		// Save the configuration
+		Ignore.callVoid(
+			() -> configuration.configuration().writer().save(Common.configurationPath()),
+			MediaDownloader::error
+		);
 		
 		if(!VERSION.equals(previousVersion)) {
 			// Automatically (i.e. without a prompt) update the resources directory
