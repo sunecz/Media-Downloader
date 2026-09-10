@@ -1101,6 +1101,10 @@ public final class MediaDownloader {
 			}
 			
 			public static final int of(String value) {
+				if(value == null) {
+					return NONE;
+				}
+				
 				switch(value.toUpperCase()) {
 					case "NORMAL": return NORMAL;
 					case "IDE":    return IDE;
