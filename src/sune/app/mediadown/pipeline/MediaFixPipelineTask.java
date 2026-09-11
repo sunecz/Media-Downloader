@@ -4,9 +4,9 @@ import java.util.List;
 
 import sune.app.mediadown.conversion.ConversionMedia;
 import sune.app.mediadown.event.MediaFixEvent;
-import sune.app.mediadown.gui.table.ResolvedMedia;
 import sune.app.mediadown.manager.MediaFixManager;
 import sune.app.mediadown.manager.PositionAwareManagerSubmitResult;
+import sune.app.mediadown.media.ResolvedMedia;
 import sune.app.mediadown.media.fix.MediaFixContext;
 import sune.app.mediadown.media.fix.MediaFixer;
 

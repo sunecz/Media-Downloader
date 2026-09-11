@@ -7,6 +7,7 @@ import sune.app.mediadown.entity.MediaEngine;
 import sune.app.mediadown.entity.MediaGetter;
 import sune.app.mediadown.gui.window.TableWindow;
 import sune.app.mediadown.media.Media;
+import sune.app.mediadown.media.ResolvedMedia;
 import sune.app.mediadown.net.Net;
 import sune.app.mediadown.task.ListTask;
 import sune.app.mediadown.task.Tasks;

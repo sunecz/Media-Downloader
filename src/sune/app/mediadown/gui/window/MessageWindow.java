@@ -20,11 +20,11 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.gui.DraggableWindow;
+import sune.app.mediadown.gui.util.FXUtils;
 import sune.app.mediadown.message.Message;
 import sune.app.mediadown.message.MessageList;
 import sune.app.mediadown.message.MessageManager;
 import sune.app.mediadown.os.OS;
-import sune.app.mediadown.util.FXUtils;
 import sune.app.mediadown.util.Utils.Ignore;
 
 /** @since 00.02.02 */

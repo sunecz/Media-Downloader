@@ -18,7 +18,7 @@ import sune.app.mediadown.gui.DialogWindow;
 import sune.app.mediadown.gui.GUI.CredentialsRegistry;
 import sune.app.mediadown.gui.GUI.CredentialsRegistry.CredentialsEntry;
 import sune.app.mediadown.gui.GUI.CredentialsRegistry.CredentialsType;
-import sune.app.mediadown.util.FXUtils;
+import sune.app.mediadown.gui.util.FXUtils;
 
 /** @since 00.02.09 */
 public final class CredentialsEditDialogWindow extends DialogWindow<VBox, Credentials> {

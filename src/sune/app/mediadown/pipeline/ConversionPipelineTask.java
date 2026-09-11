@@ -5,10 +5,10 @@ import java.util.List;
 import sune.app.mediadown.conversion.ConversionMedia;
 import sune.app.mediadown.entity.Converter;
 import sune.app.mediadown.event.ConversionEvent;
-import sune.app.mediadown.gui.table.ResolvedMedia;
 import sune.app.mediadown.manager.ConversionManager;
 import sune.app.mediadown.manager.PositionAwareManagerSubmitResult;
 import sune.app.mediadown.media.MediaConversionContext;
+import sune.app.mediadown.media.ResolvedMedia;
 
 /** @since 00.01.26 */
 public final class ConversionPipelineTask

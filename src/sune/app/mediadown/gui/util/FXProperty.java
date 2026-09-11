@@ -1,4 +1,4 @@
-package sune.app.mediadown.util;
+package sune.app.mediadown.gui.util;
 
 import java.util.LinkedHashMap;
 import java.util.Map;

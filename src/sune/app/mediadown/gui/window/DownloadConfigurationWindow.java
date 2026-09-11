@@ -37,13 +37,13 @@ import javafx.util.StringConverter;
 import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.gui.CustomChoiceDialog;
 import sune.app.mediadown.gui.DraggableWindow;
+import sune.app.mediadown.gui.util.FXUtils;
 import sune.app.mediadown.language.Translation;
 import sune.app.mediadown.media.MediaFilter;
 import sune.app.mediadown.media.MediaFormat;
 import sune.app.mediadown.media.MediaLanguage;
 import sune.app.mediadown.media.MediaQuality;
 import sune.app.mediadown.media.MediaType;
-import sune.app.mediadown.util.FXUtils;
 import sune.app.mediadown.util.Opt;
 import sune.app.mediadown.util.Utils;
 

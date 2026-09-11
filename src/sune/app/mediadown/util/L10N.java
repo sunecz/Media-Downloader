@@ -19,6 +19,7 @@ import java.util.stream.Collectors;
 
 import sune.app.mediadown.os.OS;
 
+/** @since 00.02.09 */
 public final class L10N {
 	
 	private static final CharsetEncoder ASCII_ENCODER = StandardCharsets.US_ASCII.newEncoder();

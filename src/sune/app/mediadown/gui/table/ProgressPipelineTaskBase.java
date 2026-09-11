@@ -14,13 +14,13 @@ import sune.app.mediadown.concurrent.StateMutex;
 import sune.app.mediadown.gui.ProgressWindow;
 import sune.app.mediadown.gui.ProgressWindow.ProgressAction;
 import sune.app.mediadown.gui.ProgressWindow.ProgressContext;
+import sune.app.mediadown.gui.util.FXUtils;
 import sune.app.mediadown.gui.Window;
 import sune.app.mediadown.pipeline.Pipeline;
 import sune.app.mediadown.pipeline.PipelineResult;
 import sune.app.mediadown.pipeline.PipelineTask;
 import sune.app.mediadown.task.ListTask;
 import sune.app.mediadown.task.ListTask.ListTaskEvent;
-import sune.app.mediadown.util.FXUtils;
 import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Utils.Ignore;
 

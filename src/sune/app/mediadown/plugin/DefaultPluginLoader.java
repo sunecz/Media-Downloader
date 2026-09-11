@@ -30,8 +30,8 @@ import sune.app.mediadown.language.Translation;
 import sune.app.mediadown.plugin.PluginMemory.MemoryFile;
 import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.Pair;
-import sune.app.mediadown.util.Reflection;
 import sune.app.mediadown.util.Utils;
+import sune.app.mediadown.util.unsafe.Reflection;
 import sune.util.load.ModuleLazyLoader;
 import sune.util.load.RootAnalyzingClassLoader;
 import sune.util.memory.GrowableMemory;
@@ -67,16 +67,8 @@ final class DefaultPluginLoader implements PluginLoader {
 			       ClassNotFoundException,
 			       NoSuchFieldException {
 		Class<?> clazz = Class.forName(className);
-		Constructor<?> constructor = clazz.getDeclaredConstructor();
-		
-		try {
-			Reflection.setAccessible(constructor, true);
-			@SuppressWarnings("unchecked")
-			T instance = (T) constructor.newInstance();
-			return instance;
-		} finally {
-			Reflection.setAccessible(constructor, false);
-		}
+		Constructor<?> constructor = Reflection.getConstructor(clazz);
+		return Reflection.newInstance(constructor);
 	}
 	
 	private static final void initPluginMemory(PluginFile file) throws Exception {

@@ -1,21 +1,24 @@
 package sune.app.mediadown.gui.control;
 
+import java.lang.reflect.Field;
+
 import javafx.scene.Group;
 import javafx.scene.control.TextField;
 import javafx.scene.control.skin.TextFieldSkin;
 import javafx.scene.control.skin.TextInputControlSkin;
 import javafx.scene.layout.Region;
 import javafx.scene.shape.Path;
-import sune.app.mediadown.util.Reflection2;
+import sune.app.mediadown.util.unsafe.Reflection;
 
 public class FixedTextField extends TextField {
 	
+	// Fixes the caret position, so that it is sharper; it is achieved by removing subpixel accuracy
 	private static final class FixedTextFieldSkin extends TextFieldSkin {
 		
 		public FixedTextFieldSkin(TextField textField) {
 			super(textField);
-			// Fixes the caret position, so that it is sharper; it is achieved by removing subpixel accuracy
-			Path caretPath = Reflection2.getField(TextInputControlSkin.class, this, "caretPath");
+			Field field = Reflection.getField(TextInputControlSkin.class, "caretPath");
+			Path caretPath = Reflection.getValue(field, this);
 			caretPath.setStrokeWidth(1.0);
 			caretPath.layoutBoundsProperty().addListener((o, ov, nv) -> {
 				double xfix = -(nv.getMinX() % 1.0);

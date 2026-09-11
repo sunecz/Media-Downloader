@@ -1,4 +1,4 @@
-package sune.app.mediadown.util;
+package sune.app.mediadown.gui.util;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -18,8 +18,6 @@ import java.util.concurrent.Callable;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-import javafx.application.Application;
-import javafx.application.HostServices;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.property.ReadOnlyProperty;
@@ -69,7 +67,8 @@ import sune.app.mediadown.report.Report;
 import sune.app.mediadown.report.Report.Reason;
 import sune.app.mediadown.report.ReportContext;
 import sune.app.mediadown.theme.Theme;
-import sune.app.mediadown.util.Reflection2.InstanceCreationException;
+import sune.app.mediadown.util.Utils;
+import sune.app.mediadown.util.unsafe.Reflection;
 
 public final class FXUtils {
 	
@@ -812,7 +811,6 @@ public final class FXUtils {
 					_mh_getColumnHeaderFor = lookup.unreflect(method);
 				} catch(NoSuchMethodException
 							| SecurityException
-							| NoSuchFieldException
 							| IllegalArgumentException
 							| IllegalAccessException ex) {
 					throw new IllegalStateException(ex);
@@ -827,7 +825,6 @@ public final class FXUtils {
 					_mh_resizeColumnToFitContent = lookup.unreflect(method);
 				} catch(NoSuchMethodException
 						| SecurityException
-						| NoSuchFieldException
 						| IllegalArgumentException
 						| IllegalAccessException ex) {
 					throw new IllegalStateException(ex);
@@ -1336,62 +1333,13 @@ public final class FXUtils {
 		}
 	}
 	
-	/** @since 00.02.06 */
-	private static Application dummyApplication;
-	
-	/** @since 00.02.06 */
-	private static final Application dummyApplication() {
-		if(dummyApplication == null) {
-			dummyApplication = new Application() {
-				
-				@Override
-				public void start(Stage primaryStage) throws Exception {
-					// Do nothing
-				}
-			};
-		}
-		return dummyApplication;
-	}
-	
-	/** @since 00.02.06 */
-	private static HostServices hostServices;
-	
-	/** @since 00.02.06 */
-	public static final boolean openURI(String uri) {
-		Objects.requireNonNull(uri);
-		if(hostServices == null) {
-			// The constructor is not publicly accessible, so just use reflection.
-			// For the Application argument just use the dummy Application instance,
-			// this may cause problems with other HostServices methods, however
-			// the showDocument one does not use the Application instance in any way,
-			// at least not currently in JavaFX 11, so we should be okay.
-			try {
-				hostServices = Reflection2.newInstance(
-					HostServices.class,
-					new Class[] { Application.class },
-					dummyApplication()
-				);
-			} catch(InstanceCreationException ex) {
-				return false;
-			}
-		}
-		hostServices.showDocument(uri);
-		// Return true even though we don't know if it was really successful
-		return true;
-	}
-	
-	/** @since 00.02.06 */
-	public static final boolean openURI(URI uri) {
-		return openURI(Objects.requireNonNull(uri).toString());
-	}
-	
 	/** @since 00.02.09 */
 	public static final Stage alertStage(Alert alert) {
 		Objects.requireNonNull(alert);
-		Class<?> internalClass = Reflection2.getClass("javafx.scene.control.HeavyweightDialog");
-		return (Stage) Reflection2.getField(
-			internalClass, Reflection2.getField(Dialog.class, alert, "dialog"), "stage"
-		);
+		Class<?> internalClass = Reflection.getClass("javafx.scene.control.HeavyweightDialog");
+		Field fieldStage = Reflection.getField(internalClass, "stage");
+		Field fieldDialog = Reflection.getField(Dialog.class, "dialog");
+		return Reflection.getValue(fieldStage, Reflection.getValue(fieldDialog, alert));
 	}
 	
 	// Forbid anyone to create an instance of this class

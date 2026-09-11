@@ -1,4 +1,4 @@
-package sune.app.mediadown.util;
+package sune.app.mediadown.gui.util;
 
 import java.util.Comparator;
 import java.util.List;
@@ -10,6 +10,9 @@ import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.conversion.ConversionFormat;
 import sune.app.mediadown.media.MediaFormat;
 import sune.app.mediadown.media.MediaType;
+import sune.app.mediadown.util.ComparatorCombiner;
+import sune.app.mediadown.util.Regex;
+import sune.app.mediadown.util.Utils;
 
 public final class ExtensionFilters {
 	

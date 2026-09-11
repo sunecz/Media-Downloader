@@ -8,7 +8,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 import eu.infomas.annotation.AnnotationDetector.TypeReporter;
-import sune.app.mediadown.util.UnsafeLegacy;
+import sune.app.mediadown.util.unsafe.UnsafeLegacy;
 
 // Package-private class
 final class PluginTypeReporter implements TypeReporter {
@@ -41,7 +41,7 @@ final class PluginTypeReporter implements TypeReporter {
 			// Ignore
 		}
 		// Define the requested class by the given bytes
-		return UnsafeLegacy.defineClass(name, bytes, 0, bytes.length, loader, null);
+		return UnsafeLegacy.defineClass(loader, name, bytes, 0, bytes.length, null);
 	}
 	
 	public static final void resetClassLoader() {

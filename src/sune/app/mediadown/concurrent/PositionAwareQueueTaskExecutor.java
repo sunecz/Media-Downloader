@@ -5,8 +5,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 
-import javafx.beans.property.IntegerProperty;
-import javafx.beans.property.SimpleIntegerProperty;
+import sune.app.mediadown.util.Property;
 import sune.app.mediadown.util.Utils;
 
 /** @since 00.02.08 */
@@ -155,7 +154,7 @@ public class PositionAwareQueueTaskExecutor<V> extends QueueTaskExecutor<V> {
 		/** @since 00.02.09 */
 		protected volatile PositionAwareQueueTaskState state;
 		/** @since 00.02.09 */
-		protected final VarLoader<IntegerProperty> queuePositionProperty;
+		protected final VarLoader<Property<Integer>> queuePositionProperty;
 		
 		public PositionAwareInternalQueueTask(QueueTask<V> task, PositionAwareQueueTaskState state) {
 			super(task);
@@ -164,8 +163,8 @@ public class PositionAwareQueueTaskExecutor<V> extends QueueTaskExecutor<V> {
 		}
 		
 		/** @since 00.02.09 */
-		protected final IntegerProperty createQueuePositionProperty() {
-			return new SimpleIntegerProperty(state.queuePosition());
+		protected final Property<Integer> createQueuePositionProperty() {
+			return new Property<>(state.queuePosition());
 		}
 		
 		/** @since 00.02.09 */
@@ -216,7 +215,7 @@ public class PositionAwareQueueTaskExecutor<V> extends QueueTaskExecutor<V> {
 		}
 		
 		@Override
-		public IntegerProperty queuePositionProperty() {
+		public Property<Integer> queuePositionProperty() {
 			return queuePositionProperty.value();
 		}
 		
@@ -236,7 +235,7 @@ public class PositionAwareQueueTaskExecutor<V> extends QueueTaskExecutor<V> {
 		/** @since 00.02.09 */
 		static final int UNDEFINED_POSITION = Integer.MIN_VALUE;
 		
-		IntegerProperty queuePositionProperty();
+		Property<Integer> queuePositionProperty();
 		int position();
 		int queuePosition();
 	}

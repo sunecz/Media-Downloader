@@ -4,8 +4,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
 
-import sune.app.mediadown.util.FXUtils;
-
 /** @since 00.02.07 */
 final class MacOS implements OS {
 	
@@ -24,8 +22,14 @@ final class MacOS implements OS {
 	
 	@Override
 	public void browse(URI uri) throws IOException {
-		// Delegate to the existing method
-		FXUtils.openURI(uri);
+		// Should be equivalent to the Desktop::browse(URI) method as of OpenJDK 24 (2025-05-16).
+		// `open` executable should call the LSOpenURLsWithRole function (or similar) as the native
+		// method `_lsOpenURI` does in the OpenJDK source code.
+		// See: sun.lwawt.macosx.CDesktopPeer::browse (lsOpen) method for official implementation
+		// as of OpenJDK 24.
+		Runtime.getRuntime().exec(new String[] {
+			"open", uri.toString()
+		});
 	}
 	
 	@Override

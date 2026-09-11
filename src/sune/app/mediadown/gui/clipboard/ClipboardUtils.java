@@ -1,4 +1,4 @@
-package sune.app.mediadown.util;
+package sune.app.mediadown.gui.clipboard;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -12,6 +12,8 @@ import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.DataFormat;
 import sune.app.mediadown.net.HTML;
 import sune.app.mediadown.net.Net;
+import sune.app.mediadown.util.Regex;
+import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Utils.Ignore;
 
 /** @since 00.02.05 */

@@ -8,7 +8,7 @@ import javafx.scene.control.ButtonType;
 import javafx.scene.control.TextArea;
 import javafx.scene.layout.BorderPane;
 import sune.app.mediadown.MediaDownloader;
-import sune.app.mediadown.util.FXUtils;
+import sune.app.mediadown.gui.util.FXUtils;
 
 public final class Dialog extends Alert {
 	

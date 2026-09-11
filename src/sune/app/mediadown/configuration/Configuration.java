@@ -3,7 +3,7 @@ package sune.app.mediadown.configuration;
 import java.io.IOException;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
-import java.lang.reflect.Method;
+import java.lang.invoke.MethodType;
 import java.nio.file.Path;
 import java.util.ArrayDeque;
 import java.util.Collection;
@@ -19,10 +19,8 @@ import java.util.function.Supplier;
 
 import sune.app.mediadown.util.MutablePair;
 import sune.app.mediadown.util.NIO;
-import sune.app.mediadown.util.Reflection;
-import sune.app.mediadown.util.Reflection2;
-import sune.app.mediadown.util.Reflection2.InstanceCreationException;
 import sune.app.mediadown.util.Utils;
+import sune.app.mediadown.util.unsafe.TrustedLookup;
 import sune.util.ssdf2.SSDCollection;
 import sune.util.ssdf2.SSDCollectionType;
 import sune.util.ssdf2.SSDNode;
@@ -55,16 +53,6 @@ public class Configuration implements ConfigurationAccessor {
 	
 	private final <T> T getPropertyValue(ConfigurationProperty<T> property, T defaultValue) {
 		return property != null ? property.value() : defaultValue;
-	}
-	
-	// Utility method. This method is used primarly for creating the root SSDCollection (name is null, not empty).
-	private static final SSDCollection newRootCollection(boolean isArray) {
-		try {
-			return Reflection2.newInstance(SSDCollection.class, new Class<?>[] { SSDNode.class, boolean.class }, null, isArray);
-		} catch(InstanceCreationException ex) {
-			// Convert to an unchecked exception
-			throw new AssertionError(ex);
-		}
 	}
 	
 	// Utility method
@@ -235,6 +223,50 @@ public class Configuration implements ConfigurationAccessor {
 			return false;
 		Configuration other = (Configuration) obj;
 		return Objects.equals(name, other.name) && Objects.equals(properties, other.properties);
+	}
+	
+	/** @since 00.02.09 */
+	private final static class Helper {
+		
+		private static final MethodHandle mh_SSDCollection_ctor;
+		private static final MethodHandle mh_SSDCollection_set;
+		
+		static {
+			MethodHandles.Lookup lookup = TrustedLookup.get();
+			
+			try {
+				mh_SSDCollection_ctor = lookup.findConstructor(
+					SSDCollection.class,
+					MethodType.methodType(void.class, SSDNode.class, boolean.class)
+				);
+				mh_SSDCollection_set = lookup.findVirtual(
+					SSDCollection.class, "set",
+					MethodType.methodType(void.class, String.class, SSDType.class, Object.class)
+				);
+			} catch(Throwable th) {
+				throw new ExceptionInInitializerError(th);
+			}
+		}
+		
+		private Helper() {
+		}
+		
+		// Utility method. This method is used primarly for creating the root SSDCollection (name is null, not empty).
+		public static final SSDCollection newRootCollection(boolean isArray) {
+			try {
+				return (SSDCollection) mh_SSDCollection_ctor.invoke(null, isArray);
+			} catch(Throwable th) {
+				throw new AssertionError(th); // Use unchecked exception
+			}
+		}
+		
+		public static final void setData(SSDCollection data, String name, SSDType type, SSDNode value) {
+			try {
+				mh_SSDCollection_set.invoke(data, name, type, value);
+			} catch(Throwable ex) {
+				throw new AssertionError(ex); // Use unchecked exception
+			}
+		}
 	}
 	
 	/** @since 00.02.04 */
@@ -1453,7 +1485,7 @@ public class Configuration implements ConfigurationAccessor {
 		}
 		
 		public SSDCollection data(Map<String, ConfigurationProperty<?>> builtProperties) {
-			SSDCollection data = newRootCollection(false);
+			SSDCollection data = Helper.newRootCollection(false);
 			for(ConfigurationProperty.BuilderBase<?, ?> property : properties.values()) {
 				SSDNode node = property.build().toNode(builtProperties);
 				ensureDataParents(data, property.name());
@@ -1581,17 +1613,7 @@ public class Configuration implements ConfigurationAccessor {
 	/** @since 00.02.05 */
 	public static class Writer {
 		
-		private static final MethodHandle mh_SSDCollection_set;
 		
-		static {
-			try {
-				Method method = SSDCollection.class.getDeclaredMethod("set", String.class, SSDType.class, Object.class);
-				Reflection.setAccessible(method, true);
-				mh_SSDCollection_set = MethodHandles.lookup().unreflect(method);
-			} catch(Exception ex) {
-				throw new ExceptionInInitializerError(ex);
-			}
-		}
 		
 		protected final SSDCollection refData;
 		protected final Map<String, ConfigurationProperty<?>> refProperties;
@@ -1689,11 +1711,7 @@ public class Configuration implements ConfigurationAccessor {
 		
 		/** @since 00.02.07 */
 		private static final <T> void setData(SSDCollection data, String name, SSDNode value) {
-			try {
-				mh_SSDCollection_set.invoke(data, name, ssdType(value), value);
-			} catch(Throwable ex) {
-				throw new AssertionError(ex);
-			}
+			Helper.setData(data, name, ssdType(value), value);
 		}
 		
 		public final Writer set(String name, Object value) {

@@ -5,8 +5,8 @@ import java.lang.invoke.VarHandle;
 import java.util.Objects;
 import java.util.function.Supplier;
 
+import sune.app.mediadown.exception.UncheckedException;
 import sune.app.mediadown.util.CheckedSupplier;
-import sune.app.mediadown.util.UncheckedException;
 
 /** @since 00.02.08 */
 public final class VarLoader<T> {

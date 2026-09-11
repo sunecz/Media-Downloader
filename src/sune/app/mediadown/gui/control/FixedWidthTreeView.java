@@ -16,7 +16,7 @@ import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.control.skin.TreeViewSkin;
-import sune.app.mediadown.util.FXUtils;
+import sune.app.mediadown.gui.util.FXUtils;
 
 /** @since 00.02.09 */
 public class FixedWidthTreeView<T> extends TreeView<T> {

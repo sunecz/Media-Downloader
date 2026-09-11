@@ -1,5 +1,6 @@
 package sune.app.mediadown.gui;
 
+import java.lang.reflect.Field;
 import java.util.List;
 
 import javafx.scene.control.ChoiceDialog;
@@ -8,8 +9,8 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
 import javafx.util.StringConverter;
 import sune.app.mediadown.gui.control.ScrollableComboBox;
-import sune.app.mediadown.util.Reflection2;
 import sune.app.mediadown.util.Utils;
+import sune.app.mediadown.util.unsafe.Reflection;
 
 public class CustomChoiceDialog<T> extends ChoiceDialog<T> {
 	
@@ -41,9 +42,10 @@ public class CustomChoiceDialog<T> extends ChoiceDialog<T> {
 	}
 	
 	private final void initCustom(StringConverter<T> converter, T defaultChoice, List<T> choices) {
-		ComboBox<T> oldComboBox = Reflection2.getField(ChoiceDialog.class, this, "comboBox");
+		Field field = Reflection.getField(ChoiceDialog.class, "comboBox");
+		ComboBox<T> oldComboBox = Reflection.getValue(field, this);
 		ComboBox<T> newComboBox = new ScrollableComboBox<>();
-		Reflection2.setField(ChoiceDialog.class, this, "comboBox", newComboBox);
+		Reflection.setField(field, this, newComboBox);
 		newComboBox.setMinWidth(150);
 		if(choices != null) newComboBox.getItems().addAll(Utils.deduplicate(choices));
 		if(converter != null) newComboBox.setConverter(converter);

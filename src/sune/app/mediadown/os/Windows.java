@@ -4,8 +4,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
 
-import sune.app.mediadown.util.FXUtils;
-
 /** @since 00.02.07 */
 final class Windows implements OS {
 	
@@ -26,8 +24,11 @@ final class Windows implements OS {
 	
 	@Override
 	public void browse(URI uri) throws IOException {
-		// Delegate to the existing method
-		FXUtils.openURI(uri);
+		// See: com.sun.javafx.application.HostServicesDelegate$StandaloneHostService::showDocument
+		// method for official implementation as of OpenJDK 24.
+		Runtime.getRuntime().exec(new String[] {
+			"rundll32", "url.dll,FileProtocolHandler", uri.toString()
+		});
 	}
 	
 	@Override

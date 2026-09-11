@@ -2,6 +2,7 @@ package sune.app.mediadown.gui.table;
 
 import java.util.List;
 
+import sune.app.mediadown.media.ResolvedMedia;
 import sune.app.mediadown.pipeline.Pipeline;
 import sune.app.mediadown.pipeline.PipelineTask;
 import sune.app.mediadown.pipeline.TerminatingPipelineTask;
