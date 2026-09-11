@@ -68,7 +68,7 @@ public final class Arguments {
 	
 	private static final class WindowsRegistry {
 		
-		private static final Regex REGEX_KEY_VALUE = Regex.of("^\\s*\\S+\\s+\\S+\\s+(\\S+)\\s*$");
+		private static final Regex REGEX_KEY_VALUE = Regex.of("(?m)^\\s*\\S+\\s+\\S+\\s+(\\S+)\\s*$");
 		
 		private WindowsRegistry() {
 			throw new AssertionError("No instances");
@@ -93,7 +93,7 @@ public final class Arguments {
 			
 			Matcher matcher = REGEX_KEY_VALUE.matcher(output);
 			
-			if(!matcher.matches()) {
+			if(!matcher.find()) {
 				throw new IOException("Invalid query value (" + key + ", " + name + "): " + output);
 			}
 			
