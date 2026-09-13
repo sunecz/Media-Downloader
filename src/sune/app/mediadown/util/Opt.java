@@ -90,6 +90,7 @@ public final class Opt<T> {
 		}
 	}
 	
+	@SuppressWarnings("unchecked")
 	private final T primitiveZeroValue() {
 		try {
 			return (T) MethodHandles.zero(primitiveClass).invoke();
