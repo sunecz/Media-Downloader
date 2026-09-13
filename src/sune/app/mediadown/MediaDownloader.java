@@ -52,7 +52,6 @@ import sune.app.mediadown.conversion.ConversionProvider;
 import sune.app.mediadown.conversion.Conversions;
 import sune.app.mediadown.event.DownloadEvent;
 import sune.app.mediadown.event.LibraryEvent;
-import sune.app.mediadown.event.NativeLibraryLoaderEvent;
 import sune.app.mediadown.event.PluginLoaderEvent;
 import sune.app.mediadown.event.tracker.TrackerManager;
 import sune.app.mediadown.exception.TranslatableException;
@@ -83,8 +82,6 @@ import sune.app.mediadown.language.Language;
 import sune.app.mediadown.language.Translation;
 import sune.app.mediadown.library.Libraries;
 import sune.app.mediadown.library.Library;
-import sune.app.mediadown.library.NativeLibraries;
-import sune.app.mediadown.library.NativeLibrary;
 import sune.app.mediadown.logging.Log;
 import sune.app.mediadown.media.MediaFormat;
 import sune.app.mediadown.media.MediaTitleFormat;
@@ -321,7 +318,6 @@ public final class MediaDownloader {
 					}
 				}
 			}
-			classesCount += NativeLibraries.all().size();
 			classesCount += libraries != null ? libraries.all().size() : 0;
 			classesCount += countPlugins ? Plugins.all().size() : 0;
 			return classesCount;
@@ -757,49 +753,8 @@ public final class MediaDownloader {
 				registerNativeLibraries();
 				registerLibraries();
 				updateTotal(false);
-				return new LoadNativeLibraries();
-			}
-		}
-		
-		private static final class LoadNativeLibraries implements InitializationState {
-			
-			@Override
-			public InitializationState run(Arguments args) {
-				NativeLibraries.addEventListener(NativeLibraryLoaderEvent.LOADING, (library) -> {
-					setText(String.format(
-						"Loading native library %s (%s)...",
-						library.getName(),
-						library.getPath().getFileName().toString()
-					));
-				});
-				
-				NativeLibraries.addEventListener(NativeLibraryLoaderEvent.LOADED, (pair) -> {
-					update(String.format(
-						"Loading native library %s (%s)... %s",
-						pair.a.getName(),
-						pair.a.getPath().getFileName().toString(),
-						pair.b == null ? "done" : "error"
-					));
-				});
-				
-				NativeLibraries.addEventListener(NativeLibraryLoaderEvent.NOT_LOADED, (libraries) -> {
-					String text = String.format("Cannot load native libraries (%d)", libraries.size());
-					StringBuilder content = new StringBuilder();
-					
-					for(NativeLibrary library : libraries) {
-						content.append(String.format("%s (%s)\n", library.getName(), library.getPath()));
-					}
-					
-					Dialog.showContentError("Critical error", text, content.toString());
-					System.exit(-1);
-				});
-				
-				NativeLibraries.load();
-				
 				return new LoadLibraries();
 			}
-			
-			@Override public String getTitle() { return "Loading native libraries..."; }
 		}
 		
 		private static final class LoadLibraries implements InitializationState {
