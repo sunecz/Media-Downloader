@@ -20,4 +20,8 @@ public class ArtifactsState {
 	public Manifest manifest() {
 		return manifest;
 	}
+	
+	public boolean isEmpty() {
+		return artifacts.isEmpty() && manifest.isEmpty();
+	}
 }

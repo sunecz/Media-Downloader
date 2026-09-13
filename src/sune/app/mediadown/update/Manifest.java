@@ -314,6 +314,10 @@ public final class Manifest {
 		return new Manifest(newVersions, newPaths);
 	}
 	
+	public boolean isEmpty() {
+		return versions.isEmpty() && paths.isEmpty();
+	}
+	
 	private static final class Mapping<K, V> {
 		
 		private final Map<K, V> mapping;

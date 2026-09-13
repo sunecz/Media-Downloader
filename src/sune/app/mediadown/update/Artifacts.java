@@ -86,8 +86,31 @@ public final class Artifacts {
 		return state.artifacts();
 	}
 	
+	public boolean isRemoteEmpty() {
+		return state.isEmpty();
+	}
+	
+	public boolean isLocalEmpty() {
+		return localManifest.isEmpty();
+	}
+	
+	public static final Artifacts empty(Channel channel) {
+		return empty(Environment.ofCurrent(), channel);
+	}
+	
+	public static final Artifacts empty(Environment environment, Channel channel) {
+		Artifacts empty = new Artifacts(environment, channel, (a) -> ArtifactsIterator.empty());
+		empty.localManifest = Manifest.empty();
+		empty.state = new ArtifactsState(List.of(), Manifest.empty());
+		return empty;
+	}
+	
 	public static final Builder builderOf(Channel channel) {
-		return new Builder(Common.rootPath(), Environment.ofCurrent(), channel);
+		return builderOf(Common.rootPath(), Environment.ofCurrent(), channel);
+	}
+	
+	public static final Builder builderOf(Path root, Channel channel) {
+		return builderOf(root, Environment.ofCurrent(), channel);
 	}
 	
 	public static final Builder builderOf(Path root, Environment environment, Channel channel) {

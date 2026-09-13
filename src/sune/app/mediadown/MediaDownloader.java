@@ -149,7 +149,7 @@ public final class MediaDownloader {
 	/** @since 00.02.09 */
 	private static Log log;
 	/** @since 00.02.09 */
-	private static Manifest.ComponentChanges updatedComponents;
+	private static ArtifactsCheckState artifactsCheckState;
 	/** @since 00.02.09 */
 	private static Version previousVersion = VERSION;
 	
@@ -223,6 +223,37 @@ public final class MediaDownloader {
 					.collect(Collectors.toList())
 			);
 		}
+	}
+	
+	/** @since 00.02.09 */
+	private static final class ArtifactsCheckState {
+		
+		private final Artifacts artifacts;
+		private final Manifest.ComponentChanges updatedComponents;
+		private final Path root;
+		
+		public ArtifactsCheckState(
+			Artifacts artifacts,
+			Manifest.ComponentChanges updatedComponents,
+			Path root
+		) {
+			this.artifacts = Objects.requireNonNull(artifacts);
+			this.updatedComponents = Objects.requireNonNull(updatedComponents);
+			this.root = Objects.requireNonNull(root);
+		}
+		
+		public static final ArtifactsCheckState empty(Channel channel) {
+			return new ArtifactsCheckState(
+				Artifacts.empty(channel),
+				Manifest.ComponentChanges.empty(),
+				Common.rootPath()
+			);
+		}
+		
+		public Artifacts artifacts() { return artifacts; }
+		public Manifest.ComponentChanges updatedComponents() { return updatedComponents; }
+		public Path root() { return root; }
+		public boolean isRemoteEmpty() { return artifacts.isRemoteEmpty(); }
 	}
 	
 	/** @since 00.02.08 */
@@ -325,142 +356,14 @@ public final class MediaDownloader {
 			@Override
 			public InitializationState run(Arguments args) {
 				initConfiguration();
-				return new CheckArtifacts();
+				return new UpdateJRE();
 			}
 			
 			@Override public String getTitle() { return "Initializing configuration..."; }
 		}
 		
 		/** @since 00.02.09 */
-		private static final class CheckArtifacts implements InitializationState {
-			
-			private static final ArtifactDownloader artifactDownloader(Path root) {
-				PathTranslator translator = new PathTranslator(Map.of(
-					Common.oldJreName(), Common.newJreName(),
-					Common.oldJarName(), Common.newJarName()
-				));
-				
-				ArtifactDownloader downloader = new PathTranslatingArtifactDownloader(new TrackerManager(), root, translator);
-				
-				downloader.addEventListener(DownloadEvent.BEGIN, (context) -> {
-					setText(String.format(
-						"Downloading %s...",
-						context.output().getFileName().toString()
-					));
-				});
-				downloader.addEventListener(DownloadEvent.UPDATE, (context) -> {
-					setText(String.format(
-						"Downloading %s... %s%%",
-						context.output().getFileName().toString(),
-						MathUtils.round(context.trackerManager().tracker().progress() * 100.0, 2)
-					));
-				});
-				downloader.addEventListener(DownloadEvent.END, (context) -> {
-					setText(String.format(
-						"Downloading %s... done",
-						context.output().getFileName().toString()
-					));
-				});
-				
-				return downloader;
-			}
-			
-			private static final ArtifactChecker artifactChecker(Path root) {
-				ArtifactChecker checker = new ArtifactChecker(root);
-				
-				checker.addEventListener(ArtifactCheckEvent.BEGIN, (context) -> {
-					setText(String.format(
-						"Checking %s...",
-						context.artifact().installPath()
-					));
-				});
-				checker.addEventListener(ArtifactCheckEvent.END, (context) -> {
-					setText(String.format(
-						"Checking %s... %s",
-						context.artifact().installPath(),
-						context.result()
-					));
-				});
-				checker.addEventListener(ArtifactCheckEvent.ERROR, (context) -> {
-					setText("Checking %s... error");
-				});
-				
-				return checker;
-			}
-			
-			private final void doRun(Arguments args) throws Exception {
-				List<ComponentRegistry> registries;
-				
-				if(!AppArguments.isUpdateEnabled()
-						|| (registries = Common.componentRegistries()).isEmpty()) {
-					updatedComponents = Manifest.ComponentChanges.empty();
-					return; // Nothing to be checked
-				}
-				
-				Set<String> skipComponents = Common.defaultSkipComponents();
-				Channel channel = Common.updateChannel();
-				Artifacts.Builder builder = Artifacts.builderOf(channel);
-				Path root = builder.root();
-				Path manifestPath = Common.manifestPath();
-				Manifest manifest = Manifest.ofLocal(manifestPath);
-				
-				builder = builder.skipArtifactFilter((a) -> skipComponents.contains(a.component()));
-				builder = (
-					isCheckIntegrityEnabled()
-						? builder.withStrictIntegrityCheck((a) -> artifactChecker(root))
-						: builder.withIntegrityCheck((a) -> artifactChecker(root))
-				);
-				
-				Artifacts artifacts = builder.build(manifest, registries);
-				Manifest.ComponentChanges changedComponents = artifacts.changedComponents();
-				List<Manifest.ManagedPath> deletedPaths = artifacts.deletedPaths();
-				
-				// If the application will be updated and the user doesn't have auto-update
-				// enabled, ask them. Update the application only if they accept.
-				if(changedComponents.has("application")
-							&& (!configuration.isAutoUpdateCheck() && !showUpdateDialog())) {
-					skipComponents.add("application");
-				}
-				
-				try(ArtifactDownloader downloader = artifactDownloader(root)) {
-					artifacts.download(downloader);
-				}
-				
-				Manifest finalManifest = artifacts.remoteManifest();
-				
-				if(!skipComponents.isEmpty()) {
-					finalManifest = finalManifest.replaceComponents(skipComponents, manifest);
-				}
-				
-				finalManifest.writeTo(manifestPath);
-				updatedComponents = changedComponents.removeAll(skipComponents);
-				
-				if(!deletedPaths.isEmpty()) {
-					String content = deletedPaths.stream()
-						.map(Manifest.ManagedPath::path)
-						.reduce(null, (a, b) -> (a != null ? a + "\n" : "") + b);
-					NIO.save(Common.deletedIndexPath(), content);
-				}
-			}
-			
-			@Override
-			public InitializationState run(Arguments args) {
-				try {
-					doRun(args);
-				} catch(Exception ex) {
-					error(ex);
-				}
-				
-				return new CheckJRE();
-			}
-			
-			@Override public String getTitle() { return "TestComponentRegistry"; }
-		}
-		
-		// Update the JRE, if needed, as soon as possible, since some libraries and/or plugins
-		// may rely on it.
-		/** @since 00.02.02 */
-		private static final class CheckJRE implements InitializationState {
+		private static final class UpdateJRE implements InitializationState {
 			
 			private final void doRun(Arguments args) throws Exception {
 				Path oldPath = Common.oldJrePath();
@@ -502,36 +405,6 @@ public final class MediaDownloader {
 					// Finish the whole JRE update process by deleting the temporary JRE directory
 					setText("Deleting the temporary JRE directory...");
 					NIO.deleteDir(newPath);
-				} else if(NIO.exists(newPath)) {
-					// Copy all files that were not updated
-					NIO.mergeDirectories(oldPath, newPath, (p, np) -> !NIO.exists(np));
-					
-					// Get the current run command, so that the application can be run again
-					String runCommand = SelfProcess.command(args.argsList());
-					runCommand = Base64.getEncoder().encodeToString(runCommand.getBytes(Shared.CHARSET));
-					
-					// Get Java executable in the new directory
-					Path exePath = SelfProcess.exePath();
-					// Check whether the current process was run in the old JRE directory
-					Path parent = exePath;
-					while((parent = parent.getParent()) != null && !parent.equals(oldPath));
-					// If run in the old JRE directory, change the new executable path to the new JRE directory
-					if(parent != null && parent.equals(oldPath)) {
-						exePath = newPath.resolve(oldPath.relativize(exePath));
-					}
-					
-					// Make sure the new executable is actually executable
-					NIO.makeExecutable(exePath);
-					
-					// Start a new process to finish updating the JRE
-					SelfProcess.launch(exePath, List.of(
-						"--jre-update",
-						"--pid", String.valueOf(SelfProcess.pid()),
-						"--run-command", runCommand
-					));
-					
-					// Exit normally
-					System.exit(0);
 				}
 			}
 			
@@ -543,11 +416,11 @@ public final class MediaDownloader {
 					error(ex);
 				}
 				
-				return new CheckVersion();
+				return new UpdateVersion();
 			}
 		}
 		
-		private static final class CheckVersion implements InitializationState {
+		private static final class UpdateVersion implements InitializationState {
 			
 			private final void doRun(Arguments args) throws Exception {
 				Path oldPath = Common.oldJarPath();
@@ -592,24 +465,264 @@ public final class MediaDownloader {
 					// Since we're done relaunching the application at this point (both JRE and
 					// the JAR are updated), we can just set the information to a global variable.
 					previousVersion = Version.of(args.getValue("jar-previous-version"));
-				} else if(NIO.exists(newPath)) {
-					// Get the current run command, so that the application can be run again
-					String runCommand = SelfProcess.command(args.argsList());
-					runCommand = Base64.getEncoder().encodeToString(runCommand.getBytes(Shared.CHARSET));
-					Path exePath = SelfProcess.exePath();
-					
-					// Start a new process to finish updating the application
-					SelfProcess.launchJAR(newPath, exePath, List.of(
-						"--jar-update",
-						"--pid", String.valueOf(SelfProcess.pid()),
-						"--run-command", runCommand,
-						"--is-jar-update",
-						"--jar-previous-version", VERSION.string()
-					));
-					
-					// Exit normally
-					System.exit(0);
 				}
+			}
+			
+			@Override
+			public InitializationState run(Arguments args) {
+				try {
+					doRun(args);
+				} catch(Exception ex) {
+					error(ex);
+				}
+				
+				return new CheckArtifacts();
+			}
+		}
+		
+		/** @since 00.02.09 */
+		private static final class CheckArtifacts implements InitializationState {
+			
+			private static final ArtifactChecker artifactChecker(Path root) {
+				ArtifactChecker checker = new ArtifactChecker(root);
+				
+				checker.addEventListener(ArtifactCheckEvent.BEGIN, (context) -> {
+					setText(String.format(
+						"Checking %s...",
+						context.artifact().installPath()
+					));
+				});
+				checker.addEventListener(ArtifactCheckEvent.END, (context) -> {
+					setText(String.format(
+						"Checking %s... %s",
+						context.artifact().installPath(),
+						context.result()
+					));
+				});
+				checker.addEventListener(ArtifactCheckEvent.ERROR, (context) -> {
+					setText("Checking %s... error");
+				});
+				
+				return checker;
+			}
+			
+			private final void doRun(Arguments args) throws Exception {
+				Channel channel = Common.updateChannel();
+				List<ComponentRegistry> registries;
+				
+				if(!AppArguments.isUpdateEnabled()
+						|| (registries = Common.componentRegistries()).isEmpty()) {
+					artifactsCheckState = ArtifactsCheckState.empty(channel);
+					return; // Nothing to be checked
+				}
+				
+				Set<String> skipComponents = Common.defaultSkipComponents();
+				Path root = Common.rootPath();
+				Artifacts.Builder builder = Artifacts.builderOf(root, channel);
+				Path manifestPath = Common.manifestPath();
+				Manifest manifest = Manifest.ofLocal(manifestPath);
+				
+				builder = builder.skipArtifactFilter((a) -> skipComponents.contains(a.component()));
+				builder = (
+					isCheckIntegrityEnabled()
+						? builder.withStrictIntegrityCheck((a) -> artifactChecker(root))
+						: builder.withIntegrityCheck((a) -> artifactChecker(root))
+				);
+				
+				Artifacts artifacts = builder.build(manifest, registries);
+				Manifest.ComponentChanges changedComponents = artifacts.changedComponents();
+				Manifest finalManifest = artifacts.remoteManifest();
+				
+				// If the application will be updated and the user doesn't have auto-update
+				// enabled, ask them. Update the application only if they accept.
+				if(changedComponents.has("application")
+							&& (!configuration.isAutoUpdateCheck() && !showUpdateDialog())) {
+					skipComponents.add("application");
+				}
+				
+				if(!skipComponents.isEmpty()) {
+					finalManifest = finalManifest.replaceComponents(skipComponents, manifest);
+				}
+				
+				finalManifest.writeTo(manifestPath);
+				
+				artifactsCheckState = new ArtifactsCheckState(
+					artifacts,
+					changedComponents.removeAll(skipComponents),
+					root
+				);
+			}
+			
+			@Override
+			public InitializationState run(Arguments args) {
+				try {
+					doRun(args);
+				} catch(Exception ex) {
+					error(ex);
+				}
+				
+				return new ProcessArtifacts();
+			}
+			
+			@Override public String getTitle() { return "Checking artifacts..."; }
+		}
+		
+		/** @since 00.02.09 */
+		private static final class ProcessArtifacts implements InitializationState {
+			
+			private static final ArtifactDownloader artifactDownloader(Path root) {
+				PathTranslator translator = new PathTranslator(Map.of(
+					Common.oldJreName(), Common.newJreName(),
+					Common.oldJarName(), Common.newJarName()
+				));
+				
+				ArtifactDownloader downloader = new PathTranslatingArtifactDownloader(
+					new TrackerManager(),
+					root,
+					translator
+				);
+				
+				downloader.addEventListener(DownloadEvent.BEGIN, (context) -> {
+					setText(String.format(
+						"Downloading %s...",
+						context.output().getFileName().toString()
+					));
+				});
+				downloader.addEventListener(DownloadEvent.UPDATE, (context) -> {
+					setText(String.format(
+						"Downloading %s... %s%%",
+						context.output().getFileName().toString(),
+						MathUtils.round(context.trackerManager().tracker().progress() * 100.0, 2)
+					));
+				});
+				downloader.addEventListener(DownloadEvent.END, (context) -> {
+					setText(String.format(
+						"Downloading %s... done",
+						context.output().getFileName().toString()
+					));
+				});
+				
+				return downloader;
+			}
+			
+			private final void doRun(Arguments args) throws Exception {
+				if(artifactsCheckState.isRemoteEmpty()) return;
+				
+				Artifacts artifacts = artifactsCheckState.artifacts();
+				Path root = artifactsCheckState.root();
+				List<Manifest.ManagedPath> deletedPaths = artifacts.deletedPaths();
+				
+				try(ArtifactDownloader downloader = artifactDownloader(root)) {
+					artifacts.download(downloader);
+				}
+				
+				if(!deletedPaths.isEmpty()) {
+					String content = (
+						deletedPaths.stream()
+							.map(Manifest.ManagedPath::path)
+							.collect(Collectors.joining("\n"))
+					);
+					
+					NIO.save(Common.deletedIndexPath(), content);
+				}
+			}
+			
+			@Override
+			public InitializationState run(Arguments args) {
+				try {
+					doRun(args);
+				} catch(Exception ex) {
+					error(ex);
+				}
+				
+				return new CheckJRE();
+			}
+			
+			@Override public String getTitle() { return "Processing artifacts..."; }
+		}
+		
+		/** @since 00.02.09 */
+		private static final class CheckJRE implements InitializationState {
+			
+			private final void doRun(Arguments args) throws Exception {
+				Path oldPath = Common.oldJrePath();
+				Path newPath = Common.newJrePath();
+				
+				if(args.has("jre-update-finish") || !NIO.exists(newPath)) {
+					return;
+				}
+				
+				// Copy all files that were not updated
+				NIO.mergeDirectories(oldPath, newPath, (p, np) -> !NIO.exists(np));
+				
+				// Get the current run command, so that the application can be run again
+				String runCommand = SelfProcess.command(args.argsList());
+				runCommand = Base64.getEncoder().encodeToString(runCommand.getBytes(Shared.CHARSET));
+				
+				// Get Java executable in the new directory
+				Path exePath = SelfProcess.exePath();
+				// Check whether the current process was run in the old JRE directory
+				Path parent = exePath;
+				while((parent = parent.getParent()) != null && !parent.equals(oldPath));
+				// If run in the old JRE directory, change the new executable path to the new JRE directory
+				if(parent != null && parent.equals(oldPath)) {
+					exePath = newPath.resolve(oldPath.relativize(exePath));
+				}
+				
+				// Make sure the new executable is actually executable
+				NIO.makeExecutable(exePath);
+				
+				// Start a new process to finish updating the JRE
+				SelfProcess.launch(exePath, List.of(
+					"--jre-update",
+					"--pid", String.valueOf(SelfProcess.pid()),
+					"--run-command", runCommand
+				));
+				
+				// Exit normally
+				System.exit(0);
+			}
+			
+			@Override
+			public InitializationState run(Arguments args) {
+				try {
+					doRun(args);
+				} catch(Exception ex) {
+					error(ex);
+				}
+				
+				return new CheckVersion();
+			}
+			
+			@Override public String getTitle() { return "Checking JRE..."; }
+		}
+		
+		/** @since 00.02.09 */
+		private static final class CheckVersion implements InitializationState {
+			
+			private final void doRun(Arguments args) throws Exception {
+				Path newPath = Common.newJarPath();
+				
+				if(args.has("jar-update-finish") || !NIO.exists(newPath)) {
+					return;
+				}
+				
+				// Get the current run command, so that the application can be run again
+				String runCommand = SelfProcess.command(args.argsList());
+				runCommand = Base64.getEncoder().encodeToString(runCommand.getBytes(Shared.CHARSET));
+				Path exePath = SelfProcess.exePath();
+				
+				// Start a new process to finish updating the application
+				SelfProcess.launchJAR(newPath, exePath, List.of(
+					"--jar-update",
+					"--pid", String.valueOf(SelfProcess.pid()),
+					"--run-command", runCommand,
+					"--is-jar-update",
+					"--jar-previous-version", VERSION.string()
+				));
+				
+				// Exit normally
+				System.exit(0);
 			}
 			
 			@Override
@@ -623,7 +736,7 @@ public final class MediaDownloader {
 				return new InitializeApplicationUpdateTriggers();
 			}
 			
-			@Override public String getTitle() { return "Checking new versions..."; }
+			@Override public String getTitle() { return "Checking application version..."; }
 		}
 		
 		/** @since 00.02.09 */
@@ -2149,12 +2262,10 @@ public final class MediaDownloader {
 	}
 	
 	private static final void initDefaultPlugins() throws Exception {
-		if(updatedComponents == null) return; // Skip the initialization
-		
 		Regex regexPluginPrefix = Regex.of("^plugin\\.(?<name>.*)$");
 		Matcher matcher = regexPluginPrefix.matcher();
 		
-		for(Manifest.ComponentChange change : updatedComponents.changes()) {
+		for(Manifest.ComponentChange change : artifactsCheckState.updatedComponents().changes()) {
 			if(!matcher.reset(change.component()).matches()) {
 				continue;
 			}
