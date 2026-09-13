@@ -1,6 +1,6 @@
 {
 	name:    "english",
-	version: "19",
+	version: "20",
 	title:   "English",
 	code:    "eng",
 	windows: {

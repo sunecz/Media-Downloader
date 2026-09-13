@@ -1,6 +1,6 @@
 {
 	name:    "czech",
-	version: "19",
+	version: "20",
 	title:   "Čeština",
 	code:    "ces",
 	windows: {
