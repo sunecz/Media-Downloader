@@ -41,4 +41,25 @@ final class MacOS implements OS {
 	public Name name() {
 		return Name.MACOS;
 	}
+	
+	/** @since 00.02.09 */
+	private final boolean signal(long pid, String name) {
+		try {
+			return Runtime.getRuntime().exec(new String[] {
+				"kill", "-" + name, Long.toString(pid)
+			}).waitFor() == 0;
+		} catch(InterruptedException | IOException ex) {
+			return false;
+		}
+	}
+	
+	@Override
+	public boolean suspendProcess(long pid) {
+		return signal(pid, "STOP");
+	}
+	
+	@Override
+	public boolean resumeProcess(long pid) {
+		return signal(pid, "CONT");
+	}
 }

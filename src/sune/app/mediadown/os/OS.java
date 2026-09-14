@@ -11,6 +11,10 @@ public interface OS {
 	void browse(URI uri) throws IOException;
 	/** @since 00.02.09 */
 	String executableFileName(String name);
+	/** @since 00.02.09 */
+	boolean suspendProcess(long pid);
+	/** @since 00.02.09 */
+	boolean resumeProcess(long pid);
 	
 	/** @since 00.02.09 */
 	default Name name() { return OSUtils.currentName(); }
