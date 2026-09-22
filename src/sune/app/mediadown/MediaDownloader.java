@@ -2411,7 +2411,6 @@ public final class MediaDownloader {
 		Ignore.callVoid(Plugins::dispose, MediaDownloader::error);
 		Ignore.callVoid(Disposables::dispose, MediaDownloader::error);
 		Ignore.callVoid(Threads::destroy, MediaDownloader::error);
-		Ignore.callVoid(Web::clear, MediaDownloader::error);
 	}
 	
 	// https://stackoverflow.com/questions/4159802/how-can-i-restart-a-java-application

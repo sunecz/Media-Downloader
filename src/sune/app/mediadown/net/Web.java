@@ -33,6 +33,7 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.WeakHashMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -48,7 +49,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import sune.app.mediadown.Shared;
-import sune.app.mediadown.concurrent.VarLoader;
 import sune.app.mediadown.util.L10N;
 import sune.app.mediadown.util.Opt;
 import sune.app.mediadown.util.Range;
@@ -72,13 +72,6 @@ public final class Web {
 	private static Duration defaultConnectTimeout = Duration.ofMillis(5000);
 	private static Duration defaultReadTimeout = Duration.ofMillis(20000);
 	
-	private static final VarLoader<HttpClient> httpClientWithRedirect = VarLoader.of(Web::newDefaultHttpClientWithRedirect);
-	private static final VarLoader<HttpClient> httpClientNoRedirect = VarLoader.of(Web::newDefaultHttpClientNoRedirect);
-	private static final VarLoader<CookieManager> cookieManager = VarLoader.of(Web::newCookieManager);
-	private static final VarLoader<HttpRequest.Builder> httpRequestBuilder = VarLoader.of(Web::newHttpRequestBuilder);
-	
-	private static final AtomicInteger clientId = new AtomicInteger();
-	
 	/** @since 00.02.09 */
 	public static final long UNKNOWN_SIZE = -1L;
 	
@@ -94,37 +87,125 @@ public final class Web {
 	private Web() {
 	}
 	
-	private static final ExecutorService newExecutor() {
-		// Must create the new executor with a custom thread factory so that
-		// the threads are closed properly.
-		return Executors.newCachedThreadPool(new WebThreadFactory(clientId.getAndIncrement()));
+	/** @since 00.02.09 */
+	private static final class Holder {
+		
+		static final class OfExecutor {
+			
+			static final ExecutorService INSTANCE = create();
+			
+			private static final ExecutorService create() {
+				return Executors.newCachedThreadPool(new ExecutorThreadFactory());
+			}
+			
+			private static final class ExecutorThreadFactory implements ThreadFactory {
+				
+				private final String namePrefix = "Web.Client.Thread-";
+				private final AtomicInteger nextId = new AtomicInteger();
+				
+				@Override
+				public Thread newThread(Runnable r) {
+					String name = namePrefix + nextId.getAndIncrement();
+					Thread thread = new Thread(null, r, name, 0, false);
+					thread.setDaemon(true);
+					return thread;
+				}
+			}
+		}
+		
+		static final class OfClient {
+			
+			static final Client INSTANCE = create();
+			
+			private static final Client create() {
+				return new Client();
+			}
+		}
+		
+		static final class OfCookieManager {
+			
+			static final CookieManager INSTANCE = create();
+			
+			private static final CookieManager create() {
+				return new CookieManager(null, CookiePolicy.ACCEPT_ALL);
+			}
+		}
+		
+		static final class OfRequestBuilder {
+			
+			static final HttpRequest.Builder INSTANCE = create();
+			
+			private static final HttpRequest.Builder create() {
+				return (
+					HttpRequest.newBuilder()
+						.setHeader("User-Agent", USER_AGENT)
+						.timeout(defaultReadTimeout)
+				);
+			}
+		}
+		
+		static final class OfHeaders {
+			
+			static final BiPredicate<String, String> NO_FILTER = (a, b) -> true;
+			static final HttpHeaders EMPTY = HttpHeaders.of(Map.of(), NO_FILTER);
+		}
 	}
 	
-	private static final HttpClient.Builder newHttpClientBuilder() {
-		return HttpClient.newBuilder()
-					.connectTimeout(defaultConnectTimeout)
-					.cookieHandler(cookieManager())
-					.executor(newExecutor())
-					.sslContext(SSL.Contexts.aiaFetching())
-					.version(DEFAULT_HTTP_VERSION);
-	}
-	
-	private static final HttpClient newDefaultHttpClientWithRedirect() {
-		return newHttpClientBuilder().followRedirects(Redirect.NORMAL).build();
-	}
-	
-	private static final HttpClient newDefaultHttpClientNoRedirect() {
-		return newHttpClientBuilder().followRedirects(Redirect.NEVER).build();
-	}
-	
-	private static final CookieManager newCookieManager() {
-		return new CookieManager(null, CookiePolicy.ACCEPT_ALL);
-	}
-	
-	private static final HttpRequest.Builder newHttpRequestBuilder() {
-		return HttpRequest.newBuilder()
-					.setHeader("User-Agent", USER_AGENT)
-					.timeout(defaultReadTimeout);
+	/** @since 00.02.09 */
+	private static final class Client {
+		
+		private final Map<Key, HttpClient> clients = new ConcurrentHashMap<>();
+		
+		public HttpClient httpClientFor(Request request) {
+			return clients.computeIfAbsent(Key.of(request), Key::createClient);
+		}
+		
+		private static final class Key {
+			
+			private final Redirect redirect;
+			
+			private Key(Redirect redirect) {
+				this.redirect = redirect;
+			}
+			
+			static Key of(Request request) {
+				return new Key(request.followRedirects());
+			}
+			
+			private final HttpClient.Builder newBuilder() {
+				return (
+					HttpClient.newBuilder()
+						.connectTimeout(defaultConnectTimeout)
+						.cookieHandler(Holder.OfCookieManager.INSTANCE)
+						.executor(Holder.OfExecutor.INSTANCE)
+						.sslContext(SSL.Contexts.aiaFetching())
+						.version(DEFAULT_HTTP_VERSION)
+				);
+			}
+			
+			HttpClient createClient() {
+				HttpClient.Builder builder = newBuilder();
+				builder.followRedirects(redirect);
+				return builder.build();
+			}
+			
+			@Override
+			public int hashCode() {
+				return Objects.hash(redirect);
+			}
+			
+			@Override
+			public boolean equals(Object obj) {
+				if(!(obj instanceof Key)) return false;
+				Key other = (Key) obj;
+				return redirect == other.redirect;
+			}
+			
+			@Override
+			public String toString() {
+				return "Web.Client.Key[redirect=" + redirect + "]";
+			}
+		}
 	}
 	
 	private static final Duration checkTimeout(Duration timeout) {
@@ -136,18 +217,11 @@ public final class Web {
 	}
 	
 	private static final HttpRequest.Builder httpRequestBuilder() {
-		return httpRequestBuilder.value().copy();
+		return Holder.OfRequestBuilder.INSTANCE.copy();
 	}
 	
 	private static final HttpClient httpClientFor(Request request) {
-		switch(request.followRedirects()) {
-			case NORMAL:
-			case ALWAYS:
-				return httpClientWithRedirect.value();
-			case NEVER:
-			default:
-				return httpClientNoRedirect.value();
-		}
+		return Holder.OfClient.INSTANCE.httpClientFor(request);
 	}
 	
 	/** @since 00.02.09 */
@@ -290,7 +364,7 @@ public final class Web {
 	}
 	
 	public static final CookieManager cookieManager() {
-		return cookieManager.value();
+		return Holder.OfCookieManager.INSTANCE;
 	}
 	
 	public static final Response.OfString request(Request request) throws Exception {
@@ -355,12 +429,6 @@ public final class Web {
 		);
 	}
 	
-	public static final void clear() {
-		if(cookieManager.isSet()) {
-			cookieManager.value().getCookieStore().removeAll();
-		}
-	}
-	
 	/** @since 00.02.09 */
 	private static final class Internal {
 		
@@ -389,24 +457,6 @@ public final class Web {
 			synchronized(versions) {
 				return versions.get(normalizedUri);
 			}
-		}
-	}
-	
-	private static final class WebThreadFactory implements ThreadFactory {
-		
-		private final String namePrefix;
-		private final AtomicInteger nextId = new AtomicInteger();
-		
-		private WebThreadFactory(int clientId) {
-			this.namePrefix = "WebClient-" + clientId + "-Thread-";
-		}
-		
-		@Override
-		public Thread newThread(Runnable r) {
-			String name = namePrefix + nextId.getAndIncrement();
-			Thread thread = new Thread(null, r, name, 0, false);
-			thread.setDaemon(true);
-			return thread;
 		}
 	}
 	
@@ -979,31 +1029,16 @@ public final class Web {
 	
 	public static final class Headers {
 		
-		private static final VarLoader<BiPredicate<String, String>> filter = VarLoader.of(Headers::newFilter);
-		private static final VarLoader<HttpHeaders> empty = VarLoader.of(Headers::newEmpty);
-		
 		// Forbid anyone to create an instance of this class
 		private Headers() {
 		}
 		
-		private static final BiPredicate<String, String> newFilter() {
-			return (a, b) -> true;
-		}
-		
-		private static final BiPredicate<String, String> noFilter() {
-			return filter.value();
-		}
-		
-		private static final HttpHeaders newEmpty() {
-			return HttpHeaders.of(Map.of(), noFilter());
-		}
-		
 		public static final HttpHeaders empty() {
-			return empty.value();
+			return Holder.OfHeaders.EMPTY;
 		}
 		
 		public static final HttpHeaders ofMap(Map<String, List<String>> headers) {
-			return HttpHeaders.of(headers, noFilter());
+			return HttpHeaders.of(headers, Holder.OfHeaders.NO_FILTER);
 		}
 		
 		public static final HttpHeaders ofSingleMap(Map<String, String> headers) {
