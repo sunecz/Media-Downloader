@@ -240,7 +240,14 @@
 					columns: {
 						season: "Season",
 						number: "Episode",
+						available: "Available",
 						title:  "Title"
+					},
+					values: {
+						available: {
+							yes: "Yes",
+							no:  "No"
+						}
 					},
 					context_menu: {
 						copy_url:      "Copy URL",
