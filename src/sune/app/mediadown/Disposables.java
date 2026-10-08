@@ -1,29 +1,43 @@
 package sune.app.mediadown;
 
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReference;
 
 import sune.app.mediadown.util.Utils.Ignore;
 
 public final class Disposables {
 	
-	private static final Queue<Disposable> disposables = new ConcurrentLinkedQueue<>();
+	private static final AtomicReference<Node> queue = new AtomicReference<>();
+	private static final Node SHUTDOWN = new Node(null, null);
 	
-	// Forbid anyone to create an instance of this class
-	private Disposables() {
-	}
+	private Disposables() { throw new AssertionError("No instances"); }
 	
 	public static final void add(Disposable disposable) {
-		if(disposable == null) {
-			throw new IllegalArgumentException("Disposable object cannot be null");
-		}
+		Objects.requireNonNull(disposable);
 		
-		disposables.add(disposable);
+		Node head;
+		do {
+			head = queue.get();
+			
+			if(head == SHUTDOWN) {
+				Ignore.callVoid(disposable::dispose);
+				return;
+			}
+		} while(!queue.compareAndSet(head, new Node(disposable, head)));
 	}
 	
 	public static final void dispose() {
-		for(Disposable disposable; (disposable = disposables.poll()) != null;) {
-			Ignore.callVoid(disposable::dispose);
+		for(Node node = queue.getAndSet(SHUTDOWN);
+				node != null && node != SHUTDOWN;
+				node = node.next) {
+			Ignore.callVoid(node.disposable::dispose);
 		}
+	}
+	
+	private static final class Node {
+		
+		final Disposable disposable;
+		final Node next;
+		Node(Disposable d, Node n) { disposable = d; next = n; }
 	}
 }
