@@ -22,8 +22,6 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
 
-import sune.app.mediadown.concurrent.VarLoader;
-
 /** @since 00.02.09 */
 public final class SSL {
 	
@@ -103,31 +101,40 @@ public final class SSL {
 	
 	public static final class Contexts {
 		
-		private static final VarLoader<SSLContext> aiaFetching;
-		
-		static {
-			aiaFetching = VarLoader.ofChecked(Contexts::newAIAFetching);
+		private static final class OfAIAFetching {
+			
+			static final SSLContext INSTANCE = create();
+			
+			private static final SSLContext create() {
+				try {
+					return newInstance();
+				} catch(NoSuchAlgorithmException
+							| KeyStoreException
+							| KeyManagementException ex) {
+					throw new ExceptionInInitializerError(ex);
+				}
+			}
+			
+			private static final SSLContext newInstance()
+					throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
+				X509TrustManager tm = new AIAFetchingX509TrustManager(defaultX509TrustManager());
+				String protocol = Security.getProperty("sslContextProtocol");
+				
+				if(protocol == null) {
+					protocol = "TLS";
+				}
+				
+				SSLContext sslContext = SSLContext.getInstance(protocol);
+				sslContext.init(null, new TrustManager[] { tm }, new SecureRandom());
+				return sslContext;
+			}
 		}
 		
 		private Contexts() {
 		}
 		
-		private static final SSLContext newAIAFetching()
-				throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
-			X509TrustManager tm = new AIAFetchingX509TrustManager(defaultX509TrustManager());
-			String protocol = Security.getProperty("sslContextProtocol");
-			
-			if(protocol == null) {
-				protocol = "TLS";
-			}
-			
-			SSLContext sslContext = SSLContext.getInstance(protocol);
-			sslContext.init(null, new TrustManager[] { tm }, new SecureRandom());
-			return sslContext;
-		}
-		
 		public static final SSLContext aiaFetching() {
-			return aiaFetching.value();
+			return OfAIAFetching.INSTANCE;
 		}
 	}
 	

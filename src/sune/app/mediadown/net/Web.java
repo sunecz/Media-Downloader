@@ -64,6 +64,7 @@ import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
+import sune.app.mediadown.Disposables;
 import sune.app.mediadown.Shared;
 import sune.app.mediadown.util.JSON;
 import sune.app.mediadown.util.L10N;
@@ -116,7 +117,9 @@ public final class Web {
 			static final ExecutorService INSTANCE = create();
 			
 			private static final ExecutorService create() {
-				return Executors.newCachedThreadPool(new ExecutorThreadFactory());
+				ExecutorService executor = Executors.newCachedThreadPool(new ExecutorThreadFactory());
+				Disposables.add(executor::shutdownNow);
+				return executor;
 			}
 			
 			private static final class ExecutorThreadFactory implements ThreadFactory {
@@ -139,7 +142,9 @@ public final class Web {
 			static final Client INSTANCE = create();
 			
 			private static final Client create() {
-				return new Client();
+				Client client = new Client();
+				Disposables.add(client::close);
+				return client;
 			}
 		}
 		
@@ -178,7 +183,7 @@ public final class Web {
 			private static final TLSProxyBridgePool create() {
 				SSLContext sslContext = SSL.Contexts.aiaFetching();
 				TLSProxyBridgePool instance = new TLSProxyBridgePool(sslContext);
-				Runtime.getRuntime().addShutdownHook(new Thread(instance::close));
+				Disposables.add(instance::close);
 				return instance;
 			}
 		}
@@ -191,6 +196,10 @@ public final class Web {
 		
 		public HttpClient httpClientFor(Request request) {
 			return clients.computeIfAbsent(Key.of(request), Key::createClient);
+		}
+		
+		public void close() {
+			clients.clear();
 		}
 		
 		private static final class Key {
@@ -1655,7 +1664,11 @@ public final class Web {
 			while(running) {
 				try {
 					Socket client = server.accept();
-					executor.submit(() -> handleConnection(client));
+					try {
+						executor.submit(() -> handleConnection(client));
+					} catch(RejectedExecutionException ex) {
+						close(client); // Shutting down
+					}
 				} catch(IOException ex) {
 					// Ignore
 				}
@@ -1686,13 +1699,18 @@ public final class Web {
 		}
 		
 		private final void submitPump(Socket src, Socket dst) {
-			executor.submit(() -> {
-				try(Socket s = src; Socket d = dst) {
-					s.getInputStream().transferTo(d.getOutputStream());
-				} catch(IOException ex) {
-					// One of the sides closed, ignore.
-				}
-			});
+			try {
+				executor.submit(() -> {
+					try(Socket s = src; Socket d = dst) {
+						s.getInputStream().transferTo(d.getOutputStream());
+					} catch(IOException ex) {
+						// One of the sides closed, ignore.
+					}
+				});
+			} catch(RejectedExecutionException ex) {
+				close(src);
+				close(dst);
+			}
 		}
 		
 		private final void close(Closeable closeable) {
