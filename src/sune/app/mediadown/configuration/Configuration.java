@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -151,6 +152,12 @@ public class Configuration implements ConfigurationAccessor {
 	@Override
 	public final Object nullValue(String name) {
 		return getPropertyValue(getPropertyAndCheck(name, ConfigurationPropertyType.NULL), null);
+	}
+	
+	/** @since 00.02.09 */
+	@Override
+	public final SSDCollection objectTypeValue(String name) {
+		return getPropertyValue(getPropertyAndCheck(name, ConfigurationPropertyType.OBJECT), null);
 	}
 	
 	@Override
@@ -328,6 +335,11 @@ public class Configuration implements ConfigurationAccessor {
 		
 		public static final NullConfigurationProperty.Builder ofNull(String name) {
 			return new NullConfigurationProperty.Builder(name);
+		}
+		
+		/** @since 00.02.09 */
+		public static final <T> ObjectTypeConfigurationProperty.Builder<T> ofObjectType(String name, Class<? extends T> typeClass) {
+			return new ObjectTypeConfigurationProperty.Builder<>(name, typeClass);
 		}
 		
 		/** @since 00.02.05 */
@@ -1398,6 +1410,184 @@ public class Configuration implements ConfigurationAccessor {
 		}
 	}
 	
+	/** @since 00.02.09 */
+	protected static abstract class ObjectTypeConfigurationPropertyBase<T> extends ConfigurationProperty<SSDCollection> {
+		
+		protected final Class<? extends T> typeClass;
+		protected final Supplier<Collection<SSDCollection>> factory;
+		protected final BiPredicate<Collection<SSDCollection>, SSDCollection> validityPredicate;
+		protected final Function<T, SSDCollection> transformer;
+		protected final Function<SSDCollection, T> inverseTransformer;
+		
+		private ObjectTypeConfigurationPropertyBase(String name, Class<? extends T> typeClass, SSDCollection value,
+				boolean isHidden, Supplier<Collection<SSDCollection>> factory, BiPredicate<Collection<SSDCollection>, SSDCollection> validityPredicate,
+				Function<T, SSDCollection> transformer, Function<SSDCollection, T> inverseTransformer, String group, int order) {
+			super(name, ConfigurationPropertyType.OBJECT, value, isHidden, group, order);
+			this.typeClass = Objects.requireNonNull(typeClass);
+			this.factory = factory;
+			this.validityPredicate = validityPredicate;
+			this.transformer = transformer;
+			this.inverseTransformer = inverseTransformer;
+		}
+		
+		public Class<?> typeClass() {
+			return typeClass;
+		}
+		
+		public Collection<SSDCollection> values() {
+			return factory != null ? factory.get() : List.of();
+		}
+		
+		public Supplier<Collection<SSDCollection>> factory() {
+			return factory;
+		}
+		
+		public BiPredicate<Collection<SSDCollection>, SSDCollection> validityPredicate() {
+			return validityPredicate;
+		}
+		
+		public Function<T, SSDCollection> transformer() {
+			return transformer;
+		}
+		
+		public Function<SSDCollection, T> inverseTransformer() {
+			return inverseTransformer;
+		}
+		
+		public static abstract class Builder<T> extends ConfigurationProperty.BuilderBase<SSDCollection, ObjectTypeConfigurationPropertyBase<T>> {
+			
+			protected final Class<? extends T> typeClass;
+			
+			protected SSDCollection value;
+			protected boolean useValue;
+			protected SSDCollection defaultValue;
+			
+			protected Supplier<Collection<SSDCollection>> factory;
+			protected BiPredicate<Collection<SSDCollection>, SSDCollection> validityPredicate;
+			protected Function<T, SSDCollection> transformer;
+			protected Function<SSDCollection, T> inverseTransformer;
+			
+			public Builder(String name, Class<? extends T> typeClass) {
+				super(name, ConfigurationPropertyType.OBJECT);
+				this.typeClass = typeClass;
+				this.value = null;
+				this.useValue = false;
+				this.defaultValue = null;
+			}
+			
+			@Override
+			public Builder<T> asHidden(boolean isHidden) {
+				return (Builder<T>) super.asHidden(isHidden);
+			}
+			
+			public Builder<T> inGroup(String group) {
+				return (Builder<T>) super.inGroup(group);
+			}
+			
+			public Builder<T> withTransformer(Function<T, SSDCollection> transformer, Function<SSDCollection, T> inverseTransformer) {
+				this.transformer = transformer;
+				this.inverseTransformer = inverseTransformer;
+				return this;
+			}
+			
+			public Builder<T> withFactory(Supplier<Collection<SSDCollection>> factory, BiPredicate<Collection<SSDCollection>, SSDCollection> validityPredicate) {
+				this.factory = factory;
+				this.validityPredicate = validityPredicate;
+				return this;
+			}
+			
+			public Builder<T> withValue(SSDCollection value) {
+				this.value = value;
+				this.useValue = true;
+				return this;
+			}
+			
+			public Builder<T> withDefaultValue(SSDCollection defaultValue) {
+				this.defaultValue = defaultValue;
+				return this;
+			}
+			
+			protected Collection<SSDCollection> values() {
+				return factory != null ? factory.get() : List.of();
+			}
+		}
+	}
+	
+	/** @since 00.02.09 */
+	public static final class ObjectTypeConfigurationProperty<T> extends ObjectTypeConfigurationPropertyBase<T> {
+		
+		private ObjectTypeConfigurationProperty(String name, Class<? extends T> typeClass, SSDCollection value,
+				boolean isHidden, Supplier<Collection<SSDCollection>> factory, BiPredicate<Collection<SSDCollection>, SSDCollection> validityPredicate,
+				Function<T, SSDCollection> transformer, Function<SSDCollection, T> inverseTransformer, String group, int order) {
+			super(name, typeClass, value, isHidden, factory, validityPredicate, transformer, inverseTransformer, group, order);
+		}
+		
+		@Override
+		public SSDNode toNode(Map<String, ConfigurationProperty<?>> builtProperties) {
+			SSDNode node = value;
+			if(builtProperties != null)
+				builtProperties.put(name, this);
+			return node;
+		}
+		
+		public static final class Builder<T> extends ObjectTypeConfigurationPropertyBase.Builder<T> {
+			
+			public Builder(String name, Class<? extends T> typeClass) {
+				super(name, typeClass);
+			}
+			
+			@Override
+			public Builder<T> asHidden(boolean isHidden) {
+				return (Builder<T>) super.asHidden(isHidden);
+			}
+			
+			@Override
+			public Builder<T> inGroup(String group) {
+				return (Builder<T>) super.inGroup(group);
+			}
+			
+			@Override
+			public SSDCollection value() {
+				return useValue ? value : defaultValue;
+			}
+			
+			@Override
+			public Builder<T> loadData(SSDNode node) {
+				if(!(node instanceof SSDCollection))
+					return this;
+				value = (SSDCollection) node;
+				useValue = true;
+				return this;
+			}
+			
+			@Override
+			public ObjectTypeConfigurationPropertyBase<T> build() {
+				SSDCollection value = value();
+				return factory == null || validityPredicate.test(values(), value)
+							? new ObjectTypeConfigurationProperty<T>(name, typeClass, value, isHidden,
+									factory, validityPredicate, transformer, inverseTransformer, group, order)
+							: new NullObjectTypeConfigurationProperty<>(name, typeClass, isHidden, group, order);
+			}
+		}
+	}
+	
+	/** @since 00.02.09 */
+	public static final class NullObjectTypeConfigurationProperty<T> extends ObjectTypeConfigurationPropertyBase<T> {
+		
+		private NullObjectTypeConfigurationProperty(String name, Class<? extends T> typeClass, boolean isHidden,
+				String group, int order) {
+			super(name, typeClass, null, isHidden, null, null, null, null, group, order);
+		}
+		
+		@Override
+		public SSDNode toNode(Map<String, ConfigurationProperty<?>> builtProperties) {
+			SSDNode node = SSDObject.of(name, null);
+			if(builtProperties != null)
+				builtProperties.put(name, this);
+			return node;
+		}
+	}
+	
 	/** @since 00.02.04 */
 	public static class Builder {
 		
@@ -1601,6 +1791,12 @@ public class Configuration implements ConfigurationAccessor {
 				return getPropertyValue(getPropertyAndCheck(name, ConfigurationPropertyType.NULL), null);
 			}
 			
+			/** @since 00.02.09 */
+			@Override
+			public final SSDCollection objectTypeValue(String name) {
+				return getPropertyValue(getPropertyAndCheck(name, ConfigurationPropertyType.OBJECT), null);
+			}
+			
 			@Override
 			public SSDCollection data() {
 				Map<String, ConfigurationProperty<?>> builtProperties = new LinkedHashMap<>();
@@ -1717,12 +1913,19 @@ public class Configuration implements ConfigurationAccessor {
 		public final Writer set(String name, Object value) {
 			ConfigurationProperty<?> existing;
 			if((existing = refProperties.get(name)) != null) {
-				// First, check whether the value is of a supported/compatible type,
-				// i.e. not Integer but Long, not Float but Double, etc.
-				Object checked = checkValue(value);
+				Object checked = value;
+				boolean hasRawValue = (
+					existing instanceof ObjectTypeConfigurationPropertyBase
+				);
 				
-				if(!checkValueAgainstProperty(existing, checked)) {
-					return this;
+				if(!hasRawValue) {
+					// First, check whether the value is of a supported/compatible type,
+					// i.e. not Integer but Long, not Float but Double, etc.
+					checked = checkValue(value);
+					
+					if(!checkValueAgainstProperty(existing, checked)) {
+						return this;
+					}
 				}
 				
 				setValue(existing, checked); // Must be called first

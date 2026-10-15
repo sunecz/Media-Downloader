@@ -3,6 +3,7 @@ package sune.app.mediadown.configuration;
 import java.util.Map;
 
 import sune.util.ssdf2.SSDCollection;
+import sune.util.ssdf2.SSDNode;
 
 /** @since 00.02.04 */
 public interface ConfigurationAccessor {
@@ -20,5 +21,7 @@ public interface ConfigurationAccessor {
 	Map<String, Object> arrayValue(String name);
 	Map<String, Object> objectValue(String name);
 	Object nullValue(String name);
+	/** @since 00.02.09 */
+	SSDNode objectTypeValue(String name);
 	SSDCollection data();
 }
