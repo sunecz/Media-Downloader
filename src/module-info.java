@@ -20,6 +20,7 @@ module sune.app.mediadown {
 	// Exports
 	exports sune.app.mediadown;
 	exports sune.app.mediadown.authentication;
+	exports sune.app.mediadown.builtin;
 	exports sune.app.mediadown.concurrent;
 	exports sune.app.mediadown.configuration;
 	exports sune.app.mediadown.conversion;

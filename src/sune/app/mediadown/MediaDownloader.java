@@ -44,12 +44,15 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import javafx.scene.image.Image;
+import sune.app.mediadown.authentication.CredentialsManager;
+import sune.app.mediadown.authentication.UsernameCredentials;
 import sune.app.mediadown.concurrent.Threads;
 import sune.app.mediadown.configuration.ApplicationConfiguration;
 import sune.app.mediadown.configuration.ApplicationConfigurationAccessor;
 import sune.app.mediadown.configuration.Configuration;
 import sune.app.mediadown.conversion.ConversionProvider;
 import sune.app.mediadown.conversion.Conversions;
+import sune.app.mediadown.entity.ProxyProvider.Factory;
 import sune.app.mediadown.event.DownloadEvent;
 import sune.app.mediadown.event.LibraryEvent;
 import sune.app.mediadown.event.PluginLoaderEvent;
@@ -86,6 +89,8 @@ import sune.app.mediadown.logging.Log;
 import sune.app.mediadown.media.MediaFormat;
 import sune.app.mediadown.media.MediaTitleFormat;
 import sune.app.mediadown.media.MediaTitleFormats.NamedMediaTitleFormat;
+import sune.app.mediadown.net.Transport;
+import sune.app.mediadown.net.Transport.ProxyManager;
 import sune.app.mediadown.net.Web;
 import sune.app.mediadown.plugin.PluginConfiguration;
 import sune.app.mediadown.plugin.PluginFile;
@@ -331,6 +336,16 @@ public final class MediaDownloader {
 				disableIllegalAccessWarnings();
 				initAutoDispose();
 				initInternalProtocol();
+				return new InitializeDefaults();
+			}
+		}
+		
+		/** @since 00.02.09 */
+		private static final class InitializeDefaults implements InitializationState {
+			
+			@Override
+			public InitializationState run(Arguments args) {
+				Ignore.callVoid(MediaDownloader::initDefaults, MediaDownloader::error);
 				return new ShowStartupWindow();
 			}
 		}
@@ -352,6 +367,7 @@ public final class MediaDownloader {
 			@Override
 			public InitializationState run(Arguments args) {
 				initConfiguration();
+				initTransport();
 				return new UpdateJRE();
 			}
 			
@@ -835,22 +851,20 @@ public final class MediaDownloader {
 			public InitializationState run(Arguments args) {
 				checkExternalResources();
 				addAutomaticLanguage();
-				return new InitializeDefaults();
+				return new InitializeGUIDefaults();
 			}
 			
 			@Override public String getTitle() { return "Checking external resources..."; }
 		}
 		
 		/** @since 00.02.09 */
-		private static final class InitializeDefaults implements InitializationState {
+		private static final class InitializeGUIDefaults implements InitializationState {
 			
 			@Override
 			public InitializationState run(Arguments args) {
-				Ignore.callVoid(MediaDownloader::initDefaults, MediaDownloader::error);
+				Ignore.callVoid(MediaDownloader::initGUIDefaults, MediaDownloader::error);
 				return new FinalizeConfiguration();
 			}
-			
-			@Override public String getTitle() { return "Initializing defaults..."; }
 		}
 		
 		private static final class FinalizeConfiguration implements InitializationState {
@@ -2073,6 +2087,30 @@ public final class MediaDownloader {
 		Conversions.Providers.register("sune.app.mediadown.ffmpeg.FFmpeg$Provider");
 		// Conversion providers ---->
 		
+		// <---- Credentials
+		try {
+			CredentialsManager credentialsManager = CredentialsManager.instance();
+			String proxyCredentialsName = "proxy/default";
+			
+			if(!credentialsManager.has(proxyCredentialsName)) {
+				try(UsernameCredentials defaultCredentials = new UsernameCredentials()) {
+					credentialsManager.set(proxyCredentialsName, defaultCredentials);
+				}
+			}
+		} catch(IOException ex) {
+			error(ex);
+		}
+		// Credentials ---->
+		
+		// <---- Proxy providers
+		ProxyManager.register("sune.app.mediadown.builtin.NoneProxyProvider$Factory");
+		ProxyManager.register("sune.app.mediadown.builtin.GlobalProxyProvider$Factory");
+		ProxyManager.register("sune.app.mediadown.builtin.InternalProxyProvider$Factory");
+		// Proxy providers ---->
+	}
+	
+	/** @since 00.02.09 */
+	private static final void initGUIDefaults() throws ClassNotFoundException {
 		// <---- Configuration window
 		// Ensure that main groups are in a specific order
 		predefineGroups(
@@ -2080,6 +2118,7 @@ public final class MediaDownloader {
 			ApplicationConfigurationAccessor.GROUP_UPDATE,
 			ApplicationConfigurationAccessor.GROUP_DOWNLOAD,
 			ApplicationConfigurationAccessor.GROUP_CONVERSION,
+			ApplicationConfigurationAccessor.GROUP_PROXY,
 			ApplicationConfigurationAccessor.GROUP_NAMING,
 			ApplicationConfigurationAccessor.GROUP_PLUGINS
 		);
@@ -2108,6 +2147,12 @@ public final class MediaDownloader {
 			)
 		)));
 		// Configuration ---->
+	}
+	
+	/** @since 00.02.09 */
+	private static final void initTransport() {
+		SSDCollection data = configuration.data().getCollection("proxy.providerFactory");
+		Transport.ProxyManager.initialize(data);
 	}
 	
 	private static final class GUI {
@@ -2507,6 +2552,8 @@ public final class MediaDownloader {
 		@Override public Channel updateChannel() { return accessor().updateChannel(); }
 		/** @since 00.02.09 */
 		@Override public List<String> updateRegistries() { return accessor().updateRegistries(); }
+		/** @since 00.02.09 */
+		@Override public Factory proxyProviderFactory() { return accessor().proxyProviderFactory(); }
 		@Override public SSDCollection data() { return accessor().data(); }
 		/** @since 00.02.07 */
 		@Override public boolean reload() { return accessor().reload(); }

@@ -1,22 +1,13 @@
 package sune.app.mediadown.net;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.UncheckedIOException;
 import java.net.Authenticator;
 import java.net.CookieManager;
 import java.net.CookiePolicy;
 import java.net.CookieStore;
 import java.net.HttpCookie;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.PasswordAuthentication;
-import java.net.Proxy;
 import java.net.ProxySelector;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -59,14 +50,8 @@ import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLParameters;
-import javax.net.ssl.SSLSocket;
-import javax.net.ssl.SSLSocketFactory;
-
 import sune.app.mediadown.Disposables;
 import sune.app.mediadown.Shared;
-import sune.app.mediadown.util.JSON;
 import sune.app.mediadown.util.L10N;
 import sune.app.mediadown.util.Opt;
 import sune.app.mediadown.util.Range;
@@ -175,18 +160,6 @@ public final class Web {
 			static final BiPredicate<String, String> NO_FILTER = (a, b) -> true;
 			static final HttpHeaders EMPTY = HttpHeaders.of(Map.of(), NO_FILTER);
 		}
-		
-		static final class OfTLSProxyBridgePool {
-			
-			static final TLSProxyBridgePool INSTANCE = create();
-			
-			private static final TLSProxyBridgePool create() {
-				SSLContext sslContext = SSL.Contexts.aiaFetching();
-				TLSProxyBridgePool instance = new TLSProxyBridgePool(sslContext);
-				Disposables.add(instance::close);
-				return instance;
-			}
-		}
 	}
 	
 	/** @since 00.02.09 */
@@ -204,20 +177,42 @@ public final class Web {
 		
 		private static final class Key {
 			
+			private static final class RedirectOnly {
+				
+				static final Key NEVER  = new Key(Redirect.NEVER,  null);
+				static final Key ALWAYS = new Key(Redirect.ALWAYS, null);
+				static final Key NORMAL = new Key(Redirect.NORMAL, null);
+				
+				static Key of(Redirect redirect) {
+					switch(redirect) {
+						case NEVER:  return NEVER;
+						case ALWAYS: return ALWAYS;
+						case NORMAL: return NORMAL;
+						default:     return NORMAL;
+					}
+				}
+			}
+			
 			private final Redirect redirect;
-			private final ProxyConfiguration proxyConfiguration;
+			private final Transport.ProxyConfiguration proxyConfiguration;
 			private final HttpClient.Builder clientBuilder;
 			
-			private Key(Redirect redirect, ProxyConfiguration proxyConfiguration) {
+			private Key(Redirect redirect, Transport.ProxyConfiguration proxyConfiguration) {
 				this.redirect = redirect;
 				this.proxyConfiguration = proxyConfiguration;
 				this.clientBuilder = createClientBuilder();
 			}
 			
 			static Key of(Request request) {
-				// TODO: Select proxy provider based on configuration
-				ProxyConfiguration proxyConfiguration = null;
-				return new Key(request.followRedirects(), proxyConfiguration);
+				Redirect redirect = request.followRedirects();
+				Transport.ProxyConfiguration proxyConfiguration
+					= Transport.ProxyManager.provider().router().route(request);
+				
+				if(proxyConfiguration == null) {
+					return RedirectOnly.of(redirect); // Optimization
+				}
+				
+				return new Key(redirect, proxyConfiguration);
 			}
 			
 			private final HttpClient.Builder createClientBuilder() {
@@ -423,6 +418,11 @@ public final class Web {
 	
 	public static final void defaultReadTimeout(Duration timeout) {
 		defaultReadTimeout = checkTimeout(timeout);
+	}
+	
+	/** @since 00.02.09 */
+	public static final Version defaultHttpVersion() {
+		return DEFAULT_HTTP_VERSION;
 	}
 	
 	public static final CookieManager cookieManager() {
@@ -1370,6 +1370,7 @@ public final class Web {
 		
 		public static final class Geolocation {
 			
+			public static final Geolocation ANY = of("*");
 			public static final Geolocation CZ = of("CZ");
 			public static final Geolocation SK = of("SK");
 			
@@ -1383,6 +1384,8 @@ public final class Web {
 				return new Geolocation(isoCountryCode.toUpperCase(Locale.ROOT));
 			}
 			
+			public String isoCountryCode() { return isoCountryCode; }
+			
 			@Override
 			public boolean equals(Object obj) {
 				return obj instanceof Geolocation
@@ -1391,415 +1394,6 @@ public final class Web {
 			
 			@Override public int hashCode() { return isoCountryCode.hashCode(); }
 			@Override public String toString() { return isoCountryCode; }
-		}
-	}
-	
-	/** @since 00.02.09 */
-	public static final class ProxyUtils {
-		
-		private ProxyUtils() { throw new AssertionError("No instances"); }
-		
-		public static final int portOf(URI uri) {
-			int port;
-			if((port = uri.getPort()) == -1) {
-				String scheme;
-				if((scheme = uri.getScheme()) == null) {
-					port = 80;
-				} else {
-					switch(scheme.toLowerCase()) {
-						case "http":  port = 80;  break;
-						case "https": port = 443; break;
-						default:      port = 80;  break;
-					}
-				}
-			}
-			
-			return port;
-		}
-		
-		public static final InetSocketAddress socketAddressOf(URI uri) {
-			Objects.requireNonNull(uri);
-			return InetSocketAddress.createUnresolved(uri.getHost(), portOf(uri));
-		}
-		
-		public static final ProxySelector proxySelectorOf(URI uri) {
-			Objects.requireNonNull(uri);
-			
-			switch(uri.getScheme().toLowerCase()) {
-				case "https":
-					// Java's HttpClient doesn't support TLS proxy. The workaround is to route
-					// traffic through an additional small forwarding proxy. This proxy accepts
-					// any connection, does handshake with the actual configured proxy and then
-					// forwards all following traffic.
-					return new TLSProxySelector(uri);
-				default:
-					return ProxySelector.of(socketAddressOf(uri));
-			}
-		}
-		
-		private static final class TLSProxySelector extends ProxySelector {
-			
-			private static final List<Proxy> NO_PROXY_LIST = List.of(Proxy.NO_PROXY);
-			
-			private final URI proxyUri;
-			private volatile List<Proxy> list;
-			
-			TLSProxySelector(URI proxyUri) {
-				this.proxyUri = Objects.requireNonNull(proxyUri);
-			}
-			
-			private final List<Proxy> list() {
-				List<Proxy> l;
-				if((l = list) == null) {
-					synchronized(this) {
-						if((l = list) == null) {
-							InetSocketAddress address = new InetSocketAddress(
-								InetAddress.getLoopbackAddress(),
-								Holder.OfTLSProxyBridgePool.INSTANCE.getLocalPort(proxyUri)
-							);
-							
-							list = l = List.of(new Proxy(Proxy.Type.HTTP, address));
-						}
-					}
-				}
-				
-				return l;
-			}
-			
-			@Override
-			public void connectFailed(URI uri, SocketAddress sa, IOException e) {
-				// Ignore
-			}
-			
-			@Override
-			public List<Proxy> select(URI uri) {
-				switch(uri.getScheme().toLowerCase()) {
-					case "http":
-					case "https":
-						return list();
-					default:
-						return NO_PROXY_LIST;
-				}
-			}
-		}
-	}
-	
-	/** @since 00.02.09 */
-	public static final class ProxyProviders {
-		
-		private ProxyProviders() { throw new AssertionError("No instances"); }
-		
-		public static final ProxyProvider ofGeolocation(Map<Hint.Geolocation, ProxyConfiguration> configurations) {
-			return new OfGeolocation(configurations);
-		}
-		
-		public static final ProxyProvider ofInternalPrx01() {
-			return OfInternalPrx01.INSTANCE.provider;
-		}
-		
-		private static final class OfGeolocation implements ProxyProvider {
-			
-			private final Map<Hint.Geolocation, ProxyConfiguration> configurations;
-			
-			public OfGeolocation(Map<Hint.Geolocation, ProxyConfiguration> configurations) {
-				this.configurations = Objects.requireNonNull(configurations);
-			}
-			
-			@Override
-			public ProxyConfiguration resolve(Request request) {
-				return request.hint(Hint.GEOLOCATION).map(configurations::get).orElse(null);
-			}
-		}
-		
-		private static enum OfInternalPrx01 {
-			INSTANCE(new OfGeolocation(Map.of(
-				Hint.Geolocation.CZ, configurationOf("cz"),
-				Hint.Geolocation.SK, configurationOf("sk")
-			)));
-			
-			private static final char[] PW = { 'x' };
-			private static final ProxyConfiguration configurationOf(String countryCode) {
-				URI uri = URI.create(String.format("https://%s.prx01.sune.cc", countryCode));
-				URI authUri = URI.create(String.format("https://api.prx01.sune.cc/tokens/%s", countryCode));
-				
-				return new ProxyConfiguration(
-					ProxyUtils.proxySelectorOf(uri),
-					new Prx01Authenticator(authUri)
-				);
-			}
-			
-			private final ProxyProvider provider;
-			private OfInternalPrx01(ProxyProvider p) { provider = p; }
-			
-			private static final class Prx01Authenticator extends Authenticator {
-				
-				private final URI tokenEndpointUri;
-				
-				private Prx01Authenticator(URI tokenEndpointUri) {
-					this.tokenEndpointUri = Objects.requireNonNull(tokenEndpointUri);
-				}
-				
-				private final String fetchToken() throws InterruptedException, IOException {
-					HttpResponse<InputStream> response = HttpClientHolder.INSTANCE.send(
-						HttpRequest
-							.newBuilder(tokenEndpointUri)
-							.header("User-Agent", Shared.USER_AGENT)
-							.GET().build(),
-						BodyHandlers.ofInputStream()
-					);
-					
-					try(InputStream stream = response.body()) {
-						int statusCode;
-						if((statusCode = response.statusCode()) != 200) {
-							throw new IOException("Token endpoint returned: " + statusCode);
-						}
-						
-						return JSON.read(stream).getString("token");
-					}
-				}
-				
-				@Override
-				protected PasswordAuthentication getPasswordAuthentication() {
-					if(getRequestorType() != RequestorType.PROXY) {
-						return null; // Only handle 407 status code
-					}
-					
-					try {
-						String token = fetchToken();
-						return new PasswordAuthentication(token, PW);
-					} catch(InterruptedException ex) {
-						Thread.currentThread().interrupt();
-						return null;
-					} catch(IOException ex) {
-						return null;
-					}
-				}
-				
-				private static final class HttpClientHolder {
-					
-					static final HttpClient INSTANCE = createClient();
-					
-					private static HttpClient createClient() {
-						return (
-							HttpClient.newBuilder()
-								.connectTimeout(defaultConnectTimeout)
-								.executor(Executors.newSingleThreadExecutor())
-								.sslContext(SSL.Contexts.aiaFetching())
-								.version(DEFAULT_HTTP_VERSION)
-								.followRedirects(Redirect.NEVER)
-								.build()
-						);
-					}
-				}
-			}
-		}
-	}
-	
-	/** @since 00.02.09 */
-	public static final class ProxyConfiguration {
-		
-		private final ProxySelector selector;
-		private final Authenticator authenticator;
-		
-		public ProxyConfiguration(ProxySelector selector, Authenticator authenticator) {
-			this.selector = selector;
-			this.authenticator = authenticator;
-		}
-		
-		public ProxySelector selector() { return selector; }
-		public Authenticator authenticator() { return authenticator; }
-	}
-	
-	/** @since 00.02.09 */
-	public static interface ProxyProvider {
-		
-		ProxyConfiguration resolve(Request request);
-	}
-	
-	/** @since 00.02.09 */
-	private static final class TLSProxyBridge implements AutoCloseable {
-		
-		private final ServerSocket server;
-		private final String upstreamHost;
-		private final int upstreamPort;
-		private final SSLSocketFactory sslSocketFactory;
-		
-		private final ExecutorService executor;
-		private volatile boolean running = true;
-		private Thread serverThread;
-		
-		private TLSProxyBridge(
-			String upstreamHost,
-			int upstreamPort,
-			SSLSocketFactory sslSocketFactory
-		) throws IOException {
-			this.upstreamHost = Objects.requireNonNull(upstreamHost);
-			this.upstreamPort = upstreamPort;
-			this.sslSocketFactory = Objects.requireNonNull(sslSocketFactory);
-			this.server = new ServerSocket(0, 50, InetAddress.getLoopbackAddress());
-			this.executor = Executors.newCachedThreadPool(new BridgeThreadFactory());
-		}
-		
-		public static final TLSProxyBridge of(URI uri, SSLContext sslContext) throws IOException {
-			Objects.requireNonNull(uri);
-			Objects.requireNonNull(sslContext);
-			
-			TLSProxyBridge bridge = new TLSProxyBridge(
-				uri.getHost(),
-				ProxyUtils.portOf(uri),
-				sslContext.getSocketFactory()
-			);
-			
-			bridge.start();
-			return bridge;
-		}
-		
-		private final void start() {
-			serverThread = new Thread(this::serverLoop, "Web.TLSProxyBridge.ServerThread-");
-			serverThread.setDaemon(true);
-			serverThread.start();
-		}
-		
-		private final void serverLoop() {
-			while(running) {
-				try {
-					Socket client = server.accept();
-					try {
-						executor.submit(() -> handleConnection(client));
-					} catch(RejectedExecutionException ex) {
-						close(client); // Shutting down
-					}
-				} catch(IOException ex) {
-					// Ignore
-				}
-			}
-		}
-		
-		private final void handleConnection(Socket downstream) {
-			SSLSocket upstream = null;
-			try {
-				downstream.setTcpNoDelay(true);
-				upstream = (SSLSocket) sslSocketFactory.createSocket(upstreamHost, upstreamPort);
-				
-				// Enforce hostname verification against the proxy's certificate - raw SSLSocket
-				// doesn't do this by default.
-				SSLParameters params = upstream.getSSLParameters();
-				params.setEndpointIdentificationAlgorithm("HTTPS");
-				upstream.setSSLParameters(params);
-				
-				upstream.startHandshake();
-			} catch(IOException ex) {
-				close(downstream);
-				close(upstream);
-				return; // Setup failed, exit.
-			}
-			
-			submitPump(downstream, upstream);
-			submitPump(upstream, downstream);
-		}
-		
-		private final void submitPump(Socket src, Socket dst) {
-			try {
-				executor.submit(() -> {
-					try(Socket s = src; Socket d = dst) {
-						s.getInputStream().transferTo(d.getOutputStream());
-					} catch(IOException ex) {
-						// One of the sides closed, ignore.
-					}
-				});
-			} catch(RejectedExecutionException ex) {
-				close(src);
-				close(dst);
-			}
-		}
-		
-		private final void close(Closeable closeable) {
-			if(closeable == null) return;
-			try { closeable.close(); } catch(IOException ex) {}
-		}
-		
-		@Override
-		public void close() {
-			running = false;
-			close(server);
-			executor.shutdownNow();
-			
-			if(serverThread != null) {
-				try {
-					serverThread.join(Duration.ofSeconds(5).toMillis());
-				} catch(InterruptedException ex) {
-					Thread.currentThread().interrupt();
-				}
-			}
-		}
-		
-		public int getLocalPort() {
-			return server.getLocalPort();
-		}
-		
-		private static final class BridgeThreadFactory implements ThreadFactory {
-			
-			private final String namePrefix = "Web.TLSProxyBridge.Thread-";
-			private final AtomicInteger nextId = new AtomicInteger();
-			
-			@Override
-			public Thread newThread(Runnable r) {
-				String name = namePrefix + nextId.getAndIncrement();
-				Thread thread = new Thread(null, r, name, 0, false);
-				thread.setDaemon(true);
-				return thread;
-			}
-		}
-	}
-	
-	/** @since 00.02.09 */
-	private static final class TLSProxyBridgePool implements AutoCloseable {
-		
-		private final SSLContext sslContext;
-		private final Map<Key, TLSProxyBridge> bridges = new ConcurrentHashMap<>();
-		
-		public TLSProxyBridgePool(SSLContext sslContext) {
-			this.sslContext = Objects.requireNonNull(sslContext);
-		}
-		
-		private final TLSProxyBridge createBridge(Key key) {
-			return key.createBridge(sslContext);
-		}
-		
-		@Override
-		public void close() {
-			bridges.values().forEach(TLSProxyBridge::close);
-			bridges.clear();
-		}
-		
-		public int getLocalPort(URI uri) {
-			return bridges.computeIfAbsent(Key.of(uri), this::createBridge).getLocalPort();
-		}
-		
-		private static final class Key {
-			
-			private final String key;
-			private final URI uri;
-			
-			private Key(String key, URI uri) {
-				this.key = key;
-				this.uri = uri;
-			}
-			
-			static final Key of(URI uri) {
-				return new Key(uri.getHost() + ":" + ProxyUtils.portOf(uri), uri);
-			}
-			
-			final TLSProxyBridge createBridge(SSLContext sslContext) {
-				try {
-					return TLSProxyBridge.of(uri, sslContext);
-				} catch(IOException ex) {
-					throw new UncheckedIOException(ex);
-				}
-			}
-			
-			@Override public int hashCode() { return key.hashCode(); }
-			@Override public boolean equals(Object o) { return o instanceof Key && key.equals(((Key) o).key); }
 		}
 	}
 }

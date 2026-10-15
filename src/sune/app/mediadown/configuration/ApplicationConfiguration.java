@@ -15,11 +15,13 @@ import sune.app.mediadown.Defaults;
 import sune.app.mediadown.MediaDownloader;
 import sune.app.mediadown.conversion.ConversionProvider;
 import sune.app.mediadown.conversion.Conversions;
+import sune.app.mediadown.entity.ProxyProvider;
 import sune.app.mediadown.language.Language;
 import sune.app.mediadown.media.MediaFormat;
 import sune.app.mediadown.media.MediaTitleFormat;
 import sune.app.mediadown.media.MediaTitleFormats;
 import sune.app.mediadown.media.MediaTitleFormats.NamedMediaTitleFormat;
+import sune.app.mediadown.net.Transport.ProxyManager;
 import sune.app.mediadown.net.Web;
 import sune.app.mediadown.resource.ResourceRegistry;
 import sune.app.mediadown.theme.Theme;
@@ -27,6 +29,7 @@ import sune.app.mediadown.update.Channel;
 import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.Utils.Ignore;
 import sune.util.ssdf2.SSDCollection;
+import sune.util.ssdf2.SSDObject;
 
 /** @since 00.02.04 */
 public class ApplicationConfiguration extends Configuration implements ApplicationConfigurationAccessor {
@@ -70,11 +73,20 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 	private Channel update_channel;
 	/** @since 00.02.09 */
 	private List<String> update_registries;
+	/** @since 00.02.09 */
+	private ProxyProvider.Factory proxy_providerFactory;
 	
 	private ApplicationConfiguration(Path path, String name, SSDCollection data, Map<String, ConfigurationProperty<?>> properties) {
 		super(name, data, properties);
 		this.path = Objects.requireNonNull(path);
 		this.loadFields();
+	}
+	
+	private static final SSDCollection ofObject(Object... args) {
+		if((args.length & 1) != 0) throw new IllegalArgumentException("Odd number of args");
+		SSDCollection object = SSDCollection.empty();
+		for(int i = 0, l = args.length; i < l; i += 2) object.set(String.valueOf(args[i]), SSDObject.of(args[i + 1]));
+		return object;
 	}
 	
 	public static final ApplicationConfiguration.Builder builder(Path path) {
@@ -198,6 +210,24 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 		builder.addProperty(ConfigurationProperty.ofString(PROPERTY_REPORT_EMAIL)
 			.inGroup(GROUP_OTHER));
 		
+		// ----- Proxy
+		builder.addProperty(ConfigurationProperty.ofObjectType(PROPERTY_PROXY_PROVIDER_FACTORY, ProxyProvider.Factory.class)
+			.withFactory(
+				() -> ProxyManager.factories().stream()
+						.map((f) -> ofObject("name", f.name()))
+						.collect(Collectors.toList()),
+				(l, v) -> {
+					String n = v.getDirectString("name");
+					return l.stream().anyMatch((i) -> n.equals(i.getDirectString("name", null)));
+				}
+			)
+			.withTransformer(
+				(f) -> ofObject("name", f.name()),
+				(n) -> ProxyManager.factory(n.getDirectString("name"))
+			)
+			.inGroup(GROUP_PROXY)
+			.withDefaultValue(ofObject("name", "none")));
+		
 		return builder;
 	}
 	
@@ -247,6 +277,10 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 		update_registries = arrayValue(PROPERTY_UPDATE_REGISTRIES).values().stream()
 			.map(String::valueOf)
 			.collect(Collectors.toList());
+		proxy_providerFactory = ProxyManager.factory(
+			objectTypeValue(PROPERTY_PROXY_PROVIDER_FACTORY)
+				.getDirectString("name", null)
+		);
 	}
 	
 	/** @since 00.02.07 */
@@ -381,6 +415,12 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 	/** @since 00.02.09 */
 	public List<String> updateRegistries() {
 		return update_registries;
+	}
+	
+	/** @since 00.02.09 */
+	@Override
+	public ProxyProvider.Factory proxyProviderFactory() {
+		return proxy_providerFactory;
 	}
 	
 	public static final class Builder extends Configuration.Builder implements ApplicationConfigurationAccessor {
@@ -526,6 +566,16 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 			return accessor().arrayValue(PROPERTY_UPDATE_REGISTRIES).values().stream()
 						.map(String::valueOf)
 						.collect(Collectors.toList());
+		}
+		
+		/** @since 00.02.09 */
+		@Override
+		public ProxyProvider.Factory proxyProviderFactory() {
+			return ProxyManager.factory(
+				accessor()
+					.objectTypeValue(PROPERTY_PROXY_PROVIDER_FACTORY)
+					.getDirectString("name", null)
+			);
 		}
 		
 		@Override

@@ -4,6 +4,7 @@ import java.nio.file.Path;
 import java.util.List;
 
 import sune.app.mediadown.conversion.ConversionProvider;
+import sune.app.mediadown.entity.ProxyProvider;
 import sune.app.mediadown.language.Language;
 import sune.app.mediadown.media.MediaFormat;
 import sune.app.mediadown.media.MediaTitleFormat;
@@ -29,6 +30,8 @@ public interface ApplicationConfigurationAccessor extends ConfigurationLocatable
 	public static final String GROUP_NAMING = "naming";
 	/** @since 00.02.07 */
 	public static final String GROUP_OTHER = "other";
+	/** @since 00.02.09 */
+	public static final String GROUP_PROXY = "proxy";
 	
 	// ----- Names of configuration properties
 	public static final String PROPERTY_LANGUAGE = "language";
@@ -66,6 +69,8 @@ public interface ApplicationConfigurationAccessor extends ConfigurationLocatable
 	public static final String PROPERTY_UPDATE_CHANNEL = "update.channel";
 	/** @since 00.02.09 */
 	public static final String PROPERTY_UPDATE_REGISTRIES = "update.registries";
+	/** @since 00.02.09 */
+	public static final String PROPERTY_PROXY_PROVIDER_FACTORY = "proxy.providerFactory";
 	
 	Language language();
 	Theme theme();
@@ -102,6 +107,8 @@ public interface ApplicationConfigurationAccessor extends ConfigurationLocatable
 	Channel updateChannel();
 	/** @since 00.02.09 */
 	List<String> updateRegistries();
+	/** @since 00.02.09 */
+	ProxyProvider.Factory proxyProviderFactory();
 	
 	SSDCollection data();
 }
