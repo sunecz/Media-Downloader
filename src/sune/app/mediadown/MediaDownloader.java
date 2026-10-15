@@ -52,6 +52,7 @@ import sune.app.mediadown.configuration.ApplicationConfigurationAccessor;
 import sune.app.mediadown.configuration.Configuration;
 import sune.app.mediadown.conversion.ConversionProvider;
 import sune.app.mediadown.conversion.Conversions;
+import sune.app.mediadown.entity.ProxyProvider;
 import sune.app.mediadown.entity.ProxyProvider.Factory;
 import sune.app.mediadown.event.DownloadEvent;
 import sune.app.mediadown.event.LibraryEvent;
@@ -59,7 +60,11 @@ import sune.app.mediadown.event.PluginLoaderEvent;
 import sune.app.mediadown.event.tracker.TrackerManager;
 import sune.app.mediadown.exception.TranslatableException;
 import sune.app.mediadown.gui.Dialog;
+import sune.app.mediadown.gui.GUI.CredentialsRegistry;
+import sune.app.mediadown.gui.GUI.CredentialsRegistry.CredentialsEntry;
 import sune.app.mediadown.gui.Window;
+import sune.app.mediadown.gui.configuration.ProxyProviderFormFieldSupplier;
+import sune.app.mediadown.gui.configuration.ProxyProviderGUIRegistry;
 import sune.app.mediadown.gui.form.field.PasswordField;
 import sune.app.mediadown.gui.form.field.SelectLanguageField;
 import sune.app.mediadown.gui.form.field.SelectMediaTitleFormatField;
@@ -1894,6 +1899,7 @@ public final class MediaDownloader {
 			addIcon("automatic.png", false);
 			addIcon("show.png", false);
 			addIcon("hide.png", false);
+			addIcon("credentials.png", false);
 		}
 		
 		private static final <T> List<String> extract(ResourceNamedRegistry<T> registry, String prefix, String suffix,
@@ -2111,6 +2117,18 @@ public final class MediaDownloader {
 	
 	/** @since 00.02.09 */
 	private static final void initGUIDefaults() throws ClassNotFoundException {
+		// <---- Credentials GUI
+		CredentialsRegistry.registerEntry(CredentialsEntry.of(
+			"proxy/default",
+			translation().getSingle("credentials.entry.proxy_default.title"),
+			() -> ICON
+		));
+		// Credentials GUI ---->
+		
+		// <---- Proxy GUI providers
+		ProxyProviderGUIRegistry.register("sune.app.mediadown.gui.builtin.GlobalProxyProviderGUI$Factory");
+		// Proxy GUI providers ---->
+		
 		// <---- Configuration window
 		// Ensure that main groups are in a specific order
 		predefineGroups(
@@ -2146,6 +2164,7 @@ public final class MediaDownloader {
 				)
 			)
 		)));
+		registerFormField(isOfTypeClass(ProxyProvider.Factory.class, new ProxyProviderFormFieldSupplier()));
 		// Configuration window ---->
 	}
 	

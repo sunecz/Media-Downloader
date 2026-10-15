@@ -321,6 +321,7 @@
 				update:     "Updates",
 				download:   "Download",
 				conversion: "Conversion",
+				proxy:      "Proxy",
 				naming:     "Naming",
 				plugins:    "Plugins",
 				other:      "Other"
@@ -342,6 +343,9 @@
 				update: {
 					channel:    "Update channel",
 					registries: "Update sources"
+				},
+				proxy: {
+					providerFactory: "Proxy provider"
 				},
 				plugins: {
 					autoUpdateCheck: "Automatic plugin updates"
@@ -373,6 +377,13 @@
 				},
 				conversionProvider: {
 					ffmpeg: "FFmpeg"
+				},
+				proxy: {
+					providerFactory: {
+						none:     "None",
+						global:   "Global",
+						internal: "Internal"
+					}
 				}
 			}
 		},
@@ -599,6 +610,11 @@
 					email:    "Email",
 					password: "Password"
 				}
+			}
+		},
+		entry: {
+			proxy_default: {
+				title: "Proxy"
 			}
 		}
 	}

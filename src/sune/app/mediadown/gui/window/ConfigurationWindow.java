@@ -38,7 +38,9 @@ import sune.app.mediadown.configuration.ApplicationConfigurationAccessor;
 import sune.app.mediadown.configuration.Configuration;
 import sune.app.mediadown.configuration.Configuration.ConfigurationProperty;
 import sune.app.mediadown.configuration.Configuration.ConfigurationPropertyType;
+import sune.app.mediadown.configuration.Configuration.NullObjectTypeConfigurationProperty;
 import sune.app.mediadown.configuration.Configuration.NullTypeConfigurationProperty;
+import sune.app.mediadown.configuration.Configuration.ObjectTypeConfigurationProperty;
 import sune.app.mediadown.configuration.Configuration.TypeConfigurationProperty;
 import sune.app.mediadown.configuration.ConfigurationReloadable;
 import sune.app.mediadown.gui.Dialog;
@@ -170,8 +172,8 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 			ConfigurationProperty<?> property = fieldProperty.property();
 			ConfigurationPropertyType type = property.type();
 			
-			if(type == ConfigurationPropertyType.ARRAY || type == ConfigurationPropertyType.OBJECT)
-				return null; // No fields for containers
+			if(type == ConfigurationPropertyType.ARRAY)
+				return null; // No fields for arrays
 			
 			if(type == ConfigurationPropertyType.STRING
 					// Must use instanceof since no isTyped()-like method exists
@@ -179,6 +181,20 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 				Class<?> typeClass = (
 					property instanceof TypeConfigurationProperty     ? ((TypeConfigurationProperty<?>)     property).typeClass() :
 					property instanceof NullTypeConfigurationProperty ? ((NullTypeConfigurationProperty<?>) property).typeClass() :
+					null
+				);
+				
+				if(typeClass == targetTypeClass) {
+					return supplier;
+				}
+			}
+			
+			if(type == ConfigurationPropertyType.OBJECT
+					// Must use instanceof since no isTyped()-like method exists
+					&& (property instanceof ObjectTypeConfigurationProperty || property instanceof NullObjectTypeConfigurationProperty)) {
+				Class<?> typeClass = (
+					property instanceof ObjectTypeConfigurationProperty     ? ((ObjectTypeConfigurationProperty<?>)     property).typeClass() :
+					property instanceof NullObjectTypeConfigurationProperty ? ((NullObjectTypeConfigurationProperty<?>) property).typeClass() :
 					null
 				);
 				

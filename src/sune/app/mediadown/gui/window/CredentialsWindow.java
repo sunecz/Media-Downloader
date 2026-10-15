@@ -105,15 +105,13 @@ public class CredentialsWindow extends DraggableWindow<VBox> {
 		return row;
 	}
 	
-	private final void editSelectedCredentials() {
-		CredentialsEntryItem item = table.getSelectionModel().getSelectedItem();
-		
-		if(item == null) {
+	private final void editCredentials(CredentialsEntry entry) {
+		if(entry == null) {
 			return;
 		}
 		
 		CredentialsEditDialogWindow window = MediaDownloader.window(CredentialsEditDialogWindow.NAME);
-		Credentials credentials = window.showAndGet(this, item.entry());
+		Credentials credentials = window.showAndGet(this, entry);
 		
 		if(credentials == null) {
 			return; // Cancelled
@@ -121,10 +119,20 @@ public class CredentialsWindow extends DraggableWindow<VBox> {
 		
 		try {
 			CredentialsManager cm = CredentialsManager.instance();
-			cm.set(item.entry().name(), credentials);
+			cm.set(entry.name(), credentials);
 		} catch(IOException ex) {
 			MediaDownloader.error(ex);
 		}
+	}
+	
+	private final void editSelectedCredentials() {
+		CredentialsEntryItem item = table.getSelectionModel().getSelectedItem();
+		
+		if(item == null) {
+			return;
+		}
+		
+		editCredentials(item.entry());
 	}
 	
 	private static final TableColumn<CredentialsEntryItem, String> columnIcon(String title) {

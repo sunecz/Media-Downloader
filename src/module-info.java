@@ -32,7 +32,9 @@ module sune.app.mediadown {
 	exports sune.app.mediadown.exception;
 	exports sune.app.mediadown.ffmpeg;
 	exports sune.app.mediadown.gui;
+	exports sune.app.mediadown.gui.builtin;
 	exports sune.app.mediadown.gui.clipboard;
+	exports sune.app.mediadown.gui.configuration;
 	exports sune.app.mediadown.gui.control;
 	exports sune.app.mediadown.gui.form;
 	exports sune.app.mediadown.gui.form.field;

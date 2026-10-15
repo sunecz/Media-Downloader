@@ -11,6 +11,7 @@ import sune.app.mediadown.gui.form.Form;
 import sune.app.mediadown.gui.form.FormField;
 import sune.app.mediadown.gui.form.FormFieldType;
 import sune.app.mediadown.util.Utils;
+import sune.util.ssdf2.SSDCollection;
 import sune.util.ssdf2.SSDNode;
 import sune.util.ssdf2.SSDObject;
 
@@ -31,6 +32,11 @@ public class TranslatableSelectField<T, V> extends FormField<T> {
 		this.transformer = Objects.requireNonNull(transformer);
 	}
 	
+	/** @since 00.02.09 */
+	public ComboBox<V> control() {
+		return control;
+	}
+	
 	@Override
 	public Node render(Form form) {
 		return control;
@@ -38,12 +44,17 @@ public class TranslatableSelectField<T, V> extends FormField<T> {
 	
 	@Override
 	public void value(SSDNode node) {
-		String string = Utils.removeStringQuotes(((SSDObject) node).getFormattedValue().stringValue());
+		String string;
+		if(node instanceof SSDCollection) {
+			string = ((SSDCollection) node).getDirectString("name", null);
+		} else {
+			string = Utils.removeStringQuotes(((SSDObject) node).getFormattedValue().stringValue());
+		}
 		control.getSelectionModel().select(transformer.value(string));
 	}
 	
 	@Override
-	public Object value() {
+	public String value() {
 		return transformer.string(Utils.cast(control.getSelectionModel().getSelectedItem()));
 	}
 	

@@ -1,6 +1,7 @@
 package sune.app.mediadown.gui;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -115,7 +116,11 @@ public final class GUI {
 		}
 		
 		public static final Collection<CredentialsEntry> entries() {
-			return entries.values();
+			return Collections.unmodifiableCollection(entries.values());
+		}
+		
+		public static final CredentialsEntry entry(String name) {
+			return entries.get(Objects.requireNonNull(name));
 		}
 		
 		public static abstract class CredentialsType<T extends Credentials> {

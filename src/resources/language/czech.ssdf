@@ -321,6 +321,7 @@
 				update:     "Aktualizace",
 				download:   "Stahování",
 				conversion: "Konverze",
+				proxy:      "Proxy",
 				naming:     "Pojmenování",
 				plugins:    "Pluginy",
 				other:      "Ostatní"
@@ -342,6 +343,9 @@
 				update: {
 					channel:    "Kanál aktualizací",
 					registries: "Zdroje aktualizací"
+				},
+				proxy: {
+					providerFactory: "Poskytovatel proxy"
 				},
 				plugins: {
 					autoUpdateCheck: "Automatická aktualizace pluginů"
@@ -373,6 +377,13 @@
 				},
 				conversionProvider: {
 					ffmpeg: "FFmpeg"
+				},
+				proxy: {
+					providerFactory: {
+						none:     "None",
+						global:   "Global",
+						internal: "Internal"
+					}
 				}
 			}
 		},
@@ -599,6 +610,11 @@
 					email:    "Email",
 					password: "Heslo"
 				}
+			}
+		},
+		entry: {
+			proxy_default: {
+				title: "Proxy"
 			}
 		}
 	}
