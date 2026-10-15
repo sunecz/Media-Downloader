@@ -408,11 +408,13 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 	}
 	
 	/** @since 00.02.09 */
+	@Override
 	public Channel updateChannel() {
 		return update_channel;
 	}
 	
 	/** @since 00.02.09 */
+	@Override
 	public List<String> updateRegistries() {
 		return update_registries;
 	}
@@ -557,11 +559,13 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 		}
 		
 		/** @since 00.02.09 */
+		@Override
 		public Channel updateChannel() {
 			return Channel.valueOf(accessor().stringValue(PROPERTY_UPDATE_CHANNEL));
 		}
 		
 		/** @since 00.02.09 */
+		@Override
 		public List<String> updateRegistries() {
 			return accessor().arrayValue(PROPERTY_UPDATE_REGISTRIES).values().stream()
 						.map(String::valueOf)

@@ -2146,7 +2146,7 @@ public final class MediaDownloader {
 				)
 			)
 		)));
-		// Configuration ---->
+		// Configuration window ---->
 	}
 	
 	/** @since 00.02.09 */

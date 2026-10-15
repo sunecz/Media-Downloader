@@ -354,7 +354,7 @@ public final class Web {
 				Version version = response.version();
 				
 				if(version != DEFAULT_HTTP_VERSION
-						|| (targetVersion != null && !targetVersion.equals(version))) {
+						|| (targetVersion != null && targetVersion != version)) {
 					Internal.setHttpVersion(request, version);
 				}
 				
@@ -842,7 +842,6 @@ public final class Web {
 				this.uri = Objects.requireNonNull(uri);
 				headers = new HashMap<>();
 				cookies = new ArrayList<>();
-				followRedirects = Redirect.NORMAL;
 			}
 			
 			private Builder(Request request) {
@@ -882,7 +881,7 @@ public final class Web {
 				}
 				
 				if(followRedirects == null) {
-					followRedirects = Redirect.NEVER;
+					followRedirects = Redirect.NORMAL;
 				}
 				
 				if(timeout == null || timeout.isNegative()) {
