@@ -345,7 +345,8 @@
 					registries: "Zdroje aktualizací"
 				},
 				proxy: {
-					providerFactory: "Poskytovatel proxy"
+					providerFactory: "Poskytovatel proxy",
+					allowFallback:   "Povolit připojení bez proxy"
 				},
 				plugins: {
 					autoUpdateCheck: "Automatická aktualizace pluginů"

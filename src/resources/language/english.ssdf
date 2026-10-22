@@ -345,7 +345,8 @@
 					registries: "Update sources"
 				},
 				proxy: {
-					providerFactory: "Proxy provider"
+					providerFactory: "Proxy provider",
+					allowFallback:   "Allow connecting without proxy"
 				},
 				plugins: {
 					autoUpdateCheck: "Automatic plugin updates"

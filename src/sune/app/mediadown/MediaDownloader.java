@@ -1307,6 +1307,7 @@ public final class MediaDownloader {
 		// Set configuration-dependant values early
 		Web.defaultConnectTimeout(Duration.ofMillis(configuration.requestConnectTimeout()));
 		Web.defaultReadTimeout(Duration.ofMillis(configuration.requestReadTimeout()));
+		Web.fallbackToDefaultClient(configuration.proxyAllowFallback());
 	}
 	
 	/** @since 00.02.09 */
@@ -2573,6 +2574,8 @@ public final class MediaDownloader {
 		@Override public List<String> updateRegistries() { return accessor().updateRegistries(); }
 		/** @since 00.02.09 */
 		@Override public Factory proxyProviderFactory() { return accessor().proxyProviderFactory(); }
+		/** @since 00.02.09 */
+		@Override public boolean proxyAllowFallback() { return accessor().proxyAllowFallback(); }
 		@Override public SSDCollection data() { return accessor().data(); }
 		/** @since 00.02.07 */
 		@Override public boolean reload() { return accessor().reload(); }

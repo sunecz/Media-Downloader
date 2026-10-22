@@ -74,6 +74,8 @@ public final class Web {
 	
 	private static volatile Duration defaultConnectTimeout = Duration.ofMillis(5000);
 	private static volatile Duration defaultReadTimeout = Duration.ofMillis(20000);
+	/** @since 00.02.09 */
+	private static volatile boolean fallbackToDefaultClient = true;
 	
 	/** @since 00.02.09 */
 	public static final long UNKNOWN_SIZE = -1L;
@@ -382,6 +384,7 @@ public final class Web {
 				
 				// Proxy refused the request, fallback to the default client (without the proxy)
 				if(isProxyErrorResponse(response)
+						&& fallbackToDefaultClient
 						&& client != (defaultClient = defaultHttpClientFor(request))) {
 					response.close(); // Release the connection
 					client = defaultClient;
@@ -404,6 +407,7 @@ public final class Web {
 				
 				// Proxy refused the tunnel, fallback to the default client (without the proxy)
 				if(isProxyTunnelError(cause)
+						&& fallbackToDefaultClient
 						&& client != (defaultClient = defaultHttpClientFor(request))) {
 					client = defaultClient;
 					retryInternalAttempt = 0;
@@ -474,6 +478,16 @@ public final class Web {
 	/** @since 00.02.09 */
 	public static final Version defaultHttpVersion() {
 		return DEFAULT_HTTP_VERSION;
+	}
+	
+	/** @since 00.02.09 */
+	public static final boolean fallbackToDefaultClient() {
+		return fallbackToDefaultClient;
+	}
+	
+	/** @since 00.02.09 */
+	public static final void fallbackToDefaultClient(boolean fallback) {
+		fallbackToDefaultClient = fallback;
 	}
 	
 	public static final CookieManager cookieManager() {
@@ -555,6 +569,7 @@ public final class Web {
 				
 				// Proxy refused the tunnel, fallback to the default client (without the proxy)
 				if(isProxyTunnelError(cause)
+						&& fallbackToDefaultClient
 						&& client != (defaultClient = defaultHttpClientFor(request))) {
 					client = defaultClient;
 					retryInternalAttempt = 0;

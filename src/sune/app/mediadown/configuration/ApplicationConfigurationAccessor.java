@@ -71,6 +71,8 @@ public interface ApplicationConfigurationAccessor extends ConfigurationLocatable
 	public static final String PROPERTY_UPDATE_REGISTRIES = "update.registries";
 	/** @since 00.02.09 */
 	public static final String PROPERTY_PROXY_PROVIDER_FACTORY = "proxy.providerFactory";
+	/** @since 00.02.09 */
+	public static final String PROPERTY_PROXY_ALLOW_FALLBACK = "proxy.allowFallback";
 	
 	Language language();
 	Theme theme();
@@ -109,6 +111,8 @@ public interface ApplicationConfigurationAccessor extends ConfigurationLocatable
 	List<String> updateRegistries();
 	/** @since 00.02.09 */
 	ProxyProvider.Factory proxyProviderFactory();
+	/** @since 00.02.09 */
+	boolean proxyAllowFallback();
 	
 	SSDCollection data();
 }

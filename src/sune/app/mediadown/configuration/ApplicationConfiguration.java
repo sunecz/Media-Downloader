@@ -75,6 +75,8 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 	private List<String> update_registries;
 	/** @since 00.02.09 */
 	private ProxyProvider.Factory proxy_providerFactory;
+	/** @since 00.02.09 */
+	private boolean proxy_allowFallback;
 	
 	private ApplicationConfiguration(Path path, String name, SSDCollection data, Map<String, ConfigurationProperty<?>> properties) {
 		super(name, data, properties);
@@ -227,6 +229,9 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 			)
 			.inGroup(GROUP_PROXY)
 			.withDefaultValue(ofObject("name", "none")));
+		builder.addProperty(ConfigurationProperty.ofBoolean(PROPERTY_PROXY_ALLOW_FALLBACK)
+			.inGroup(GROUP_PROXY)
+			.withDefaultValue(true));
 		
 		return builder;
 	}
@@ -281,6 +286,7 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 			objectTypeValue(PROPERTY_PROXY_PROVIDER_FACTORY)
 				.getDirectString("name", null)
 		);
+		proxy_allowFallback = booleanValue(PROPERTY_PROXY_ALLOW_FALLBACK);
 	}
 	
 	/** @since 00.02.07 */
@@ -423,6 +429,12 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 	@Override
 	public ProxyProvider.Factory proxyProviderFactory() {
 		return proxy_providerFactory;
+	}
+	
+	/** @since 00.02.09 */
+	@Override
+	public boolean proxyAllowFallback() {
+		return proxy_allowFallback;
 	}
 	
 	public static final class Builder extends Configuration.Builder implements ApplicationConfigurationAccessor {
@@ -580,6 +592,12 @@ public class ApplicationConfiguration extends Configuration implements Applicati
 					.objectTypeValue(PROPERTY_PROXY_PROVIDER_FACTORY)
 					.getDirectString("name", null)
 			);
+		}
+		
+		/** @since 00.02.09 */
+		@Override
+		public boolean proxyAllowFallback() {
+			return accessor().booleanValue(PROPERTY_PROXY_ALLOW_FALLBACK);
 		}
 		
 		@Override
