@@ -362,8 +362,11 @@ public final class Web {
 	
 	/** @since 00.02.09 */
 	private static final <T, R extends Response> R doRequest(
-			Request request, BiFunction<Request, HttpResponse<T>, R> constructor, BodyHandler<T> handler,
-			int retryInternalAttempt, int retryExternalAttempt
+		Request request,
+		BiFunction<Request, HttpResponse<T>, R> constructor,
+		BodyHandler<T> handler,
+		int retryInternalAttempt,
+		int retryExternalAttempt
 	) throws Exception {
 		HttpClient client = httpClientFor(request);
 		HttpClient defaultClient;
@@ -440,7 +443,9 @@ public final class Web {
 	}
 	
 	private static final <T, R extends Response> R doRequest(
-			Request request, BiFunction<Request, HttpResponse<T>, R> constructor, BodyHandler<T> handler
+		Request request,
+		BiFunction<Request, HttpResponse<T>, R> constructor,
+		BodyHandler<T> handler
 	) throws Exception {
 		return doRequest(request, constructor, handler, 0, 0);
 	}
@@ -528,13 +533,72 @@ public final class Web {
 	}
 	
 	/** @since 00.02.09 */
-	public static final WebSocket newWebSocket(Request request, WebSocket.Listener listener) {
-		return (
-			httpClientFor(request)
-				.newWebSocketBuilder()
-				.buildAsync(request.uri(), listener)
-				.join()
-		);
+	private static final WebSocket newWebSocket(
+		Request request,
+		WebSocket.Listener listener,
+		int retryInternalAttempt,
+		int retryExternalAttempt
+	) throws Exception {
+		HttpClient client = httpClientFor(request);
+		HttpClient defaultClient;
+		
+		do {
+			try {
+				return (
+					client
+						.newWebSocketBuilder()
+						.buildAsync(request.uri(), listener)
+						.get(request.timeout().toNanos(), TimeUnit.NANOSECONDS)
+				);
+			} catch(ExecutionException ex) {
+				Throwable cause = ex.getCause();
+				
+				// Proxy refused the tunnel, fallback to the default client (without the proxy)
+				if(isProxyTunnelError(cause)
+						&& client != (defaultClient = defaultHttpClientFor(request))) {
+					client = defaultClient;
+					retryInternalAttempt = 0;
+					retryExternalAttempt = 0;
+					continue; // Retry the request
+				}
+				
+				// Handle HTTP/2 GOAWAY and other causes internally
+				if(isInternallyRetryableError(cause)) {
+					if(retryInternalAttempt++ >= INTERNAL_RETRY_MAX_ATTEMPT) {
+						throw ex; // Propagate
+					}
+					
+					waitInternalRetry(retryInternalAttempt); // Wait a little
+					continue; // Retry the request
+				}
+				
+				// Allow retries when the request times out
+				if(isExternallyRetryableError(cause)) {
+					if(retryExternalAttempt++ >= request.retry()) {
+						throw ex; // Propagate
+					}
+					
+					continue; // Retry the request
+				}
+				
+				throw ex; // Propagate
+			} catch(TimeoutException ex) {
+				// Allow retries when the request times out
+				if(retryExternalAttempt++ >= request.retry()) {
+					throw ex; // Propagate
+				}
+				
+				continue; // Retry the request
+			}
+		} while(true);
+	}
+	
+	/** @since 00.02.09 */
+	public static final WebSocket newWebSocket(
+		Request request,
+		WebSocket.Listener listener
+	) throws Exception {
+		return newWebSocket(request, listener, 0, 0);
 	}
 	
 	/** @since 00.02.09 */
