@@ -171,6 +171,10 @@ public final class Web {
 			return clients.computeIfAbsent(Key.of(request), Key::createClient);
 		}
 		
+		public HttpClient defaultHttpClientFor(Request request) {
+			return clients.computeIfAbsent(Key.RedirectOnly.of(request.followRedirects()), Key::createClient);
+		}
+		
 		public void close() {
 			clients.clear();
 		}
@@ -282,6 +286,11 @@ public final class Web {
 	}
 	
 	/** @since 00.02.09 */
+	private static final HttpClient defaultHttpClientFor(Request request) {
+		return Holder.OfClient.INSTANCE.defaultHttpClientFor(request);
+	}
+	
+	/** @since 00.02.09 */
 	private static final boolean isInternallyRetryableError(Throwable cause) {
 		if(!(cause instanceof IOException)) {
 			return false;
@@ -297,6 +306,21 @@ public final class Web {
 			L10N.Errors.ofNeutral().anyContains(message, "WEBINTERNALRETRY")
 				|| L10N.Errors.ofOS().anyEquals(message, "WSAECONNRESET")
 		);
+	}
+	
+	/** @since 00.02.09 */
+	private static final boolean isProxyErrorResponse(Response response) {
+		return response.headers().allValues("proxy-status").stream().anyMatch((v) -> v.contains("error="));
+	}
+	
+	/** @since 00.02.09 */
+	private static final boolean isProxyTunnelError(Throwable cause) {
+		if(!(cause instanceof IOException)) {
+			return false;
+		}
+		
+		String message = L10N.messageOf(cause);
+		return message != null && L10N.Errors.ofNeutral().anyContains(message, "WEBPROXYTUNNEL");
 	}
 	
 	/** @since 00.02.09 */
@@ -341,14 +365,27 @@ public final class Web {
 			Request request, BiFunction<Request, HttpResponse<T>, R> constructor, BodyHandler<T> handler,
 			int retryInternalAttempt, int retryExternalAttempt
 	) throws Exception {
+		HttpClient client = httpClientFor(request);
+		HttpClient defaultClient;
+		
 		do {
 			try {
 				R response = constructor.apply(
 					request,
-					httpClientFor(request)
+					client
 						.sendAsync(toHttpRequest(request), handler)
 						.get(request.timeout().toNanos(), TimeUnit.NANOSECONDS)
 				);
+				
+				// Proxy refused the request, fallback to the default client (without the proxy)
+				if(isProxyErrorResponse(response)
+						&& client != (defaultClient = defaultHttpClientFor(request))) {
+					response.close(); // Release the connection
+					client = defaultClient;
+					retryInternalAttempt = 0;
+					retryExternalAttempt = 0;
+					continue; // Retry the request
+				}
 				
 				Version targetVersion = request.version();
 				Version version = response.version();
@@ -361,6 +398,15 @@ public final class Web {
 				return response;
 			} catch(ExecutionException ex) {
 				Throwable cause = ex.getCause();
+				
+				// Proxy refused the tunnel, fallback to the default client (without the proxy)
+				if(isProxyTunnelError(cause)
+						&& client != (defaultClient = defaultHttpClientFor(request))) {
+					client = defaultClient;
+					retryInternalAttempt = 0;
+					retryExternalAttempt = 0;
+					continue; // Retry the request
+				}
 				
 				// Handle HTTP/2 GOAWAY and other causes internally
 				if(isInternallyRetryableError(cause)) {

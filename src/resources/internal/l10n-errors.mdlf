@@ -6,6 +6,9 @@ en|eof reached while reading
 en|an existing connection was forcibly closed
 en|connection reset
 
+#name=any:WEBPROXYTUNNEL,fallback=en
+en|tunnel failed
+
 #name=windows:WSAECONNRESET,fallback=en
 ar|تم إنهاء الاتصال الموجود بالقوة بواسطة المضيف البعيد
 cs|stávající připojení bylo vynuceně ukončeno vzdáleným hostitelem
