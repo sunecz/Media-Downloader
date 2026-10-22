@@ -72,8 +72,8 @@ public final class Web {
 	/** @since 00.02.09 */
 	private static final Version DEFAULT_HTTP_VERSION = Version.HTTP_2;
 	
-	private static Duration defaultConnectTimeout = Duration.ofMillis(5000);
-	private static Duration defaultReadTimeout = Duration.ofMillis(20000);
+	private static volatile Duration defaultConnectTimeout = Duration.ofMillis(5000);
+	private static volatile Duration defaultReadTimeout = Duration.ofMillis(20000);
 	
 	/** @since 00.02.09 */
 	public static final long UNKNOWN_SIZE = -1L;
