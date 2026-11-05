@@ -1,0 +1,47 @@
+/* Application-owned chrome also supports themes extracted by older clients. */
+#window-about #label-description {
+    -fx-fill: -fx-text-base-color;
+}
+
+.draggable-window-pane:maximized {
+    -fx-padding: 0;
+    -fx-background-insets: 0;
+}
+
+#pane-header {
+    -fx-background-color: -fx-base-top;
+}
+
+#pane-header .window-control {
+    -fx-padding: 0;
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+}
+
+#pane-header .window-control #button-cross {
+    -fx-fill: transparent;
+    -fx-stroke-width: 1;
+}
+
+#pane-header .window-control:hover {
+    -fx-background-color: derive(-fx-base, 15%);
+}
+
+#pane-header .window-control:pressed {
+    -fx-background-color: derive(-fx-base, 5%);
+}
+
+.menu-bar {
+    -fx-background-color: -fx-base-top;
+}
+
+.menu-bar > .container > .menu-button > .label {
+    -fx-text-fill: -fx-text-base-color;
+}
+
+.menu-bar > .container > .menu-button:hover > .label,
+.menu-bar > .container > .menu-button:focused > .label,
+.menu-bar > .container > .menu-button:showing > .label {
+    -fx-text-fill: white;
+}
