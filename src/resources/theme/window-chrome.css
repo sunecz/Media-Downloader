@@ -1,0 +1,108 @@
+/* Application-owned chrome also supports themes extracted by older clients. */
+.button,
+.toggle-button,
+.menu-button,
+.split-menu-button,
+.menu-item,
+.hyperlink,
+.check-box,
+.radio-button,
+.combo-box-base,
+.scroll-bar,
+.scroll-bar > .thumb,
+.scroll-bar > .track,
+.scroll-bar > .increment-button,
+.scroll-bar > .decrement-button,
+.list-cell:filled,
+.table-row-cell:filled,
+.table-row-cell:filled > .table-cell,
+.tree-cell:filled,
+.tree-table-row-cell:filled,
+.tree-table-row-cell:filled > .tree-table-cell,
+.tab-pane > .tab-header-area > .headers-region > .tab {
+    -fx-cursor: hand;
+}
+
+.button:disabled,
+.toggle-button:disabled,
+.menu-button:disabled,
+.split-menu-button:disabled,
+.menu-item:disabled,
+.hyperlink:disabled,
+.check-box:disabled,
+.radio-button:disabled,
+.combo-box-base:disabled,
+.scroll-bar:disabled,
+.scroll-bar:disabled > *,
+.list-cell:disabled,
+.list-cell:empty,
+.table-row-cell:disabled,
+.table-row-cell:disabled > .table-cell,
+.table-row-cell:empty,
+.table-row-cell:empty > .table-cell,
+.tree-cell:disabled,
+.tree-cell:empty,
+.tree-table-row-cell:disabled,
+.tree-table-row-cell:disabled > .tree-table-cell,
+.tree-table-row-cell:empty,
+.tree-table-row-cell:empty > .tree-table-cell,
+.tab-pane > .tab-header-area > .headers-region > .tab:disabled {
+    -fx-cursor: default;
+}
+
+.native-window-pane {
+    -fx-padding: 0;
+    -fx-background-insets: 0;
+}
+
+.native-window-pane > #pane-wrapper {
+    -fx-border-width: 0;
+    -fx-effect: null;
+}
+
+#window-about #label-description {
+    -fx-fill: -fx-text-base-color;
+}
+
+.draggable-window-pane:maximized {
+    -fx-padding: 0;
+    -fx-background-insets: 0;
+}
+
+#pane-header {
+    -fx-background-color: -fx-base-top;
+}
+
+#pane-header .window-control {
+    -fx-padding: 0;
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+}
+
+#pane-header .window-control #button-cross {
+    -fx-fill: transparent;
+    -fx-stroke-width: 1;
+}
+
+#pane-header .window-control:hover {
+    -fx-background-color: derive(-fx-base, 15%);
+}
+
+#pane-header .window-control:pressed {
+    -fx-background-color: derive(-fx-base, 5%);
+}
+
+.menu-bar {
+    -fx-background-color: -fx-base-top;
+}
+
+.menu-bar > .container > .menu-button > .label {
+    -fx-text-fill: -fx-text-base-color;
+}
+
+.menu-bar > .container > .menu-button:hover > .label,
+.menu-bar > .container > .menu-button:focused > .label,
+.menu-bar > .container > .menu-button:showing > .label {
+    -fx-text-fill: white;
+}

@@ -1,0 +1,16 @@
+{
+	name: "black",
+	version: "1",
+	title: {
+		eng: "Black",
+		ces: "Black"
+	},
+	files: [
+		"general-component.css",
+		"window-progress.css",
+		"window-information.css",
+		"window-configuration.css",
+		"window-search.css",
+		"window-about.css"
+	]
+}

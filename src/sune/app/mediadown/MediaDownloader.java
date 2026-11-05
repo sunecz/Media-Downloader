@@ -1876,6 +1876,7 @@ public final class MediaDownloader {
 			// Themes
 			addTheme(Theme.ofLight(), true);
 			addTheme(Theme.ofDark(), true);
+			addTheme(Theme.ofBlack(), true);
 			// Icons
 			addIcon("automatic.png", false);
 			addIcon("show.png", false);
