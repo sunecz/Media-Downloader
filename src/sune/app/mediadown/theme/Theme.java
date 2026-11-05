@@ -88,6 +88,10 @@ public class Theme implements Extractable {
 	public static final Theme ofDark() {
 		return BuiltInThemes.ofDark();
 	}
+
+	public static final Theme ofBlack() {
+		return BuiltInThemes.ofBlack();
+	}
 	
 	private final String internalPath(String file) {
 		return String.format("theme/%s/%s", name, file);
@@ -214,6 +218,7 @@ public class Theme implements Extractable {
 		
 		private static Theme LIGHT;
 		private static Theme DARK;
+		private static Theme BLACK;
 		
 		// Forbid anyone to create an instance of this class
 		private BuiltInThemes() {
@@ -229,6 +234,10 @@ public class Theme implements Extractable {
 		
 		public static final Theme ofDark() {
 			return DARK == null ? (DARK = loadInternal("dark")) : DARK;
+		}
+
+		public static final Theme ofBlack() {
+			return BLACK == null ? (BLACK = loadInternal("black")) : BLACK;
 		}
 	}
 	
