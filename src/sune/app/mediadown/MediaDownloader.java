@@ -526,6 +526,12 @@ public final class MediaDownloader {
 				);
 				
 				Artifacts artifacts = builder.build(manifest, registries);
+				if(!configuration.isPluginsAutoUpdateCheck()) {
+					artifacts.artifacts().stream()
+						.map((a) -> a.component())
+						.filter((component) -> component.startsWith("plugin."))
+						.forEach(skipComponents::add);
+				}
 				Manifest.ComponentChanges changedComponents = artifacts.changedComponents();
 				Manifest finalManifest = artifacts.remoteManifest();
 				
@@ -606,7 +612,9 @@ public final class MediaDownloader {
 				
 				Artifacts artifacts = artifactsCheckState.artifacts();
 				Path root = artifactsCheckState.root();
-				List<Manifest.ManagedPath> deletedPaths = artifacts.deletedPaths();
+				List<Manifest.ManagedPath> deletedPaths = artifacts.deletedPaths().stream()
+					.filter((path) -> configuration.isPluginsAutoUpdateCheck() || !path.component().startsWith("plugin."))
+					.collect(Collectors.toList());
 				
 				try(ArtifactDownloader downloader = artifactDownloader(root)) {
 					artifacts.download(downloader);
