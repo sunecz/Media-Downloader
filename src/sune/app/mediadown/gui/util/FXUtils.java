@@ -184,19 +184,7 @@ public final class FXUtils {
 	}
 	
 	public static final void showErrorWindow(Stage stage, String title, String message) {
-		thread(() -> {
-			Alert alert = new Alert(AlertType.ERROR);
-			alert.initModality(Modality.APPLICATION_MODAL);
-			if((stage != null))
-				alert.initOwner(stage);
-			alert.setHeaderText(null);
-			alert.setContentText(message);
-			alert.setTitle(title);
-			setDialogIcon(alert, MediaDownloader.ICON);
-			alert.getButtonTypes().clear();
-			alert.getButtonTypes().add(ButtonType.OK);
-			alert.showAndWait();
-		});
+		thread(() -> sune.app.mediadown.gui.Dialog.showError(title, message));
 	}
 	
 	/** @since 00.02.09 */
@@ -252,7 +240,6 @@ public final class FXUtils {
 			
 			alert = new ExceptionAlert(AlertType.ERROR);
 			alert.initModality(Modality.APPLICATION_MODAL);
-			alert.setHeaderText(null);
 			alert.setOnCloseRequest((e) -> clear());
 		}
 		
@@ -315,22 +302,25 @@ public final class FXUtils {
 		}
 		
 		/** @since 00.02.09 */
-		private static final class ExceptionAlert extends Alert implements ExceptionAlertContext {
+		private static final class ExceptionAlert extends sune.app.mediadown.gui.DraggableWindow<VBox> implements ExceptionAlertContext {
 			
 			private final VBox pane;
 			private final TabPane tabs;
 			
 			public ExceptionAlert(AlertType alertType) {
-				super(alertType);
-				pane = new VBox(5.0);
+				super("exception", new VBox(5.0), 750.0, 500.0);
+				setTitle(translation.hasSingle("title") ? translation.getSingle("title") : "Error");
+				pane = content;
 				tabs = new TabPane();
-				pane.getChildren().addAll(tabs);
-				getDialogPane().setContent(pane);
+				Button close = new Button("OK");
+				close.setDefaultButton(true);
+				close.setCancelButton(true);
+				close.setOnAction((e) -> fireEvent(new javafx.stage.WindowEvent(this, javafx.stage.WindowEvent.WINDOW_CLOSE_REQUEST)));
+				HBox buttons = new HBox(close);
+				buttons.setAlignment(javafx.geometry.Pos.CENTER_RIGHT);
+				buttons.setPadding(new Insets(10.0));
+				pane.getChildren().addAll(tabs, buttons);
 				VBox.setVgrow(tabs, Priority.ALWAYS);
-				setDialogIcon(this, MediaDownloader.ICON);
-				getButtonTypes().setAll(ButtonType.OK);
-				setGraphic(null);
-				initStylesheet();
 				
 				// Make the window resizable so that at least the user can resize it
 				// and that way see the content, if the window is incorrectly sized.
@@ -340,15 +330,8 @@ public final class FXUtils {
 				
 				// Limit the size of the window. This should help when the window is
 				// incorrectly sized on some Linux systems.
-				Stage stage = alertStage(this);
-				stage.setMinWidth(200.0);
-				stage.setMinHeight(200.0);
-			}
-			
-			private final void initStylesheet() {
-				Theme currentTheme = MediaDownloader.theme();
-				Scene scene = getDialogPane().getScene();
-				scene.getStylesheets().add(currentTheme.stylesheet("general-component.css"));
+				setMinWidth(200.0);
+				setMinHeight(200.0);
 			}
 			
 			@Override

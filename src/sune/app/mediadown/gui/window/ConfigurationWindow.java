@@ -408,6 +408,7 @@ public class ConfigurationWindow extends DraggableWindow<BorderPane> {
 			.forEach(ConfigurationReloadable::reload);
 		
 		if(errorContentBuilder == null) {
+			sune.app.mediadown.gui.Window.refreshTheme();
 			Dialog.showInfo(dialogTitle, translation.getSingle("dialog.save_success"));
 			close();
 		} else {

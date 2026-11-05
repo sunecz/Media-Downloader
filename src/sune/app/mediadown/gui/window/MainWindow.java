@@ -58,7 +58,7 @@ import sune.app.mediadown.gui.ProgressWindow;
 import sune.app.mediadown.gui.ProgressWindow.ProgressAction;
 import sune.app.mediadown.gui.ProgressWindow.ProgressContext;
 import sune.app.mediadown.gui.clipboard.ClipboardUtils;
-import sune.app.mediadown.gui.Window;
+import sune.app.mediadown.gui.DraggableWindow;
 import sune.app.mediadown.gui.control.PipelineTableView;
 import sune.app.mediadown.gui.control.PipelineTableView.ColumnFactory;
 import sune.app.mediadown.gui.control.PipelineTableView.ContextMenuItem;
@@ -92,7 +92,7 @@ import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.Utils;
 import sune.app.mediadown.util.Utils.Ignore;
 
-public final class MainWindow extends Window<BorderPane> {
+public final class MainWindow extends DraggableWindow<BorderPane> {
 	
 	public static final String NAME = "main";
 	
@@ -147,9 +147,10 @@ public final class MainWindow extends Window<BorderPane> {
 	public MainWindow() {
 		super(NAME, new BorderPane(), DEFAULT_WIDTH, DEFAULT_HEIGHT);
 		
-		pane.setTop(initializeMenuBar());
-		pane.setCenter(initializePipelinesTable());
-		pane.setBottom(initializeButtons());
+		content.setTop(initializeMenuBar());
+		content.setCenter(initializePipelinesTable());
+		content.setBottom(initializeButtons());
+		addWindowControls();
 		
 		setScene(scene);
 		setOnCloseRequest(this::closeRequest);

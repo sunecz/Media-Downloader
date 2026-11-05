@@ -5,6 +5,7 @@ import java.util.Objects;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
+import javafx.css.PseudoClass;
 import javafx.event.EventTarget;
 import javafx.geometry.Bounds;
 import javafx.geometry.Dimension2D;
@@ -16,6 +17,7 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.Tooltip;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
@@ -88,13 +90,13 @@ public class DraggableWindow<T extends Pane> extends Window<StackPane> {
 		boxHeaderFill.setId("pane-header-fill");
 		HBox.setHgrow(boxHeaderFill, Priority.ALWAYS);
 		header.addEventHandler(MouseEvent.MOUSE_PRESSED, (e) -> {
-			if((e.getButton() != MouseButton.PRIMARY))
+			if(e.getButton() != MouseButton.PRIMARY || isHeaderButton(e.getTarget()))
 				return;
 			posX = e.getSceneX();
 			posY = e.getSceneY();
 		});
 		header.addEventHandler(MouseEvent.MOUSE_DRAGGED, (e) -> {
-			if((e.getButton() != MouseButton.PRIMARY))
+			if(e.getButton() != MouseButton.PRIMARY || isHeaderButton(e.getTarget()) || isMaximized())
 				return;
 			setX(e.getScreenX() - posX);
 			setY(e.getScreenY() - posY);
@@ -121,7 +123,54 @@ public class DraggableWindow<T extends Pane> extends Window<StackPane> {
 	
 	private final void windowClose() {
 		fireEvent(new WindowEvent(this, WindowEvent.WINDOW_CLOSE_REQUEST));
-		close();
+	}
+
+	private static boolean isHeaderButton(EventTarget target) {
+		for(Node node = target instanceof Node ? (Node) target : null; node != null; node = node.getParent()) {
+			if(node instanceof Button) return true;
+		}
+		return false;
+	}
+
+	/** Adds desktop window controls to the themed header of the main window. */
+	protected final void addWindowControls() {
+		Button minimize = windowControl("button-window-minimize", "M 10 16 L 20 16", tr("buttons.minimize"));
+		Button maximize = windowControl("button-window-maximize", "M 10 10 H 20 V 20 H 10 Z", tr("buttons.maximize"));
+		minimize.setOnAction((e) -> setIconified(true));
+		maximize.setOnAction((e) -> setMaximized(!isMaximized()));
+		btnHeaderClose.setAccessibleText(tr("buttons.close"));
+		btnHeaderClose.setTooltip(new Tooltip(tr("buttons.close")));
+		header.getChildren().addAll(header.getChildren().size() - 1, java.util.List.of(minimize, maximize));
+		maximizedProperty().addListener((o, ov, maximized) -> {
+			pane.pseudoClassStateChanged(PseudoClass.getPseudoClass("maximized"), maximized);
+			String text = tr(maximized ? "buttons.restore" : "buttons.maximize");
+			maximize.setAccessibleText(text);
+			maximize.getTooltip().setText(text);
+			((SVGPath) maximize.getGraphic()).setContent(maximized
+				? "M 10 12 H 18 V 20 H 10 Z M 12 10 H 20 V 18"
+				: "M 10 10 H 20 V 20 H 10 Z");
+		});
+		header.addEventHandler(MouseEvent.MOUSE_CLICKED, (e) -> {
+			if(e.getButton() == MouseButton.PRIMARY && e.getClickCount() == 2 && !isHeaderButton(e.getTarget())) {
+				setMaximized(!isMaximized());
+			}
+		});
+	}
+
+	private Button windowControl(String id, String path, String text) {
+		SVGPath graphic = new SVGPath();
+		graphic.setContent(path);
+		graphic.setId("button-cross");
+		graphic.setFill(Color.TRANSPARENT);
+		graphic.setStrokeWidth(1.0);
+		graphic.strokeProperty().bind(lblHeaderTitle.textFillProperty());
+		Button button = new Button("", graphic);
+		button.setId(id);
+		button.getStyleClass().add("window-control");
+		button.setPrefSize(30.0, 30.0);
+		button.setAccessibleText(text);
+		button.setTooltip(new Tooltip(text));
+		return button;
 	}
 	
 	/** @since 00.02.09 */
@@ -237,11 +286,11 @@ public class DraggableWindow<T extends Pane> extends Window<StackPane> {
 			
 			outer = OUTER_INSETS.getLeft() + OUTER_INSETS.getRight();
 			inner = insets.getLeft() + insets.getRight();
-			window.setMinWidth(min.getWidth() + inner + outer);
+			window.setMinWidth(Math.max(window.getMinWidth(), min.getWidth() + inner + outer));
 			
 			outer = OUTER_INSETS.getTop() + OUTER_INSETS.getBottom();
 			inner = insets.getTop() + insets.getBottom();
-			window.setMinHeight(min.getHeight() + inner + outer);
+			window.setMinHeight(Math.max(window.getMinHeight(), min.getHeight() + inner + outer + window.header.getHeight()));
 		}
 		
 		private static final Dimension2D minContentSize(Region node) {
@@ -331,7 +380,7 @@ public class DraggableWindow<T extends Pane> extends Window<StackPane> {
 		}
 		
 		private final boolean isInDragBorder(Bounds bounds, Point2D mouse) {
-			return bounds.contains(mouse) && !innerRect(bounds).contains(mouse);
+			return !window.isMaximized() && bounds.contains(mouse) && !innerRect(bounds).contains(mouse);
 		}
 		
 		private final Direction mouseDragDirection(Bounds bounds, Point2D mouse) {

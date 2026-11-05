@@ -1,7 +1,12 @@
 package sune.app.mediadown.gui;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.WeakHashMap;
 
 import javafx.scene.Scene;
 import javafx.scene.layout.Pane;
@@ -14,9 +19,13 @@ import sune.app.mediadown.theme.Theme;
 import sune.app.mediadown.util.Utils;
 
 public class Window<T extends Pane> extends Stage {
+
+	private static final Set<Window<?>> windows = Collections.newSetFromMap(new WeakHashMap<>());
 	
 	static final double DEFAULT_WIDTH  = 200.0;
 	static final double DEFAULT_HEIGHT = 200.0;
+
+	private final List<String> themeStylesheets = new ArrayList<>();
 	
 	protected final Map<String, Object> args = new LinkedHashMap<>();
 	
@@ -43,17 +52,29 @@ public class Window<T extends Pane> extends Stage {
 		setScene(scene);
 		setTitle(translation.getSingle("title"));
 		getIcons().setAll(MediaDownloader.ICON);
-		initStylesheet();
+		applyTheme(MediaDownloader.theme());
+		scene.getStylesheets().add(Window.class.getResource("/resources/theme/window-chrome.css").toExternalForm());
+		windows.add(this);
 	}
 	
-	private final void initStylesheet() {
-		Theme currentTheme = MediaDownloader.theme();
-		// init general styles (these must exist)
-		scene.getStylesheets().add(currentTheme.stylesheet("general-component.css"));
-		// init window-specific style
-		String style;
-		if((style = currentTheme.stylesheet("window-" + name + ".css")) != null) {
-			scene.getStylesheets().add(style);
+	private final void applyTheme(Theme theme) {
+		scene.getStylesheets().removeAll(themeStylesheets);
+		themeStylesheets.clear();
+		themeStylesheets.add(theme.stylesheet("general-component.css"));
+
+		String windowStylesheet = theme.stylesheet("window-" + name + ".css");
+		if(windowStylesheet != null) {
+			themeStylesheets.add(windowStylesheet);
+		}
+
+		scene.getStylesheets().addAll(0, themeStylesheets);
+	}
+
+	public static void refreshTheme() {
+		Theme theme = MediaDownloader.theme();
+		for(Window<?> window : new ArrayList<>(windows)) {
+			window.applyTheme(theme);
+			window.scene.getRoot().applyCss();
 		}
 	}
 	
