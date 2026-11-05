@@ -33,6 +33,7 @@ import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
 import sune.app.mediadown.gui.util.FXUtils;
+import sune.app.mediadown.os.OS;
 import sune.app.mediadown.util.Utils;
 
 public class DraggableWindow<T extends Pane> extends Window<StackPane> {
@@ -65,11 +66,24 @@ public class DraggableWindow<T extends Pane> extends Window<StackPane> {
 	}
 	
 	private final void initWindow(T contentPane) {
+		wrapper = new VBox();
+		wrapper.setId("pane-wrapper");
+		content = contentPane;
+		content.setId("pane-content");
+		VBox.setVgrow(content, Priority.ALWAYS);
+		wrapper.getChildren().add(content);
+		pane.getChildren().add(wrapper);
+		setResizable(true);
+
+		if(OS.current().name() != OS.Name.WINDOWS) {
+			initStyle(StageStyle.DECORATED);
+			pane.getStyleClass().add("native-window-pane");
+			return;
+		}
+
 		initStyle(StageStyle.TRANSPARENT);
 		Resizer.create(this);
 		scene.setFill(Color.TRANSPARENT);
-		wrapper = new VBox();
-		wrapper.setId("pane-wrapper");
 		header         = new HBox();
 		lblHeaderTitle = new Label(getTitle());
 		SVGPath svgCross = new SVGPath();
@@ -103,13 +117,8 @@ public class DraggableWindow<T extends Pane> extends Window<StackPane> {
 		});
 		header.getChildren().addAll(lblHeaderTitle, boxHeaderFill, btnHeaderClose);
 		header.setId("pane-header");
-		content = contentPane;
-		content.setId("pane-content");
-		VBox.setVgrow(contentPane, Priority.ALWAYS);
-		wrapper.getChildren().addAll(header, content);
-		pane.getChildren().add(wrapper);
+		wrapper.getChildren().add(0, header);
 		pane.getStyleClass().add("draggable-window-pane");
-		setResizable(true);
 		
 		FXUtils.onWindowShow(this, () -> {
 			double outerHeight = getHeight();
@@ -134,6 +143,7 @@ public class DraggableWindow<T extends Pane> extends Window<StackPane> {
 
 	/** Adds desktop window controls to the themed header of the main window. */
 	protected final void addWindowControls() {
+		if(header == null) return; // Native decorations provide the controls outside Windows.
 		Button minimize = windowControl("button-window-minimize", "M 10 16 L 20 16", tr("buttons.minimize"));
 		Button maximize = windowControl("button-window-maximize", "M 10 10 H 20 V 20 H 10 Z", tr("buttons.maximize"));
 		minimize.setOnAction((e) -> setIconified(true));
@@ -175,7 +185,7 @@ public class DraggableWindow<T extends Pane> extends Window<StackPane> {
 	
 	/** @since 00.02.09 */
 	protected void setCloseButtonVisible(boolean value) {
-		btnHeaderClose.setVisible(value);
+		if(btnHeaderClose != null) btnHeaderClose.setVisible(value);
 	}
 	
 	public void centerWindow(Stage parent) {

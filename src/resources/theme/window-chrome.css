@@ -1,4 +1,65 @@
 /* Application-owned chrome also supports themes extracted by older clients. */
+.button,
+.toggle-button,
+.menu-button,
+.split-menu-button,
+.menu-item,
+.hyperlink,
+.check-box,
+.radio-button,
+.combo-box-base,
+.scroll-bar,
+.scroll-bar > .thumb,
+.scroll-bar > .track,
+.scroll-bar > .increment-button,
+.scroll-bar > .decrement-button,
+.list-cell:filled,
+.table-row-cell:filled,
+.table-row-cell:filled > .table-cell,
+.tree-cell:filled,
+.tree-table-row-cell:filled,
+.tree-table-row-cell:filled > .tree-table-cell,
+.tab-pane > .tab-header-area > .headers-region > .tab {
+    -fx-cursor: hand;
+}
+
+.button:disabled,
+.toggle-button:disabled,
+.menu-button:disabled,
+.split-menu-button:disabled,
+.menu-item:disabled,
+.hyperlink:disabled,
+.check-box:disabled,
+.radio-button:disabled,
+.combo-box-base:disabled,
+.scroll-bar:disabled,
+.scroll-bar:disabled > *,
+.list-cell:disabled,
+.list-cell:empty,
+.table-row-cell:disabled,
+.table-row-cell:disabled > .table-cell,
+.table-row-cell:empty,
+.table-row-cell:empty > .table-cell,
+.tree-cell:disabled,
+.tree-cell:empty,
+.tree-table-row-cell:disabled,
+.tree-table-row-cell:disabled > .tree-table-cell,
+.tree-table-row-cell:empty,
+.tree-table-row-cell:empty > .tree-table-cell,
+.tab-pane > .tab-header-area > .headers-region > .tab:disabled {
+    -fx-cursor: default;
+}
+
+.native-window-pane {
+    -fx-padding: 0;
+    -fx-background-insets: 0;
+}
+
+.native-window-pane > #pane-wrapper {
+    -fx-border-width: 0;
+    -fx-effect: null;
+}
+
 #window-about #label-description {
     -fx-fill: -fx-text-base-color;
 }
