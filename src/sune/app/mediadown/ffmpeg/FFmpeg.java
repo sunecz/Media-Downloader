@@ -4,6 +4,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.stream.Collectors;
@@ -31,6 +32,7 @@ import sune.app.mediadown.util.Metadata;
 import sune.app.mediadown.util.NIO;
 import sune.app.mediadown.util.Pair;
 import sune.app.mediadown.util.Regex;
+import sune.app.mediadown.util.Utils;
 
 /** @since 00.02.08 */
 public final class FFmpeg {
@@ -152,6 +154,11 @@ public final class FFmpeg {
 					super(format);
 				}
 				
+				protected void addExtraVideoOptions(VideoMedia video, int index, Input.Builder input,
+						Output.Builder output, boolean force, boolean copy) {
+					// No extra options by default
+				}
+				
 				@Override
 				protected int ensureVideo(Media media, int index, Input.Builder input, Output.Builder output,
 						boolean force) {
@@ -163,6 +170,7 @@ public final class FFmpeg {
 					
 					if(video != null && video.format().is(MediaFormat.MP4)) {
 						output.addOptions(Options.streamVideoCodecCopy(index));
+						addExtraVideoOptions(video, index, input, output, force, true);
 						return RESULT_COPY;
 					}
 					
@@ -173,6 +181,7 @@ public final class FFmpeg {
 						Option.ofShort("preset", value(inputMetadata, "video.preset", DEFAULT_VIDEO_PRESET)),
 						Option.ofShort("crf", value(inputMetadata, "video.crf", DEFAULT_VIDEO_CRF))
 					);
+					addExtraVideoOptions(video, index, input, output, force, false);
 					
 					return RESULT_REENCODE;
 				}
@@ -226,6 +235,35 @@ public final class FFmpeg {
 				
 				public MP4() {
 					super(MediaFormat.MP4);
+				}
+				
+				@Override
+				protected void addExtraVideoOptions(VideoMedia video, int index, Input.Builder input,
+						Output.Builder output, boolean force, boolean copy) {
+					String tag = null;
+					
+					if(copy) {
+						Set<String> tags = video.codecs().stream()
+							.map((s) -> Utils.beforeFirst(s, "."))
+							.collect(Collectors.toSet());
+						
+						// Only apply the tag flag if there are no conflicting codecs
+						if(tags.size() == 1) {
+							String onlyTag = tags.iterator().next(); // The first and only tag
+							
+							if(onlyTag.startsWith("avc")) tag = "avc1"; else
+							if(onlyTag.startsWith("hvc")) tag = "hvc1"; else
+							if(onlyTag.startsWith("hev")) tag = "hvc1";
+						}
+					}
+					
+					if(tag == null) {
+						// Force avc1 for both stream copy when uncertain and re-encode,
+						// since h264 is used for the output.
+						tag = "avc1";
+					}
+					
+					output.addOptions(Option.ofShort("tag:v", tag));
 				}
 			}
 			
