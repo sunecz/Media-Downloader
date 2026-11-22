@@ -240,7 +240,14 @@
 					columns: {
 						season: "Sezóna",
 						number: "Epizoda",
+						available: "Dostupné",
 						title:  "Název"
+					},
+					values: {
+						available: {
+							yes: "Ano",
+							no:  "Ne"
+						}
 					},
 					context_menu: {
 						copy_url:      "Zkopírovat URL",

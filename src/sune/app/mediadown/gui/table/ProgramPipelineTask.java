@@ -90,30 +90,39 @@ public final class ProgramPipelineTask extends MediaEnginePipelineTaskBase<Progr
 		Translation translation = window.getTranslation();
 		String titleSeason = translation.getSingle("tables.episodes.columns.season");
 		String titleNumber = translation.getSingle("tables.episodes.columns.number");
+		String titleAvailable = translation.getSingle("tables.episodes.columns.available");
 		String titleTitle = translation.getSingle("tables.episodes.columns.title");
 		TableColumn<Episode, Integer> columnSeason = new TableColumn<>(titleSeason);
 		TableColumn<Episode, Integer> columnNumber = new TableColumn<>(titleNumber);
+		TableColumn<Episode, Boolean> columnAvailable = new TableColumn<>(titleAvailable);
 		TableColumn<Episode, String> columnTitle = new TableColumn<>(titleTitle);
 		columnSeason.setCellFactory((c) -> new IntegerTableCell());
 		columnNumber.setCellFactory((c) -> new IntegerTableCell());
+		columnAvailable.setCellFactory((c) -> new BooleanTableCell(translation));
 		columnTitle.setCellFactory((c) -> new NullableStringTableCell());
 		columnSeason.setPrefWidth(65);
 		columnNumber.setPrefWidth(65);
+		columnAvailable.setPrefWidth(85);
 		columnTitle.setPrefWidth(400);
 		columnSeason.setCellValueFactory((v) -> new SimpleObjectProperty<>(v.getValue().season()));
 		columnNumber.setCellValueFactory((v) -> new SimpleObjectProperty<>(v.getValue().number()));
+		columnAvailable.setCellValueFactory((v) -> new SimpleObjectProperty<>(v.getValue().<Boolean>get("playable")));
 		columnTitle.setCellValueFactory((v) -> new SimpleObjectProperty<>(v.getValue().title()));
 		columnSeason.setSortType(SortType.DESCENDING);
 		columnNumber.setSortType(SortType.DESCENDING);
+		columnAvailable.setSortType(SortType.DESCENDING);
 		columnTitle.setComparator(Utils::compareNaturalWithDateTime);
 		columnSeason.setReorderable(false);
 		columnNumber.setReorderable(false);
+		columnAvailable.setReorderable(false);
 		columnTitle.setReorderable(false);
 		table.getColumns().add(columnSeason);
 		table.getColumns().add(columnNumber);
+		table.getColumns().add(columnAvailable);
 		table.getColumns().add(columnTitle);
 		table.getSortOrder().add(columnSeason);
 		table.getSortOrder().add(columnNumber);
+		table.getSortOrder().add(columnAvailable);
 		table.getSortOrder().add(columnTitle);
 		table.setPlaceholder(new Label(translation.getSingle("tables.episodes.placeholder")));
 		table.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
@@ -198,6 +207,35 @@ public final class ProgramPipelineTask extends MediaEnginePipelineTaskBase<Progr
 				setGraphic(null);
 			} else {
 				setText(string(value));
+			}
+		}
+	}
+	private static final class BooleanTableCell extends TableCell<Episode, Boolean> {
+
+		private static final String EMPTY_TEXT = "-";
+		private final String textTrue;
+		private final String textFalse;
+
+		public BooleanTableCell(Translation translation) {
+			textTrue = translation.getSingle("tables.episodes.values.available.yes");
+			textFalse = translation.getSingle("tables.episodes.values.available.no");
+		}
+
+		@Override
+		protected void updateItem(Boolean value, boolean empty) {
+			if(Objects.equals(value, getItem()) && (empty || value != null)) {
+				return;
+			}
+
+			super.updateItem(value, empty);
+
+			if(empty) {
+				setText(null);
+				setGraphic(null);
+			} else if(value == null) {
+				setText(EMPTY_TEXT);
+			} else {
+				setText(value ? textTrue : textFalse);
 			}
 		}
 	}
