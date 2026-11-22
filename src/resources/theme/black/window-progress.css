@@ -1,0 +1,17 @@
+.root {
+	-fx-padding: 20;
+	-fx-background-insets: 20;
+}
+
+#pane-content {
+	-fx-padding: 10;
+	-fx-background-color: -fx-base;
+	-fx-border-width: 1;
+	-fx-border-color: -fx-control-inner-background;
+	-fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.2), 7, 0, 0, 0);
+}
+
+#pane-buttons {
+	-fx-hgap: 5;
+	-fx-alignment: center-right;
+}

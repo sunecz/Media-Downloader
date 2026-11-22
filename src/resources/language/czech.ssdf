@@ -1,10 +1,11 @@
 {
 	name:    "czech",
-	version: "20",
+	version: "21",
 	title:   "Čeština",
 	code:    "ces",
 	windows: {
 		exception: {
+			title: "Chyba",
 			button: {
 				report: "Nahlásit"
 			}
@@ -12,6 +13,10 @@
 		main: {
 			title: "Media Downloader",
 			buttons: {
+				minimize: "Minimalizovat",
+				maximize: "Maximalizovat",
+				restore:  "Obnovit",
+				close:    "Zavřít",
 				download:          "Stáhnout vše",
 				download_selected: "Stáhnout vybrané",
 				add:               "Přidat",

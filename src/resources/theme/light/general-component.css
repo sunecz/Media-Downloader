@@ -9,6 +9,8 @@
 	-fx-focus-color: -fx-accent;
 	-fx-base: rgb(244, 244, 244);
 	-fx-base-top: rgb(255, 255, 255);
+	-fx-header-foreground: rgb(32, 32, 32);
+	-fx-header-hover: rgb(229, 229, 229);
 	-fx-base-border: derive(-fx-base, -20%);
 	-fx-control-inner-background: derive(-fx-base, 80%);
 	-fx-control-inner-background-alt: derive(-fx-control-inner-background, -2%);
@@ -366,4 +368,53 @@
 
 .alert.error.dialog-pane:no-header .graphic-container {
 	-fx-padding: 0;
+}
+
+.draggable-window-pane:maximized {
+    -fx-padding: 0;
+    -fx-background-insets: 0;
+}
+
+#pane-header #label-window-title {
+    -fx-text-fill: -fx-header-foreground;
+}
+
+#pane-header .window-control {
+    -fx-padding: 0;
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+}
+
+#pane-header .window-control #button-cross,
+#pane-header #button-window-close #button-cross {
+    -fx-fill: transparent;
+    -fx-stroke: -fx-header-foreground;
+    -fx-stroke-width: 1;
+}
+
+#pane-header .window-control:hover {
+    -fx-background-color: -fx-header-hover;
+}
+
+#pane-header .window-control:pressed {
+    -fx-background-color: derive(-fx-header-hover, -10%);
+}
+
+#pane-header #button-window-close:hover #button-cross {
+    -fx-stroke: white;
+}
+
+.menu-bar {
+    -fx-background-color: -fx-base-top;
+}
+
+.menu-bar > .container > .menu-button > .label {
+    -fx-text-fill: -fx-header-foreground;
+}
+
+.menu-bar > .container > .menu-button:hover > .label,
+.menu-bar > .container > .menu-button:focused > .label,
+.menu-bar > .container > .menu-button:showing > .label {
+    -fx-text-fill: white;
 }
