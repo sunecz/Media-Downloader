@@ -98,6 +98,7 @@ import sune.app.mediadown.resource.InputStreamResolver;
 import sune.app.mediadown.resource.InternalURLProtocols;
 import sune.app.mediadown.resource.ResourceRegistry;
 import sune.app.mediadown.theme.Theme;
+import sune.app.mediadown.update.Artifact;
 import sune.app.mediadown.update.ArtifactCheckEvent;
 import sune.app.mediadown.update.ArtifactChecker;
 import sune.app.mediadown.update.ArtifactDownloader;
@@ -526,14 +527,19 @@ public final class MediaDownloader {
 				);
 				
 				Artifacts artifacts = builder.build(manifest, registries);
-				if(!configuration.isPluginsAutoUpdateCheck()) {
-					artifacts.artifacts().stream()
-						.map((a) -> a.component())
-						.filter((component) -> component.startsWith("plugin."))
-						.forEach(skipComponents::add);
-				}
 				Manifest.ComponentChanges changedComponents = artifacts.changedComponents();
 				Manifest finalManifest = artifacts.remoteManifest();
+				
+				if(!configuration.isPluginsAutoUpdateCheck()) {
+					Set<String> allPlugins = (
+						artifacts.artifacts().stream()
+							.map(Artifact::component)
+							.filter((component) -> component.startsWith("plugin."))
+							.collect(Collectors.toSet())
+					);
+					
+					skipComponents.addAll(allPlugins);
+				}
 				
 				// If the application will be updated and the user doesn't have auto-update
 				// enabled, ask them. Update the application only if they accept.
@@ -612,9 +618,15 @@ public final class MediaDownloader {
 				
 				Artifacts artifacts = artifactsCheckState.artifacts();
 				Path root = artifactsCheckState.root();
-				List<Manifest.ManagedPath> deletedPaths = artifacts.deletedPaths().stream()
-					.filter((path) -> configuration.isPluginsAutoUpdateCheck() || !path.component().startsWith("plugin."))
-					.collect(Collectors.toList());
+				List<Manifest.ManagedPath> deletedPaths = artifacts.deletedPaths();
+				
+				if(!configuration.isPluginsAutoUpdateCheck()) {
+					deletedPaths = (
+						deletedPaths.stream()
+							.filter((path) -> !path.component().startsWith("plugin."))
+							.collect(Collectors.toList())
+					);
+				}
 				
 				try(ArtifactDownloader downloader = artifactDownloader(root)) {
 					artifacts.download(downloader);
